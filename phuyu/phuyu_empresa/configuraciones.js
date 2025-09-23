@@ -74,3 +74,4 @@ var phuyu_datos = new Vue({
 		phuyu_sistema.phuyu_fin();
 	}
 });
+

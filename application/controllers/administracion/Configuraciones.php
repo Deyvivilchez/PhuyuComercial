@@ -23,7 +23,7 @@ class Configuraciones extends CI_Controller {
 		}
 	}
 
-	function guardar_original(){
+	function guardar(){
 		if ($this->input->is_ajax_request()) {
 			/* $dep = substr($_POST["ubigeo"],0,2); $pro = substr($_POST["ubigeo"],2,2); $dis = substr($_POST["ubigeo"],4,2); $codubigeo = 0;
 			$ubigeo = $this->db->query("select codubigeo from public.ubigeo where ubidepartamento='".$dep."' and ubiprovincia='".$pro."' and ubidistrito='".$dis."'")->result_array();
@@ -35,11 +35,34 @@ class Configuraciones extends CI_Controller {
 			$ubigeo = $this->db->query("select *from public.ubigeo where codubigeo=".$codubigeo)->result_array();
 
 			$campos = ["coddocumentotipo","documento","razonsocial","nombrecomercial","direccion","email","telefono","codubigeo"];
-			$valores = [4,$_POST["documento"],$_POST["razonsocial"],$_POST["nombrecomercial"],$_POST["direccion"],$_POST["email"],$_POST["telefono"],$codubigeo];
+			$valores = [4,$_POST["documento"],
+			$_POST["razonsocial"],
+			$_POST["nombrecomercial"],
+			$_POST["direccion"],
+			$_POST["email"],
+			$_POST["telefono"],
+			$codubigeo];
+
 			$estado = $this->phuyu_model->phuyu_editar("public.personas", $campos, $valores,"codpersona",$_POST["codpersona"]);
 
 			$campos = ["igvsunat","icbpersunat","iscsunat","slogan","itemrepetircomprobante","claveseguridad","publicidad","agradecimiento","ubigeo","departamento","provincia","distrito","leyendapamazonia","codleyendapamazonia","leyendasamazonia","codleyendasamazonia","urlconsultacomprobantes"];
-			$valores = [(double)$_POST["igvsunat"],(double)$_POST["icbpersunat"],(double)$_POST["iscsunat"],$_POST["slogan"],$_POST["itemrepetircomprobante"],$_POST["claveseguridad"],$_POST["publicidad"],$_POST["agradecimiento"],$ubigeo[0]["ubidepartamento"].''.$ubigeo[0]["ubiprovincia"].''.$ubigeo[0]["ubidistrito"],$ubigeo[0]["departamento"],$ubigeo[0]["provincia"],$ubigeo[0]["distrito"],$_POST["leyendapamazonia"],$_POST["codleyendapamazonia"],$_POST["leyendasamazonia"],$_POST["codleyendasamazonia"],$_POST["urlconsultacomprobantes"]];
+			$valores = [(double)$_POST["igvsunat"],
+			(double)$_POST["icbpersunat"],
+			(double)$_POST["iscsunat"],
+			$_POST["slogan"],
+			$_POST["itemrepetircomprobante"],
+			$_POST["claveseguridad"],
+			$_POST["publicidad"],
+			$_POST["agradecimiento"],
+			$ubigeo[0]["ubidepartamento"].''.$ubigeo[0]["ubiprovincia"].''.$ubigeo[0]["ubidistrito"],
+			$ubigeo[0]["departamento"],
+			$ubigeo[0]["provincia"],
+			$ubigeo[0]["distrito"],
+			$_POST["leyendapamazonia"],
+			$_POST["codleyendapamazonia"],
+			$_POST["leyendasamazonia"],
+			$_POST["codleyendasamazonia"],
+			$_POST["urlconsultacomprobantes"]];
 			$estado = $this->phuyu_model->phuyu_editar("public.empresas", $campos, $valores,"codempresa",$_POST["codempresa"]);
 
 			if ($_FILES["logo"]["name"]!="") {
@@ -73,7 +96,7 @@ class Configuraciones extends CI_Controller {
 
 	// application/controllers/administracion/Configuraciones.php
 
-public function guardar()
+public function guardar22()
 {
     $campo = 'logo';                 // <input type="file" name="logo">
     $nombreArchivo = 'logo_4.png';   // o genera uno dinámico
