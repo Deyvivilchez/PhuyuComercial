@@ -1,0 +1,175 @@
+/* This file is reserved for overriding and extending the template styles. */
+html[data-placement=vertical] .nav-container, 
+html[data-placement=horizontal] .nav-container.mobile-side-ready, 
+html[data-placement=vertical] .nav-container.mobile-side-ready{
+	width: 16rem !important;
+}
+
+html[data-placement=vertical] .nav-container .nav-content .menu-container, 
+html[data-placement=horizontal] .nav-container.mobile-side-ready .nav-content 
+.menu-container, html[data-placement=vertical] .nav-container.mobile-side-ready 
+.nav-content .menu-container {
+    display: flex !important;
+    align-self: flex-start;
+    order: 3;
+    margin-top: 0rem;
+    margin-bottom: 1rem;
+    width: 15rem;
+    margin-left: 0.5rem;
+    margin-right: 1rem;
+}
+@media (min-width: 576px){
+	.modal-dialog {
+	    max-width: 580px;
+	}
+}
+.modal-fullscreen-xxl-down {
+    width: 100vw;
+    max-width: none !important;
+    height: 100%;
+    margin: 0;
+}
+.modal-lg, .modal-xl {
+    max-width: 800px;
+}
+.modal-sm {
+    max-width: 300px;
+}
+@media (min-width: 1200px){
+    .modal-xl {
+        max-width: 1140px;
+    }
+}
+.btn-xs{
+    padding: 5px 10px;
+    font-size: .8em;
+}
+:root {
+    --transition-time: 400ms;
+    --transition-time-long: 1000ms;
+    --transition-time-short: 200ms;
+    --nav-size-slim: 4.5rem;
+    --nav-size: 16rem;
+    --footer-size: 4.5rem;
+    --input-height: 2.25rem;
+    --small-title-height: 2rem;
+    --font: "Nunito Sans", sans-serif;
+    --font-heading: "Montserrat", sans-serif;
+}
+
+label{
+	font-weight: bold;
+}
+
+.card .card-body label{
+	font-size: 11px;
+}
+.modal-body label{
+	font-size: 11px;
+}
+.card .card-body .form-control, .form-select, .custom-select{
+	font-size: .68rem;
+}
+.form-select{
+    padding: 0.65rem 2.25rem 0.375rem 0.75rem;
+}
+.table .number{
+	font-size: .68rem;
+	min-height: 1rem;
+}
+
+.table ._number {
+    min-height: 1rem;
+    padding: 3px !important;
+    border-radius: 2px !important;
+}
+
+main{
+	padding-left: calc(var(--nav-size) + var(--main-spacing-horizontal));
+}
+
+.form-group {
+    margin-bottom: 10px;
+}
+
+.compose-body {
+    margin-right: 1rem;
+    margin-left: 1rem;
+}
+
+.search-input-container {
+    border: 1px solid #ddd;
+}
+
+.modal-phuyu-titulo{
+	padding-left: 2rem;
+    padding-top: 1.2rem;
+    padding-bottom: 1.2rem;
+}
+
+.phuyu_anulado{
+	text-decoration: line-through;
+	color:red !important;
+}
+
+.form-control:disabled, .form-control[readonly] {
+    color: #2e2e2e;
+    -webkit-text-fill-color: #2e2e2e !important;
+}
+.select2-container--default .select2-selection--single {
+    color: #4e4e4e;
+box-shadow: initial !important;
+background-color: #ffffff;
+border: 1px solid var(--separator) !important;
+border-radius: 10px; !important;
+min-height: 2.25rem; !important;
+font-size: 1em;
+}
+
+.select2-container--open .select2-dropdown--below{
+    border: 1px solid rgba(30, 168, 231, 1) !important;
+    padding: 0.75rem;
+    border-radius: 10px !important;
+    background: #ffffff;
+    margin-top: 3px;
+}
+.select2-results__option--highlighted, .select2-container--bootstrap4 .select2-results__option--highlighted.select2-results__option[aria-selected=true] {
+    cursor: pointer;
+    color: #1ea8e7;
+    background: #f1f1f1 !important;
+    border-radius: 6px;
+}
+.phuyu-mesas {
+    padding-right: 3px;
+    padding-left: 3px;
+    cursor: pointer;
+}
+.phuyu-libre {
+    background: #f2f2f2;
+    color: #36404e;
+    padding: 2px;
+    text-align: center;
+    margin-bottom: 5px;
+}
+.phuyu-libre:hover {
+    background: #ccc;
+}
+.phuyu-ocupada {
+    background: #d9534f;
+    color: #fff;
+    padding: 2px;
+    text-align: center;
+    margin-bottom: 5px;
+}
+.phuyu-ocupada h3, .phuyu-ocupada h6{
+    color: #fff;
+    font-weight: 700
+}
+
+.mesa-activa {
+    background: #595ad4;
+}
+.mesa-activa h3, .mesa-activa h6{
+    color: #fff;
+    font-weight: 700
+}
