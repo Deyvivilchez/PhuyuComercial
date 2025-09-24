@@ -94,7 +94,7 @@ class Configuraciones extends CI_Controller {
 		}
 	}
 
-	// application/controllers/administracion/Configuraciones.php
+	// application/controllers/administracion/Configuraciones.php ///
 
 public function guardar22()
 {
