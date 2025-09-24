@@ -20,7 +20,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 | development and MUST NOT be used in production!
 |
 | If you need to allow multiple domains, remember that this file is still
-| a PHP script and you can easily do that on your own.
+| a PHP script and you can easily do that on your own.x
 |
 */
 $config['base_url'] = "http://".$_SERVER['HTTP_HOST']."/sistemas/phuyu_comercial";
@@ -37,6 +37,7 @@ $config['base_url'] = "http://".$_SERVER['HTTP_HOST']."/sistemas/phuyu_comercial
 |
 */
 $config['index_page'] = 'index.php';
+
 
 /*
 |--------------------------------------------------------------------------
