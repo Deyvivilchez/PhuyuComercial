@@ -35,7 +35,7 @@ $db['default'] = array(
 	'port' => '5432',
 	'username' => 'phuyu',
 	'password' => 'sistemas*2025',
-	'database' => 'laezquina',
+	'database' => 'tushkuna',
 	'dbdriver' => 'postgre',
 	'dbprefix' => '',
 	'pconnect' => FALSE,
@@ -51,3 +51,4 @@ $db['default'] = array(
 	'failover' => array(),
 	'save_queries' => TRUE
 );
+

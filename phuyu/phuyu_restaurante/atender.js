@@ -170,6 +170,21 @@ var phuyu_operacion = new Vue({
 				}else{
 					if (data.body.estado==1) {
 						phuyu_sistema.phuyu_noti("PEDIDO REGISTRADO CORRECTAMENTE","PEDIDO REGISTRADO EN EL SISTEMA","success");
+						this.$http.get(url+"restaurante/caja/comanda/"+data.body.codpedido).then(function(data){
+							$("#imprimir_pedido").empty().html(data.body); var id = "imprimir_pedido";
+							var data = document.getElementById(id).innerHTML;
+					        var myWindow = window.open('', 'IMPRIMIENDO', 'height=500,width=1000');
+					        myWindow.document.write('<html><head><title>TICKET</title>');
+					        // myWindow.document.write('<link rel="stylesheet" href="main.css" type="text/css" />');
+					        myWindow.document.write('</head><body >');
+					        myWindow.document.write(data);
+					        myWindow.document.write('</body></html>');
+					        myWindow.document.close();
+
+					        myWindow.onload=function(){
+					            myWindow.focus(); myWindow.print(); myWindow.close();
+					        };
+						});
 					}else{
 						phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR PEDIDO","ERROR DE RED","error");
 					}
@@ -281,6 +296,29 @@ var phuyu_operacion = new Vue({
 				// $("#phuyu_pdf").attr("src",url+"restaurante/caja/avance_pedido/"+this.campos.codpedido);
 			}
 		},
+		phuyu_comanda: function(){
+			if (this.campos.pedidonuevo==1) {
+				phuyu_sistema.phuyu_noti("DEBE SELECCIONAR UNA MESA CON PEDIDO","PARA IMPRIMIR LA COMANDA","error");
+				return false;
+			}else{
+				this.$http.get(url+"restaurante/caja/comanda/"+this.campos.codpedido).then(function(data){
+					$("#imprimir_pedido").empty().html(data.body); var id = "imprimir_pedido";
+					var data = document.getElementById(id).innerHTML;
+			        var myWindow = window.open('', 'IMPRIMIENDO', 'height=500,width=1000');
+			        myWindow.document.write('<html><head><title>TICKET</title>');
+			        // myWindow.document.write('<link rel="stylesheet" href="main.css" type="text/css" />');
+			        myWindow.document.write('</head><body >');
+			        myWindow.document.write(data);
+			        myWindow.document.write('</body></html>');
+			        myWindow.document.close();
+
+			        myWindow.onload=function(){
+			            myWindow.focus(); myWindow.print(); myWindow.close();
+			        };
+				});
+				// $("#phuyu_pdf").attr("src",url+"restaurante/caja/avance_pedido/"+this.campos.codpedido);
+			}
+		},
 
 		phuyu_cobrar_pedido: function(){
 			if (this.campos.pedidonuevo==1) {
@@ -310,14 +348,10 @@ var phuyu_operacion = new Vue({
 			});
 		},
 
-		phuyu_infocliente: function(){
-			this.campos.cliente = $("#codpersona option:selected").text();
+		phuyu_infocliente: function(codpersona,cliente){
+			this.campos.codpersona = codpersona;
+			this.campos.cliente = cliente;
 			this.$http.get(url+"ventas/clientes/infocliente/"+this.campos.codpersona).then(function(data){
-				/* if (this.campos.codpersona==2) {
-					$("#cliente").removeAttr("readonly"); $("#direccion").removeAttr("readonly");
-				}else{
-					$("#cliente").attr("readonly","true"); $("#direccion").attr("readonly","true");
-				} */
 				this.codtipodocumento = data.body[0].coddocumentotipo; this.campos.direccion = data.body[0].direccion;
 			});
         },
