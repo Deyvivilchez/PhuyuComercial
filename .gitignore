@@ -1,2 +1,4 @@
 # IGNORAMOS LOS CAMBIOS A LA CARPETA DE FACTURACION ELECTRONICA SUNAT #
 # /sunat
+/aplliction/config/config.php
+/aplliction/config/database.php

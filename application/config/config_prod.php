@@ -23,11 +23,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 | a PHP script and you can easily do that on your own.x
 |
 */
-$config['base_url'] = "https://".$_SERVER['HTTP_HOST']."";
-//$config['base_url'] = 'https://laezquina.phuyusystem.com';
-//$config['base_url'] = "http://".$_SERVER['HTTP_HOST']."/sistemas/phuyu_comercial";
-/*
+$config['base_url'] = "http://".$_SERVER['HTTP_HOST']."/sistemas/phuyu_comercial";
+//$config['base_url'] = '/phuyuperu_demo/';
 
+/*
 |--------------------------------------------------------------------------
 | Index File
 |--------------------------------------------------------------------------
