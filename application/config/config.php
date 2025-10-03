@@ -24,8 +24,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 |
 */
 //$config['base_url'] = "http://".$_SERVER['HTTP_HOST']."";
-$config['base_url'] = 'https://laezquina.phuyusystem.com/';
-//$config['base_url'] = "http://".$_SERVER['HTTP_HOST']."/sistemas/phuyu_comercial";
+//$config['base_url'] = 'https://laezquina.phuyusystem.com/';
+$config['base_url'] = "http://".$_SERVER['HTTP_HOST']."/sistemas/phuyu_comercial";
 /*
 |--------------------------------------------------------------------------
 | Index File
