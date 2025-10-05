@@ -1,5 +1,6 @@
 <?php
 
+
 class Facturacion_model extends CI_Model {
 
     public function __construct(){
@@ -918,9 +919,16 @@ class Facturacion_model extends CI_Model {
     }
 
     function phuyu_rb_crearXML($periodo,$nrocorrelativo,$codresumentipo){
-        $empresa = $this->db->query("select p.documento,p.razonsocial,p.direccion,u.* from public.personas as p inner join public.ubigeo as u on(p.codubigeo=u.codubigeo) where p.codpersona=".$_SESSION["phuyu_codempresa"])->result_array();
+
+      //  echo "estamos donde se genera el xml resumenBoletas";
+        $empresa = $this->db->query("select p.documento,p.razonsocial,p.direccion,u.* 
+        from public.personas as p 
+        inner join public.ubigeo as u on(p.codubigeo=u.codubigeo)
+        where p.codpersona=".$_SESSION["phuyu_codempresa"])->result_array();
 
         $resumen = $this->db->query("select *from sunat.resumenes where codresumentipo=".$codresumentipo." and periodo='".$periodo."' and nrocorrelativo=".$nrocorrelativo)->result_array();
+
+     //   print_r( $resumen);
         if ($codresumentipo==3) {
             $detalle = $this->db->query("select dt.oficial as coddocumento, p.documento, k.seriecomprobante,k.nrocomprobante, k.igv,k.icbper,k.importe,k.codkardex from sunat.kardexsunatdetalle as ksd inner join kardex.kardex as k on(ksd.codkardex=k.codkardex) inner join public.personas as p on(k.codpersona=p.codpersona) inner join public.documentotipos as dt on(p.coddocumentotipo=dt.coddocumentotipo) where ksd.codresumentipo=".$codresumentipo." and ksd.periodo='".$periodo."' and ksd.nrocorrelativo=".$nrocorrelativo." and ksd.codempresa=".$_SESSION["phuyu_codempresa"]." order by k.seriecomprobante,k.nrocomprobante")->result_array();
             $estado = 1;
@@ -932,9 +940,7 @@ class Facturacion_model extends CI_Model {
         // 0: CREAMOS UNA CARPETA PARA ALMACENAR EL XML DEL COMPROBANTE TEMPORALMENTE //
         
         $carpeta_phuyu  = "./sunat/webphuyu/".$resumen[0]["nombre_xml"];
-        if (!file_exists($carpeta_phuyu)) {
-            mkdir($carpeta_phuyu,0777); chmod($carpeta_phuyu, 0777);
-        }
+        if (!file_exists($carpeta_phuyu)) {   mkdir($carpeta_phuyu,0777); chmod($carpeta_phuyu, 0777);  }
 
         // 1.- CREAR EL DOCUMENTO XML //
 

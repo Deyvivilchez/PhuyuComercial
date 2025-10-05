@@ -21,7 +21,6 @@ class Phuyu extends CI_Controller
 			$this->request = json_decode(file_get_contents('php://input'));
 			$info["almacenes"] = $this->db->query("select *from almacen.almacenes where estado=1 and codsucursal=".$this->request->codsucursal)->result_array();
 			$info["cajas"] = $this->db->query("select *from caja.cajas where estado=1 and codsucursal=".$this->request->codsucursal)->result_array();
-
 			echo json_encode($info);
 		}
 	}

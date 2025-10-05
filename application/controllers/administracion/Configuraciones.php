@@ -77,7 +77,7 @@ class Configuraciones extends CI_Controller {
 				$file = "auspiciador_".substr($_FILES["auspiciador"]["name"],-5);
 				move_uploaded_file($_FILES["auspiciador"]["tmp_name"],"./public/img/empresa/".$file);
 				
-				$data = array("foto" => $file);
+				$data = array("logoauspiciador" => $file);
 				$this->db->where("codempresa",$_POST["codempresa"]);
 				$estado = $this->db->update("public.empresas",$data);
 			}
