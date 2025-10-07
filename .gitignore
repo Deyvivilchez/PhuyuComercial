@@ -2,3 +2,10 @@
 # /sunat
 /application/config/config.php
 /application/config/database.php
+
+/sunat/certificados
+/sunat/comprobaantes
+/sunat/log
+/sunat/resumenes
+/sunat/webphuyu
+/sunat/xml

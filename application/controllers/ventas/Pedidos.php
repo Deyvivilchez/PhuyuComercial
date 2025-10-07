@@ -594,7 +594,8 @@ class Pedidos extends CI_Controller {
 
 				$this->db->trans_begin();
 
-				$campos = ["codsucursal","codalmacen","codusuario","codpersona","fechapedido","valorventa","porcdescuento","descglobal","descuentos","porcigv","igv","importe","cliente","direccion","codcomprobantetipo","codempleado","tipopedido","codcontroldiario"];
+				$campos = ["codsucursal","codalmacen","codusuario","codpersona","fechapedido","valorventa","porcdescuento","descglobal","descuentos","porcigv",
+				"igv","importe","cliente","direccion","codcomprobantetipo","codempleado","tipopedido","codcontroldiario"];
 				$valores = [
 					(int)$_SESSION["phuyu_codsucursal"],
 					(int)$_SESSION["phuyu_codalmacen"],
@@ -880,7 +881,7 @@ class Pedidos extends CI_Controller {
 			$estado = $this->phuyu_model->phuyu_editar("restaurante.mesaspedido", $campos, $valores, "codpedido", $this->request->codregistro);
 
 			$campos = ["situacion"]; $valores = [1];
-			$estado = $this->phuyu_model->phuyu_editar("restaurante.mesas", $campos, $valores, "codmesa", $this->request->codmesa);
+			$estado = $this->phuyu_model->phuyu_editar("restaurante.mesas", $campos, $valores, "codmesa", $this->request->codmefbsa);
 
 			echo $estado;
 		}else{
