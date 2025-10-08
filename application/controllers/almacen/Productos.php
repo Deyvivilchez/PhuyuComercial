@@ -785,7 +785,7 @@ class Productos extends CI_Controller
 		$this->db->order_by('p.codproducto', 'desc');
 
 		// 👉 Aquí se aplica el límite
-		$limit = 50; // cantidad de registros por página
+		$limit = 80; // cantidad de registros por página
 		$page  = 1;
 		$this->db->limit($limit, $offset);
 

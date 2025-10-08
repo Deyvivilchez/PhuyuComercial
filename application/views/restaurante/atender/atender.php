@@ -144,6 +144,92 @@
         background: #cbd5e1;
         border-radius: 999px;
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /* ------------------ CSS recomendado ------------------ */
+    /* scroll suave */
+    .table-wrapper,
+    .table-wrapper-atendidos {
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* tarjetas limpias */
+    .card {
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        box-shadow: none;
+    }
+
+    /* tablas compactas */
+    .table-sm th,
+    .table-sm td {
+        padding: .35rem;
+        vertical-align: middle;
+    }
+
+    /* header y footer suaves */
+    .modal-header {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .modal-footer {
+        border-top: 1px solid rgba(0, 0, 0, 0.03);
+        background: linear-gradient(90deg, #f8f9fa, #ffffff);
+    }
+
+    /* adaptaciones por tamaño */
+    @media (max-width: 576px) {
+        .table-wrapper {
+            max-height: 34vh !important;
+        }
+
+        .table-wrapper-atendidos {
+            max-height: 42vh !important;
+        }
+
+        .modal-content {
+            border-radius: 6px 6px 0 0;
+        }
+
+        .modal-body {
+            padding: 8px !important;
+        }
+
+        .modal-footer .btn {
+            font-size: 13px;
+            padding: .4rem .6rem;
+        }
+    }
+
+    /* desktop: permitir wrapping para evitar overflow horizontal innecesario */
+    @media (min-width: 992px) {
+
+        .table td,
+        .table th {
+            white-space: normal;
+        }
+
+        .modal-dialog {
+            max-width: 900px;
+        }
+    }
+
+    /* compensación si tu theme añade padding al body */
+    .modal-open .modal {
+        padding-right: 0 !important;
+    }
 </style>
 
 <div class="card container p-1">
@@ -164,7 +250,7 @@
 
             <div class="input-group mb-2">
                 <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                <input v-model="buscar" type="search" class="form-control"
+                <input v-model="buscar" type="search" class="form-control" v-on:keyup="phuyu_producto()"
                     placeholder="Buscar producto, plato o bebida…" />
             </div>
             <div class="d-flex gap-2 align-items-center mb-2">
@@ -185,6 +271,7 @@
                     <?php foreach ($lineas as $key => $value) { ?>
                         <button class="chip btn btn-sm text-dark"
                             :class="{ 'active': lineaActiva === <?php echo $value['codlinea']; ?> }"
+                            cod-linea="<?php echo $value['codlinea']; ?>"
                             v-on:click="phuyu_producto(<?php echo $value['codlinea']; ?>)">
                             <span class="me-1">🍮</span> <?php echo $value['descripcion']; ?>
                         </button>
@@ -230,9 +317,22 @@
                 </div>
             </div>
             <div class="row g-2">
-                <div v-if="productos.length === 0" class="text-center">
+                <div v-if="cargando && productos.length === 0" class="text-center">
                     <div class="spinner-border"></div>
                     <p>Cargando productos...</p>
+                </div>
+                <!-- Mensaje cuando no hay resultados después de buscar -->
+                <div v-else-if="productos.length === 0 && !cargando" class="text-center">
+                    <div class="text-muted py-4">
+                        <i class="bi bi-search display-4"></i>
+                        <h5>No se encontraron productos</h5>
+                        <p class="mb-2">No hay resultados para tu búsqueda</p>
+                        <button v-if="buscar || lineaActiva > 0"
+                            @click="buscar = ''; phuyu_producto(0);"
+                            class="btn btn-sm btn-outline-primary">
+                            Ver todos los productos
+                        </button>
+                    </div>
                 </div>
                 <div class="contenedor-scroll" style="height: 500px; overflow-y: auto;">
                     <div class="row">
@@ -324,7 +424,7 @@
                                     </li>
                                     <!-- <li class="dropdown-header">Caja</li>
                                         <li><a class="dropdown-item" href="#" @click.prevent="balanceCaja">📦 Balance caja</a></li>
-                                        <li><a class="dropdown-item fw-semibold" href="#" @click.prevent="precuenta"><i class="bi bi-receipt me-1"></i> Pre-cuenta</a></li> -->
+                                        <li><a class="dropdown-item fw-semibold" href="#" @click.prevent="phuyu_avance_pedido()"><i class="bi bi-receipt me-1"></i> Pre-cuenta</a></li> -->
                                 </ul>
                             </div>
                         </div>
@@ -370,6 +470,11 @@
                                         <i class="fa fa-flag-o"></i>
                                         {{ producto . atendido == 1 ? 'ATENDIDO' : 'PENDIENTE' }}
                                     </small>
+                                </button>
+                                <button type="button" class="btn btn-warning btn-block btn-xs"
+                                    style="margin-bottom:-1px;"
+                                    v-on:click="phuyu_itemdetalle(index,producto)">
+                                    TOMAR NOTA
                                 </button>
 
                                 <!-- Stock info -->
@@ -424,7 +529,7 @@
                                     <i class="bi bi-check-lg me-1"></i>
                                     Guardar
                                 </button>
-                                <button class="btn btn-primary btn-sm flex-fill" @click="precuenta"
+                                <button class="btn btn-primary btn-sm flex-fill" @click="phuyu_avance_pedido()"
                                     :disabled="!items.length">
                                     <i class="bi bi-printer me-1"></i>
                                     Imprimir
@@ -438,102 +543,131 @@
 
 
 
-
-        <div id="modal_atender" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
+        <!-- ------------------ Modal responsivo con + / - restaurados ------------------ -->
+        <div id="modal_atender"
+            class="modal fade"
+            tabindex="-1"
+            role="dialog"
+            aria-hidden="true"
+            data-bs-backdrop="static"
+            data-bs-keyboard="false">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-fullscreen-sm-down">
                 <div class="modal-content">
-                    <div class="modal-header" style="padding:10px 15px 5px">
-                        <h4 class="modal-title">
-                            <b style="letter-spacing:3px;">PEDIDO N°: 0000{{ DatosMesaSelect.codpedido }} | MESA {{ DatosMesaSelect.nromesa }}</b>
-                        </h4>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"
-                            style="font-size:30px;margin-bottom:0px;">
-                        </button>
+                    <!-- Header compacto -->
+                    <div class="modal-header py-2 px-3">
+                        <h5 class="modal-title mb-0" style="letter-spacing:3px; font-weight:700; font-size:14px;">
+                            PEDIDO N°: 0000{{ DatosMesaSelect.codpedido }} | MESA {{ DatosMesaSelect.nromesa }}
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                     </div>
-                    <div class="modal-body">
-                        <div class="x_panel scroll-phuyu"
-                            style="height:220px;overflow:auto;overflow-x:hidden;padding:0px;">
-                            <table class="table table-bordered" style="font-size: 11px">
-                                <thead>
-                                    <tr>
-                                        <th>DESCRIPCION</th>
-                                        <th width="10px">UNIDAD</th>
-                                        <th width="10px">CANTIDAD</th>
-                                        <th width="10px">ATENDIDO</th>
-                                        <th width="10px">ATENDER</th>
-                                        <th width="10px" colspan="2">AGREGAR</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="(dato,index) in atender">
-                                        <td>{{ dato . producto }} - {{ dato . descripcion }}</td>
-                                        <td>{{ dato . unidad }}</td>
-                                        <td>{{ dato . cantidad }}</td>
-                                        <td>{{ dato . atendido }}</td>
-                                        <td>
-                                            <input type="number" step="0.1" class="form-control number line-success"
-                                                v-model.number="dato.atender" min="0" max="dato.cantidad"
-                                                readonly>
-                                        </td>
-                                        <td v-if="dato.cantidad!=dato.atendido">
-                                            <button class="btn btn-info btn-xs btn-block" style="margin-bottom:-1px;"
-                                                v-on:click="phuyu_mas_menos(dato,1)">
-                                                +
-                                            </button>
-                                        </td>
-                                        <td v-if="dato.cantidad!=dato.atendido">
-                                            <button class="btn btn-warning btn-xs btn-block" style="margin-bottom:-1px;"
-                                                v-on:click="phuyu_mas_menos(dato,2)">
-                                                -
-                                            </button>
-                                        </td>
-                                        <td v-if="dato.cantidad==dato.atendido" colspan="2">
-                                            <button type="button" class="btn btn-danger btn-xs btn-block" style="margin-bottom:-1px;">ATENDIDO</button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                                <tfoot>
-                                    <tr v-for="dato in totales">
-                                        <td colspan="2" align="right"><b>TOTALES</b></td>
-                                        <td><b>{{ dato . cantidad }}</b></td>
-                                        <td><b>{{ dato . atendido }}</b></td>
-                                        <td colspan="3">
-                                            <button type="button" class="btn btn-success btn-block btn-sm"
-                                                style="margin-bottom:-1px;" v-on:click="phuyu_atender()"
-                                                v-bind:disabled="estado==1">GUARDAR ATENCION</button>
-                                        </td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
-                        <h5 class="text-center"> <b>DETALLE DE LAS ATENCIONES DEL PEDIDO</b> </h5>
 
-                        <div class="x_panel scroll-phuyu"
-                            style="height:200px;overflow:auto;overflow-x:hidden;padding:0px;">
-                            <table class="table table-bordered">
-                                <thead>
-                                    <tr>
-                                        <th>DESCRIPCION</th>
-                                        <th width="10px">UNIDAD</th>
-                                        <th width="10px">CANTIDAD</th>
-                                        <th width="140px">FECHA Y HORA</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="dato in atendidos">
-                                        <td><b>{{ dato . producto }} - {{ dato . descripcion }}</b></td>
-                                        <td>{{ dato . unidad }}</td>
-                                        <td>{{ dato . cantidad }}</td>
-                                        <td><b style="color:#d43f3a">{{ dato . fecha }} {{ dato . hora }}</b></td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                    <!-- Body -->
+                    <div class="modal-body p-2">
+                        <!-- PANEL 1: lista de items -->
+                        <div class="card mb-2" style="border-radius:8px;">
+                            <div class="card-body p-0">
+                                <div class="table-wrapper" style="max-height: 340px; overflow:auto; -webkit-overflow-scrolling: touch;">
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered table-sm mb-0" style="font-size:12px;">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>DESCRIPCION</th>
+                                                    <th style="width:55px">UNIDAD</th>
+                                                    <th style="width:60px">CANT.</th>
+                                                    <th style="width:60px">ATEND.</th>
+                                                    <th style="width:90px">ATENDER</th>
+                                                    <th style="width:60px" colspan="2">AGREGAR</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr v-for="(dato, index) in atender" :key="dato.id || index">
+                                                    <td class="align-middle">{{ dato.producto }} - {{ dato.descripcion }}</td>
+                                                    <td class="align-middle">{{ dato.unidad }}</td>
+                                                    <td class="align-middle">{{ dato.cantidad }}</td>
+                                                    <td class="align-middle">{{ dato.atendido }}</td>
+
+                                                    <!-- input para 'atender' -->
+                                                    <td class="align-middle" style="min-width:96px;">
+                                                        <input type="number" step="0.1" class="form-control form-control-sm"
+                                                            v-model.number="dato.atender" min="0" :max="dato.cantidad" />
+                                                    </td>
+
+                                                    <!-- Botones + y - (restaurados) -->
+                                                    <td v-if="dato.cantidad != dato.atendido" class="p-1 align-middle" style="width:48px;">
+                                                        <button class="btn btn-info btn-sm w-100" @click="phuyu_mas_menos(dato,1)">+</button>
+                                                    </td>
+                                                    <td v-if="dato.cantidad != dato.atendido" class="p-1 align-middle" style="width:48px;">
+                                                        <button class="btn btn-warning btn-sm w-100" @click="phuyu_mas_menos(dato,2)">-</button>
+                                                    </td>
+
+                                                    <!-- Si ya está atendido -->
+                                                    <td v-if="dato.cantidad == dato.atendido" colspan="2" class="p-1 align-middle">
+                                                        <button class="btn btn-danger btn-sm w-100">ATENDIDO</button>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+
+                                            <tfoot>
+                                                <tr v-for="(dato, idx) in totales" :key="'tot-'+idx">
+                                                    <td colspan="2" class="text-end"><b>TOTALES</b></td>
+                                                    <td><b>{{ dato.cantidad }}</b></td>
+                                                    <td><b>{{ dato.atendido }}</b></td>
+                                                    <td colspan="3"></td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div> <!-- /.table-responsive -->
+                                </div> <!-- /.table-wrapper -->
+                            </div>
+                        </div>
+
+                        <!-- Título -->
+                        <div class="text-center mb-2" style="font-weight:700; font-size:13px; color:#333;">
+                            DETALLE DE LAS ATENCIONES DEL PEDIDO
+                        </div>
+
+                        <!-- PANEL 2: atenciones realizadas -->
+                        <div class="card" style="border-radius:8px;">
+                            <div class="card-body p-0">
+                                <div class="table-wrapper-atendidos" style="max-height: 300px; overflow:auto; -webkit-overflow-scrolling: touch;">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered mb-0" style="font-size:12px;">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>DESCRIPCION</th>
+                                                    <th style="width:70px">UNIDAD</th>
+                                                    <th style="width:60px">CANT.</th>
+                                                    <th style="width:140px">FECHA Y HORA</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr v-for="(dato, idx) in atendidos" :key="dato.idAtencion || idx">
+                                                    <td><b style="font-size:12px">{{ dato.producto }} - {{ dato.descripcion }}</b></td>
+                                                    <td>{{ dato.unidad }}</td>
+                                                    <td>{{ dato.cantidad }}</td>
+                                                    <td><b style="color:#d43f3a; font-size:12px;">{{ dato.fecha }} {{ dato.hora }}</b></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div> <!-- /.table-responsive -->
+                                </div>
+                            </div>
+                        </div>
+                    </div> <!-- /.modal-body -->
+
+                    <!-- Footer -->
+                    <div class="modal-footer py-2 px-3">
+                        <div class="w-100 d-flex gap-2">
+                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">CERRAR</button>
+                            <button type="button" class="btn btn-success btn-sm ms-auto" @click="phuyu_atender()" :disabled="estado==1">
+                                GUARDAR ATENCION
+                            </button>
                         </div>
                     </div>
                 </div>
-
             </div>
         </div>
+
 
         <div id="modal_pago" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
             <div class="modal-dialog">
@@ -547,8 +681,7 @@
                             <div class="row form-group">
                                 <div class="col-md-12 col-xs-12">
                                     <label>CLIENTE DE LA VENTA</label>
-                                    <select class="form-control" name="codpersona" v-model="campos.codpersona"
-                                        id="codpersona" required>
+                                    <select class="form-control" name="codpersona" v-model="campos.codpersona" id="codpersona" required>
                                         <option value="2">CLIENTES VARIOS</option>
                                     </select>
                                 </div>
@@ -708,9 +841,16 @@
 
                             <div class="row form-group" align="center"> <br>
                                 <div class="col-md-12">
-                                    <button type="submit" class="btn btn-success btn-lg"
+                                    <!-- <button type="submit" class="btn btn-success btn-lg"
                                         v-bind:disabled="estado==1">
                                         <b>GUARDAR VENTA</b>
+                                    </button> -->
+                                    <button type="button"
+                                        class="btn btn-success btn-lg"
+                                        :disabled="estado == 1"
+                                        @click.prevent="phuyu_pagar">
+                                        <b v-if="estado != 1">GUARDAR VENTA</b>
+                                        <b v-else>GUARDANDO...</b>
                                     </button>
                                     <button type="button" class="btn btn-danger btn-lg" data-dismiss="modal">
                                         <b>CANCELAR</b> </button>
@@ -721,6 +861,56 @@
                 </div>
             </div>
         </div>
+
+
+        <div id="modal_itemdetalle" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content" align="center">
+                    <div class="modal-header modal-phuyu-titulo">
+                        <h4 class="modal-title"> <b style="letter-spacing:1px;">DETALLE DEL ITEM DEL PEDIDO</b> </h4>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                            style="font-size:30px;margin-bottom:0px;">
+                        </button>
+                    </div>
+                    <div class="modal-body" style="height:380px;">
+                        <h4 align="center">
+                            {{ item . producto }} <br> <br> <span class="label label-warning">UNIDAD:
+                                {{ item . unidad }}</span>
+                        </h4>
+                        <hr>
+
+                        <h6>DESCRIPCION DEL ITEM DEL PEDIDO</h6>
+                        <textarea class="form-control" v-model="item.descripcion" rows="3" maxlength="250"></textarea>
+                        <div align="center"> <br>
+                            <button type="button" class="btn btn-success" v-on:click="phuyu_cerrar_itemdetalle()">
+                                GUARDAR Y CERRAR
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -872,10 +1062,14 @@
                 cargando: false,
                 lineaActiva: 0,
                 DatosMesaSelect: {},
-                estado: 0,
+                // estado: 0,
+                codtipodocumento: 0,
+                cargando: false,
             },
 
             computed: {
+
+
 
                 productosVisibles() {
                     if (!this.productos || this.productos.length === 0) return [];
@@ -908,6 +1102,67 @@
             },
 
             methods: {
+                phuyu_cerrar_itemdetalle: function() {
+                    // 1. Cerrar el modal de detalle
+                    $("#modal_itemdetalle").modal("hide");
+                    // this.phuyu_guardar_pedido();
+                    if(this.campos.pedidonuevo){
+
+                           phuyu_sistema.phuyu_noti("PEDIDO NUEVO", "TODAS LAS NOTAS SE ACTUALIZARAN CUANDO GUARDE EL PEDIDO", "info");
+                            setTimeout(() => {
+                                var offcanvas = new bootstrap.Offcanvas(document.getElementById('pedidoCanvas'));
+                                offcanvas.show();
+                            }, 300);
+                          return false;
+
+                    }
+
+                      this.$http.post(url + "ventas/pedidos/guardar_pedido", {
+                        "campos": this.campos,
+                        "detalle": this.items,
+                        "totales": this.totales
+                    }).then(function(data) {
+                        if (data.body == "e") {
+                            phuyu_sistema.phuyu_alerta("SESION DEL USUARIO TERMINADA", "DEBE INICIAR SESION NUEVAMENTE", "error");
+                        } else {
+                            if (data.body.estado == 1) {
+                                phuyu_sistema.phuyu_noti("NOTA REGISTRADO CORRECTAMENTE", "PEDIDO REGISTRADO EN EL SISTEMA", "success");
+                               
+                            } else {
+                                phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR PEDIDO", "ERROR DE RED", "error");
+                            }
+                        }
+                    }, function() {
+                        phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR PEDIDO", "ERROR DE RED", "error");
+                        phuyu_sistema.phuyu_fin();
+                        phuyu_sistema.phuyu_modulo();
+                    });
+                    
+                    // 2. Esperar a que se cierre y volver a abrir el offcanvas del pedido
+                    setTimeout(() => {
+                        var offcanvas = new bootstrap.Offcanvas(document.getElementById('pedidoCanvas'));
+                        offcanvas.show();
+                    }, 300);
+                },
+                phuyu_itemdetalle: function(index, producto) {
+                    this.item = producto;
+
+                    // 1. Cerrar el offcanvas
+                    var offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('pedidoCanvas'));
+                    offcanvas.hide();
+
+                    // 2. LIMPIAR MANUALMENTE las clases de backdrop
+                    setTimeout(() => {
+                        document.body.classList.remove('offcanvas-backdrop');
+                        document.body.style.overflow = '';
+                        document.body.style.paddingRight = '';
+
+                        // 3. Ahora abrir el modal
+                        var modal = new bootstrap.Modal(document.getElementById('modal_itemdetalle'));
+                        modal.show();
+                    }, 350);
+                },
+
                 phuyu_cobrar_pedido: function() {
                     if (this.campos.pedidonuevo == 1) {
                         phuyu_sistema.phuyu_noti("DEBE SELECCIONAR UNA MESA CON PEDIDO", "PARA COBRAR EL PEDIDO", "error");
@@ -928,6 +1183,11 @@
                 },
                 // Función separada para inicializar Select2
                 inicializarSelect2Cliente: function() {
+
+
+
+
+
                     setTimeout(() => {
                         var tipo = 1;
                         if ($('#codpersona').hasClass('select2-hidden-accessible')) {
@@ -949,16 +1209,24 @@
                                     };
                                 },
                                 processResults: function(data, page) {
+
+                                    console.log(data.data);
                                     // Transformar los datos al formato que Select2 espera
                                     const resultados = data.data.map(cliente => ({
                                         id: cliente.codpersona,
-                                        text: `${cliente.razonsocial} - ${cliente.documento}`
+                                        text: `${cliente.razonsocial} - ${cliente.documento}`,
+
+                                        //console.log()
+                                        //  codtipodocumento : cliente.coddocumentotipo,
+
                                     }));
+
 
                                     return {
                                         results: resultados
                                     };
                                 },
+
                             },
                             placeholder: 'Buscar cliente...',
                             minimumInputLength: 2,
@@ -969,7 +1237,17 @@
                         // Sincronizar con v-model
                         $('#codpersona').on('select2:select', (e) => {
                             this.campos.codpersona = e.params.data.id;
+                            this.campos.cliente = e.params.data.text;
+
+                            if (this.campos.codcomprobantetipo == 10) {
+                                this.$http.get(url + "ventas/clientes/infocliente/" + this.campos.codpersona).then((response) => {
+                                    // ✅ Esto se ejecuta CUANDO los datos lleguen
+                                    this.codtipodocumento = response.body[0].coddocumentotipo;
+                                    // console.log("Tipo documento actualizado:", this.codtipodocumento);
+                                });
+                            }
                         });
+
                     }, 300);
                 },
                 phuyu_series: function() {
@@ -980,6 +1258,7 @@
                             this.estado = 0;
                             // this.campos.seriecomprobante = $("#serie").val(); this.phuyu_correlativo();
                             this.campos.seriecomprobante = data.body.serie;
+                            console.log(this.campos.seriecomprobante);
                             this.phuyu_correlativo();
                         });
 
@@ -1233,16 +1512,21 @@
                 },
                 async phuyu_producto(codlinea) {
 
+
                     if (!codlinea) codlinea = 0; // si no se envía o viene null/undefined, usar 0
-                    this.lineaActiva = codlinea;
-                    //this.cargando = true;
+                    if (codlinea > 0) this.buscar = null;
+                    this.lineaActiva = null,
+
+
+                        this.lineaActiva = codlinea;
+                    this.cargando = true;
                     let getProd = await this.$http.post(url + "almacen/productos/" + this.buscando, {
                         "buscar": this.buscar,
                         "codlinea": codlinea
                     });
                     // console.log(getProd.data);
                     this.productos = getProd.data;
-                    //this.cargando = false;
+                    this.cargando = false;
                 },
 
 
@@ -1572,6 +1856,16 @@
 
 
                 phuyu_pagar: function() {
+
+                    if (this.estado == 1) {
+                        return; // ya en proceso
+                    }
+
+
+                    console.log(this.campos);
+                    console.log(this.codtipodocumento);
+                    //return false;
+
                     if ((this.campos.codcomprobantetipo == 10 || this.campos.codcomprobantetipo == 25) && this.codtipodocumento != 4) {
                         phuyu_sistema.phuyu_noti("PARA EMITIR UNA FACTURA", "DEBE SELECCIONAR UN CLIENTE CON RUC", "error");
                         return false;
@@ -1612,8 +1906,8 @@
 
                     this.$http.post(url + "ventas/pedidos/cobrar_pedido", {
                         "campos": this.campos,
-                       // "detalle": this.detalle,
-                         "detalle":  this.items,
+                        // "detalle": this.detalle,
+                        "detalle": this.items,
                         "cuotas": this.cuotas,
                         "pagos": this.pagos,
                         "totales": this.totales
@@ -1638,6 +1932,7 @@
                                 phuyu_sistema.phuyu_noti("VENTA REGISTRADA CORRECTAMENTE", "VENTA REGISTRADA EN EL SISTEMA", "success");
                             } else {
                                 phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR VENTA", "ERROR DE RED", "error");
+                                this.estado = 0;
                             }
                         }
                         phuyu_sistema.phuyu_fin();
@@ -1646,7 +1941,10 @@
                         phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR VENTA", "ERROR DE RED", "error");
                         phuyu_sistema.phuyu_fin();
                         phuyu_sistema.phuyu_modulo();
+                        this.estado = 0;
+
                     });
+                    this.estado == 0
                 },
                 inc(i) {
                     this.items[i].cantidad++
@@ -1658,58 +1956,9 @@
                     this.items.splice(i, 1)
                 },
 
-                // UI
-                toggleDark() {
-                    this.isDark = !this.isDark
-                    document.body.classList.toggle('bg-dark', this.isDark)
-                    document.body.classList.toggle('text-white', this.isDark)
-                },
-                openMenu() {
-                    /* placeholder opcional */
-                },
-                cobrar() {
-                    alert('Cobrar pedido (demo)')
-                },
-                precuenta() {
-                    alert('Imprimir pre-cuenta (demo)')
-                },
-
-                // Acciones de configuración
-                anfitrion() {
-                    alert('Abrir módulo Anfitrión (demo)')
-                },
-                ingresoCaja() {
-                    alert('Registrar ingreso de caja (demo)')
-                },
-                egresoCaja() {
-                    alert('Registrar egreso de caja (demo)')
-                },
-                ventaDiaria() {
-                    alert('Ver venta diaria (demo)')
-                },
                 guardar() {
                     this.phuyu_guardar_pedido();
-                    //    // alert('Guardar pedido (demo)')
-
-                    //     let temp = $("#sessioncaja").val();
-
-                    //     console.log(temp);
                 },
-                atender() {
-                    alert('Enviar a cocina / Atender (demo)')
-                },
-                imprimirPrecuenta() {
-                    alert('Imprimir pre-cuenta (demo)')
-                },
-                imprimirComanda() {
-                    alert('Imprimir comanda (demo)')
-                },
-                anular() {
-                    if (confirm('¿Seguro de anular el pedido?')) alert('Pedido anulado (demo)')
-                },
-                balanceCaja() {
-                    alert('Balance de caja (demo)')
-                }
             },
             created() {
 

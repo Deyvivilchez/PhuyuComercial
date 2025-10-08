@@ -45,11 +45,16 @@ class Atender extends CI_Controller
 				->order_by('descripcion', 'ASC')->get()->result_array();
 
 				// Comprobantes
-				$comprobantes = $this->db->select('DISTINCT(ct.codcomprobantetipo) as codigo, ct.*')
-				->from('caja.comprobantetipos ct')
-				->join('caja.comprobantes c', 'ct.codcomprobantetipo = c.codcomprobantetipo')
-				->where('c.codsucursal', $_SESSION['phuyu_codsucursal'])->where('c.codcomprobantetipo >=', 5)
-				->where('c.estado', 1)->get()->result_array();
+				// $comprobantes = $this->db->select('DISTINCT(ct.codcomprobantetipo) as codigo, ct.*')
+				// ->from('caja.comprobantetipos ct')
+				// ->join('caja.comprobantes c', 'ct.codcomprobantetipo = c.codcomprobantetipo')
+				// ->where('c.codsucursal', $_SESSION['phuyu_codsucursal'])->where('c.codcomprobantetipo >=', 5)
+				// ->where('c.estado', 1)->get()->result_array();
+
+				$comprobantes = $this->db->query("select distinct(ct.codcomprobantetipo) as codigo, ct.* from caja.comprobantetipos as ct 
+				inner join caja.comprobantes as c on(ct.codcomprobantetipo=c.codcomprobantetipo) 
+				where c.codsucursal=".$_SESSION["phuyu_codsucursal"]." and ct.venta = 1 and c.estado=1")->result_array();
+				
 				// Conceptos
 				$conceptos = $this->db
 					->select('*')
