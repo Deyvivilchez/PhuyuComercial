@@ -1,11 +1,21 @@
 # IGNORAMOS LOS CAMBIOS A LA CARPETA DE FACTURACION ELECTRONICA SUNAT #
 # /sunat
+# Archivos de configuración sensibles
 /application/config/config.php
 /application/config/database.php
 
-/sunat/certificados
-/sunat/comprobaantes
-/sunat/log
-/sunat/resumenes
-/sunat/webphuyu
-/sunat/xml
+
+
+# O si quieres ser más específico:
+/sunat/certificados/
+/sunat/comprobantes/
+/sunat/log/
+/sunat/resumenes/
+/sunat/webphuyu/
+/sunat/xml/
+
+# Otros archivos sensibles comunes
+.env
+*.key
+*.pem
+*.crt
