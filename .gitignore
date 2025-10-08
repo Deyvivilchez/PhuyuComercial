@@ -4,8 +4,6 @@
 /application/config/config.php
 /application/config/database.php
 
-
-
 # O si quieres ser más específico:
 /sunat/certificados/
 /sunat/comprobantes/
@@ -19,3 +17,11 @@
 *.key
 *.pem
 *.crt
+
+
+
+# CodeIgniter
+/application/logs/
+/application/cache/
+/application/config/database.php
+/application/config/config.php
