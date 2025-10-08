@@ -472,10 +472,10 @@
                                     </small>
                                 </button>
                                 <button type="button" class="btn btn-warning btn-block btn-xs"
-                                    style="margin-bottom:-1px;"
-                                    v-on:click="phuyu_itemdetalle(index,producto)">
-                                    TOMAR NOTA
-                                </button>
+        style="margin-bottom:-1px;"
+        v-on:click="phuyu_itemdetalle(index,producto)">
+    <i class="bi bi-sticky me-1"></i> TOMAR NOTA
+</button>
 
                                 <!-- Stock info -->
                                 <span v-if="producto.controlstock == 1" class="text-muted small">
