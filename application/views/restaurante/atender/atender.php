@@ -465,7 +465,7 @@
                             <div class="d-flex flex-wrap gap-2 align-items-center">
                                 <!-- Estado -->
                                 <button type="button" class="btn btn-xs py-0"
-                                    :class="producto.atendido == 1 ? 'btn-danger' : 'btn-success'">
+                                    :class="producto.atendido == 1 ? ' btn-success' : 'btn-danger'">
                                     <small>
                                         <i class="fa fa-flag-o"></i>
                                         {{ producto . atendido == 1 ? 'ATENDIDO' : 'PENDIENTE' }}
