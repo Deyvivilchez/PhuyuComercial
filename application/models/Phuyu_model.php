@@ -1,5 +1,6 @@
 <?php
 
+
 class Phuyu_model extends CI_Model {
 
 	public function __construct(){
@@ -7,6 +8,7 @@ class Phuyu_model extends CI_Model {
 	}
 
 	function phuyu_login($usuario,$clave){
+
 		$usuario = stripslashes($usuario);
     	$array = array("'", "=", "/", "\"", "<", ">", "|", "&", "*");
     	$usuario = str_replace($array, "", $usuario );
@@ -15,7 +17,10 @@ class Phuyu_model extends CI_Model {
     	$array = array("'", "=", "/", "\"", "<", ">", "|", "&", "*");
     	$clave = str_replace($array, "", $clave );
 
-		$existe = $this->db->query("select u.*,p.descripcion as perfil from seguridad.usuarios u inner join seguridad.perfiles p ON(u.codperfil=p.codperfil) where u.usuario='".$usuario."' and u.clave='".$clave."' and u.estado=1")->result_array();
+		$existe = $this->db->query("select u.*,p.descripcion as perfil
+		from seguridad.usuarios u 
+		inner join seguridad.perfiles p ON(u.codperfil=p.codperfil) 
+		where u.usuario='".$usuario."' and u.clave='".$clave."' and u.estado=1")->result_array();
 
 		if (count($existe)>0) {
 			$empleado = $this->db->query("select *from public.personas where codpersona=".$existe[0]["codempleado"])->result_array();

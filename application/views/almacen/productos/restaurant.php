@@ -96,7 +96,9 @@
 		methods: {
 			phuyu_productos: function(){
 				this.cargando = true;
-				this.$http.post(url+"almacen/productos/"+this.buscando,{"buscar":this.buscar,"codlinea":this.codlinea}).then(function(data){
+				this.$http.post(url+"almacen/productos/"+this.buscando,
+				{"buscar":this.buscar,"codlinea":this.codlinea})
+				.then(function(data){
 					this.productos = data.body; this.codlinea = 0; this.cargando = false;
 				},function(){
 					phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS", "ERROR DE RED","error"); 

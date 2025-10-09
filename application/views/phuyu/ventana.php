@@ -18,6 +18,11 @@
       <div class="modal-body">
         <div class="scroll-track-visible">
 
+          <!-- Botón Reset dentro del modal -->
+          <div class="row my-2 mb-4">
+            <button class="btn btn-success" id="resetThemeBtn">Resetear tema a valores por defecto</button>
+          </div>
+
           <!-- Color -->
           <div class="mb-5" id="color">
             <label class="mb-3 d-inline-block form-label">Color</label>
@@ -317,7 +322,13 @@
   #settings .option.active .card { outline: 3px solid rgba(0,0,0,.2); }
   [data-bs-theme="dark"] #settings .option.active .card { outline-color: rgba(255,255,255,.35); }
 
-  /* Botón Reset flotante */
+  /* Botón Reset dentro del modal */
+  #resetThemeBtn {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+
+  /* Botón Reset flotante (COMENTADO)
   #themeResetBtn{
     position: fixed; right: 20px; bottom: 20px; z-index: 1050;
     background: var(--accent-2); color: #fff; border: 0; border-radius: 999px;
@@ -325,6 +336,7 @@
     cursor: pointer; transition: transform .15s ease, filter .15s ease;
   }
   #themeResetBtn:hover{ transform: translateY(-1px); filter: brightness(.97); }
+  */
 </style>
 
 <!-- ===== Lógica del Theme Settings (DEFAULTS vertical + light-blue + nav light) ===== -->
@@ -382,21 +394,29 @@
     // Delegación de eventos en el modal
     document.addEventListener('click', (e) => {
       const a = e.target.closest('#settings .option');
-      if (!a) return;
-      e.preventDefault();
+      if (a) {
+        e.preventDefault();
+        const parent = a.dataset.parent;
+        const value  = a.dataset.value;
+        if (!(parent in ATTR_MAP)) return;
 
-      const parent = a.dataset.parent;
-      const value  = a.dataset.value;
-      if (!(parent in ATTR_MAP)) return;
+        const next = { ...getConfig(), [parent]: value };
+        applyTheme(next);
+      }
 
-      const next = { ...getConfig(), [parent]: value };
-      applyTheme(next);
+      // Botón Reset dentro del modal
+      if (e.target.id === 'resetThemeBtn' || e.target.closest('#resetThemeBtn')) {
+        e.preventDefault();
+        applyTheme({ ...DEFAULTS });
+      }
     });
 
-    // Botón Reset
-    ensureResetBtn();
+    // Botón Reset flotante (COMENTADO)
+    // ensureResetBtn();
   }
 
+  // Función para botón flotante (COMENTADA)
+  /*
   function ensureResetBtn() {
     if (document.getElementById('themeResetBtn')) return;
     const btn = document.createElement('button');
@@ -406,6 +426,7 @@
     btn.onclick = () => applyTheme({ ...DEFAULTS });
     document.body.appendChild(btn);
   }
+  */
 
   document.readyState === 'loading'
     ? document.addEventListener('DOMContentLoaded', init)

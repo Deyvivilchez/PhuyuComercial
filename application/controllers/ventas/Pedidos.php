@@ -594,7 +594,8 @@ class Pedidos extends CI_Controller {
 
 				$this->db->trans_begin();
 
-				$campos = ["codsucursal","codalmacen","codusuario","codpersona","fechapedido","valorventa","porcdescuento","descglobal","descuentos","porcigv","igv","importe","cliente","direccion","codcomprobantetipo","codempleado","tipopedido","codcontroldiario"];
+				$campos = ["codsucursal","codalmacen","codusuario","codpersona","fechapedido","valorventa","porcdescuento","descglobal","descuentos","porcigv",
+				"igv","importe","cliente","direccion","codcomprobantetipo","codempleado","tipopedido","codcontroldiario"];
 				$valores = [
 					(int)$_SESSION["phuyu_codsucursal"],
 					(int)$_SESSION["phuyu_codalmacen"],

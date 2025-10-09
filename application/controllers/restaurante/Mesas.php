@@ -23,7 +23,10 @@ class Mesas extends CI_Controller {
 			$this->request = json_decode(file_get_contents('php://input'));
 			$limit = 20; $offset = $this->request->pagina * $limit - $limit;
 
-			$lista = $this->db->query("select m.*, a.descripcion as ambiente from restaurante.mesas as m inner join restaurante.ambientes as a on(m.codambiente=a.codambiente) where UPPER(m.descripcion) like UPPER('%".$this->request->buscar."%') and m.estado=1 order by m.codmesa asc offset ".$offset." limit ".$limit)->result_array();
+			$lista = $this->db->query("select m.*, a.descripcion as ambiente 
+			from restaurante.mesas as m 
+			inner join restaurante.ambientes as a on(m.codambiente=a.codambiente) 
+			where UPPER(m.descripcion) like UPPER('%".$this->request->buscar."%') and m.estado=1 order by m.codmesa asc offset ".$offset." limit ".$limit)->result_array();
 
 			$total = $this->db->query("select count(*) as total from restaurante.mesas where UPPER(descripcion) like UPPER('%".$this->request->buscar."%') and estado=1")->result_array();
 

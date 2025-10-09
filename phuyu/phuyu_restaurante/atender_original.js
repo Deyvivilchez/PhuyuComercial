@@ -1,41 +1,15 @@
 var phuyu_operacion = new Vue({
 	el: "#phuyu_operacion",
 	data: {
-		estado:0, 
-    stockalmacen: $("#stockalmacen").val(), 
-    igvsunat:$("#igvsunat").val(), 
-    icbpersunat:$("#icbpersunat").val(), 
+		estado:0, stockalmacen: $("#stockalmacen").val(), igvsunat:$("#igvsunat").val(), icbpersunat:$("#icbpersunat").val(), 
 		rubro:0, series:[], cuotas: [], mesas:[], detalle: [], atender: [], atendidos: [],
 		campos:{
-			codambiente: $("#codambiente").val(), 
-      conleyendaamazonia:1,creditoprogramado:1, 
-      codlote:2, 
-      codmesa: "0", 
-      mesa:"...", 
-      codpedido:0, 
-      pedidonuevo:1, 
-      tipopedido:0, 
-			codcomprobante:$("#comprobante").val(), 
-      fechapedido: $("#fechapedido").val(),
-			codkardex:0, 
-      codpersona:2, 
-      codmovimientotipo:20, 
-      codcomprobantetipo:$("#comprobante").val(),
-      seriecomprobante:$("#serie").val(), nro:"",
-			fechacomprobante:$("#fechapedido").val(), 
-      fechakardex:$("#fechapedido").val(), 
-      codconcepto:13, 
-      descripcion:"REGISTRO POR VENTA", 
-      cliente:"CLIENTES VARIOS",
-      direccion:"-",
-			codempleado:0, 
-      codmoneda:1, 
-      tipocambio:0.00,
-      codcentrocosto:0, 
-      nroplaca:"", 
-      retirar:true, afectacaja:true,
-			condicionpago:1, 
-      nrodias:30, nrocuotas:1, codcreditoconcepto:3, tasainteres:0, interes:0, totalcredito:0, porcdescuento:0.00
+			codambiente: $("#codambiente").val(), conleyendaamazonia:1,creditoprogramado:1, codlote:2, codmesa: "0", mesa:"...", codpedido:0, pedidonuevo:1, tipopedido:0, 
+			codcomprobante:$("#comprobante").val(), fechapedido: $("#fechapedido").val(),
+			codkardex:0, codpersona:2, codmovimientotipo:20, codcomprobantetipo:$("#comprobante").val(),seriecomprobante:$("#serie").val(), nro:"",
+			fechacomprobante:$("#fechapedido").val(), fechakardex:$("#fechapedido").val(), codconcepto:13, descripcion:"REGISTRO POR VENTA", cliente:"CLIENTES VARIOS", direccion:"-",
+			codempleado:0, codmoneda:1, tipocambio:0.00, codcentrocosto:0, nroplaca:"", retirar:true, afectacaja:true,
+			condicionpago:1, nrodias:30, nrocuotas:1, codcreditoconcepto:3, tasainteres:0, interes:0, totalcredito:0, porcdescuento:0.00
 		},
 		pagos:{
 			codtipopago_efectivo:1, monto_efectivo:0, vuelto_efectivo:0, codtipopago_tarjeta:0, monto_tarjeta:0, nrovoucher:""
@@ -60,14 +34,11 @@ var phuyu_operacion = new Vue({
 		},
 		phuyu_pedido: function(mesa){
 			$("#"+this.campos.codmesa).removeClass("mesa-activa");
-			this.campos.codmesa = mesa.codmesa; 
-			this.campos.mesa = mesa.nromesa;
+			this.campos.codmesa = mesa.codmesa; this.campos.mesa = mesa.nromesa;
 			$("#"+this.campos.codmesa).addClass("mesa-activa");
 
 			this.$http.post(url+"ventas/pedidos/phuyu_pedido",{"codmesa":this.campos.codmesa}).then(function(data){
-
-				this.campos.codpedido = data.body.codpedido; 
-				this.campos.pedidonuevo = data.body.pedidonuevo;
+				this.campos.codpedido = data.body.codpedido; this.campos.pedidonuevo = data.body.pedidonuevo;
 				// data.body.pedidonuevo=1 		SIN DETALLE - PEDIDO NUEVO //
 				if (data.body.pedidonuevo==0) {
 					this.totales.valorventa = Number((parseFloat(data.body.pedido[0].valorventa) ).toFixed(2));
@@ -194,8 +165,9 @@ var phuyu_operacion = new Vue({
 
 			this.estado = 1; phuyu_sistema.phuyu_inicio_guardar("GUARDANDO PEDIDO . . .");
 			this.$http.post(url+"ventas/pedidos/guardar_pedido", {"campos":this.campos,"detalle":this.detalle,"totales":this.totales}).then(function(data){
-				if (data.body=="e") {	phuyu_sistema.phuyu_alerta("SESION DEL USUARIO TERMINADA","DEBE INICIAR SESION NUEVAMENTE","error");}else{
-					
+				if (data.body=="e") {
+					phuyu_sistema.phuyu_alerta("SESION DEL USUARIO TERMINADA","DEBE INICIAR SESION NUEVAMENTE","error");
+				}else{
 					if (data.body.estado==1) {
 						phuyu_sistema.phuyu_noti("PEDIDO REGISTRADO CORRECTAMENTE","PEDIDO REGISTRADO EN EL SISTEMA","success");
 						this.$http.get(url+"restaurante/caja/comanda/"+data.body.codpedido).then(function(data){

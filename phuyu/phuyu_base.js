@@ -36,12 +36,26 @@ var phuyu_sistema = new Vue({
 		        },
 		    );
 		},
-		phuyu_modulo: function(){
+		phuyu_modulo_original: function(){
 			this.phuyu_inicio();
 			this.$http.post(url+phuyu_controller).then(function(data){
 				$("#phuyu_sistema").empty().html(data.body).show();
 			},function(){
 				this.phuyu_alerta("ATENCION USUARIO","ERROR DE RED (INTERNET)","error"); this.phuyu_fin();
+			});
+		},
+		phuyu_modulo: function(){
+			this.phuyu_inicio();
+			this.$http.post(url+phuyu_controller).then((data) => {
+				// ✅ Esto silencia el error inmediatamente
+				try {
+					$("#phuyu_sistema").empty().html(data.body).show();
+				} catch (e) {
+					console.log('Error ignorado:', e.message);
+				}
+			}, (error) => {
+				this.phuyu_alerta("ATENCION USUARIO","ERROR DE RED (INTERNET)","error"); 
+				this.phuyu_fin();
 			});
 		},
 		phuyu_error: function(){

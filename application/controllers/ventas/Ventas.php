@@ -21,7 +21,9 @@ class Ventas extends CI_Controller {
 
 				/* FIN CODIGO TEMPORAL DE LA IMPRESION */
 
-				$comprobante_almacen = $this->db->query("select count(*) as cantidad from caja.comprobantes where (codcomprobantetipo=3 or codcomprobantetipo=4) and codalmacen=".$_SESSION["phuyu_codalmacen"]." and estado=1")->result_array();
+				$comprobante_almacen = $this->db->query("select count(*) as cantidad from caja.comprobantes 
+				where (codcomprobantetipo=3 or codcomprobantetipo=4) and 
+				codalmacen=".$_SESSION["phuyu_codalmacen"]." and estado=1")->result_array();
 				$almacen = $comprobante_almacen[0]["cantidad"]; $caja = $_SESSION["phuyu_codcontroldiario"];
 				$this->load->view("ventas/ventas/index",compact("almacen","caja"));
 			}else{
@@ -194,7 +196,8 @@ class Ventas extends CI_Controller {
 				$comprobantes = $this->db->query("select distinct(ct.codcomprobantetipo) as codigo, ct.* from caja.comprobantetipos as ct inner join caja.comprobantes as c on(ct.codcomprobantetipo=c.codcomprobantetipo) where c.codsucursal=".$_SESSION["phuyu_codsucursal"]." and ct.venta = 1 and c.estado=1")->result_array();
 				$conceptos = $this->db->query("select *from caja.conceptos where codconcepto=13 or codconcepto=15")->result_array();
 				$tipopagos = $this->db->query("select *from caja.tipopagos where ingreso=1 and estado=1 order by codtipopago")->result_array();
-				$vendedores = $this->db->query("select persona.codpersona,persona.razonsocial from public.personas as persona inner join public.empleados as empleado on(persona.codpersona=empleado.codpersona) where empleado.estado=1 ".$perfil."")->result_array();
+				$vendedores = $this->db->query("select persona.codpersona,persona.razonsocial from public.personas as persona inner join public.empleados as 
+				empleado on(persona.codpersona=empleado.codpersona) where empleado.estado=1 ".$perfil."")->result_array();
 				$sucursal = $this->db->query("select coalesce(codcomprobantetipo,12) as codcomprobantetipo, seriecomprobante from public.sucursales where codsucursal=".$_SESSION["phuyu_codsucursal"])->result_array();
 				$centrocostos = $this->db->query("select *from caja.centrocostos where estado=1")->result_array();
 				$afectacionigv = $this->db->query("select *from afectacionigv where estado = 1")->result_array();
