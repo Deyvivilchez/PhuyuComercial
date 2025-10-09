@@ -881,7 +881,7 @@ class Pedidos extends CI_Controller {
 			$estado = $this->phuyu_model->phuyu_editar("restaurante.mesaspedido", $campos, $valores, "codpedido", $this->request->codregistro);
 
 			$campos = ["situacion"]; $valores = [1];
-			$estado = $this->phuyu_model->phuyu_editar("restaurante.mesas", $campos, $valores, "codmesa", $this->request->codmefbsa);
+			$estado = $this->phuyu_model->phuyu_editar("restaurante.mesas", $campos, $valores, "codmesa", $this->request->codmesa);
 
 			echo $estado;
 		}else{
