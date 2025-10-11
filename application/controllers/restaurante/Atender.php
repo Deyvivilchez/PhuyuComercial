@@ -78,18 +78,39 @@ class Atender extends CI_Controller
 				// ->where('empleado.estado', 1)
 				// ->where('empleado.codcargo', 4)->get()->result_array();
 
+				$nuevo = ($_SESSION["phuyu_rubro"]==5) ? 'nuevo_credito' : 'nuevo_1';
+				$tipodocumentos = $this->db->query("select *from public.documentotipos where estado=1")->result_array();
+				
+
+
+				$departamentos = $this->db
+					->distinct()
+					->select('ubidepartamento, departamento')
+					->from('public.ubigeo')
+					->order_by('ubidepartamento', 'ASC')
+					->get()
+					->result_array();
+
 				// Sucursal
 				$sucursal = $this->db->select('codcomprobantetipo, seriecomprobante')->from('public.sucursales')->where('codsucursal', $_SESSION['phuyu_codsucursal'])->get()->result_array();
-				 $data = [
+			
+				
+				
+				
+				
+				$data = [
 					'ambientes' => $ambientes,
 					'lineas' => $lineas,
 					'comprobantes' => $comprobantes,
 					'conceptos' => $conceptos,
 					'tipopagos' => $tipopagos,
 					'vendedores' => $vendedores,
-					'sucursal' => $sucursal
+					'sucursal' => $sucursal,
+					'tipodocumentos' => $tipodocumentos,
+					'departamentos' => $departamentos, // sin espacio
+					'nuevo' => $nuevo,                 // sin espacio
 				];
-    
+					
 				$this->load->view('restaurante/atender/atender', $data );
 			}
 			else {

@@ -192,7 +192,8 @@ var phuyu_operacion = new Vue({
 				phuyu_sistema.phuyu_noti("REGISTRAR UN PRODUCTO EN EL DETALLE", "REGISTRAR ITEM PARA EL PEDIDO","error"); return false;
 			}
 
-			this.estado = 1; phuyu_sistema.phuyu_inicio_guardar("GUARDANDO PEDIDO . . .");
+			this.estado = 1; 
+			phuyu_sistema.phuyu_inicio_guardar("GUARDANDO PEDIDO . . .");
 			this.$http.post(url+"ventas/pedidos/guardar_pedido", {"campos":this.campos,"detalle":this.detalle,"totales":this.totales}).then(function(data){
 				if (data.body=="e") {	phuyu_sistema.phuyu_alerta("SESION DEL USUARIO TERMINADA","DEBE INICIAR SESION NUEVAMENTE","error");}else{
 					

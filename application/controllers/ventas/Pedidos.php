@@ -587,7 +587,7 @@ class Pedidos extends CI_Controller {
 		}
 	}
 
-	function guardar_pedido(){
+	function guardar_pedido_original(){
 		if ($this->input->is_ajax_request()) {
 			if (isset( $_SESSION["phuyu_codusuario"]) ) {
 				$this->request = json_decode(file_get_contents('php://input'));
@@ -623,7 +623,8 @@ class Pedidos extends CI_Controller {
 					$codpedido = $this->request->campos->codpedido;
 					$estado = $this->phuyu_model->phuyu_editar("kardex.pedidos", $campos, $valores, "codpedido", $codpedido);
 
-					$campos = ["estado"]; $valores = [0];
+					$campos = ["estado"];
+					$valores = [0];
 					$estado = $this->phuyu_model->phuyu_editar("restaurante.atendidos", $campos, $valores, "codpedido", $codpedido);
 					$estado = $this->phuyu_model->phuyu_editar("kardex.pedidosdetalle", $campos, $valores, "codpedido", $codpedido);
 				}
@@ -641,19 +642,36 @@ class Pedidos extends CI_Controller {
 
 					$suma_total = $suma_total + $this->request->detalle[$key]->subtotal;
 					$campos = ["codpedido","codproducto","codunidad","item","cantidad","preciounitario","valorventa","preciorefunitario","codafectacionigv","subtotal","descripcion","estado"];
-					$valores =[
+					// $valores =[
+					// 	(int)$codpedido,
+					// 	(int)$this->request->detalle[$key]->codproducto,
+					// 	(int)$this->request->detalle[$key]->codunidad,
+					// 	(int)$this->request->detalle[$key]->item,
+					// 	(double)$this->request->detalle[$key]->cantidad,
+					// 	(double)$this->request->detalle[$key]->precio,
+					// 	(double)$this->request->detalle[$key]->subtotal,
+					// 	(double)$this->request->detalle[$key]->preciorefunitario,
+					// 	$codafectacionigv,
+					// 	(double)$this->request->detalle[$key]->subtotal,
+					// 	$this->request->detalle[$key]->descripcion,1
+					// ];
+
+
+						$valores =[
 						(int)$codpedido,
 						(int)$this->request->detalle[$key]->codproducto,
 						(int)$this->request->detalle[$key]->codunidad,
 						(int)$this->request->detalle[$key]->item,
 						(double)$this->request->detalle[$key]->cantidad,
 						(double)$this->request->detalle[$key]->precio,
-						(double)$this->request->detalle[$key]->subtotal,
+						(double)($this->request->detalle[$key]->precio * $this->request->detalle[$key]->cantidad),
 						(double)$this->request->detalle[$key]->preciorefunitario,
 						$codafectacionigv,
-						(double)$this->request->detalle[$key]->subtotal,
+						(double)($this->request->detalle[$key]->precio * $this->request->detalle[$key]->cantidad),
 						$this->request->detalle[$key]->descripcion,1
 					];
+
+					
 					$existe = $this->db->query("select *from kardex.pedidosdetalle where codpedido=".$codpedido." and codproducto=".$this->request->detalle[$key]->codproducto." and codunidad=".$this->request->detalle[$key]->codunidad." and item=".$this->request->detalle[$key]->item)->result_array();
 					if (count($existe)==0) {
 						$estado = $this->phuyu_model->phuyu_guardar("kardex.pedidosdetalle", $campos, $valores);
@@ -701,6 +719,167 @@ class Pedidos extends CI_Controller {
 			$this->load->view("phuyu/404");
 		}
 	}
+
+	function guardar_pedido(){
+		if ($this->input->is_ajax_request()) {
+			if (!isset($_SESSION["phuyu_codusuario"])) {echo json_encode("e");return;}
+
+			$this->request = json_decode(file_get_contents('php://input'));
+			$this->db->trans_begin();
+
+			// --- suma total de detalle (seguro para objetos o arrays) ---
+			$suma_total = array_sum(array_map(function($item) {
+				$subtotal = is_object($item) ? ($item->subtotal ?? 0) : ($item['subtotal'] ?? 0);
+				return (double)$subtotal;
+			}, $this->request->detalle ?? []));
+			$suma_total = round((double)$suma_total, 2);
+
+			// --- valores previos ---
+			$campos = [
+				"codsucursal","codalmacen","codusuario","codpersona","fechapedido",
+				"valorventa","porcdescuento","descglobal","descuentos","porcigv",
+				"igv","importe","cliente","direccion","codcomprobantetipo",
+				"codempleado","tipopedido","codcontroldiario"
+			];
+
+			$valores = [
+				(int)($_SESSION["phuyu_codsucursal"] ?? 0),
+				(int)($_SESSION["phuyu_codalmacen"] ?? 0),
+				(int)($_SESSION["phuyu_codusuario"] ?? 0),
+				(int)($this->request->campos->codpersona ?? 0),	
+				$this->request->campos->fechapedido ?? null,
+				(double)$suma_total,                                      // <- usamos la suma calculada
+				(double)($this->request->campos->porcdescuento ?? 0.0),
+				(double)($this->request->totales->descglobal ?? 0.0),
+				(double)($this->request->totales->descuentos ?? 0.0),
+				(double)($_SESSION["phuyu_igv"] ?? 0.0),
+				(double)($this->request->totales->igv ?? 0.0),
+				(double)($this->request->totales->importe ?? $suma_total),
+				$this->request->campos->cliente ?? '',
+				$this->request->campos->direccion ?? '',
+				(int)($this->request->campos->codcomprobante ?? 0),
+				(int)($this->request->campos->codempleado ?? 0),
+				(int)($this->request->campos->tipopedido ?? 0),
+				(int)($_SESSION["phuyu_codcontroldiario"] ?? 0)
+			];
+
+			// --- insertar o actualizar pedido principal ---
+			if ((int)$this->request->campos->pedidonuevo == 1) {
+				$codpedido = $this->phuyu_model->phuyu_guardar("kardex.pedidos", $campos, $valores, "true");
+			} else {
+				$codpedido = $this->request->campos->codpedido;
+				$estado = $this->phuyu_model->phuyu_editar("kardex.pedidos", $campos, $valores, "codpedido", $codpedido);
+
+				// marcar atendidos y detalle en 0 para reescribir después
+				$campos_upd = ["estado"]; $valores_upd = [0];
+				$this->phuyu_model->phuyu_editar("restaurante.atendidos", $campos_upd, $valores_upd, "codpedido", $codpedido);
+				$this->phuyu_model->phuyu_editar("kardex.pedidosdetalle", $campos_upd, $valores_upd, "codpedido", $codpedido);
+			}
+
+			// --- manejar items detalle ---
+			$items = $this->db->query("select coalesce(max(item),0) as item 
+			from kardex.pedidosdetalle 
+			where codpedido = ?", [$codpedido])->result_array();
+			$item = $items[0]["item"];
+			$suma_total_loop = 0;
+
+			foreach ($this->request->detalle ?? [] as $key => $value) {
+				$detalleItem = is_object($value) ? $value : (object)$value;
+
+				if ((int)$detalleItem->item === 0) {
+					$item++;
+					$detalleItem->item = $item;
+				}
+
+				$codafectacionigv = ((double)$detalleItem->precio == 0.0) ? "21" : "20";
+
+				$cantidad = (double)($detalleItem->cantidad ?? 0);
+				$precio = (double)($detalleItem->precio ?? 0);
+				$subtotal_calc = round($precio * $cantidad, 2);
+				$suma_total_loop += $subtotal_calc;
+
+				$campos_det = [
+					"codpedido","codproducto","codunidad","item","cantidad","preciounitario",
+					"valorventa","preciorefunitario","codafectacionigv","subtotal","descripcion","estado"
+				];
+
+				$valores_det = [
+					(int)$codpedido,
+					(int)($detalleItem->codproducto ?? 0),
+					(int)($detalleItem->codunidad ?? 0),
+					(int)($detalleItem->item ?? 0),
+					(double)$cantidad,
+					(double)$precio,
+					(double)$subtotal_calc,
+					(double)($detalleItem->preciorefunitario ?? 0),
+					$codafectacionigv,
+					(double)$subtotal_calc,
+					$detalleItem->descripcion ?? '',
+					1
+				];
+
+				// existe?
+				$existe = $this->db->query(
+					"select * from kardex.pedidosdetalle where codpedido = ? and codproducto = ? and codunidad = ? and item = ?",
+					[$codpedido, $valores_det[1], $valores_det[2], $valores_det[3]]
+				)->result_array();
+
+				if (count($existe) == 0) {
+					$this->phuyu_model->phuyu_guardar("kardex.pedidosdetalle", $campos_det, $valores_det);
+				} else {
+					$f = ["codpedido","codproducto","codunidad","item"];
+					$v = [(int)$codpedido, (int)$detalleItem->codproducto, (int)$detalleItem->codunidad, (int)$detalleItem->item];
+					$this->phuyu_model->phuyu_editar_1("kardex.pedidosdetalle", $campos_det, $valores_det, $f, $v);
+
+					// asegurar atendidos en estado 1
+					$campos_upd = ["estado"]; $valores_upd = [1];
+					$this->phuyu_model->phuyu_editar_1("restaurante.atendidos", $campos_upd, $valores_upd, $f, $v);
+				}
+			}
+
+			// eliminar registros con estado = 0 (limpieza)
+			$this->db->where("codpedido", $codpedido);
+			$this->db->where("estado", 0);
+			$this->db->delete("restaurante.atendidos");
+
+			$this->db->where("codpedido", $codpedido);
+			$this->db->where("estado", 0);
+			$this->db->delete("kardex.pedidosdetalle");
+
+			// actualizar totales en tabla pedidos usando la suma real del loop
+			$campos_tot = ["valorventa","importe"];
+			$valores_tot = [(double)round($suma_total_loop, 2), (double)round($suma_total_loop, 2)];
+			$this->phuyu_model->phuyu_editar("kardex.pedidos", $campos_tot, $valores_tot, "codpedido", $codpedido);
+
+			// si era pedidonuevo, insertar en mesaspedido
+			if ((int)$this->request->campos->pedidonuevo == 1) {
+				$campos_m = ["codpedido","codmesa","nromesa"];
+				$valores_m = [(int)$codpedido, (int)($this->request->campos->codmesa ?? 0), $this->request->campos->mesa ?? ''];
+				$this->phuyu_model->phuyu_guardar("restaurante.mesaspedido", $campos_m, $valores_m);
+			}
+
+			// actualizar situacion de mesa
+			$campos_s = ["situacion"]; $valores_s = [2];
+			$this->phuyu_model->phuyu_editar("restaurante.mesas", $campos_s, $valores_s, "codmesa", $this->request->campos->codmesa);
+
+			// transacción
+			if ($this->db->trans_status() === FALSE){
+				$this->db->trans_rollback();
+				$estado = 0;
+			} else {
+				// si alguna operación devolvió diferente a 1, considerarlo error (esto depende de tus modelos)
+				$this->db->trans_commit();
+				$estado = 1;
+			}
+
+			$data["estado"] = $estado;
+			$data["codpedido"] = $codpedido;
+			echo json_encode($data);
+		} else {
+			$this->load->view("phuyu/404");
+		}
+	}
+
 
 	function guardar_atencion(){
 		if ($this->input->is_ajax_request()) {
