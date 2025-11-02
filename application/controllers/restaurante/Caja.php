@@ -226,10 +226,23 @@ class Caja extends CI_Controller
 					.no-print {
 						display: none !important
 					}
-					.subbold{ font-size:11px; font-weight:700; margin:0; }
 
-					.no-print button { padding: 6px 10px; border:1px solid #000; background:#fff; cursor:pointer }
-.no-print button:active { transform: scale(0.98) }
+					.subbold {
+						font-size: 11px;
+						font-weight: 700;
+						margin: 0;
+					}
+
+					.no-print button {
+						padding: 6px 10px;
+						border: 1px solid #000;
+						background: #fff;
+						cursor: pointer
+					}
+
+					.no-print button:active {
+						transform: scale(0.98)
+					}
 
 
 				}
@@ -315,13 +328,13 @@ class Caja extends CI_Controller
 				</div>
 				<div class="center sub" style="margin-top:4px;">SON <?= $esc($totalLetras) ?></div>
 				<hr class="sep">
-					<!-- Datos para facturación -->
+				<!-- Datos para facturación -->
 				<div class="center subbold">DATOS PARA FACTURACIÓN</div>
 				<div class="sub">NOMBRE / RAZÓN SOCIAL: _______________________________</div>
 				<div class="sub">DNI / RUC: ______________</div>
 				<div class="sub">TELÉFONO: __________</div>
 
-			
+
 				<div class="no-print center" style="margin-top:6px">
 					<button onclick="window.print()">Imprimir</button>
 				</div>
@@ -1153,7 +1166,15 @@ class Caja extends CI_Controller
 					.no-print {
 						display: none !important;
 					}
+	
 				}
+
+								.note {
+  font-weight: bold;
+  text-transform: uppercase;
+  color: #333;
+  font-size: 0.95em;
+}
 			</style>
 		</head>
 
@@ -1209,7 +1230,10 @@ class Caja extends CI_Controller
 						<div class="c-desc">
 							<?= $esc($producto) ?>
 							<?php if ($notaProducto !== ''): ?>
-								<span class="note">(<?= $esc($notaProducto) ?>)</span>
+							<span class="note bold" style="font-weight: 900; text-transform: uppercase;">
+    (<?= $esc($notaProducto) ?>)
+</span>
+
 							<?php endif; ?>
 						</div>
 						<div class="c-est"><span class="badge <?= $estadoCls ?>"><?= $estadoTxt ?></span></div>
@@ -1220,13 +1244,13 @@ class Caja extends CI_Controller
 
 				<!-- Total (opcional en comanda; útil si cocina lo revisa) -->
 				<!-- <div class="row">
-    <div class="c-desc bold">TOTAL</div>
-    <div class="c-est right bold">S/ <?= number_format((float)$info[0]['importe'], 2) ?></div>
-  </div>
-  <div class="center sub">SON <?= $esc($totalLetras) ?></div>
+					<div class="c-desc bold">TOTAL</div>
+					<div class="c-est right bold">S/ <?= number_format((float)$info[0]['importe'], 2) ?></div>
+				</div>
+				<div class="center sub">SON <?= $esc($totalLetras) ?></div>
 
-  <hr class="sep">
-  <div class="center sub">Gracias por su pedido</div> -->
+				<hr class="sep">
+				<div class="center sub">Gracias por su pedido</div> -->
 				<div class="center sub">Impreso: <?= date('d/m/Y H:i') ?></div>
 
 				<div class="no-print center" style="margin-top:6px">
