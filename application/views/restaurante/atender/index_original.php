@@ -1,4 +1,3 @@
->
 <style>
     /* ===== MESAS REGISTRADAS - UI mejorada ===== */
 
@@ -20,26 +19,14 @@
         font-size: .9rem;
         color: #0f1425;
     }
-
     /* ==== OVERRIDES MESAS: sin fondo negro + badge sin solaparse ==== */
-
-
-
     .mesas-box {
         border: 1px solid #bbb;
         border-radius: .75rem;
         background: #0f1425;
         overflow: hidden;
     }
-
-
-
-
-
     /* Panel sin fondo oscuro */
-
-
-
     .mesas-box {
         background: transparent !important;
         border-color: #e5e7eb !important;
@@ -350,16 +337,15 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php
-									foreach ($lineas as $key => $value) {
-										$estilo = "background:" . $value["background"] . ";color:" . $value["color"]; ?>
-                                    <tr>
-                                        <td class="phuyu-restaurante-table"
-                                            v-on:click="phuyu_producto(<?php echo $value['codlinea']; ?>)" style="">
-                                            <?php echo $value['descripcion']; ?>
-                                        </td>
-                                    </tr>
-                                    <?php }?>
+                                    <?php	foreach ($lineas as $key => $value) {	$estilo = "background:" . $value["background"] . ";color:" . $value["color"]; ?>
+                                        <tr>
+                                            <td class="phuyu-restaurante-table"
+                                                v-on:click="phuyu_producto(<?php echo $value['codlinea']; ?>)" style="">
+                                                <?php echo $value['descripcion']; ?>
+                                            </td>
+                                        </tr>
+                                    <?php }
+									?>
                                 </tbody>
                             </table>
                         </div>

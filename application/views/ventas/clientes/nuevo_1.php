@@ -105,7 +105,10 @@
 	</form>
 </div>
 
-<script> var campos = {codsociotipo: "1",coddocumentotipo: "2",documento: "",razonsocial: "",nombrecomercial:"",direccion: "",email: "",telefono: "",sexo: "M",departamento: 0,provincia: 0,codubigeo: 0,codpatrocinador:0,codzona:0,rubro:<?php echo $_SESSION["phuyu_rubro"];?>}; 
+<script> var campos = {codsociotipo: "1",
+coddocumentotipo: "2",documento: "",razonsocial: "",nombrecomercial:"",
+direccion: "",email: "",telefono: "",sexo: "M",departamento: 0,provincia: 0,codubigeo: 0,codpatrocinador:0,
+codzona:0,rubro:<?php echo $_SESSION["phuyu_rubro"];?>}; 
 
 	if (typeof AcornIcons !== 'undefined') {
       new AcornIcons().replace();
