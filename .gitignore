@@ -5,6 +5,7 @@
 /application/config/database.php
 
 # O si quieres ser más específico:
+/sunat/*
 /sunat/certificados/
 /sunat/comprobantes/
 /sunat/log/
