@@ -1154,6 +1154,14 @@ class Caja extends CI_Controller
 						display: none !important;
 					}
 				}
+
+
+								.note {
+  font-weight: bold;
+  text-transform: uppercase;
+  color: #333;
+  font-size: 0.95em;
+}
 			</style>
 		</head>
 
@@ -1209,7 +1217,9 @@ class Caja extends CI_Controller
 						<div class="c-desc">
 							<?= $esc($producto) ?>
 							<?php if ($notaProducto !== ''): ?>
-								<span class="note">(<?= $esc($notaProducto) ?>)</span>
+								<span class="note bold" style="font-weight: 900; text-transform: uppercase;">
+    (<?= $esc($notaProducto) ?>)
+</span>
 							<?php endif; ?>
 						</div>
 						<div class="c-est"><span class="badge <?= $estadoCls ?>"><?= $estadoTxt ?></span></div>
