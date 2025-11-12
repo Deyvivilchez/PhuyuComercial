@@ -35,7 +35,10 @@
 										<b style="color:#13a89e" v-if="dato.stock>0">STOCK {{dato.stock}} {{dato.unidad}}</b>
 										<b style="color:#d43f3a" v-if="dato.stock<=0">STOCK {{dato.stock}} {{dato.unidad}}</b> 
 										<span> STOCK P: {{dato.stockproveedor}}</span> <br> 
-										<small>MARCA: {{dato.marca}} CARACT. {{dato.caracteristicas}}</small>
+										<small>MARCA: {{dato.marca}} CARACT. {{dato.caracteristicas}}</small> <br>
+										<span class="badge bg-info" v-if="dato.controlarseries == 1">
+											<i class="mdi mdi-barcode"></i> CONTROLA-SERIES
+										</span>
 									</div>
 									<div class="col-md-3">
 										<button type="button" v-if="verprecios==1" v-on:click="phuyu_masprecios(dato,index+1)" class="btn btn-success btn-xs"> <b>MAS PRECIOS</b> </button><br>
@@ -310,6 +313,8 @@
 				this.paginacion.actual = pagina; this.phuyu_productos();
 			},
 			phuyu_seleccionado: function(index,producto){
+
+				//console.log(producto);
 				index = index;
 				$('.projects tr:eq('+index+') td').addClass("columna");
 				phuyu_operacion.phuyu_additem(producto, producto.precio);

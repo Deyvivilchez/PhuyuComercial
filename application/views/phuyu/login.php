@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="<?php echo base_url();?>public/css/vendor/bootstrap.min.css" />
     <link rel="stylesheet" href="<?php echo base_url();?>public/css/styles.css" />
     <link rel="stylesheet" href="<?php echo base_url();?>public/css/main.css" />
+    <link rel="icon" href="<?php echo base_url();?>public/img/icono-phuyu.ico">
     <script src="<?php echo base_url();?>public/js/base/loader.js"></script>
 
 <style>

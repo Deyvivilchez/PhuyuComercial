@@ -303,6 +303,7 @@ var phuyu_operacion = new Vue({
 
 		},
 		phuyu_additem: function(producto,precio){
+			console.log("Productodesde nuevo de ventas:", producto);
 			var existe_item = [];
 			if ($("#itemrepetir").val()==0) {
 				var existe_item = this.detalle.filter(function(p){

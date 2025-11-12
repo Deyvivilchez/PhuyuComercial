@@ -99,6 +99,8 @@ var phuyu_operacion = new Vue({
 			});
 		},
 		phuyu_additem: function(producto){
+
+	
 			var existeproducto = this.detalle.filter(function(p){
 			    if(p.codproducto == producto.codproducto && p.codunidad == producto.codunidad ){
 			    	p.cantidad = p.cantidad + 1; return p;

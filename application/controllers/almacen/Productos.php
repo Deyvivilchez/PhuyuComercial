@@ -173,7 +173,22 @@ class Productos extends CI_Controller
 		if ($this->input->is_ajax_request()) {
 			$this->request = json_decode(file_get_contents('php://input'));
 
-			$campos = ["codfamilia", "codlinea", "codmarca", "codempresa", "codigo", "descripcion", "afectoicbper", "codatencion", "paraventa", "calcular", "controlstock", "caracteristicas", "tipo"];
+			$campos = [
+				"codfamilia",
+				"codlinea",
+				"codmarca",
+				"codempresa",
+				"codigo",
+				"descripcion",
+				"afectoicbper",
+				"codatencion",
+				"paraventa",
+				"calcular",
+				"controlstock",
+				"caracteristicas",
+				"tipo",
+				"controlarseries"
+			];
 			$valores = [
 				(int)$this->request->campos->codfamilia,
 				(int)$this->request->campos->codlinea,
@@ -187,10 +202,12 @@ class Productos extends CI_Controller
 				(int)$this->request->campos->calcular,
 				(int)$this->request->campos->controlstock,
 				$this->request->campos->caracteristicas,
-				(int)$this->request->campos->tipo
+				(int)$this->request->campos->tipo,
+				(int)$this->request->campos->controlarseries, //controlarseries
 			];
 
-			$campos_1 = ["codproducto", "codunidad", "codsucursal", "factor", "preciocompra", "preciocosto", "pventapublico", "pventamin", "pventacredito", "pventaxmayor", "pventaadicional", "codigobarra", "estado"];
+			$campos_1 = ["codproducto", "codunidad", "codsucursal", "factor", "preciocompra", "preciocosto", "pventapublico", 
+			"pventamin", "pventacredito", "pventaxmayor", "pventaadicional", "codigobarra", "estado"];
 
 			$this->db->trans_begin();
 
@@ -405,15 +422,22 @@ class Productos extends CI_Controller
 		}
 	}
 
-	function editar()
+	function editar_ORIGINAL()
 	{
 		if ($this->input->is_ajax_request()) {
 			$this->request = json_decode(file_get_contents('php://input'));
-			$info = $this->db->query("select codproducto as codregistro,* from almacen.productos where codproducto=" . $this->request->codregistro)->result_array();
-			foreach ($info as $key => $value) {
-				$afectacion = $this->db->query("select *from almacen.productoubicacion where codproducto=" . $value["codproducto"] . " AND codalmacen=" . $_SESSION["phuyu_codalmacen"] . " AND factor=1 AND estado = 1")->result_array();
+			$info = $this->db->query("
+			select codproducto as codregistro, * 
+			from almacen.productos 
+			where codproducto=" . $this->request->codregistro)->result_array();
 
-				if ($afectacion[0]["codafectacionigvcompra"] == "" || $afectacion[0]["codafectacionigvcompra"] == null || $afectacion[0]["codafectacionigvcompra"] == 0) {
+			foreach ($info as $key => $value) {
+				$afectacion = $this->db->query("
+				select *from almacen.productoubicacion 
+				where codproducto=" . $value["codproducto"] . " AND codalmacen=" . $_SESSION["phuyu_codalmacen"] . " AND factor=1 AND estado = 1")->result_array();
+
+				if ($afectacion[0]["codafectacionigvcompra"] == "" || $afectacion[0]["codafectacionigvcompra"] == null 
+				|| $afectacion[0]["codafectacionigvcompra"] == 0) {
 					$afectacion[0]["codafectacionigvcompra"] = $_SESSION["phuyu_afectacionigv"];
 				}
 				if ($afectacion[0]["codafectacionigvventa"] == "" || $afectacion[0]["codafectacionigvventa"] == null || $afectacion[0]["codafectacionigvventa"] == 0) {
@@ -422,6 +446,51 @@ class Productos extends CI_Controller
 				$info[$key]["codafectacionigvcompra"] = $afectacion[0]["codafectacionigvcompra"];
 				$info[$key]["codafectacionigvventa"] = $afectacion[0]["codafectacionigvventa"];
 				$info[$key]["comisionvendedor"] = $afectacion[0]["comisionvendedor"];
+			}
+			echo json_encode($info);
+		} else {
+			$this->load->view("phuyu/404");
+		}
+	}
+	function editar()
+	{
+		if ($this->input->is_ajax_request()) {
+			$this->request = json_decode(file_get_contents('php://input'));
+			$info = $this->db->query("
+            SELECT codproducto as codregistro, * 
+            FROM almacen.productos 
+            WHERE codproducto = " . $this->request->codregistro)->result_array();
+
+			foreach ($info as $key => $value) {
+				$afectacion = $this->db->query("
+                SELECT * FROM almacen.productoubicacion 
+                WHERE codproducto = " . $value["codproducto"] . " 
+                AND codalmacen = " . $_SESSION["phuyu_codalmacen"] . " 
+                AND factor = 1 
+                AND estado = 1")->result_array();
+
+				// VALIDAR SI HAY REGISTROS EN AFECTACION
+				if (!empty($afectacion)) {
+					$codAfectacionCompra = $afectacion[0]["codafectacionigvcompra"];
+					$codAfectacionVenta = $afectacion[0]["codafectacionigvventa"];
+					$comisionVendedor = $afectacion[0]["comisionvendedor"];
+				} else {
+					// VALORES POR DEFECTO SI NO HAY REGISTROS
+					$codAfectacionCompra = $_SESSION["phuyu_afectacionigv"];
+					$codAfectacionVenta = $_SESSION["phuyu_afectacionigv"];
+					$comisionVendedor = 0; // O el valor por defecto que necesites
+				}
+
+				// ASIGNAR VALORES VALIDADOS
+				$info[$key]["codafectacionigvcompra"] = (!empty($codAfectacionCompra) && $codAfectacionCompra != 0)
+					? $codAfectacionCompra
+					: $_SESSION["phuyu_afectacionigv"];
+
+				$info[$key]["codafectacionigvventa"] = (!empty($codAfectacionVenta) && $codAfectacionVenta != 0)
+					? $codAfectacionVenta
+					: $_SESSION["phuyu_afectacionigv"];
+
+				$info[$key]["comisionvendedor"] = $comisionVendedor;
 			}
 			echo json_encode($info);
 		} else {
@@ -607,7 +676,10 @@ class Productos extends CI_Controller
 			$limit = 10;
 			$offset = $this->request->pagina * $limit - $limit;
 
-			$lista = $this->db->query("SELECT pun.codalmacen, p.codproducto, p.codigo,p.codfamilia, p.codlinea, p.codmarca, ma.descripcion AS marca, p.descripcion, pun.unidades, p.afectoicbper, p.controlstock, p.afectoigvcompra, p.afectoigvventa, p.foto, p.calcular, p.paraventa, p.codmodelo, p.codcolor, p.codtalla
+			$lista = $this->db->query("
+			SELECT pun.codalmacen, p.codproducto, p.codigo,p.codfamilia, p.codlinea, p.codmarca, ma.descripcion AS marca, 
+			p.descripcion, pun.unidades, p.afectoicbper, p.controlstock, p.afectoigvcompra, p.afectoigvventa, 
+			p.foto, p.calcular, p.paraventa, p.codmodelo, p.codcolor, p.codtalla ,p.controlarseries 
 			  FROM almacen.productos p
 			  JOIN almacen.v_productounidades pun ON (p.codproducto = pun.codproducto AND p.estado = 1 )
 			  JOIN almacen.lineasxsucursales ls ON (pun.codsucursal = ls.codsucursal AND p.codlinea = ls.codlinea AND ls.codsucursal = " . $_SESSION["phuyu_codsucursal"] . " )
@@ -633,9 +705,9 @@ class Productos extends CI_Controller
 			}
 
 			$total = $this->db->query("select count(*) as total FROM almacen.productos p
-  JOIN almacen.v_productounidades pun ON (p.codproducto = pun.codproducto AND p.estado = 1 )
-  JOIN almacen.lineasxsucursales ls ON (pun.codsucursal = ls.codsucursal AND p.codlinea = ls.codlinea AND ls.codsucursal = " . $_SESSION["phuyu_codsucursal"] . " )
-  JOIN almacen.marcas ma ON (p.codmarca = ma.codmarca)
+			JOIN almacen.v_productounidades pun ON (p.codproducto = pun.codproducto AND p.estado = 1 )
+			JOIN almacen.lineasxsucursales ls ON (pun.codsucursal = ls.codsucursal AND p.codlinea = ls.codlinea AND ls.codsucursal = " . $_SESSION["phuyu_codsucursal"] . " )
+			JOIN almacen.marcas ma ON (p.codmarca = ma.codmarca)
 			  where (REPLACE(UPPER(p.descripcion),' ','%') like REPLACE (UPPER('%" . $this->request->buscar . "%'),' ','%') or UPPER(p.codigo) like UPPER('%" . $this->request->buscar . "%') or UPPER(ma.descripcion) like UPPER('%" . $this->request->buscar . "%') ) and p.estado=1 and pun.codalmacen=" . $_SESSION["phuyu_codalmacen"])->result_array();
 
 			$paginas = floor($total[0]["total"] / $limit);

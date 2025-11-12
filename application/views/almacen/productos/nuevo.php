@@ -92,17 +92,23 @@
 	        	</select>
 	    	</div>
 	    	<div class="col-md-3">	
-				<div class="form-check form-switch">
-					<input class="form-check-input" v-if="campos.afectoicbper==0" type="checkbox" id="afectoicbper_check" v-on:click="phuyu_activaricbper()" />
-					<input class="form-check-input" v-if="campos.afectoicbper!=0" type="checkbox" id="afectoicbper_check" checked v-on:click="phuyu_activaricbper()" />
-					<label class="form-check-label" for="afectoicbper_check">ICBPER</label>
-				</div>    		
-				<div class="form-check form-switch">
-					<input class="form-check-input" v-if="campos.controlstock==1" type="checkbox" id="stock" checked v-on:click="phuyu_activarstock()" />
-					<input class="form-check-input" v-if="campos.controlstock!=1" type="checkbox" id="stock" v-on:click="phuyu_activarstock()" />
-					<label class="form-check-label" for="stock">CONTROLA STOCK</label>
-				</div>
-	    	</div>
+			<div class="form-check form-switch">
+				<input class="form-check-input" v-if="campos.afectoicbper==0" type="checkbox" id="afectoicbper_check" v-on:click="phuyu_activaricbper()" />
+				<input class="form-check-input" v-if="campos.afectoicbper!=0" type="checkbox" id="afectoicbper_check" checked v-on:click="phuyu_activaricbper()" />
+				<label class="form-check-label" for="afectoicbper_check">ICBPER</label>
+			</div>    		
+			<div class="form-check form-switch">
+				<input class="form-check-input" v-if="campos.controlstock==1" type="checkbox" id="stock" checked v-on:click="phuyu_activarstock()" />
+				<input class="form-check-input" v-if="campos.controlstock!=1" type="checkbox" id="stock" v-on:click="phuyu_activarstock()" />
+				<label class="form-check-label" for="stock">CONTROLA STOCK</label>
+			</div>
+			<!-- En lugar de dos inputs condicionales, usa uno solo: -->
+			<div class="form-check form-switch">
+			<!-- 	<input class="form-check-input" type="checkbox" id="controlarseries" v-model="campos.controlarseries" true-value="1" false-value="0"> -->
+				<input class="form-check-input" type="checkbox" id="controlarseries" v-model="campos.controlarseries" true-value="1" false-value="0">
+				<label class="form-check-label" for="controlarseries">CONTROLAR SERIES</label>
+			</div>
+		</div>
 
 	    	<div class="col-md-3 col-xs-6">
 				<label>COMISION(%)</label>
@@ -198,7 +204,24 @@
     }
 </script>
 <script>
-	var campos = {codregistro:"",descripcion:"",codfamilia:0,codlinea:0,codmarca:0,codigo:"",codigobarra:"",calcular:"0",controlstock:1,tipo:"1",codafectacionigvcompra:"1",codafectacionigvventa:"9",afectoicbper:"0",codatencion:"0",paraventa:"0", caracteristicas:"",comisionvendedor:0};
-	var campos_1 = {codunidad:"",unidad:"",factor:"1",preciocompra:"0.00",pventapublico:"0.00",pventamin:"0.00",pventacredito:"0.00",pventaxmayor:"0.00",pventaadicional:"0.00",codigobarra:""};
+	var campos = {
+		codregistro:"",
+		descripcion:"",
+		codfamilia:0,
+		codlinea:0,
+		codmarca:0,
+		codigo:"",
+		codigobarra:"",
+		calcular:"0",
+		controlstock:1,
+		tipo:"1",
+		codafectacionigvcompra:"1",codafectacionigvventa:"9",
+		afectoicbper:"0",codatencion:"0",paraventa:"0", caracteristicas:"",
+		comisionvendedor:0,
+		controlarseries:0,
+	};
+	var campos_1 = {codunidad:"",
+	unidad:"",factor:"1",preciocompra:"0.00",
+	pventapublico:"0.00",pventamin:"0.00",pventacredito:"0.00",pventaxmayor:"0.00",pventaadicional:"0.00",codigobarra:""};
 </script>
 <script src="<?php echo base_url();?>phuyu/phuyu_almacen/productos.js"></script>
