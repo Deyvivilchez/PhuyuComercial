@@ -420,13 +420,10 @@ class Controlcajas extends CI_Controller {
 
 	function pdf_arqueo_caja($codcontroldiario){
 		$estilo = "border-top:1px solid #D5D8DC; border-left:1px solid #D5D8DC; border-right:1px solid #D5D8DC;";
-
 		$sesion = $this->db->query("select *from caja.controldiario where codcontroldiario=".$codcontroldiario)->result_array();
 		$html = $this->pdf_cabecera("ARQUEO DE CAJA","CAJA NUMERO 000".$sesion[0]["codcontroldiario"]." - FECHA: ".$sesion[0]["fechaapertura"]);
-
 		$tipopagos = $this->db->query("select *from caja.tipopagos where estado=1 order by codtipopago")->result_array();
 		$caja = $this->db->query("select *from caja.controldiario where codcontroldiario=".$codcontroldiario)->result_array();
-
 		$html .= '<table cellpadding="4" width="100%" style="border:1px solid #D5D8DC;font-size:9px;">';
 			$html .= '<tr>';
 				$html .= '<th style="'.$estilo.' width:30%;"> <b>SALDO INICIAL</b> </th>';

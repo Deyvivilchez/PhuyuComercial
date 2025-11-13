@@ -213,11 +213,28 @@ class Ventas extends CI_Controller {
 	function ver($codregistro){
 		if ($this->input->is_ajax_request()) {
 			if (isset($_SESSION["phuyu_codusuario"])){
-				$info = $this->db->query("select kardex.*,p.documento,(CASE WHEN condicionpago = 1 THEN 'CONTADO' ELSE 'CREDITO' END) AS pago,mt.descripcion AS movimiento,comprobantes.descripcion as tipo from kardex.kardex as kardex inner join caja.comprobantetipos as comprobantes on(kardex.codcomprobantetipo=comprobantes.codcomprobantetipo) INNER JOIN public.personas as p on (kardex.codpersona=p.codpersona) INNER JOIN almacen.movimientotipos as mt on (kardex.codmovimientotipo=mt.codmovimientotipo) where kardex.codkardex=".$codregistro)->result_array();
+				$info = $this->db->query("
+				select kardex.*,p.documento,(CASE WHEN condicionpago = 1 THEN 'CONTADO' ELSE 'CREDITO' END) AS pago,
+				mt.descripcion AS movimiento,
+				comprobantes.descripcion as tipo 
+				from kardex.kardex as kardex 
+				inner join caja.comprobantetipos as comprobantes on(kardex.codcomprobantetipo=comprobantes.codcomprobantetipo) 
+				INNER JOIN public.personas as p on (kardex.codpersona=p.codpersona) 
+				INNER JOIN almacen.movimientotipos as mt on (kardex.codmovimientotipo=mt.codmovimientotipo) 
+				where kardex.codkardex=".$codregistro)->result_array();
 
 				$detalle = $this->db->query("select kd.*,p.descripcion as producto,u.descripcion as unidad,p.codigo from kardex.kardexdetalle as kd inner join almacen.productos as p on(kd.codproducto=p.codproducto) inner join almacen.unidades as u on(kd.codunidad=u.codunidad) where kd.codkardex=".$codregistro." and kd.estado=1 order by kd.item")->result_array();
 
-				$pagos = $this->db->query("select p.descripcion as tipopago, md.importe,md.importeentregado,md.vuelto,md.nrodocbanco from caja.movimientos as m inner join caja.movimientosdetalle as md on(m.codmovimiento=md.codmovimiento) inner join caja.tipopagos as p on(md.codtipopago=p.codtipopago) where m.codkardex=".$codregistro." and m.estado=1 order by p.codtipopago")->result_array();
+				$pagos = $this->db->query("
+				select p.descripcion as tipopago, 
+				md.importe,
+				md.importeentregado,
+				md.vuelto,
+				md.nrodocbanco 
+				from caja.movimientos as m 
+				inner join caja.movimientosdetalle as md on(m.codmovimiento=md.codmovimiento) 
+				inner join caja.tipopagos as p on(md.codtipopago=p.codtipopago) 
+				where m.codkardex=".$codregistro." and m.estado=1 order by p.codtipopago")->result_array();
 				$this->load->view("ventas/ventas/ver",compact("info","detalle","pagos")); 
 			}else{
 	            $this->load->view("phuyu/505");

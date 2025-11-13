@@ -288,5 +288,198 @@ class Movimientos extends CI_Controller {
 			$this->load->view("phuyu/404");
 		}
 	}
+
+
+
+
+
+public function exportar_excel_detallado()
+{
+    $desde           = $this->input->get('desde');
+    $hasta           = $this->input->get('hasta');
+    $codcontroldiario = $_SESSION["phuyu_codcontroldiario"];
+    $codcaja          = $_SESSION['phuyu_codcaja'];
+
+    if (empty($desde) || empty($hasta)) {
+        show_error('Debe seleccionar un rango de fechas válido.');
+        return;
+    }
+
+    $sql = "
+        SELECT 
+            m.codmovimiento,
+            m.fechamovimiento,
+            m.seriecomprobante,
+            m.nrocomprobante,
+            m.codkardex,
+            p.razonsocial,
+            c.descripcion         AS concepto_caja,
+            tp.descripcion        AS tipopago,
+            md.importe            AS importe_pago,
+            md.importeentregado   AS importe_entregado,
+            md.vuelto             AS vuelto,
+            ROUND(m.importe, 2)   AS total_movimiento,
+			CONCAT(k.seriecomprobante,'-',k.nrocomprobante) AS comprobante_referencia
+        FROM caja.movimientosdetalle AS md
+        JOIN caja.movimientos AS m       ON m.codmovimiento = md.codmovimiento
+        JOIN public.personas AS p        ON p.codpersona = m.codpersona
+        JOIN caja.conceptos AS c         ON c.codconcepto = m.codconcepto
+        JOIN caja.tipopagos AS tp        ON tp.codtipopago = md.codtipopago
+		JOIN kardex.kardex AS k        ON k.codkardex = m.codkardex
+        WHERE m.fechamovimiento BETWEEN {$this->db->escape($desde)} AND {$this->db->escape($hasta)}
+        AND m.codcaja = {$this->db->escape($codcaja)}
+        AND m.codcontroldiario = {$this->db->escape($codcontroldiario)}
+        AND m.estado = 1
+        AND m.condicionpago = 1
+        AND tp.estado = 1
+        ORDER BY m.fechamovimiento, m.codmovimiento
+    ";
+
+    $data['movimientos'] = $this->db->query($sql)->result_array();
+    $data['desde'] = $this->input->get('desde');
+    $data['hasta'] = $this->input->get('hasta');
+
+    $this->load->view('reportes/excel_movimientos_detallado', $data ,$desde, $hasta);
+}
+
+
+public function exportar_pdf_detallado()
+{
+    $desde = $this->input->get('desde');
+    $hasta = $this->input->get('hasta');
+    $codcontroldiario = $_SESSION["phuyu_codcontroldiario"];
+    $codcaja = $_SESSION['phuyu_codcaja'];
+	$nombreEmpresa =  $_SESSION["phuyu_empresa"] ;
+	$logoEmpresa = $_SESSION["phuyu_logo"] ;
+
+    if (empty($desde) || empty($hasta)) {
+        show_error('Debe seleccionar un rango de fechas válido.');
+        return;
+    }
+
+    $sql = "
+        SELECT 
+            m.codmovimiento,
+            m.fechamovimiento,
+            m.seriecomprobante,
+            m.nrocomprobante,
+            m.codkardex,
+            p.razonsocial,
+            c.descripcion         AS concepto_caja,
+            tp.descripcion        AS tipopago,
+            md.importe            AS importe_pago,
+            md.importeentregado   AS importe_entregado,
+            md.vuelto             AS vuelto,
+            ROUND(m.importe, 2)   AS total_movimiento,
+            CONCAT(k.seriecomprobante,'-',k.nrocomprobante) AS comprobante_referencia
+        FROM caja.movimientosdetalle AS md
+        JOIN caja.movimientos AS m       ON m.codmovimiento = md.codmovimiento
+        JOIN public.personas AS p        ON p.codpersona = m.codpersona
+        JOIN caja.conceptos AS c         ON c.codconcepto = m.codconcepto
+        JOIN caja.tipopagos AS tp        ON tp.codtipopago = md.codtipopago
+        JOIN kardex.kardex AS k          ON k.codkardex = m.codkardex
+        WHERE m.fechamovimiento BETWEEN {$this->db->escape($desde)} AND {$this->db->escape($hasta)}
+        AND m.codcaja = {$this->db->escape($codcaja)}
+        AND m.codcontroldiario = {$this->db->escape($codcontroldiario)}
+        AND m.estado = 1
+        AND m.condicionpago = 1
+        AND tp.estado = 1
+        ORDER BY m.fechamovimiento, m.codmovimiento
+    ";
+
+    $data['movimientos'] = $this->db->query($sql)->result_array();
+    $data['desde'] = $desde;
+    $data['hasta'] = $hasta;
+	$data['nombreEmpresa'] = $nombreEmpresa;
+	$data['logoEmpresa'] = $logoEmpresa;
+
+    // Simplemente devuelve la vista renderizada en navegador
+    $this->load->view('reportes/pdf_movimientos_detallado', $data);
+}
+
+
+
+public function exportar_pdf_detallado_02()
+{
+   $desde = $this->input->get('desde');
+    $hasta = $this->input->get('hasta');
+    $codcontroldiario = $_SESSION["phuyu_codcontroldiario"];
+    $codcaja = $_SESSION['phuyu_codcaja'];
+	$nombreEmpresa =  $_SESSION["phuyu_empresa"] ;
+	$logoEmpresa = $_SESSION["phuyu_logo"] ;
+
+    if (empty($desde) || empty($hasta)) {
+        show_error('Debe seleccionar un rango de fechas válido.');
+        return;
+    }
+
+    $sql = "
+        SELECT 
+            m.codmovimiento,
+            m.fechamovimiento,
+            m.seriecomprobante,
+            m.nrocomprobante,
+            m.codkardex,
+            p.razonsocial,
+            c.descripcion         AS concepto_caja,
+            tp.descripcion        AS tipopago,
+            md.importe            AS importe_pago,
+            md.importeentregado   AS importe_entregado,
+            md.vuelto             AS vuelto,
+            ROUND(m.importe, 2)   AS total_movimiento,
+            CONCAT(k.seriecomprobante,'-',k.nrocomprobante) AS comprobante_referencia
+        FROM caja.movimientosdetalle AS md
+        JOIN caja.movimientos AS m       ON m.codmovimiento = md.codmovimiento
+        JOIN public.personas AS p        ON p.codpersona = m.codpersona
+        JOIN caja.conceptos AS c         ON c.codconcepto = m.codconcepto
+        JOIN caja.tipopagos AS tp        ON tp.codtipopago = md.codtipopago
+        JOIN kardex.kardex AS k          ON k.codkardex = m.codkardex
+        WHERE m.fechamovimiento BETWEEN {$this->db->escape($desde)} AND {$this->db->escape($hasta)}
+        AND m.codcaja = {$this->db->escape($codcaja)}
+        AND m.codcontroldiario = {$this->db->escape($codcontroldiario)}
+        AND m.estado = 1
+        AND m.condicionpago = 1
+        AND tp.estado = 1
+        ORDER BY m.fechamovimiento, m.codmovimiento
+    ";
+
+    $data['movimientos'] = $this->db->query($sql)->result_array();
+    $data['desde'] = $desde;
+    $data['hasta'] = $hasta;
+	$data['nombreEmpresa'] = $nombreEmpresa;
+	$data['logoEmpresa'] = $logoEmpresa;
+
+    // Simplemente devuelve la vista renderizada en navegador
+     $html = $this->load->view('reportes/pdf_movimientos_detallado', $data,true);
+    //$html = $this->load->view('reportes/pdf_movimientos_detallado', $data, true);
+
+    // 2) Cargar TCPDF
+    require_once(APPPATH . 'third_party/phuyu_tcpdf/tcpdf.php'); // ajusta la ruta si la tienes en otro lado
+
+    // 3) Configurar TCPDF (horizontal, A4)
+    $pdf = new TCPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+    $pdf->SetCreator('Phuyu System');
+    $pdf->SetAuthor('Phuyu System');
+    $pdf->SetTitle('Reporte de Movimientos Detallado');
+
+    // Márgenes pequeños para aprovechar el ancho
+    $pdf->SetMargins(5, 5, 5);
+    $pdf->SetAutoPageBreak(TRUE, 5);
+    $pdf->setPrintHeader(false);
+    $pdf->setPrintFooter(false);
+
+    // 4) Nueva página
+    $pdf->AddPage();
+
+    // 5) Escribir el HTML (TU DISEÑO TAL CUAL)
+    $pdf->writeHTML($html, true, false, true, false, '');
+
+    // 6) Salida del PDF al navegador
+    $nombreArchivo = 'reporte_movimientos_detallado_' . date('Ymd_His') . '.pdf';
+    $pdf->Output($nombreArchivo, 'I'); // 'I' = inline, 'D' = descarga directa
+}
+
+
+
 	
 }
