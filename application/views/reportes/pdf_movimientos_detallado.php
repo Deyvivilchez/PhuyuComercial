@@ -23,6 +23,7 @@
                     <div
                         style="width: 80px; height: 80px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 2px solid rgba(255,255,255,0.3); backdrop-filter: blur(10px); overflow: hidden; padding: 5px;">
                         <?php
+                        
                         echo $logoEmpresa != '' ? "<img src='" . base_url() . 'public/img/' . $logoEmpresa . "' alt='Logo' style='max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px;'>" : "<div style='width: 100%; height: 100%; background: rgba(255,255,255,0.3); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 9pt; text-align: center;'>LOGO<br>EMPRESA</div>";
                         ?>
                     </div>
