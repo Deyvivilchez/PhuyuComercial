@@ -26,3 +26,4 @@
 /application/cache/
 /application/config/database.php
 /application/config/config.php
+/vendor/*
