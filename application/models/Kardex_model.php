@@ -457,8 +457,13 @@ class Kardex_model extends CI_Model
 			// INICIO DE ACTUALIZACION PARA SERIES EN VENTAS
 			if ($operacion == 0 && !empty($detalle[$key]->controlarseries)) { // VENTA CON CONTROL DE SERIES
 				// Actualiza el estado de la serie a 'VENDIDO' o 'RESERVADO'
-				$serieId     = isset($detalle[$key]->id_serie) ? (int)$detalle[$key]->id_serie : null;
-				$serieCodigo = $detalle[$key]->serie_codigo;
+
+							// DEBUG ESPECÍFICO
+				$serieSeleccionada = $detalle[$key]->serie_seleccionada;
+
+				$serieId = $serieSeleccionada->id_serie;
+				$serieCodigo = $serieSeleccionada->serie_codigo;
+				
 				$serieRow = $this->db->get_where('almacen.series', ['id_serie' => $serieId])->row_array(); // CONSULTO O BUSCO LA SERIE 
 				$estado_serie = ($retirar == 1) ? 'VENDIDO' : 'RESERVADO';
 

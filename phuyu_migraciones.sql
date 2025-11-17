@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS almacen.series (
     codalmacen INTEGER,
     codkardex  INTEGER,
     codkardex_egreso INTEGER,
+    codsucursal INTEGER,
     CONSTRAINT fk_series_codproducto
         FOREIGN KEY (codproducto)
         REFERENCES almacen.productos (codproducto)

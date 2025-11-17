@@ -303,7 +303,9 @@ var phuyu_operacion = new Vue({
 
 		},
 		phuyu_additem: function(producto,precio){
-			console.log("Productodesde nuevo de ventas:", producto);
+			// console.log("controladadore ",phuyu_controller)
+			 console.log("Productodesde nuevo de ventassss:", producto);
+			// console.log("controlseries:", producto.controlarseries);
 			var existe_item = [];
 			if ($("#itemrepetir").val()==0) {
 				var existe_item = this.detalle.filter(function(p){
@@ -356,15 +358,65 @@ var phuyu_operacion = new Vue({
 					}
 				}
 
+				if (producto.controlarseries == 1) {
+				let serieYaExiste = this.detalle.some(detalle => 
+					detalle.serie_seleccionada && 
+					detalle.serie_seleccionada.id_serie == producto.serie_seleccionada.id_serie
+				);
+				
+				if (serieYaExiste) {
+					swal({
+						title: "❌ ERROR", 
+						text: "La serie " + producto.serie_seleccionada.serie_codigo + " ya está en la lista", 
+						icon: "error",
+						button: false,
+						timer: 1500
+					});
+					return false;
+				}
+			}
+
+				
+
 				this.detalle.push({
-					codproducto: producto.codproducto, producto: producto.descripcion, codunidad: producto.codunidad,unidades: this.putunidades,
-					unidad: producto.unidad, cantidad: 1, stock:producto.stock, control:producto.control, factor: producto.factor,
-					preciobruto: producto.preciosinigv, preciosinigv: producto.preciosinigv, precio: producto.precio,
-					preciorefunitario: producto.precio,preciocredito:producto.preciocredito, porcdescuento: 0, descuento: 0,
-					codafectacionigv: producto.afectacionigv, igv: producto.igv, conicbper: producto.afectoicbper, icbper: producto.icbper,
-					valorventa: producto.valorventa, subtotal:producto.subtotal, subtotal_tem:producto.subtotal, 
-					descripcion:"", calcular: producto.calcular,preciooriginal:producto.preciooriginal,precioventa:producto.precioventa
+					codproducto: producto.codproducto, 
+					producto: producto.descripcion, 
+					codunidad: producto.codunidad,
+					unidades: this.putunidades,
+					unidad: producto.unidad, 
+					cantidad: 1, 
+					controlarseries: producto.controlarseries,
+					stock:producto.stock, 
+					control:producto.control,
+					factor: producto.factor,
+					preciobruto: producto.preciosinigv,
+					preciosinigv: producto.preciosinigv, 
+					precio: producto.precio,
+					preciorefunitario: producto.precio,
+					preciocredito:producto.preciocredito,
+					porcdescuento: 0, 
+					descuento: 0,
+					codafectacionigv: producto.afectacionigv,
+					igv: producto.igv, 
+					conicbper: producto.afectoicbper,
+					icbper: producto.icbper,
+					valorventa: producto.valorventa, 
+					subtotal:producto.subtotal, subtotal_tem:producto.subtotal, 
+				//	descripcion:"", 
+					calcular: producto.calcular,
+					preciooriginal:producto.preciooriginal,
+					precioventa:producto.precioventa,
+					descripcion: producto.controlarseries == 1 ? 'SERIE/CODIGO : ' + producto.serie_seleccionada.serie_codigo : producto.descripcion,
+    				serie_seleccionada: producto.controlarseries == 1 ? producto.serie_seleccionada : null,
 				});
+				swal({
+					title: "✓ PRODUCTO AGREGADO", 
+					text: producto.descripcion + " se agregó correctamente a la lista", 
+					icon: "success",
+					button: false,
+					timer: 1000
+				});
+				
 				this.phuyu_totales();
 				this.putunidades = [];
 		    }else{

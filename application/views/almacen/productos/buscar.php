@@ -1,445 +1,728 @@
 <style type="text/css">
-	.columna{
-		background: #ccc;
-		font-size: 12px !important; 
-	}
+    .columna {
+        background: #ccc;
+        font-size: 12px !important;
+    }
 </style>
+<style>
+    .series-card {
+        border: 2px solid #e9ecef;
+        transition: all 0.3s ease;
+        margin-bottom: 8px;
+    }
+
+    .series-card:hover {
+        border-color: #17a2b8;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .series-selected {
+        border-color: #28a745 !important;
+        background-color: #f8fff9;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
+    }
+
+    .card-body {
+        padding: 12px 8px !important;
+    }
+
+    .card-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+</style>
+
 <div id="phuyu_buscar">
-	<div class="row form-group" style="padding:10px 0px; height:53px; border-bottom: 2px solid #f3f3f3;">
-		<div class="col-md-10">
-			<input type="text" class="form-control" v-model="buscar" v-on:keyup="phuyu_buscar()" placeholder="BUSCAR PRODUCTO . . ." v-bind:autofocus="true">
-		</div>
-		<div class="col-md-2">
-			<button type="button" class="btn btn-icon btn-warning" v-on:click="phuyu_nuevoproducto()">
-				<i data-acorn-icon="shipping"></i> <i class="fa fa-plus-circle"></i>
-			</button>
-		</div>
-	</div>
-	<div class="row form-group">
-		<div class="col-xs-12">
-			<div class="row form-group">
-				<table class="table table-striped projects" style="font-size: 11px">
-					<tbody>
-						<tr v-for="(dato,index) in productos">
-							<!--<td style="width:20%;cursor:pointer;" v-on:click="phuyu_seleccionado(dato)">
-								<ul class="list-inline">
-									<li> <img v-bind:src="`<?php echo base_url();?>public/img/productos/${dato.foto}`" style="height:40px;width:100%"> </li>
-								</ul>
-							</td>-->
-							<td style="width:100%;cursor:pointer;padding-left:10px;padding-top: 10px ">
-								<div class="row form-group" >
-									<div class="col-md-9" v-on:click="phuyu_seleccionado(index,dato)">		
-										<b>{{dato.descripcion}}</b> - 
-										<b style="font-size:18px;" class="text-success" v-if="rubro==4">S/. {{dato.preciocosto}}</b>
-										<b style="font-size:18px;" class="text-success" v-else="rubro!=4">S/. {{dato.precio}}</b> <br> 
-										<b style="color:#13a89e" v-if="dato.stock>0">STOCK {{dato.stock}} {{dato.unidad}}</b>
-										<b style="color:#d43f3a" v-if="dato.stock<=0">STOCK {{dato.stock}} {{dato.unidad}}</b> 
-										<span> STOCK P: {{dato.stockproveedor}}</span> <br> 
-										<small>MARCA: {{dato.marca}} CARACT. {{dato.caracteristicas}}</small> <br>
-										<span class="badge bg-info" v-if="dato.controlarseries == 1">
-											<i class="mdi mdi-barcode"></i> CONTROLA-SERIES
-										</span>
-									</div>
-									<div class="col-md-3">
-										<button type="button" v-if="verprecios==1" v-on:click="phuyu_masprecios(dato,index+1)" class="btn btn-success btn-xs"> <b>MAS PRECIOS</b> </button><br>
-										<button type="button" v-on:click="phuyu_masstock(dato)" style="margin:5px" class="btn btn-success btn-xs"> <b>STOCKS</b> </button>
-										<div v-if="rubro==2">
-											<!--<button type="button" v-on:click="phuyu_salida(dato)" class="btn btn-danger btn-xs"> <b>DAR SALIDA</b> </button>-->
-										</div>
-									</div>
-								</div>
-								<template v-if="mostrarprecio==index+1">
-									<table class="table table-bordered" style="font-size: 11px;">
-										<thead>
-											<th>PRECIO PUBLICO</th>
-											<th>PRECIO MINIMO</th>
-											<th>PRECIO X MAYOR</th>
-											<th>PRECIO CREDITO</th>
-										</thead>
-										<tbody>
-											<tr>
-												<td>{{dato.precio}}</td>
-												<td>{{masprecios.preciomin}}</td>
-												<td>{{masprecios.preciomayor}}</td>
-												<td>{{masprecios.preciocredito}}</td>
-											</tr>	
-										</tbody>
-									</table>
-								</template>
-							</td>
-						</tr>
-					</tbody>
-				</table>
-			</div>
-		</div>
-	</div>
-	<div class="col-md-12 col-xs-12" align="center">
-		<ul class="pagination">
-			<li class="page-item disabled" v-if="paginacion.actual <= 1">
-		    	<a class="page-link"> <i data-acorn-icon="chevron-left"></i> </a> 
-		    </li>
-		    <li class="page-item" v-if="paginacion.actual > 1">
-		    	<a class="page-link" href="#" v-on:click.prevent="phuyu_paginacion(paginacion.actual - 1)"> 
-		    		<i data-acorn-icon="chevron-left"></i>
-		    	</a> 
-		    </li>
+    <div class="row form-group" style="padding:10px 0px; height:53px; border-bottom: 2px solid #f3f3f3;">
+        <div class="col-md-10">
+            <input type="text" class="form-control" v-model="buscar" v-on:keyup="phuyu_buscar()" placeholder="BUSCAR PRODUCTO . . ." v-bind:autofocus="true">
+        </div>
+        <div class="col-md-2">
+            <button type="button" class="btn btn-icon btn-warning" v-on:click="phuyu_nuevoproducto()">
+                <i data-acorn-icon="shipping"></i> <i class="fa fa-plus-circle"></i>
+            </button>
+        </div>
+    </div>
+    <div class="row form-group">
+        <div class="col-xs-12">
+            <div class="row form-group">
+                <table class="table table-striped projects" style="font-size: 11px">
+                    <tbody>
+                        <tr v-for="(dato,index) in productos">
+                            <!--<td style="width:20%;cursor:pointer;" v-on:click="phuyu_seleccionado(dato)">
+									<ul class="list-inline">
+									<li> <img v-bind:src="`<?php echo base_url(); ?>public/img/productos/${dato.foto}`" style="height:40px;width:100%"> </li>
+									</ul>
+								</td>-->
+                            <td style="width:100%;cursor:pointer;padding-left:10px;padding-top: 10px ">
+                                <div class="row form-group">
+                                    <div class="col-md-9" v-on:click="phuyu_seleccionado(index,dato)">
+                                        <b>{{ dato . descripcion }}</b> -
+                                        <b style="font-size:18px;" class="text-success" v-if="rubro==4">S/.
+                                            {{ dato . preciocosto }}</b>
+                                        <b style="font-size:18px;" class="text-success" v-else="rubro!=4">S/.
+                                            {{ dato . precio }}</b> <br>
+                                        <b style="color:#13a89e" v-if="dato.stock>0">STOCK {{ dato . stock }}
+                                            {{ dato . unidad }}</b>
+                                        <b style="color:#d43f3a" v-if="dato.stock<=0">STOCK {{ dato . stock }}
+                                            {{ dato . unidad }}</b>
+                                        <span> STOCK P: {{ dato . stockproveedor }}</span> <br>
+                                        <small>MARCA: {{ dato . marca }} CARACT. {{ dato . caracteristicas }}</small>
+                                        <br>
+                                        <span class="badge bg-info" v-if="dato.controlarseries == 1">
+                                            <i class="mdi mdi-barcode"></i> CONTROLA-SERIES
+                                        </span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <button type="button" v-if="verprecios==1"
+                                            v-on:click="phuyu_masprecios(dato,index+1)" class="btn btn-success btn-xs">
+                                            <b>MAS PRECIOS</b> </button><br>
+                                        <button type="button" v-on:click="phuyu_masstock(dato)" style="margin:5px"
+                                            class="btn btn-success btn-xs"> <b>STOCKS</b> </button>
+                                        <div v-if="rubro==2">
+                                            <!--<button type="button" v-on:click="phuyu_salida(dato)" class="btn btn-danger btn-xs"> <b>DAR SALIDA</b> </button>-->
+                                        </div>
+                                    </div>
+                                </div>
+                                <template v-if="mostrarprecio==index+1">
+                                    <table class="table table-bordered" style="font-size: 11px;">
+                                        <thead>
+                                            <th>PRECIO PUBLICO</th>
+                                            <th>PRECIO MINIMO</th>
+                                            <th>PRECIO X MAYOR</th>
+                                            <th>PRECIO CREDITO</th>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>{{ dato . precio }}</td>
+                                                <td>{{ masprecios . preciomin }}</td>
+                                                <td>{{ masprecios . preciomayor }}</td>
+                                                <td>{{ masprecios . preciocredito }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </template>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-12 col-xs-12" align="center">
+        <ul class="pagination">
+            <li class="page-item disabled" v-if="paginacion.actual <= 1">
+                <a class="page-link"> <i data-acorn-icon="chevron-left"></i> </a>
+            </li>
+            <li class="page-item" v-if="paginacion.actual > 1">
+                <a class="page-link" href="#" v-on:click.prevent="phuyu_paginacion(paginacion.actual - 1)">
+                    <i data-acorn-icon="chevron-left"></i>
+                </a>
+            </li>
 
-		    <li class="page-item" v-for="pag in phuyu_paginas" v-bind:class="[pag==phuyu_actual ? 'active':'']">
-		    	<a class="page-link" href="#" v-on:click.prevent="phuyu_paginacion(pag)">{{pag}}</a> 
-		    </li>
+            <li class="page-item" v-for="pag in phuyu_paginas" v-bind:class="[pag==phuyu_actual ? 'active':'']">
+                <a class="page-link" href="#" v-on:click.prevent="phuyu_paginacion(pag)">{{ pag }}</a>
+            </li>
 
-		    <li class="page-item" v-if="paginacion.actual < paginacion.ultima">
-		    	<a class="page-link" href="#" v-on:click.prevent="phuyu_paginacion(paginacion.actual + 1)"> 
-		    		<i data-acorn-icon="chevron-right"></i> 
-		    	</a> 
-		    </li>
-		    <li class="page-item disabled" v-if="paginacion.actual >= paginacion.ultima">
-		    	<a class="page-link"> <i data-acorn-icon="chevron-right"></i> </a> 
-		    </li>
-		</ul>
-	</div>
+            <li class="page-item" v-if="paginacion.actual < paginacion.ultima">
+                <a class="page-link" href="#" v-on:click.prevent="phuyu_paginacion(paginacion.actual + 1)">
+                    <i data-acorn-icon="chevron-right"></i>
+                </a>
+            </li>
+            <li class="page-item disabled" v-if="paginacion.actual >= paginacion.ultima">
+                <a class="page-link"> <i data-acorn-icon="chevron-right"></i> </a>
+            </li>
+        </ul>
+    </div>
 
-	<div id="modal_precios" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
-		<div class="modal-dialog">
-			<div class="modal-content">
-				<div class="modal-header modal-phuyu-titulo"> 
-					<button type="button" class="close" data-dismiss="modal" style="font-size:30px;margin-bottom:0px;">
-						<i class="fa fa-times-circle"></i> 
-					</button>
-					<h4 class="modal-title"> <b style="letter-spacing:1px;">MAS PRECIOS DEL PRODUCTO</b> </h4> 
-				</div>
-				<div class="modal-body text-center" style="height:350px;">
-					<h5>
-						<b>PRODUCTO: {{masprecios.producto}} &nbsp; <span class="label label-warning">U.M. {{masprecios.unidad}}</span></b>
-					</h5> <hr>
-					
-					<div class="col-md-4">
-						<div class="x_panel">
-							<h4> <b>PRECIO VENTA PUBLICO</b> </h4> 
-							<button type="button" class="btn btn-success btn-block" v-on:click="phuyu_seleccionado_1(masprecios.precio)"> 
-								<b style="font-size:18px;">S/. {{masprecios.precio}}</b> 
-							</button>
+    <div id="modal_precios" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header modal-phuyu-titulo">
+                    <button type="button" class="close" data-dismiss="modal"
+                        style="font-size:30px;margin-bottom:0px;">
+                        <i class="fa fa-times-circle"></i>
+                    </button>
+                    <h4 class="modal-title"> <b style="letter-spacing:1px;">MAS PRECIOS DEL PRODUCTO</b> </h4>
+                </div>
+                <div class="modal-body text-center" style="height:350px;">
+                    <h5>
+                        <b>PRODUCTO: {{ masprecios . producto }} &nbsp; <span class="label label-warning">U.M.
+                                {{ masprecios . unidad }}</span></b>
+                    </h5>
+                    <hr>
+
+                    <div class="col-md-4">
+                        <div class="x_panel">
+                            <h4> <b>PRECIO VENTA PUBLICO</b> </h4>
+                            <button type="button" class="btn btn-success btn-block"
+                                v-on:click="phuyu_seleccionado_1(masprecios.precio)">
+                                <b style="font-size:18px;">S/. {{ masprecios . precio }}</b>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="x_panel">
+                            <h4> <b>PRECIO VENTA MINIMO</b> </h4>
+                            <button type="button" class="btn btn-success btn-block"
+                                v-on:click="phuyu_seleccionado_1(masprecios.preciomin)">
+                                <b style="font-size:18px;">S/. {{ masprecios . preciomin }}</b>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="x_panel">
+                            <h4> <b>PRECIO VENTA CREDITO</b> </h4>
+                            <button type="button" class="btn btn-success btn-block"
+                                v-on:click="phuyu_seleccionado_1(masprecios.preciocredito)">
+                                <b style="font-size:18px;">S/. {{ masprecios . preciocredito }}</b>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="x_panel">
+                            <h4> <b>PRECIO VENTA X MAYOR</b> </h4>
+                            <button type="button" class="btn btn-success btn-block"
+                                v-on:click="phuyu_seleccionado_1(masprecios.preciomayor)">
+                                <b style="font-size:18px;">S/. {{ masprecios . preciomayor }}</b>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="x_panel">
+                            <h4> <b>PRECIO DE COSTO</b> </h4>
+                            <button type="button" class="btn btn-success btn-block"
+                                v-on:click="phuyu_seleccionado_1(masprecios.preciocosto)">
+                                <b style="font-size:18px;">S/. {{ masprecios . preciocosto }}</b>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="x_panel">
+                            <h4> <b>PRECIO ADICIONAL</b> </h4>
+                            <button type="button" class="btn btn-success btn-block"
+                                v-on:click="phuyu_seleccionado_1(masprecios.precioadicional)">
+                                <b style="font-size:18px;">S/. {{ masprecios . precioadicional }}</b>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal_salidas" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"
+                        style="font-size:30px;margin-bottom:0px;">
+                        <i class="fa fa-times-circle"></i>
+                    </button>
+                    <h4 class="modal-title"> <b style="letter-spacing:1px;">SALIDA DE STOCK</b> </h4>
+                </div>
+                <div class="modal-body" style="height: 410px;">
+                    <h4 align="center">
+                        {{ salida . producto }} <br> <br> <span class="label label-warning">STOCK: {{ salida . stock }}
+                            {{ salida . unidad }} </span>
+                    </h4>
+                    <hr>
+
+                    <div class="row">
+                        <div class="col-md-6"> <label align="center">FECHA KARDEX Y COMPROBANTE</label> </div>
+                        <div class="col-md-6"> <input type="text" class="form-control input-sm datepicker"
+                                id="fechakardex_salida" value="<?php echo date('Y-m-d'); ?>"> </div>
+                    </div> <br>
+
+                    <div class="row">
+                        <div class="col-md-6"> <label align="center">CANTIDAD SALIDA {{ salida . unidad }}</label>
+                        </div>
+                        <div class="col-md-6"> <input type="number" class="form-control number" min="0"
+                                step="0.01" v-model="salida.cantidad" v-on:keyup="phuyu_unidadingreso()"> </div>
+                    </div>
+                    <hr>
+
+                    <div class="row">
+                        <div class="col-md-6"> <label align="center">UNIDAD A CONVERTIR</label> </div>
+                        <div class="col-md-6">
+                            <select class="form-control number" id="codunidad_ingreso"
+                                v-model="salida.codunidad_ingreso" v-on:change="phuyu_unidadingreso()">
+                                <option value="0">SELECCIONE</option>
+                                <option v-for="dato in unidades" v-bind:value="dato.codunidad">
+                                    {{ dato . descripcion }} </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <h5 class="text-center"> <b>TOTAL INGRESO: {{ salida . cantidadingreso }}</b> </h5>
+                    <button type="button" class="btn btn-success btn-block btn-salida"
+                        v-on:click="phuyu_guardarsalida()">GUARDAR OPERACION DE STOCK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal_stock" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header modal-phuyu-titulo">
+                    <h5 class="modal-title"><b style="font-size:20px;">STOCK EN ALMACENES</b></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" style="height: 410px;">
+                    <h4 align="center">
+                        {{ stock . producto }} <br> <br> <span class="label label-warning">STOCK: {{ stock . stock }}
+                            {{ stock . unidad }} </span>
+                    </h4>
+                    <hr>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <tbody>
+                                        <tr v-for="dato in almacenes">
+                                            <td>{{ dato . almacen }}</td>
+                                            <td>
+                                                <span class="text-danger"
+                                                    v-for="(unidads, und) in dato.unidades"><strong>{{ unidads . descripcion }}:
+                                                        {{ unidads . stock }}</strong><br></span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div> <br>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+
+    <!-- Modal para selección de series -->
+
+    <div class="modal fade" id="listadoSeries" tabindex="-1" aria-labelledby="listadoSeries" aria-hidden="true"
+        data-bs-backdrop="static" data-bs-keyboard="false" style="z-index: 1090;">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header custom-header bg-info text-white">
+                    <h5 class="modal-title" style="color: #ddd;">
+                        <i class="bi bi-person-badge me-2"></i> <strong>Seleccionar Serie</strong>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Buscador simple -->
+                    <!-- Buscador simple -->
+					<div class="row mb-3">
+						<div class="col-12">
+							<input type="text" class="form-control form-control-sm" placeholder="Buscar serie..." 
+								v-model="buscarSerie">
 						</div>
 					</div>
-					<div class="col-md-4">
-						<div class="x_panel">
-							<h4> <b>PRECIO VENTA MINIMO</b> </h4> 
-							<button type="button" class="btn btn-success btn-block" v-on:click="phuyu_seleccionado_1(masprecios.preciomin)">
-								<b style="font-size:18px;">S/. {{masprecios.preciomin}}</b> 
-							</button>
-						</div>
-					</div>
-					<div class="col-md-4">
-						<div class="x_panel">
-							<h4> <b>PRECIO VENTA CREDITO</b> </h4> 
-							<button type="button" class="btn btn-success btn-block" v-on:click="phuyu_seleccionado_1(masprecios.preciocredito)">
-								<b style="font-size:18px;">S/. {{masprecios.preciocredito}}</b> 
-							</button>
-						</div>
-					</div>
-					<div class="col-md-4">
-						<div class="x_panel">
-							<h4> <b>PRECIO VENTA X MAYOR</b> </h4> 
-							<button type="button" class="btn btn-success btn-block" v-on:click="phuyu_seleccionado_1(masprecios.preciomayor)">
-								<b style="font-size:18px;">S/. {{masprecios.preciomayor}}</b> 
-							</button>
-						</div>
-					</div>
-					<div class="col-md-4">
-						<div class="x_panel">
-							<h4> <b>PRECIO DE COSTO</b> </h4> 
-							<button type="button" class="btn btn-success btn-block" v-on:click="phuyu_seleccionado_1(masprecios.preciocosto)">
-								<b style="font-size:18px;">S/. {{masprecios.preciocosto}}</b> 
-							</button>
-						</div>
-					</div>
-					<div class="col-md-4">
-						<div class="x_panel">
-							<h4> <b>PRECIO ADICIONAL</b> </h4> 
-							<button type="button" class="btn btn-success btn-block" v-on:click="phuyu_seleccionado_1(masprecios.precioadicional)">
-								<b style="font-size:18px;">S/. {{masprecios.precioadicional}}</b> 
-							</button>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
+                    <div class="row g-2">
+                        <!-- Card de serie -->
+                        <div class="col-md-4 col-sm-6" v-for="serie in listadoSeriesFiltrado" :key="serie.id_serie" v-on:click="SerieSeleccionada(serie)">
+                            <div class="card text-center series-card"  style="cursor: pointer; transition: all 0.3s ease;">
+                                <div class="card-body p-2">
+                                    <h6 class="card-title mb-1" style="font-size: 0.9rem;">{{ serie . serie_codigo }} </h6>
+                                    <p class="card-text mb-1">
+                                        <small class="text-success" style="font-size: 0.75rem;">DISPONIBLE</small>
+                                    </p>
+                                    <div>
+                                        <i class="fa fa-check-circle text-success" style="font-size: 1.2rem;"></i>
+                                    </div>
+                                    <div>
+                                        <i class="fa fa-circle text-muted" style="font-size: 1rem;"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Botones -->
+                    <!-- <div class="row mt-3">
+                        <div class="col-12 text-center">
+                            <button class="btn btn-success btn-sm me-2">
+                                <i class="fa fa-check me-1"></i> Confirmar
+                            </button>
+                            <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                                <i class="fa fa-times me-1"></i> Cancelar
+                            </button>
+                        </div>
+                    </div> -->
+                </div>
+            </div>
+        </div>
+    </div>
 
-	<div id="modal_salidas" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
-		<div class="modal-dialog modal-sm">
-			<div class="modal-content">
-				<div class="modal-header"> 
-					<button type="button" class="close" data-dismiss="modal" style="font-size:30px;margin-bottom:0px;">
-						<i class="fa fa-times-circle"></i> 
-					</button>
-					<h4 class="modal-title"> <b style="letter-spacing:1px;">SALIDA DE STOCK</b> </h4> 
-				</div>
-				<div class="modal-body" style="height: 410px;">
-					<h4 align="center">
-						{{salida.producto}} <br> <br> <span class="label label-warning">STOCK: {{salida.stock}} {{salida.unidad}} </span> 
-					</h4> <hr>
 
-					<div class="row">
-						<div class="col-md-6"> <label align="center">FECHA KARDEX Y COMPROBANTE</label> </div>
-						<div class="col-md-6"> <input type="text" class="form-control input-sm datepicker" id="fechakardex_salida" value="<?php echo date('Y-m-d');?>"> </div>
-					</div> <br>
 
-					<div class="row">
-						<div class="col-md-6"> <label align="center">CANTIDAD SALIDA {{salida.unidad}}</label> </div>
-						<div class="col-md-6"> <input type="number" class="form-control number" min="0" step="0.01" v-model="salida.cantidad" v-on:keyup="phuyu_unidadingreso()"> </div>
-					</div> <hr>
 
-					<div class="row">
-						<div class="col-md-6"> <label align="center">UNIDAD A CONVERTIR</label> </div>
-						<div class="col-md-6"> 
-							<select class="form-control number" id="codunidad_ingreso" v-model="salida.codunidad_ingreso" v-on:change="phuyu_unidadingreso()">
-								<option value="0">SELECCIONE</option>
-								<option v-for="dato in unidades" v-bind:value="dato.codunidad"> {{dato.descripcion}} </option>
-							</select>
-						</div>
-					</div>
 
-					<h5 class="text-center"> <b>TOTAL INGRESO: {{salida.cantidadingreso}}</b> </h5>
-					<button type="button" class="btn btn-success btn-block btn-salida" v-on:click="phuyu_guardarsalida()">GUARDAR OPERACION DE STOCK</button>
-				</div>
-			</div>
-		</div>
-	</div>
 
-	<div id="modal_stock" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
-		<div class="modal-dialog">
-			<div class="modal-content">
-				<div class="modal-header modal-phuyu-titulo">
-					<h5 class="modal-title"><b style="font-size:20px;">STOCK EN ALMACENES</b></h5>
-					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-				</div>
-				<div class="modal-body" style="height: 410px;">
-					<h4 align="center">
-						{{stock.producto}} <br> <br> <span class="label label-warning">STOCK: {{stock.stock}} {{stock.unidad}} </span> 
-					</h4> <hr>
 
-					<div class="row">
-						<div class="col-md-12">
-							<div class="table-responsive">
-								<table class="table table-bordered">
-									<tbody>
-										<tr v-for="dato in almacenes">
-											<td>{{dato.almacen}}</td>
-											<td>
-												<span class="text-danger" v-for="(unidads, und) in dato.unidades"><strong>{{unidads.descripcion}}: {{unidads.stock}}</strong><br></span>
-											</td>
-										</tr>
-									</tbody>
-								</table>
-							</div>
-						</div>
-					</div> <br>
 
-				</div>
-			</div>
-		</div>
-	</div>
+
 </div>
 
 <script>
-	var phuyu_buscar = new Vue({
-		el: "#phuyu_buscar",
-		data: {
-			cargando: true, buscar: "", rubro:"<?php echo $_SESSION['phuyu_rubro'];?>", verprecios:1, putunidades:[],mostrarprecio:0,
-			productos:[], unidades:[], productoprecio:{},almacenes:[],
-			masprecios: {
-				producto:"", unidad:"", precio:0, preciomin:0, preciocredito:0, preciomayor:0, preciocosto:0, precioadicional:0
-			},
-			stock:{
-                producto:"", unidad:"", stock:0
-			},
-			salida: {
-				producto:"", unidad:"", codproducto:0, codunidad:0, factor:0, preciocosto:0, stock:0, cantidad:1, fechakardex:"", codunidad_ingreso:0, factor_ingreso:0, cantidadingreso:0
-			},
-			paginacion: {"total":0, "actual":1, "ultima":0, "desde":0, "hasta":0}, offset: 3
-		},
-		computed: {
-			phuyu_actual: function(){
-				return this.paginacion.actual;
-			},
-			phuyu_paginas: function(){
-				if (!this.paginacion.hasta) {
-					return [];
-				}
-				var desde = this.paginacion.actual - this.offset;
-				if (desde < 1) {
-					desde = 1;
-				}
-				var hasta = desde + (this.offset * 2);
-				if (hasta >= this.paginacion.ultima) {
-					hasta = this.paginacion.ultima;
-				}
+    var phuyu_buscar = new Vue({
+        el: "#phuyu_buscar",
+        data: {
+            cargando: true,
+            buscar: "",
+            rubro: "<?php echo $_SESSION['phuyu_rubro']; ?>",
+            verprecios: 1,
+            putunidades: [],
+            mostrarprecio: 0,
+            productos: [],
+            unidades: [],
+            productoprecio: {},
+            almacenes: [],
+            masprecios: {
+                producto: "",
+                unidad: "",
+                precio: 0,
+                preciomin: 0,
+                preciocredito: 0,
+                preciomayor: 0,
+                preciocosto: 0,
+                precioadicional: 0
+            },
+            stock: {
+                producto: "",
+                unidad: "",
+                stock: 0
+            },
+            salida: {
+                producto: "",
+                unidad: "",
+                codproducto: 0,
+                codunidad: 0,
+                factor: 0,
+                preciocosto: 0,
+                stock: 0,
+                cantidad: 1,
+                fechakardex: "",
+                codunidad_ingreso: 0,
+                factor_ingreso: 0,
+                cantidadingreso: 0
+            },
+            paginacion: {
+                "total": 0,
+                "actual": 1,
+                "ultima": 0,
+                "desde": 0,
+                "hasta": 0
+            },
+            offset: 3,
+            // Para selección de series
+            listadoSeries: [],
+           // listadoSeriesFiltrado: [],
+              buscarSerie: '',
+            // fin selección de series
+			ProductoSelecionado: {},
+        },
+        computed: {
+            phuyu_actual: function() {
+                return this.paginacion.actual;
+            },
+            phuyu_paginas: function() {
+                if (!this.paginacion.hasta) {
+                    return [];
+                }
+                var desde = this.paginacion.actual - this.offset;
+                if (desde < 1) {
+                    desde = 1;
+                }
+                var hasta = desde + (this.offset * 2);
+                if (hasta >= this.paginacion.ultima) {
+                    hasta = this.paginacion.ultima;
+                }
 
-				var paginas = [];
-				while(desde <= hasta){
-					paginas.push(desde); desde++;
-				}
-				return paginas;
+                var paginas = [];
+                while (desde <= hasta) {
+                    paginas.push(desde);
+                    desde++;
+                }
+                return paginas;
+            },
+			// AGREGAR ESTE COMPUTED PARA FILTRAR SERIES
+			listadoSeriesFiltrado: function() {
+
+				 console.log("Filtro de series activado:", this.buscarSerie);
+				// Paso 1: Si no hay texto de búsqueda, devuelve todas las series
+				if (!this.buscarSerie) return this.listadoSeries;
+				
+				// Paso 2: Convierte el texto de búsqueda a minúsculas
+				const termino = this.buscarSerie.toLowerCase();
+				
+				// Paso 3: Filtra las series que incluyen el término de búsqueda
+				return this.listadoSeries.filter(serie => 
+					serie.serie_codigo.toLowerCase().includes(termino)
+				);
 			}
-		},
-		methods: {
-			phuyu_nuevoproducto : function(){
-				$(".compose").removeClass("col-md-4").addClass("col-md-9");
-				phuyu_sistema.phuyu_loader("phuyu_formulario",180);
-				this.$http.post(url+"almacen/productos/nuevo").then(function(data){
-					$("#phuyu_formulario").empty().html(data.body);phuyu_sistema.phuyu_finloader("phuyu_formulario");
-				},function(){
-					phuyu_sistema.phuyu_error();phuyu_sistema.phuyu_finloader("phuyu_formulario");
-				});
-			},
-			phuyu_productos: function(){
-				var buscar = "buscar_salidas";
-				if (phuyu_controller=="almacen/ingresos" || phuyu_controller=="almacen/salidas" || phuyu_controller=="compras/compras") {
-					var buscar = "buscar_ingresos"; this.verprecios = 0;
-				}
 
-				this.cargando = true;
-				this.$http.post(url+"almacen/productos/"+buscar,{"buscar":this.buscar,"pagina":this.paginacion.actual}).then(function(data){
-					this.productos = data.body.lista; this.paginacion = data.body.paginacion; this.cargando = false;
-				},function(){
-					phuyu_sistema.phuyu_error(); this.cargando = false;
-				});
-			},
-			phuyu_buscar: function(){
-				this.paginacion.actual = 1; this.phuyu_productos();
-			},
-			phuyu_paginacion: function(pagina){
-				this.paginacion.actual = pagina; this.phuyu_productos();
-			},
-			phuyu_seleccionado: function(index,producto){
+        },
+        methods: {
+			
+            phuyu_nuevoproducto: function() {
+                $(".compose").removeClass("col-md-4").addClass("col-md-9");
+                phuyu_sistema.phuyu_loader("phuyu_formulario", 180);
+                this.$http.post(url + "almacen/productos/nuevo").then(function(data) {
+                    $("#phuyu_formulario").empty().html(data.body);
+                    phuyu_sistema.phuyu_finloader("phuyu_formulario");
+                }, function() {
+                    phuyu_sistema.phuyu_error();
+                    phuyu_sistema.phuyu_finloader("phuyu_formulario");
+                });
+            },
+            phuyu_productos: function() {
 
-				//console.log(producto);
-				index = index;
-				$('.projects tr:eq('+index+') td').addClass("columna");
-				phuyu_operacion.phuyu_additem(producto, producto.precio);
-				timeout = setTimeout(removerColumna, 100, index);
-			},
-			phuyu_masprecios:function(producto,index){
-				this.masprecios.producto = producto.descripcion; this.masprecios.unidad = producto.unidad;
-				this.masprecios.precio = producto.precio; this.masprecios.preciomin = producto.preciomin; 
-				this.masprecios.preciocredito = producto.preciocredito; this.masprecios.preciomayor = producto.preciomayor;
-				this.masprecios.preciocosto = producto.precio; this.masprecios.preciomayorcre = producto.preciomayorcre;
 
-				this.productoprecio = producto; 
-				if(this.mostrarprecio==index){
-					this.mostrarprecio = 0;
-				}else{
-					this.mostrarprecio = index;
-				}
-			},
-			phuyu_masstock:function(producto){
-				this.stock.producto = producto.descripcion;
-				this.stock.stock = producto.stock;
-				this.stock.unidad = producto.unidad;
-				$("#modal_stock").modal("show");
-				this.$http.get(url+"almacen/productos/stock_almacenes/"+producto.codproducto).then(function(data){
-					var datos = data.body
-                    var filas = [];
-					$.each( datos.almacenes, function( k, v ) {
-                        var unidades = []; var factores = []; var logo = []; arreglo = [];
-				    	unidades = (v.unidades).split(";"); var funidades = [];
+                var buscar = "buscar_salidas";
+                if (phuyu_controller == "almacen/ingresos" || phuyu_controller == "almacen/salidas" ||
+                    phuyu_controller == "compras/compras") {
+                    var buscar = "buscar_ingresos";
+                    this.verprecios = 0;
+                }
 
-				    	for (var i = 0; i < unidades.length; i++) {
-		                    factores = (unidades[i]).split("|");
-				    		logo = {descripcion:factores[1],codunidad:factores[0],factor:factores[8],stock:factores[3]};
-				    		funidades.push(logo)
-				    	}
-				    	this.putunidades = funidades;
-				    	filas.push({
-                           almacen:v.almacen, unidades : this.putunidades
-				    	});
-				    	this.putunidades = [];
+                this.cargando = true;
+                this.$http.post(url + "almacen/productos/" + buscar, {
+                    "buscar": this.buscar,
+                    "pagina": this.paginacion.actual
+                }).then(function(data) {
+                    this.productos = data.body.lista;
+                    this.paginacion = data.body.paginacion;
+                    this.cargando = false;
+                }, function() {
+                    phuyu_sistema.phuyu_error();
+                    this.cargando = false;
+                });
+            },
+            phuyu_buscar: function() {
+                this.paginacion.actual = 1;
+                this.phuyu_productos();
+            },
+            phuyu_paginacion: function(pagina) {
+                this.paginacion.actual = pagina;
+                this.phuyu_productos();
+            },
+            phuyu_seleccionado: async function(index, producto) {
+
+                // inf para identificar si es egreso o ventas asi debe selecionar la serie de producto 
+                if ((phuyu_controller == 'ventas/ventas' || phuyu_controller == 'almacen/salidas') && producto.controlarseries == 1) {
+                   // console.log("ENTRO A VENTAS O EGRESOS", phuyu_controller);
+
+					let detalleActual = phuyu_operacion.detalle || [];
+					// Lista completa de series del producto
+					let listaSeriesSinFiltro = producto.series;
+
+					// Productos del mismo tipo que ya están en el detalle
+					let FiltroProductos = detalleActual.filter(dp => dp.codproducto == producto.codproducto);
+
+					// Filtrar: quitar las series que ya están en FiltroProductos
+					this.listadoSeries = listaSeriesSinFiltro.filter(serie => {
+						// Verificar si esta serie ya existe en los productos filtrados
+						let serieYaExiste = FiltroProductos.some(productoDetalle => 
+							productoDetalle.serie_seleccionada && 
+							productoDetalle.serie_seleccionada.id_serie == serie.id_serie
+						);
+						
+						// Mantener solo las series que NO existen
+						return !serieYaExiste;
 					});
-					
 
-			    	
-					this.almacenes = filas; 
-					$("#modal_stock").modal({backdrop: 'static', keyboard: false});
-				});
-			},
-			phuyu_seleccionado_1: function(precio){
-				phuyu_operacion.phuyu_additem(this.productoprecio,precio); $("#modal_precios").modal("hide");
-			},
-			phuyu_salida:function(producto){
-				this.salida.producto = producto.descripcion; this.salida.unidad = producto.unidad;
-				this.salida.codproducto = producto.codproducto;
-				this.salida.codunidad = producto.codunidad;
-				this.salida.factor = producto.factor;
-				this.salida.preciocosto = producto.precio;
-				this.salida.stock = producto.stock;
-				this.salida.cantidad = 1;
-				this.salida.codunidad_ingreso = 0;
-				this.salida.factor_ingreso = 0;
-				this.salida.cantidadingreso = 0;
+					console.log("Series originales:", listaSeriesSinFiltro);
+					console.log("Productos en detalle:", FiltroProductos);
+					console.log("Series disponibles:", this.listadoSeries);
+                    
+				 
+				   // this.listadoSeries = producto.series;
+                    this.listadoSeriesFiltrado = this.listadoSeries;
+					this.ProductoSelecionado = producto; 
 
-				this.$http.get(url+"almacen/productos/unidades_venta/"+producto.codproducto+"/"+producto.factor).then(function(data){
-					this.unidades = data.body;
-					$(".btn-salida").html("GUARDAR OPERACION DE STOCK").removeAttr("disabled"); 
-					$("#modal_salidas").modal({backdrop: 'static', keyboard: false});
-				});
+
+                    $('#listadoSeries').modal('show');
+                    return false;
+                }
+                //console.log(producto);
+                index = index;
+                $('.projects tr:eq(' + index + ') td').addClass("columna");
+                phuyu_operacion.phuyu_additem(producto, producto.precio);
+                timeout = setTimeout(removerColumna, 100, index);
+            },
+			SerieSeleccionada : function(serie) {
+				console.log("Serie seleccionada:", serie);
+				this.ProductoSelecionado.serie_seleccionada = serie;
+				phuyu_operacion.phuyu_additem(this.ProductoSelecionado,this.ProductoSelecionado.precio);
+				$('#listadoSeries').modal('hide');
 			},
-			phuyu_unidadingreso: function(){
-				that = this;
-				var existe_factor = this.unidades.filter(function(u){
-				    if(u.codunidad == that.salida.codunidad_ingreso){
-				    	that.salida.factor_ingreso = u.factor; return u;
-				    };
-				});
-				this.salida.cantidadingreso = 0;
-				if (this.salida.factor_ingreso>0) {
-					this.salida.cantidadingreso = this.salida.cantidad * this.salida.factor / this.salida.factor_ingreso;
-				}
-			},
-			phuyu_guardarsalida: function(){
-				if ($("#codunidad_ingreso").val()==0 || $("#codunidad_ingreso").val()=="") {
-					phuyu_sistema.phuyu_alerta("SELECCIONE UNIDAD MEDIDA A CONVERTIR","","error"); return false;
-				}
-				if (this.salida.cantidad=="") {
-					phuyu_sistema.phuyu_alerta("INGRESAR LA CANTIDAD A DAR SALIDA","","error"); return false;
-				}
-				if (parseFloat(this.salida.stock)<parseFloat(this.salida.cantidad)) {
-					phuyu_sistema.phuyu_alerta("LA CANTIDAD EN STOCK SOLO ES "+this.salida.stock+" "+this.salida.unidad,"","error");
-				}else{
-					this.salida.fechakardex = $("#fechakardex_salida").val();
-					$(".btn-salida").html("<i class='fa fa-spinner fa-spin'></i> GUARDANDO OPERACION").attr("disabled","true");
-					this.$http.post(url+"almacen/salidas/guardar_operacionstock",this.salida).then(function(data){
-						if (data.body==1) {
-							phuyu_sistema.phuyu_alerta("OPERACION GUARDADA CORRECTAMENTE","","success");
-							this.phuyu_productos();
-						}else{
-							phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS", "ERROR DE RED","error");
-						}
-						$("#modal_salidas").modal("hide");
-					},function(){
-						phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS", "ERROR DE RED","error");
-						$("#modal_salidas").modal("hide");
-					});
-				}
-			},
-			phuyu_cerrar: function(){
-				$(".compose").slideToggle();
-			}
-		},
-		created: function(){
-			this.phuyu_productos();
-		}
-	});
+            phuyu_masprecios: function(producto, index) {
+                this.masprecios.producto = producto.descripcion;
+                this.masprecios.unidad = producto.unidad;
+                this.masprecios.precio = producto.precio;
+                this.masprecios.preciomin = producto.preciomin;
+                this.masprecios.preciocredito = producto.preciocredito;
+                this.masprecios.preciomayor = producto.preciomayor;
+                this.masprecios.preciocosto = producto.precio;
+                this.masprecios.preciomayorcre = producto.preciomayorcre;
+
+                this.productoprecio = producto;
+                if (this.mostrarprecio == index) {
+                    this.mostrarprecio = 0;
+                } else {
+                    this.mostrarprecio = index;
+                }
+            },
+            phuyu_masstock: function(producto) {
+                this.stock.producto = producto.descripcion;
+                this.stock.stock = producto.stock;
+                this.stock.unidad = producto.unidad;
+                $("#modal_stock").modal("show");
+                this.$http.get(url + "almacen/productos/stock_almacenes/" + producto.codproducto).then(
+                    function(data) {
+                        var datos = data.body
+                        var filas = [];
+                        $.each(datos.almacenes, function(k, v) {
+                            var unidades = [];
+                            var factores = [];
+                            var logo = [];
+                            arreglo = [];
+                            unidades = (v.unidades).split(";");
+                            var funidades = [];
+
+                            for (var i = 0; i < unidades.length; i++) {
+                                factores = (unidades[i]).split("|");
+                                logo = {
+                                    descripcion: factores[1],
+                                    codunidad: factores[0],
+                                    factor: factores[8],
+                                    stock: factores[3]
+                                };
+                                funidades.push(logo)
+                            }
+                            this.putunidades = funidades;
+                            filas.push({
+                                almacen: v.almacen,
+                                unidades: this.putunidades
+                            });
+                            this.putunidades = [];
+                        });
+
+
+
+                        this.almacenes = filas;
+                        $("#modal_stock").modal({
+                            backdrop: 'static',
+                            keyboard: false
+                        });
+                    });
+            },
+            phuyu_seleccionado_1: function(precio) {
+                phuyu_operacion.phuyu_additem(this.productoprecio, precio);
+                $("#modal_precios").modal("hide");
+            },
+            phuyu_salida: function(producto) {
+                this.salida.producto = producto.descripcion;
+                this.salida.unidad = producto.unidad;
+                this.salida.codproducto = producto.codproducto;
+                this.salida.codunidad = producto.codunidad;
+                this.salida.factor = producto.factor;
+                this.salida.preciocosto = producto.precio;
+                this.salida.stock = producto.stock;
+                this.salida.cantidad = 1;
+                this.salida.codunidad_ingreso = 0;
+                this.salida.factor_ingreso = 0;
+                this.salida.cantidadingreso = 0;
+
+                this.$http.get(url + "almacen/productos/unidades_venta/" + producto.codproducto + "/" +
+                    producto.factor).then(function(data) {
+                    this.unidades = data.body;
+                    $(".btn-salida").html("GUARDAR OPERACION DE STOCK").removeAttr("disabled");
+                    $("#modal_salidas").modal({
+                        backdrop: 'static',
+                        keyboard: false
+                    });
+                });
+            },
+            phuyu_unidadingreso: function() {
+                that = this;
+                var existe_factor = this.unidades.filter(function(u) {
+                    if (u.codunidad == that.salida.codunidad_ingreso) {
+                        that.salida.factor_ingreso = u.factor;
+                        return u;
+                    };
+                });
+                this.salida.cantidadingreso = 0;
+                if (this.salida.factor_ingreso > 0) {
+                    this.salida.cantidadingreso = this.salida.cantidad * this.salida.factor / this.salida
+                        .factor_ingreso;
+                }
+            },
+            phuyu_guardarsalida: function() {
+                if ($("#codunidad_ingreso").val() == 0 || $("#codunidad_ingreso").val() == "") {
+                    phuyu_sistema.phuyu_alerta("SELECCIONE UNIDAD MEDIDA A CONVERTIR", "", "error");
+                    return false;
+                }
+                if (this.salida.cantidad == "") {
+                    phuyu_sistema.phuyu_alerta("INGRESAR LA CANTIDAD A DAR SALIDA", "", "error");
+                    return false;
+                }
+                if (parseFloat(this.salida.stock) < parseFloat(this.salida.cantidad)) {
+                    phuyu_sistema.phuyu_alerta("LA CANTIDAD EN STOCK SOLO ES " + this.salida.stock + " " +
+                        this.salida.unidad, "", "error");
+                } else {
+                    this.salida.fechakardex = $("#fechakardex_salida").val();
+                    $(".btn-salida").html("<i class='fa fa-spinner fa-spin'></i> GUARDANDO OPERACION").attr(
+                        "disabled", "true");
+                    this.$http.post(url + "almacen/salidas/guardar_operacionstock", this.salida).then(
+                        function(data) {
+                            if (data.body == 1) {
+                                phuyu_sistema.phuyu_alerta("OPERACION GUARDADA CORRECTAMENTE", "",
+                                    "success");
+                                this.phuyu_productos();
+                            } else {
+                                phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS", "ERROR DE RED",
+                                    "error");
+                            }
+                            $("#modal_salidas").modal("hide");
+                        },
+                        function() {
+                            phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS", "ERROR DE RED",
+                                "error");
+                            $("#modal_salidas").modal("hide");
+                        });
+                }
+            },
+            phuyu_cerrar: function() {
+                $(".compose").slideToggle();
+            },
+			
+        },
+        created: function() {
+            this.phuyu_productos();
+        }
+    });
 </script>
 
-<script> 
+<script>
     if (typeof AcornIcons !== 'undefined') {
-      new AcornIcons().replace();
+        new AcornIcons().replace();
     }
     if (typeof Icons !== 'undefined') {
-      const icons = new Icons();
+        const icons = new Icons();
     }
- function removerColumna(index){
- 	$('.projects tr:eq('+index+') td').removeClass("columna");
-} 
+
+    function removerColumna(index) {
+        $('.projects tr:eq(' + index + ') td').removeClass("columna");
+    }
 </script>
