@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-    <title>phuyu Soft | Iniciar Sesión</title>
+    <title>Phuyu System | Iniciar Sesión</title>
 
     <!-- Base (mantengo tus rutas y libs principales) -->
     <link rel="stylesheet" href="<?php echo base_url();?>public/css/vendor/bootstrap.min.css" />
