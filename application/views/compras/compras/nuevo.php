@@ -179,7 +179,9 @@
 											</select>
 										</td>
 										<td>
-											<input type="number" step="0.0001" class="form-control number" v-model.number="dato.cantidad" v-on:keyup="phuyu_calcular(dato)" min="0.001" required>
+											
+											<input     :disabled="dato.controlarseries == 1"  type="number" step="0.0001" class="form-control number" v-model.number="dato.cantidad" v-on:keyup="phuyu_calcular(dato)" min="0.001" required>
+											
 										</td>
 										<td>
 											<input type="number" step="0.0001" class="form-control number" v-if="dato.codafectacionigv==21" v-model.number="dato.preciosinigv" min="0" readonly>

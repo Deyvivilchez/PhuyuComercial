@@ -62,6 +62,10 @@ var phuyu_operacion = new Vue({
 		agregarSerieLista(serie, mensaje) {
 			this.productoSeleccionado.series.push({ serie_codigo: serie });
 			this.detalle[this.productoSeleccionado.index].series = this.productoSeleccionado.series;
+			// RECALCULAO DEL SUB TOTAL DEL ITEM
+			this.detalle[this.productoSeleccionado.index].cantidad = this.detalle[this.productoSeleccionado.index].series.length;
+			this.phuyu_calcular(this.detalle[this.productoSeleccionado.index]);
+			// FIN RECALCULAO DEL SUB TOTAL DEL ITEM
 			this.nuevaSerie = '';
 			phuyu_sistema.phuyu_noti("Éxito", mensaje, "success");
 		},
@@ -71,11 +75,12 @@ var phuyu_operacion = new Vue({
 
 			// ✅ CORRECTO: Verificar si existe el array de series
 			if (this.detalle[index].series === undefined) {
-				this.detalle[index].series = []; // Inicializar si no existe
+				this.detalle[index].series = []; // Inicializar si no existe				
 			}
 
 			this.productoSeleccionado.series = this.detalle[index].series;
 			this.productoSeleccionado.index = index;
+			//
 			$("#modalSeries").modal('show');
 		},
 
