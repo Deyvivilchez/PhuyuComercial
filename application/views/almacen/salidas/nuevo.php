@@ -134,7 +134,8 @@
 					    	<input class="form-control" name="descripcion" v-model="campos.descripcion" required autocomplete="off">
 					    </div>
 					    <div class="col-md-2" align="right">
-					    	<button type="button" style="margin-top: 1.3rem" class="btn btn-success btn-icon btn-block" v-on:click="phuyu_item()"> <b><i data-acorn-icon="search"></i> Productos</b> </button>
+					    	<button type="button" style="margin-top: 1.3rem" class="btn btn-success btn-icon btn-block"
+							 v-on:click="phuyu_item()"> <b><i data-acorn-icon="search"></i> Productos</b> </button>
 					    </div>
 				    </div>
 				    <?php
@@ -147,6 +148,7 @@
 						<table class="table table-striped" style="font-size: 11px">
 							<thead>
 								<tr>
+									
 									<th width="45%">PRODUCTO</th>
 									<th width="10%">UNIDAD</th>
 									<th width="10%">STOCK ACTUAL</th>
@@ -158,6 +160,7 @@
 							</thead>
 							<tbody>
 								<tr v-for="(dato,index) in detalle">
+									
 									<td>{{dato.producto}}</td>
 									<td>
 										<select class="form-select number unidad" v-model="dato.codunidad" v-on:change="informacion_unidad(index,dato,this.value)" id="codunidad">
@@ -172,9 +175,29 @@
 										</select>
 									</td>
 									<td style="color:red;font-weight:bold">{{dato.stock}} </td>
-									<td>
-										<input type="number" step="0.0001" class="form-control number" v-if="dato.control==1" v-model.number="dato.cantidad" v-on:keyup="phuyu_calcular(dato,3)" <?php echo $data; ?> min="0.0001"  required>
+
+									<td v-if="dato.controlarseries != 1">
+										<input
+											type="number"
+											class="form-control number"
+											v-model.number="dato.cantidad"
+											@keyup="phuyu_calcular(dato, 3)"
+											<?php echo $data; ?>
+											min="1"
+											step="1"
+											required
+										>
+										</td>
+
+									<td v-else>
+										{{dato.cantidad}}
 									</td>
+									<!-- <td>
+										<input type="number" step="0.0001" class="form-control number" 
+										v-if="dato.control==1" 
+										v-model.number="dato.cantidad" 
+										v-on:keyup="phuyu_calcular(dato,3)" <?php echo $data; ?> min="0.0001"  required>
+									</td> -->
 									<td> 
 										<input type="number" step="0.0001" class="form-control number" v-model.number="dato.precio" v-on:keyup="phuyu_calcular(dato,3)" min="0" required>
 									</td>

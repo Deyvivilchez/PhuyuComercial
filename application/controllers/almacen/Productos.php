@@ -87,10 +87,10 @@ class Productos extends CI_Controller
                 $productos = $this->db
                     ->query(
                         "select producto.codproducto, producto.codigo,
-    producto.descripcion,
-    marca.descripcion as marca from almacen.productos as producto
-    inner join almacen.marcas as marca on (producto.codmarca=marca.codmarca)
-    where (REPLACE(UPPER(producto.descripcion),' ','%') like REPLACE (UPPER('%" .
+                        producto.descripcion,
+                        marca.descripcion as marca from almacen.productos as producto
+                        inner join almacen.marcas as marca on (producto.codmarca=marca.codmarca)
+                        where (REPLACE(UPPER(producto.descripcion),' ','%') like REPLACE (UPPER('%" .
                             $_POST['q'] .
                             "%'),' ','%') or UPPER(producto.codigo) like UPPER('%" .
                             $_POST['q'] .

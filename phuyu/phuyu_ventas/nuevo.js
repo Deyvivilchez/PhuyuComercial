@@ -316,7 +316,6 @@ var phuyu_operacion = new Vue({
 			}
 
 		    if (existe_item.length==0 || $("#itemrepetir").val()==1) {
-
 		    	var unidades = []; var factores = []; var logo = []; arreglo = [];
 		    	unidades = (producto.unidades).split(";");
 
@@ -333,11 +332,10 @@ var phuyu_operacion = new Vue({
 		    	}
 
 		    	producto.preciooriginal = precio;
-
-		    	producto.preciosinigv = producto.precio; producto.precio = precio; 
-		    	producto.valorventa = producto.precio; producto.subtotal = producto.precio;
-		    	
-
+		    	producto.preciosinigv = producto.precio; 
+				producto.precio = precio; 
+		    	producto.valorventa = producto.precio; 
+				producto.subtotal = producto.precio;
 				producto.igv = 0; var porcentaje = 1;
 				if (producto.afectacionigv==10) {
 					var porcentaje = (1 + this.igvsunat) / 100;
@@ -376,8 +374,6 @@ var phuyu_operacion = new Vue({
 				}
 			}
 
-				
-
 				this.detalle.push({
 					codproducto: producto.codproducto, 
 					producto: producto.descripcion, 
@@ -409,6 +405,7 @@ var phuyu_operacion = new Vue({
 					descripcion: producto.controlarseries == 1 ? 'SERIE/CODIGO : ' + producto.serie_seleccionada.serie_codigo : producto.descripcion,
     				serie_seleccionada: producto.controlarseries == 1 ? producto.serie_seleccionada : null,
 				});
+
 				swal({
 					title: "✓ PRODUCTO AGREGADO", 
 					text: producto.descripcion + " se agregó correctamente a la lista", 
