@@ -160,8 +160,17 @@
 							</thead>
 							<tbody>
 								<tr v-for="(dato,index) in detalle">
-									
-									<td>{{dato.producto}}</td>
+
+									<td v-if="dato.controlarseries == 1">
+									{{ dato.producto }} - SERIE:
+									<strong style="color:rgb(118, 29, 165);">
+										{{ dato.serie_seleccionada?.serie_codigo }}
+									</strong>
+									</td>
+
+									<td v-else>
+									{{ dato.producto }}
+									</td>
 									<td>
 										<select class="form-select number unidad" v-model="dato.codunidad" v-on:change="informacion_unidad(index,dato,this.value)" id="codunidad">
 											<template v-for="(unidad, und) in dato.unidades">

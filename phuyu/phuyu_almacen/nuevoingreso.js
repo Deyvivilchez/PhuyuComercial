@@ -6,8 +6,74 @@ var phuyu_operacion = new Vue({
 			"codcomprobantetipo_ref":0,"seriecomprobante_ref":"","nrocomprobante_ref":"","descripcion":"","fechakardex":""
 		},
 		estado:0,kardex_id:0, igvsunat:$("#igvsunat").val(), detalle: [],detalle_prestamo: [],putunidades : [], totales: {"valorventa":0.00,"igv":0.00,"importe":0.00},
+		productoSeleccionado: {},
+		nuevaSerie: null,
 	},
 	methods: {
+
+		eliminarSerie(index) {
+			if (index < 0 || index >= this.productoSeleccionado.series.length) return;
+
+			this.productoSeleccionado.series.splice(index, 1);
+			this.detalle[this.productoSeleccionado.index].series =this.productoSeleccionado.series;
+			phuyu_sistema.phuyu_noti("Serie eliminada", "La serie se eliminó correctamente.", "warning");
+		},
+
+
+		agregarSerie() {
+			if (!this.nuevaSerie) {
+				phuyu_sistema.phuyu_noti("Serie requerida", "Ingrese el número de serie", "warning");
+				return;
+			}
+
+			const serie = this.nuevaSerie.trim().toUpperCase();
+
+			if (this.productoSeleccionado.series.length === 0) {
+				this.agregarSerieLista(serie, "Primera serie agregada");
+				return;
+			}
+
+			if (this.productoSeleccionado.series.some(s => s.serie_codigo === serie)) {
+				phuyu_sistema.phuyu_noti("Serie duplicada", "Ya existe en la lista", "info");
+				return;
+			}
+
+			this.agregarSerieLista(serie, "Serie agregada");
+		},
+
+		agregarSerieLista(serie, mensaje) {
+			this.productoSeleccionado.series.push({ serie_codigo: serie });
+			this.detalle[this.productoSeleccionado.index].series = this.productoSeleccionado.series;
+			// RECALCULAO DEL SUB TOTAL DEL ITEM
+			this.detalle[this.productoSeleccionado.index].cantidad = this.detalle[this.productoSeleccionado.index].series.length;
+			this.phuyu_calcular(this.detalle[this.productoSeleccionado.index]);
+			// FIN RECALCULAO DEL SUB TOTAL DEL ITEM
+			this.nuevaSerie = '';
+			phuyu_sistema.phuyu_noti("Éxito", mensaje, "success");
+		},
+		/* FUNCIONES MODAL SERIES */
+		phuyu_ModalSeries(producto, index) {
+			this.productoSeleccionado = producto;
+
+			// ✅ CORRECTO: Verificar si existe el array de series
+			if (this.detalle[index].series === undefined) {
+				this.detalle[index].series = []; // Inicializar si no existe				
+			}
+
+			this.productoSeleccionado.series = this.detalle[index].series;
+			this.productoSeleccionado.index = index;
+			//
+			$("#modalSeries").modal('show');
+		},
+
+
+
+
+
+
+
+
+
 		phuyu_infocliente: function(){
 			this.campos.codpersona = $("#codpersona").val();
 			this.campos.cliente = $(".select2-selection__rendered").text();
@@ -132,11 +198,56 @@ var phuyu_operacion = new Vue({
 					producto.igv = Number((producto.precio - producto.valorventa).toFixed(2));
 				}
 				this.detalle.push({
-					"itemorigen":0,"codproducto":producto.codproducto,"producto":producto.descripcion,"codunidad":producto.codunidad,"unidades": this.putunidades,
-					"unidad":producto.unidad,"cantidad":1,"stock":producto.stock,"control":producto.controlstock,"precio":parseFloat(producto.precio).toFixed(2),
-					"preciorefunitario":producto.precio,"preciosinigv":producto.preciosinigv,"igv":producto.igv,"subtotal":producto.precio,"valorventa":producto.valorventa,
-					"codafectacionigv": producto.afectacionigv,"factor": producto.factor
+					"itemorigen":0,
+					"codproducto":producto.codproducto,
+					"producto":producto.descripcion,
+					"codunidad":producto.codunidad,
+					"unidades": this.putunidades,
+					"unidad":producto.unidad,
+					"cantidad":1,
+					"stock":producto.stock,
+					"control":producto.controlstock,
+					"precio":parseFloat(producto.precio).toFixed(2),
+					"preciorefunitario":producto.precio,
+					"preciosinigv":producto.preciosinigv,
+					"igv":producto.igv,
+					"subtotal":producto.precio,
+					"valorventa":producto.valorventa,
+					"codafectacionigv": producto.afectacionigv,
+					"factor": producto.factor,
+					"controlarseries": producto.controlarseries
 				});
+				// this.detalle.push({
+				// 	itemorigen: 0,
+				// 	codproducto: producto.codproducto,
+				// 	producto: producto.descripcion,
+				// 	codunidad: producto.codunidad,
+				// 	unidades: this.putunidades,
+				// 	unidad: producto.unidad,
+				// 	cantidad: 1,
+				// 	stock: producto.stock,
+				// 	control: producto.controlstock,
+				// 	preciobrutosinigv: producto.preciosinigv,
+				// 	preciobruto: producto.precio, 
+				// 	preciosinigv: producto.preciosinigv,
+				// 	precio: parseFloat(producto.precio).toFixed(2),
+				// 	preciorefunitario: producto.precio, 
+				// 	porcdescuento: 0, descuento: 0,
+				// 	codafectacionigv: producto.afectacionigv,
+				// 	igv: producto.igv,
+				// 	flete: 0, 
+				// 	conicbper: producto.afectoicbper, 
+				// 	icbper: producto.icbper,
+				// 	valorventa: producto.valorventa, 
+				// 	subtotal: producto.precio,
+				// 	subtotal_tem: producto.subtotal,
+				// 	descripcion: "", 
+				// 	calcular: producto.calcular,
+				// 	controlarseries: producto.controlarseries,
+				// 	factor: producto.factor,
+				// 	subtotaloriginal: producto.precio,
+
+				// });
 				this.phuyu_calcular(producto,1);
 				this.putunidades = [];
 		    }else{

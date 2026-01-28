@@ -18,8 +18,6 @@
 		}
 	</style>
 	<div id="phuyu_operacion">
-
-
 		<form id="formulario" class="form-horizontal" v-on:submit.prevent="phuyu_guardar()">
 			<input type="hidden" id="itemrepetir" value="<?php echo $_SESSION["phuyu_itemrepetir"]; ?>">
 			<input type="hidden" id="igvsunat" value="<?php echo $_SESSION["phuyu_igv"]; ?>">
@@ -27,7 +25,6 @@
 			<input type="hidden" id="rubro" value="<?php echo $_SESSION["phuyu_rubro"]; ?>" name="">
 			<input type="hidden" id="afectacionigv" value="<?php echo $_SESSION["phuyu_afectacionigv"]; ?>" name="">
 			<input type="hidden" id="crediprogramado" value="<?php echo $_SESSION["phuyu_creditoprogramado"]; ?>" name="">
-
 			<div class="phuyu_body">
 				<div class="card">
 					<div class="card-body">
@@ -180,7 +177,8 @@
 										</td>
 										<td>
 											
-											<input     :disabled="dato.controlarseries == 1"  type="number" step="0.0001" class="form-control number" v-model.number="dato.cantidad" v-on:keyup="phuyu_calcular(dato)" min="0.001" required>
+											<input     :disabled="dato.controlarseries == 1"  type="number" step="0.0001" class="form-control number" v-model.number="dato.cantidad"
+											 v-on:keyup="phuyu_calcular(dato)" min="0.001" required>
 											
 										</td>
 										<td>

@@ -464,17 +464,13 @@ class Salidas extends CI_Controller
 
                 // --- 4.3 Leer stock de la unidad (bloqueo recomendado: FOR UPDATE en PostgreSQL) ---
                 $existe = $this->db
-                    ->query(
-                        "
-                select *
-                from almacen.productoubicacion
-                where codalmacen = " .
-                            (int) $_SESSION['phuyu_codalmacen'] .
-                            "
-                  and codproducto = $codproducto
-                  and codunidad   = $codunidad
-                for update
-            ",
+                    ->query(  "
+                            select *
+                            from almacen.productoubicacion
+                            where codalmacen = " . (int) $_SESSION['phuyu_codalmacen'] . "
+                            and codproducto = $codproducto
+                            and codunidad   = $codunidad
+                            for update ",
                     )
                     ->result_array();
 
