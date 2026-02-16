@@ -167,60 +167,76 @@ class Ingresos extends CI_Controller {
 	function guardar(){
 		if ($this->input->is_ajax_request()) {
 			if (isset( $_SESSION["phuyu_codusuario"]) ) {
+
 				$this->request = json_decode(file_get_contents('php://input'));
-//echo "dd";exit;
 				$this->db->trans_begin();
-
-				$proveedor = $this->db->query("select razonsocial,direccion,documento,d.abreviatura as tipo from public.personas p inner join public.documentotipos d on(p.coddocumentotipo=d.coddocumentotipo) where p.codpersona=".$this->request->campos->codpersona)->result_array();
-
+				$proveedor = $this->db->query("select razonsocial,direccion,documento,d.abreviatura as tipo 
+				from public.personas p inner join public.documentotipos d on(p.coddocumentotipo=d.coddocumentotipo) where p.codpersona=".$this->request->campos->codpersona)->result_array();
 				$this->request->campos->cliente = $proveedor[0]["razonsocial"];
 				$this->request->campos->direccion = $proveedor[0]["direccion"];
 
 				// REGISTRO KARDEX //
-				$campos = ["codkardex_ref","codsucursal","codalmacen","codalmacen_ref","codpersona","codusuario","codmovimientotipo","fechakardex","fechacomprobante","codcomprobantetipo","seriecomprobante","codcomprobantetipo_ref","seriecomprobante_ref","nrocomprobante_ref","valorventa","porcigv","igv","importe","descripcion","cliente","direccion"];
-				$valores = [ (int)$this->request->campos->codkardex_ref,
-					(int)$_SESSION["phuyu_codsucursal"],
-					(int)$_SESSION["phuyu_codalmacen"],
-					(int)$this->request->campos->codalmacen_ref,
-					(int)$this->request->campos->codpersona,
-					(int)$_SESSION["phuyu_codusuario"],
-					(int)$this->request->campos->codmovimientotipo,
-					$this->request->campos->fechakardex,$this->request->campos->fechakardex,
-					(int)$this->request->campos->codcomprobantetipo,
-					$this->request->campos->seriecomprobante,
-					(int)$this->request->campos->codcomprobantetipo_ref,
-					$this->request->campos->seriecomprobante_ref,
-					$this->request->campos->nrocomprobante_ref,
-					(double)$this->request->totales->valorventa,
-					(double)$_SESSION["phuyu_igv"],
-					(double)$this->request->totales->igv,
-					(double)$this->request->totales->importe,
-					$this->request->campos->descripcion,$this->request->campos->cliente,
-					$this->request->campos->direccion
-				];
+				$campos = [
+				"codkardex_ref","codsucursal","codalmacen","codalmacen_ref","codpersona","codusuario",
+				"codmovimientotipo","fechakardex","fechacomprobante","codcomprobantetipo",
+				"seriecomprobante","codcomprobantetipo_ref","seriecomprobante_ref","nrocomprobante_ref",
+				"valorventa","porcigv","igv","importe","descripcion","cliente","direccion"];
+
+				$valores = [ 
+							(int)$this->request->campos->codkardex_ref,
+							(int)$_SESSION["phuyu_codsucursal"],
+							(int)$_SESSION["phuyu_codalmacen"],
+							(int)$this->request->campos->codalmacen_ref,
+							(int)$this->request->campos->codpersona,
+							(int)$_SESSION["phuyu_codusuario"],
+							(int)$this->request->campos->codmovimientotipo,
+							$this->request->campos->fechakardex,$this->request->campos->fechakardex,
+							(int)$this->request->campos->codcomprobantetipo,
+							$this->request->campos->seriecomprobante,
+							(int)$this->request->campos->codcomprobantetipo_ref,
+							$this->request->campos->seriecomprobante_ref,
+							$this->request->campos->nrocomprobante_ref,
+							(double)$this->request->totales->valorventa,
+							(double)$_SESSION["phuyu_igv"],
+							(double)$this->request->totales->igv,
+							(double)$this->request->totales->importe,
+							$this->request->campos->descripcion,$this->request->campos->cliente,
+							$this->request->campos->direccion
+						];
+
 				$codkardex = $this->phuyu_model->phuyu_guardar("kardex.kardex", $campos, $valores, "true");
 
 				// REGISTRO KARDEX ALMACEN //
 				$campos = ["codsucursal","codalmacen","codalmacen_ref","codkardex","codusuario","codmovimientotipo","fechakardex","codcomprobantetipo","seriecomprobante"];
 				$valores = [
-					(int)$_SESSION["phuyu_codsucursal"],
-					(int)$_SESSION["phuyu_codalmacen"],
-					(int)$this->request->campos->codalmacen_ref,
-					(int)$codkardex,
-					(int)$_SESSION["phuyu_codusuario"],
-					(int)$this->request->campos->codmovimientotipo,
-					$this->request->campos->fechakardex,
-					(int)$this->request->campos->codcomprobantetipo,
-					$this->request->campos->seriecomprobante
-				];
+							(int)$_SESSION["phuyu_codsucursal"],
+							(int)$_SESSION["phuyu_codalmacen"],
+							(int)$this->request->campos->codalmacen_ref,
+							(int)$codkardex,
+							(int)$_SESSION["phuyu_codusuario"],
+							(int)$this->request->campos->codmovimientotipo,
+							$this->request->campos->fechakardex,
+							(int)$this->request->campos->codcomprobantetipo,
+							$this->request->campos->seriecomprobante
+							];
+
 				$codkardexalmacen = $this->phuyu_model->phuyu_guardar("kardex.kardexalmacen", $campos, $valores, "true");
-				
+
 				$nro_comprobante = $this->Kardex_model->phuyu_kardexcorrelativo($codkardex,$codkardexalmacen,$this->request->campos->codcomprobantetipo,$this->request->campos->seriecomprobante);
 
 				// REGISTRO KARDEX DETALLE Y KARDEX ALMACEN DETALLE //
 				$item = 0;
-				foreach ($this->request->detalle as $key => $value) { $item = $item + 1;
-					$campos = ["codkardex","codproducto","codunidad","item","cantidad","preciobruto","preciosinigv","preciounitario","preciorefunitario","codafectacionigv","valorventa","subtotal","igv","itemorigen","factor"];
+				foreach ($this->request->detalle as $key => $value) {
+					
+					$item = $item + 1;
+					$campos = [
+					"codkardex",
+					"codproducto","codunidad","item",
+					"cantidad","preciobruto",
+					"preciosinigv","preciounitario",
+					"preciorefunitario","codafectacionigv",
+					"valorventa","subtotal","igv",
+					"itemorigen","factor"];
 					$valores =[
 						(int)$codkardex,
 						(int)$this->request->detalle[$key]->codproducto,
@@ -237,6 +253,7 @@ class Ingresos extends CI_Controller {
 						(int)$this->request->detalle[$key]->itemorigen,
 						(double)$this->request->detalle[$key]->factor
 					];
+
 					$estado = $this->phuyu_model->phuyu_guardar("kardex.kardexdetalle", $campos, $valores);
 
 					$campos =["codkardexalmacen","codproducto","codunidad","item","codalmacen","codsucursal","cantidad","factor"];
@@ -251,6 +268,36 @@ class Ingresos extends CI_Controller {
 					];
 					$estado = $this->phuyu_model->phuyu_guardar("kardex.kardexalmacendetalle", $campos, $valores);
 
+
+					if($this->request->detalle[$key]->controlarseries == 1){
+						// REGISTRAMOS LAS SERIES //
+						foreach ($this->request->detalle[$key]->series as $k => $val) {
+
+
+									// INSERT DIRECTO (sin modelo)
+									$this->db->insert('almacen.series', [
+										'codproducto'   => (int)$this->request->detalle[$key]->codproducto,
+										'serie_codigo'  => $val->serie_codigo,
+										'codsucursal'   => (int)$_SESSION["phuyu_codsucursal"],
+										'codalmacen'    => (int)$_SESSION["phuyu_codalmacen"],
+										'estado'        => 'EN_ALMACEN',
+										'fecha_ingreso' => date('Y-m-d H:i:s'),
+										'codalmacen'    => (int)$_SESSION["phuyu_codalmacen"],
+										'codsucursal'   => (int)$_SESSION["phuyu_codsucursal"],
+										'codkardex'     => (int)$codkardex,
+										'comprobante'   => $this->request->campos->seriecomprobante.'-'.$nro_comprobante,
+										'motivo'        => $this->request->campos->descripcion,
+
+									]);
+
+
+						}
+					}
+
+
+
+					// ACTUALIZAMOS PRODUCTOS UBICACION //
+					
 					$existe_ubi = $this->db->query("select *from almacen.productoubicacion where codalmacen=".$_SESSION["phuyu_codalmacen"]." and codproducto=".$this->request->detalle[$key]->codproducto." and codunidad=".$this->request->detalle[$key]->codunidad)->result_array();
 					
 					if (count($existe_ubi)>0) {
@@ -281,7 +328,9 @@ class Ingresos extends CI_Controller {
 
 					foreach ($stockconvertido as $k => $val) {
 						$stockc = 0;
-						$productounidad = $this->db->query("select *from almacen.productounidades where codproducto=".$this->request->detalle[$key]->codproducto." and codunidad=".$val["codunidad"])->result_array();
+						$productounidad = $this->db->query("
+						select *from almacen.productounidades 
+						where codproducto=".$this->request->detalle[$key]->codproducto." and codunidad=".$val["codunidad"])->result_array();
 						$stockc = ((float)$this->request->detalle[$key]->cantidad*(float)$factor[0]["factor"])/(float)$productounidad[0]["factor"];
 						
                         $stockc = (double)$val["stockactualconvertido"] + $stockc;

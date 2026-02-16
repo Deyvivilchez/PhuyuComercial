@@ -489,11 +489,11 @@
 
 
                 var buscar = "buscar_salidas";
-                if (phuyu_controller == "almacen/ingresos" || phuyu_controller == "almacen/salidas" ||
-                    phuyu_controller == "compras/compras") {
+                if (phuyu_controller == "almacen/ingresos"  || phuyu_controller == "compras/compras") {
                     var buscar = "buscar_ingresos";
                     this.verprecios = 0;
                 }
+              
 
                 this.cargando = true;
                 this.$http.post(url + "almacen/productos/" + buscar, {
@@ -521,14 +521,11 @@
                 // inf para identificar si es egreso o ventas asi debe selecionar la serie de producto 
                 if ((phuyu_controller == 'ventas/ventas' || phuyu_controller == 'almacen/salidas') && producto.controlarseries == 1) {
                    // console.log("ENTRO A VENTAS O EGRESOS", phuyu_controller);
-
 					let detalleActual = phuyu_operacion.detalle || [];
 					// Lista completa de series del producto
 					let listaSeriesSinFiltro = producto.series;
-
 					// Productos del mismo tipo que ya están en el detalle
 					let FiltroProductos = detalleActual.filter(dp => dp.codproducto == producto.codproducto);
-
 					// Filtrar: quitar las series que ya están en FiltroProductos
 					this.listadoSeries = listaSeriesSinFiltro.filter(serie => {
 						// Verificar si esta serie ya existe en los productos filtrados
@@ -536,20 +533,15 @@
 							productoDetalle.serie_seleccionada && 
 							productoDetalle.serie_seleccionada.id_serie == serie.id_serie
 						);
-						
 						// Mantener solo las series que NO existen
 						return !serieYaExiste;
 					});
-
 					console.log("Series originales:", listaSeriesSinFiltro);
 					console.log("Productos en detalle:", FiltroProductos);
 					console.log("Series disponibles:", this.listadoSeries);
-                    
-				 
-				   // this.listadoSeries = producto.series;
-                    this.listadoSeriesFiltrado = this.listadoSeries;
-					this.ProductoSelecionado = producto; 
-
+					// this.listadoSeries = producto.series;
+					this.listadoSeriesFiltrado = this.listadoSeries;
+					this.ProductoSelecionado = producto;
 
                     $('#listadoSeries').modal('show');
                     return false;

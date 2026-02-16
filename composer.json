@@ -20,6 +20,7 @@
 	"require-dev": {
 		"mikey179/vfsstream": "^1.6",
 		
-		"phpunit/phpunit": "4.* || 5.*"
+		"phpunit/phpunit": "4.* || 5.*",
+		"phpstan/phpstan": "^2.1"
 	}
 }

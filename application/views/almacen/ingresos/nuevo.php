@@ -140,7 +140,7 @@
 				    <div class="row form-group table-responsive">
 						<table class="table table-bordered table-striped" style="font-size: 11px">
 							<thead>
-								<tr>
+								<tr><th width="7%">-</th>
 									<th width="55%">PRODUCTO</th>
 									<th width="10%">UNIDAD</th>
 									<th width="10%">CANTIDAD</th>
@@ -151,6 +151,17 @@
 							</thead>
 							<tbody>
 								<tr v-for="(dato,index) in detalle">
+									<td class="text-center">
+											<div class="d-flex flex-column align-items-center gap-1">
+												
+												<button v-if="dato.controlarseries == 1" type="button"
+													class="btn btn-outline-secondary btn-sm px-2 py-0"
+													style="font-size: 11px; line-height: 1;"
+													v-on:click="phuyu_ModalSeries(dato,index)">
+													+ Series
+												</button>
+											</div>
+										</td>
 									<td>{{dato.producto}}</td>
 									<td>
 										<select class="form-select number unidad" v-model="dato.codunidad" v-on:change="informacion_unidad(index,dato,this.value)" id="codunidad">
@@ -165,7 +176,9 @@
 										</select>
 									</td>
 									<td>
-										<input type="number" step="0.0001" class="form-control number" v-model.number="dato.cantidad" v-on:keyup="phuyu_calcular(dato,3)" min="0.0001" required>
+										<!-- <input type="number" step="0.0001" class="form-control number" v-model.number="dato.cantidad" v-on:keyup="phuyu_calcular(dato,3)" min="0.0001" required> -->
+										<input     :disabled="dato.controlarseries == 1"  type="number" step="0.0001" class="form-control number" v-model.number="dato.cantidad"
+											 v-on:keyup="phuyu_calcular(dato,3)" min="0.001" required>
 									</td>
 									<td> 
 										<input type="number" step="0.0001" class="form-control number" v-model.number="dato.precio" v-on:keyup="phuyu_calcular(dato,3)" min="0" required>
@@ -201,6 +214,100 @@
 			</div>
 		</div>
 	</form>
+
+<!-- Modal para Series -->
+		<div class="modal fade" id="modalSeries" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+			<div class="modal-dialog modal-lg">
+				<div class="modal-content">
+					<div class="modal-header bg-gradient text-white py-2 px-3" style="background: linear-gradient(90deg, #007bff, #00bcd4); border-bottom: 3px solid #00acc1;">
+						<h5 class="modal-title d-flex align-items-center mb-0">
+							<i class="mdi mdi-barcode-scan me-2 fs-4 text-white"></i>
+							<span class="fw-bold text-uppercase">Gestión de Series</span>
+						</h5>
+						<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+					</div>
+
+					<div class="modal-body">
+						<!-- Información del producto -->
+						<div class="row mb-3">
+							<div class="col-md-6">
+								<strong>Código:</strong> {{this.productoSeleccionado.codproducto }}
+							</div>
+							<div class="col-md-6">
+								<strong>Producto:</strong> {{this.productoSeleccionado.producto }}
+							</div>
+						</div>
+
+						<hr>
+
+						<!-- Formulario para agregar series -->
+						<div class="row mb-3">
+							<div class="col-md-8">
+								<label class="form-label">Número de Serie</label>
+								<input type="text" class="form-control" id="nuevaSerieInput" v-model="nuevaSerie"
+									placeholder="Ingrese el número de serie..." maxlength="50">
+							</div>
+							<div class="col-md-4">
+								<label class="form-label">&nbsp;</label>
+								<button type="button" class="btn btn-primary w-100" @click="agregarSerie">
+									<i class="mdi mdi-plus"></i> Agregar Serie
+								</button>
+							</div>
+						</div>
+
+						<!-- Lista de series -->
+						<div class="table-responsive">
+							<table class="table table-sm table-hover">
+								<thead class="table-light">
+									<tr>
+										<th width="5%">#</th>
+										<th width="70%">NÚMERO DE SERIE</th>
+										<th width="25%">ACCIONES</th>
+									</tr>
+								</thead>
+								<tbody id="tablaSeries">
+									<tr v-for="(serie, indexSerie) in productoSeleccionado.series"
+										:key="indexSerie">
+										<td>{{ indexSerie + 1 }}</td>
+										<td>
+										<span class="font-monospace">{{ serie.serie_codigo }}</span>
+										</td>
+										<td>
+										<button type="button"
+												class="btn btn-sm btn-outline-danger btnEliminarSerie"
+												@click.prevent="eliminarSerie(indexSerie)">
+											<i class="mdi mdi-trash-can-outline"></i> Eliminar
+										</button>
+										</td>
+									</tr>
+									</tbody>
+
+							</table>
+						</div>
+					</div>
+
+					<div class="modal-footer">
+						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+							<i class="mdi mdi-close"></i> Cerrar
+						</button>
+						<!-- <button type="button" class="btn btn-success" id="btnGuardarSeries">
+                    <i class="mdi mdi-content-save"></i> Guardar Series
+                </button> -->
+					</div>
+				</div>
+			</div>
+		</div>
+
+
+
+
+
+
+
+
+
+
+
 </div>
 
 <script src="<?php echo base_url();?>phuyu/phuyu_almacen/nuevoingreso.js"> </script>

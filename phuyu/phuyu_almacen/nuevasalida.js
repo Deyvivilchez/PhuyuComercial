@@ -97,7 +97,8 @@ var phuyu_operacion = new Vue({
 				phuyu_sistema.phuyu_modulo();
 			});
 		},
-		phuyu_additem: function(producto){
+		phuyu_additem_originalsalidas: function(producto){
+
 			var existeproducto = this.detalle.filter(function(p){
 			    if(p.codproducto == producto.codproducto && p.codunidad == producto.codunidad ){
 			    	p.cantidad = p.cantidad + 1; return p;
@@ -121,7 +122,6 @@ var phuyu_operacion = new Vue({
 
 		    	producto.preciosinigv = producto.precio;
 				producto.valorventa =producto.precio;
-
 		    	producto.igv = 0; var porcentaje = 1;
 				if (producto.afectacionigv==10) {
 					var porcentaje = (1 + this.igvsunat) / 100;
@@ -131,15 +131,146 @@ var phuyu_operacion = new Vue({
 				}
 
 				this.detalle.push({
-					"itemorigen":0,"codproducto":producto.codproducto,"producto":producto.descripcion,"codunidad":producto.codunidad,"unidades": this.putunidades,
-					"cantidad":1,"stock":producto.stock,"control":producto.controlstock,"precio":parseFloat(producto.precio).toFixed(2),
-					"preciorefunitario":producto.precio,"subtotal":parseFloat(producto.precio).toFixed(2),"unidad": producto.unidad,"igv":producto.igv
-					,"valorventa":producto.valorventa,"codafectacionigv": producto.afectacionigv
+					"itemorigen":0,
+					"codproducto":producto.codproducto,
+					"producto":producto.descripcion,
+					"codunidad":producto.codunidad,
+					"unidades": this.putunidades,
+					"cantidad":1,
+					"stock":producto.stock,
+					"control":producto.controlstock,
+					"precio":parseFloat(producto.precio).toFixed(2),
+					"preciorefunitario":producto.precio,
+					"subtotal":parseFloat(producto.precio).toFixed(2),
+					"unidad": producto.unidad,
+					"igv":producto.igv
+					,"valorventa":producto.valorventa,
+					"codafectacionigv": producto.afectacionigv
 				});
+
 				this.phuyu_calcular(producto,1);
 				this.putunidades = [];
 		    }else{
 		    	this.phuyu_calcular(existeproducto[0],3);
+		    }
+		},
+		phuyu_additem: function(producto,precio){
+			 console.log("producto desde salida almacen:", producto);	
+			var existe_item = [];
+			if ($("#itemrepetir").val()==0) {
+				var existe_item = this.detalle.filter(function(p){
+				    if(p.codproducto == producto.codproducto && p.codunidad == producto.codunidad ){
+				    	p.cantidad = p.cantidad + 1; return p;
+				    };
+				});
+			}
+
+		    if (existe_item.length==0 || $("#itemrepetir").val()==1) {
+		    	var unidades = []; var factores = []; var logo = []; arreglo = [];
+		    	unidades = (producto.unidades).split(";");
+
+		    	for (var i = 0; i < unidades.length; i++) {
+                    factores = (unidades[i]).split("|");
+		    		logo = {descripcion:factores[1],codunidad:factores[0],factor:factores[8]};
+		    		this.putunidades.push(logo)
+		    		if(factores[8]==1){
+		    			producto.codunidad = factores[0];
+		    			producto.unidad = factores[1];
+		    			producto.afectacionigv = factores[14];
+		    			producto.factor = factores[8];
+		    		}
+		    	}
+
+		    	producto.preciooriginal = precio;
+		    	producto.preciosinigv = producto.precio; producto.precio = precio; 
+		    	producto.valorventa = producto.precio; producto.subtotal = producto.precio;
+				producto.igv = 0; var porcentaje = 1;
+				if (producto.afectacionigv==10) {
+					var porcentaje = (1 + this.igvsunat) / 100;
+					producto.preciosinigv = Number((producto.precio / porcentaje).toFixed(4));
+					producto.valorventa = Number((producto.precio / porcentaje).toFixed(2));
+					producto.igv = Number((producto.subtotal - producto.valorventa).toFixed(2));
+				}
+				
+				producto.icbper = 0; producto.isc = 0;
+				if (producto.afectoicbper==1) {
+					producto.icbper = Number((1 * this.icbpersunat).toFixed(2));;
+				}
+
+				producto.control = 0;
+				if (this.stockalmacen==1) {
+					if (producto.controlstock==1) {
+						producto.control = 1;
+					}
+				}
+
+				if (producto.controlarseries == 1) {
+				let serieYaExiste = this.detalle.some(detalle => 
+					detalle.serie_seleccionada && 
+					detalle.serie_seleccionada.id_serie == producto.serie_seleccionada.id_serie
+				);
+				
+				if (serieYaExiste) {
+					swal({
+						title: "❌ ERROR", 
+						text: "La serie " + producto.serie_seleccionada.serie_codigo + " ya está en la lista", 
+						icon: "error",
+						button: false,
+						timer: 1500
+					});
+					return false;
+				}
+			}
+
+				
+
+				this.detalle.push({
+					itemorigen:0,
+					codproducto: producto.codproducto, 
+					producto: producto.descripcion, 
+					codunidad: producto.codunidad,
+					unidades: this.putunidades,
+					unidad: producto.unidad, 
+					cantidad:1, 
+					controlarseries: producto.controlarseries,
+					stock:parseFloat(producto.stock).toFixed(2), 
+					control:producto.control,
+					factor: producto.factor,
+					preciobruto: producto.preciosinigv,
+					preciosinigv: producto.preciosinigv, 
+					precio: producto.precio,
+					preciorefunitario: producto.precio,
+					preciocredito:producto.preciocredito,
+					porcdescuento: 0, 
+					descuento: 0,
+					codafectacionigv: producto.afectacionigv,
+					igv: producto.igv, 
+					conicbper: producto.afectoicbper,
+					icbper: producto.icbper,
+					valorventa: producto.valorventa, 
+					subtotal:parseFloat(producto.precio).toFixed(2),
+					subtotal_tem:producto.subtotal, 
+	
+					calcular: producto.calcular,
+					preciooriginal:producto.preciooriginal,
+					precioventa:producto.precioventa,
+					descripcion: producto.controlarseries == 1 ? 'SERIE/CODIGO : ' + producto.serie_seleccionada.serie_codigo : producto.descripcion,
+    				serie_seleccionada: producto.controlarseries == 1 ? producto.serie_seleccionada : null,
+				});
+				console.log("detalle despues de agregar producto:", this.detalle);
+				swal({
+					title: "✓ PRODUCTO AGREGADO", 
+					text: producto.descripcion + " se agregó correctamente a la lista", 
+					icon: "success",
+					button: false,
+					timer: 1000
+				});
+				
+			//	this.phuyu_totales();
+				this.phuyu_calcular(producto,1);
+				this.putunidades = [];
+		    }else{
+		    	this.phuyu_calcular(existe_item[0]);
 		    }
 		},
 		informacion_unidad: function(index,producto,val){

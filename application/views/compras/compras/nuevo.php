@@ -18,8 +18,6 @@
 		}
 	</style>
 	<div id="phuyu_operacion">
-
-
 		<form id="formulario" class="form-horizontal" v-on:submit.prevent="phuyu_guardar()">
 			<input type="hidden" id="itemrepetir" value="<?php echo $_SESSION["phuyu_itemrepetir"]; ?>">
 			<input type="hidden" id="igvsunat" value="<?php echo $_SESSION["phuyu_igv"]; ?>">
@@ -27,7 +25,6 @@
 			<input type="hidden" id="rubro" value="<?php echo $_SESSION["phuyu_rubro"]; ?>" name="">
 			<input type="hidden" id="afectacionigv" value="<?php echo $_SESSION["phuyu_afectacionigv"]; ?>" name="">
 			<input type="hidden" id="crediprogramado" value="<?php echo $_SESSION["phuyu_creditoprogramado"]; ?>" name="">
-
 			<div class="phuyu_body">
 				<div class="card">
 					<div class="card-body">
@@ -179,7 +176,10 @@
 											</select>
 										</td>
 										<td>
-											<input type="number" step="0.0001" class="form-control number" v-model.number="dato.cantidad" v-on:keyup="phuyu_calcular(dato)" min="0.001" required>
+											
+											<input     :disabled="dato.controlarseries == 1"  type="number" step="0.0001" class="form-control number" v-model.number="dato.cantidad"
+											 v-on:keyup="phuyu_calcular(dato)" min="0.001" required>
+											
 										</td>
 										<td>
 											<input type="number" step="0.0001" class="form-control number" v-if="dato.codafectacionigv==21" v-model.number="dato.preciosinigv" min="0" readonly>
@@ -543,19 +543,22 @@
 									</tr>
 								</thead>
 								<tbody id="tablaSeries">
-									<tr v-for="(serie, index) in productoSeleccionado.series" :key="index">
-										<td>{{index++}}</td>
+									<tr v-for="(serie, indexSerie) in productoSeleccionado.series"
+										:key="indexSerie">
+										<td>{{ indexSerie + 1 }}</td>
 										<td>
-											<span class="font-monospace">{{serie.serie_codigo}}</span>
+										<span class="font-monospace">{{ serie.serie_codigo }}</span>
 										</td>
 										<td>
-											<button type="button" class="btn btn-sm btn-outline-danger btnEliminarSerie" 
-												@click="eliminarSerie(index)">
-												<i class="mdi mdi-trash-can-outline"></i> Eliminar
-											</button>
+										<button type="button"
+												class="btn btn-sm btn-outline-danger btnEliminarSerie"
+												@click.prevent="eliminarSerie(indexSerie)">
+											<i class="mdi mdi-trash-can-outline"></i> Eliminar
+										</button>
 										</td>
 									</tr>
-								</tbody>
+									</tbody>
+
 							</table>
 						</div>
 					</div>
@@ -573,9 +576,9 @@
 		</div>
 
 		<!-- Botón para abrir el modal (ejemplo) -->
-		<button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#modalSeries">
+		<!-- <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#modalSeries">
 			+ Series
-		</button>
+		</button> -->
 
 
 	</div>

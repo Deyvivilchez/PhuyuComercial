@@ -3,7 +3,9 @@
 class Cuentascobrar extends CI_Controller {
 
 	public function __construct(){
-		parent::__construct(); $this->load->model("phuyu_model"); $this->load->model("Caja_model");
+		parent::__construct();
+		 $this->load->model("phuyu_model");
+		 $this->load->model("Caja_model");
 	}
 
 	public function index(){
@@ -55,10 +57,10 @@ class Cuentascobrar extends CI_Controller {
 			}
 
 			$lista = $this->db->query("select personas.*, lotes.descripcion as descripcionlote, lotes.direccion as direccionlote,lotes.codlote 
-from public.socios as socios 
-inner join public.personas as personas on (socios.codpersona=personas.codpersona) 
-inner join public.lotes as lotes on (socios.codpersona=lotes.codsocio) 
-where (UPPER(personas.documento) like UPPER('%".$this->request->buscar."%') or UPPER(personas.razonsocial) like UPPER('%".$this->request->buscar."%') or UPPER(personas.nombrecomercial) like UPPER('%".$this->request->buscar."%') ) and (socios.codsociotipo=1 or socios.codsociotipo=3) and socios.codpersona not in (SELECT codpersona  FROM empresas) and socios.estado=1 order by personas.codpersona desc offset ".$offset." limit ".$limit)->result_array();
+				from public.socios as socios 
+				inner join public.personas as personas on (socios.codpersona=personas.codpersona) 
+				inner join public.lotes as lotes on (socios.codpersona=lotes.codsocio) 
+				where (UPPER(personas.documento) like UPPER('%".$this->request->buscar."%') or UPPER(personas.razonsocial) like UPPER('%".$this->request->buscar."%') or UPPER(personas.nombrecomercial) like UPPER('%".$this->request->buscar."%') ) and (socios.codsociotipo=1 or socios.codsociotipo=3) and socios.codpersona not in (SELECT codpersona  FROM empresas) and socios.estado=1 order by personas.codpersona desc offset ".$offset." limit ".$limit)->result_array();
 
 			foreach ($lista as $key => $value) {
 				$cantidad = $this->db->query("select count(*) as cantidad from kardex.creditos where codpersona=".$value["codpersona"]." and codsucursal=".$_SESSION["phuyu_codsucursal"]." and estado=1 and tipo=1 AND codlote=".(int)$value["codlote"])->result_array();
