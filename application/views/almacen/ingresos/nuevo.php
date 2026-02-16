@@ -266,19 +266,22 @@
 									</tr>
 								</thead>
 								<tbody id="tablaSeries">
-									<tr v-for="(serie, index) in productoSeleccionado.series" :key="index">
-										<td>{{index++}}</td>
+									<tr v-for="(serie, indexSerie) in productoSeleccionado.series"
+										:key="indexSerie">
+										<td>{{ indexSerie + 1 }}</td>
 										<td>
-											<span class="font-monospace">{{serie.serie_codigo}}</span>
+										<span class="font-monospace">{{ serie.serie_codigo }}</span>
 										</td>
 										<td>
-											<button type="button" class="btn btn-sm btn-outline-danger btnEliminarSerie" 
-												@click="eliminarSerie(index)">
-												<i class="mdi mdi-trash-can-outline"></i> Eliminar
-											</button>
+										<button type="button"
+												class="btn btn-sm btn-outline-danger btnEliminarSerie"
+												@click.prevent="eliminarSerie(indexSerie)">
+											<i class="mdi mdi-trash-can-outline"></i> Eliminar
+										</button>
 										</td>
 									</tr>
-								</tbody>
+									</tbody>
+
 							</table>
 						</div>
 					</div>

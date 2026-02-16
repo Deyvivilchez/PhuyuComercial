@@ -1081,4 +1081,41 @@ class Productos extends CI_Controller
             echo $estado;
         }
     }
+
+    public function buscar_serie() {
+        if ($this->input->is_ajax_request()) {
+
+            $request = json_decode(file_get_contents('php://input'));
+            $serie = trim($request->serie ?? '');
+
+            if ($serie === '') {
+                echo json_encode([
+                    "estado" => false,
+                    "existe" => false,
+                    "mensaje" => "Serie vacía",
+                    "data" => null
+                ]);
+                return;
+            }
+
+            $query = $this->db
+                ->select('*')
+                ->from('almacen.series')
+                ->where('serie_codigo', $serie)
+                ->limit(1)
+                ->get();
+
+            $existe = $query->num_rows() > 0;
+            $data   = $existe ? $query->row_array() : null;
+
+            echo json_encode([
+                "estado"  => true,
+                "existe"  => $existe,
+                "mensaje" => $existe
+                    ? "La serie ya está registrada en el sistema."
+                    : "Serie disponible.",
+                "data"    => $data
+            ]);
+        }
+    }
 }

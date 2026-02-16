@@ -29,16 +29,45 @@ var phuyu_operacion = new Vue({
 		nuevaSerie: null,
 	},
 	methods: {
-		eliminarSerie(index) {
+		eliminarSerie_or(index) {
 			if (index < 0 || index >= this.productoSeleccionado.series.length) return;
 
 			this.productoSeleccionado.series.splice(index, 1);
 			this.detalle[this.productoSeleccionado.index].series =this.productoSeleccionado.series;
 			phuyu_sistema.phuyu_noti("Serie eliminada", "La serie se eliminó correctamente.", "warning");
 		},
+		eliminarSerie(index) {
+			const ps = this.productoSeleccionado;
+			if (!ps || !Array.isArray(ps.series)) return;
+			if (index < 0 || index >= ps.series.length) return;
+			if (ps.index == null || !this.detalle[ps.index]) return;
+
+			// 1) Crea copia y elimina en la copia (no sobre el array compartido)
+			const nuevasSeries = ps.series.slice();
+			nuevasSeries.splice(index, 1);
+
+			// 2) Actualiza el modal con copia
+			ps.series = nuevasSeries;
+
+			// 3) Actualiza el detalle con copia y fuerza reactividad
+			this.$set(this.detalle[ps.index], "series", nuevasSeries);
+			
+
+			this.detalle[ps.index].cantidad = nuevasSeries.length;
+			this.detalle[ps.index].subtotal = parseFloat(this.detalle[ps.index].precio) * nuevasSeries.length;
+			const item = this.detalle[ps.index];
+			this.phuyu_calcular(item);
+
+			phuyu_sistema.phuyu_noti(
+				"Serie eliminada",
+				"La serie se eliminó correctamente.",
+				"warning"
+			);
+
+		},
 
 
-		agregarSerie() {
+		agregarSerie_or() {
 			if (!this.nuevaSerie) {
 				phuyu_sistema.phuyu_noti("Serie requerida", "Ingrese el número de serie", "warning");
 				return;
@@ -57,6 +86,27 @@ var phuyu_operacion = new Vue({
 			}
 
 			this.agregarSerieLista(serie, "Serie agregada");
+		},
+		async agregarSerie() {
+
+			if (!this.nuevaSerie) {
+				phuyu_sistema.phuyu_noti("Serie requerida", "Ingrese el número de serie", "warning");
+				return false;
+			}
+			const serie = this.nuevaSerie.trim().toUpperCase();
+
+			resp = await this.$http.post(url + "almacen/productos/buscar_serie",{ serie : serie });
+			if(resp.body.existe){
+				phuyu_sistema.phuyu_noti("Serie duplicada", resp.body.mensaje , "info");
+				return false;
+			}
+			if (this.productoSeleccionado.series.some(s => s.serie_codigo === serie)) {
+				phuyu_sistema.phuyu_noti("Serie duplicada", "Ya existe en la lista", "info");
+				return false;
+			}
+
+			this.agregarSerieLista(serie, "Serie agregada");
+
 		},
 
 		agregarSerieLista(serie, mensaje) {
@@ -224,14 +274,23 @@ var phuyu_operacion = new Vue({
 					codunidad: producto.codunidad,
 					unidades: this.putunidades,
 					unidad: producto.unidad,
-					cantidad: 1, stock: producto.stock,
+					cantidad: (producto.controlarseries == 1) ? 0 : 1,
+					stock: producto.stock,
 					control: 0,
 					preciobrutosinigv: producto.preciosinigv,
 					preciobruto: producto.precio, preciosinigv: producto.preciosinigv,
 					precio: producto.precio,
 					preciorefunitario: producto.precio, porcdescuento: 0, descuento: 0,
-					codafectacionigv: producto.afectacionigv, igv: producto.igv, flete: 0, conicbper: producto.afectoicbper, icbper: producto.icbper,
-					valorventa: producto.valorventa, subtotal: producto.subtotal, subtotal_tem: producto.subtotal, descripcion: "", calcular: producto.calcular,
+					codafectacionigv: producto.afectacionigv, 
+					igv: producto.igv, 
+					flete: 0,
+					conicbper: producto.afectoicbper,
+					icbper: producto.icbper,
+					valorventa: producto.valorventa,
+					subtotal: producto.precio * ((producto.controlarseries == 1) ? 0 : 1),
+					subtotal_tem: producto.subtotal,
+					descripcion: "",
+					calcular: producto.calcular,
 					controlarseries: producto.controlarseries,
 
 				});

@@ -28,8 +28,8 @@ class Ventas extends CI_Controller
                 $comprobante_almacen = $this->db
                     ->query(
                         "select count(*) as cantidad from caja.comprobantes
-                        where (codcomprobantetipo=3 or codcomprobantetipo=4) and
-                        codalmacen=" .
+    where (codcomprobantetipo=3 or codcomprobantetipo=4) and
+    codalmacen=" .
                             $_SESSION['phuyu_codalmacen'] .
                             ' and estado=1',
                     )
@@ -259,11 +259,12 @@ class Ventas extends CI_Controller
                 $tipopagos = $this->db->query('select *from caja.tipopagos where ingreso=1 and estado=1 order by codtipopago')->result_array();
                 $vendedores = $this->db
                     ->query(
-                        "select persona.codpersona,persona.razonsocial 
-                            from public.personas as persona 
-                            inner join public.empleados as
-                            empleado on(persona.codpersona=empleado.codpersona) where empleado.estado=1 " .
-                            $perfil . '', ) ->result_array();
+                        "select persona.codpersona,persona.razonsocial from public.personas as persona inner join public.empleados as
+    empleado on(persona.codpersona=empleado.codpersona) where empleado.estado=1 " .
+                            $perfil .
+                            '',
+                    )
+                    ->result_array();
                 $sucursal = $this->db->query('select coalesce(codcomprobantetipo,12) as codcomprobantetipo, seriecomprobante from public.sucursales where codsucursal=' . $_SESSION['phuyu_codsucursal'])->result_array();
                 $centrocostos = $this->db->query('select *from caja.centrocostos where estado=1')->result_array();
                 $afectacionigv = $this->db->query('select *from afectacionigv where estado = 1')->result_array();
@@ -282,29 +283,35 @@ class Ventas extends CI_Controller
             if (isset($_SESSION['phuyu_codusuario'])) {
                 $info = $this->db
                     ->query(
-                        "select kardex.*,p.documento,(CASE WHEN condicionpago = 1 THEN 'CONTADO' ELSE 'CREDITO' END) AS pago,
-                            mt.descripcion AS movimiento,
-                            comprobantes.descripcion as tipo
-                            from kardex.kardex as kardex
-                            inner join caja.comprobantetipos as comprobantes on(kardex.codcomprobantetipo=comprobantes.codcomprobantetipo)
-                            INNER JOIN public.personas as p on (kardex.codpersona=p.codpersona)
-                            INNER JOIN almacen.movimientotipos as mt on (kardex.codmovimientotipo=mt.codmovimientotipo)
-                            where kardex.codkardex=" . $codregistro,
-                    ) ->result_array();
+                        "
+    select kardex.*,p.documento,(CASE WHEN condicionpago = 1 THEN 'CONTADO' ELSE 'CREDITO' END) AS pago,
+    mt.descripcion AS movimiento,
+    comprobantes.descripcion as tipo
+    from kardex.kardex as kardex
+    inner join caja.comprobantetipos as comprobantes on(kardex.codcomprobantetipo=comprobantes.codcomprobantetipo)
+    INNER JOIN public.personas as p on (kardex.codpersona=p.codpersona)
+    INNER JOIN almacen.movimientotipos as mt on (kardex.codmovimientotipo=mt.codmovimientotipo)
+    where kardex.codkardex=" . $codregistro,
+                    )
+                    ->result_array();
 
                 $detalle = $this->db->query('select kd.*,p.descripcion as producto,u.descripcion as unidad,p.codigo from kardex.kardexdetalle as kd inner join almacen.productos as p on(kd.codproducto=p.codproducto) inner join almacen.unidades as u on(kd.codunidad=u.codunidad) where kd.codkardex=' . $codregistro . ' and kd.estado=1 order by kd.item')->result_array();
 
                 $pagos = $this->db
                     ->query(
-                        "select p.descripcion as tipopago,
-                            md.importe,
-                            md.importeentregado,
-                            md.vuelto,
-                            md.nrodocbanco
-                            from caja.movimientos as m
-                            inner join caja.movimientosdetalle as md on(m.codmovimiento=md.codmovimiento)
-                            inner join caja.tipopagos as p on(md.codtipopago=p.codtipopago)
-                            where m.codkardex=" . $codregistro .  ' and m.estado=1 order by p.codtipopago', )
+                        "
+    select p.descripcion as tipopago,
+    md.importe,
+    md.importeentregado,
+    md.vuelto,
+    md.nrodocbanco
+    from caja.movimientos as m
+    inner join caja.movimientosdetalle as md on(m.codmovimiento=md.codmovimiento)
+    inner join caja.tipopagos as p on(md.codtipopago=p.codtipopago)
+    where m.codkardex=" .
+                            $codregistro .
+                            ' and m.estado=1 order by p.codtipopago',
+                    )
                     ->result_array();
                 $this->load->view('ventas/ventas/ver', compact('info', 'detalle', 'pagos'));
             } else {
@@ -438,23 +445,8 @@ class Ventas extends CI_Controller
                     }
                     $this->db->trans_commit();
                 }
-
-                
                 $data['estado'] = $estado;
                 $data['codkardex'] = $codkardex;
-
-                if($this->request->campos->condicionpago == 2 && $this->request->campos->inicial > 0){
-                $data['info_credito'] = $this->db->query("
-                            SELECT *
-                            FROM kardex.creditos 
-                            WHERE codkardex = " . (int)$codkardex . " 
-                            AND estado <> 0 
-                            ORDER BY codcredito DESC 
-                            LIMIT 1 ")->row_array();
-                    
-                }
-
-
                 echo json_encode($data);
             } else {
                 echo json_encode('e');
@@ -829,32 +821,32 @@ class Ventas extends CI_Controller
 
             /*$info = $this->db->query("select *from kardex.kardexpedido where codkardex=".$this->request->codregistro)->result_array();
 
-            if(count($info) > 0){
-                $codpedido = 0;
-                foreach ($info as $key => $value) {
+   if(count($info) > 0){
+    $codpedido = 0;
+    foreach ($info as $key => $value) {
 
-                $existepedido = $this->db->query("select *from kardex.pedidosdetalle where codpedido=".$value["codpedido"]." and codproducto=".$value["codproducto"]." and item=".$value["itempedido"])->result_array();
+     $existepedido = $this->db->query("select *from kardex.pedidosdetalle where codpedido=".$value["codpedido"]." and codproducto=".$value["codproducto"]." and item=".$value["itempedido"])->result_array();
 
-                $existeventa = $this->db->query("select *from kardex.kardexdetalle where codkardex=".$value["codkardex"]." and codproducto=".$value["codproducto"]." and item=".$value["itemkardex"])->result_array();
+     $existeventa = $this->db->query("select *from kardex.kardexdetalle where codkardex=".$value["codkardex"]." and codproducto=".$value["codproducto"]." and item=".$value["itemkardex"])->result_array();
 
-                $stock = $existepedido[0]["cantidadcomprobante"] + $existeventa[0]["cantidad"];
+     $stock = $existepedido[0]["cantidadcomprobante"] + $existeventa[0]["cantidad"];
 
-                $campos = ["cantidadcomprobante"]; $valores = [(double)$stock];
-                $f = ["codpedido","codproducto","item"];
-                $v = [(int)$value["codpedido"],(int)$value["codproducto"],(int)$value["itempedido"]];
-                $estado = $this->phuyu_model->phuyu_editar_1("kardex.pedidosdetalle", $campos, $valores, $f, $v);
-                $codpedido = $value["codpedido"];
-                }
-                $estado = $this->phuyu_model->phuyu_eliminar_total("kardex.kardexpedido", "codkardex",$this->request->codregistro);
+     $campos = ["cantidadcomprobante"]; $valores = [(double)$stock];
+     $f = ["codpedido","codproducto","item"];
+     $v = [(int)$value["codpedido"],(int)$value["codproducto"],(int)$value["itempedido"]];
+     $estado = $this->phuyu_model->phuyu_editar_1("kardex.pedidosdetalle", $campos, $valores, $f, $v);
+     $codpedido = $value["codpedido"];
+    }
+    $estado = $this->phuyu_model->phuyu_eliminar_total("kardex.kardexpedido", "codkardex",$this->request->codregistro);
 
-                $estadoproceso = $this->db->query("select *FROM kardex.pedidosdetalle pd where pd.codpedido=".$codpedido." and pd.cantidad > pd.cantidadcomprobante")->result_array();
+    $estadoproceso = $this->db->query("select *FROM kardex.pedidosdetalle pd where pd.codpedido=".$codpedido." and pd.cantidad > pd.cantidadcomprobante")->result_array();
 
-                if(count($estadoproceso) > 0){
-                $data = array("estadoproceso" => 0);
-                $this->db->where("codpedido", $codpedido);
-            $estado = $this->db->update("kardex.pedidos", $data);
-                }
-            }*/
+    if(count($estadoproceso) > 0){
+     $data = array("estadoproceso" => 0);
+     $this->db->where("codpedido", $codpedido);
+  $estado = $this->db->update("kardex.pedidos", $data);
+    }
+   }*/
 
             // ANULAMOS EL MOVIMIENTO DE CAJA //
             $movi = $this->db->query('select codmovimiento from caja.movimientos where codkardex=' . $this->request->codregistro)->result_array();

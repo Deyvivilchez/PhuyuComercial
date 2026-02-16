@@ -495,7 +495,7 @@
                                     class="form-control number"
                                     min="0"
                                     v-model.number="campos.inicial"
-                                    @input="onInicialInput"
+                                    @input="calcular_credito()"
                                     placeholder="S/. 0.00"
                                     >
                                 </div>
@@ -579,11 +579,11 @@
                                                 >
                                             </td>
                                             <td><input type="text" class="form-control" v-model="dato.nroletra"
-                                                    name="" maxlength="10" disabled="disabled"></td>
+                                                    name="" maxlength="10"></td>
                                             <td><input type="text" class="form-control"
-                                                    v-model="dato.nrounicodepago" name="" disabled="disabled"></td>
+                                                    v-model="dato.nrounicodepago" name=""></td>
                                             <td><input type="number" class="form-control" v-model="dato.importe"
-                                                    step="0.001" v-on:keyup="calcular_credito()" disabled="disabled"></td>
+                                                    step="0.001" v-on:keyup="calcular_credito()"></td>
                                             <td><input type="number" disabled="disabled" class="form-control"
                                                     v-model="dato.interes"></td>
                                             <td>{{ dato . total }}</td>
