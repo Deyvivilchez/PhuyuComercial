@@ -252,7 +252,8 @@
                                 v-model="salida.codunidad_ingreso" v-on:change="phuyu_unidadingreso()">
                                 <option value="0">SELECCIONE</option>
                                 <option v-for="dato in unidades" v-bind:value="dato.codunidad">
-                                    {{ dato . descripcion }} </option>
+                                    {{ dato . descripcion }}
+                                </option>
                             </select>
                         </div>
                     </div>
@@ -322,16 +323,16 @@
                 <div class="modal-body">
                     <!-- Buscador simple -->
                     <!-- Buscador simple -->
-					<div class="row mb-3">
-						<div class="col-12">
-							<input type="text" class="form-control form-control-sm" placeholder="Buscar serie..." 
-								v-model="buscarSerie">
-						</div>
-					</div>
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <input type="text" class="form-control form-control-sm" placeholder="Buscar serie..."
+                                v-model="buscarSerie">
+                        </div>
+                    </div>
                     <div class="row g-2">
                         <!-- Card de serie -->
                         <div class="col-md-4 col-sm-6" v-for="serie in listadoSeriesFiltrado" :key="serie.id_serie" v-on:click="SerieSeleccionada(serie)">
-                            <div class="card text-center series-card"  style="cursor: pointer; transition: all 0.3s ease;">
+                            <div class="card text-center series-card" style="cursor: pointer; transition: all 0.3s ease;">
                                 <div class="card-body p-2">
                                     <h6 class="card-title mb-1" style="font-size: 0.9rem;">{{ serie . serie_codigo }} </h6>
                                     <p class="card-text mb-1">
@@ -426,10 +427,10 @@
             offset: 3,
             // Para selección de series
             listadoSeries: [],
-           // listadoSeriesFiltrado: [],
-              buscarSerie: '',
+            // listadoSeriesFiltrado: [],
+            buscarSerie: '',
             // fin selección de series
-			ProductoSelecionado: {},
+            ProductoSelecionado: {},
         },
         computed: {
             phuyu_actual: function() {
@@ -455,25 +456,25 @@
                 }
                 return paginas;
             },
-			// AGREGAR ESTE COMPUTED PARA FILTRAR SERIES
-			listadoSeriesFiltrado: function() {
+            // AGREGAR ESTE COMPUTED PARA FILTRAR SERIES
+            listadoSeriesFiltrado: function() {
 
-				 console.log("Filtro de series activado:", this.buscarSerie);
-				// Paso 1: Si no hay texto de búsqueda, devuelve todas las series
-				if (!this.buscarSerie) return this.listadoSeries;
-				
-				// Paso 2: Convierte el texto de búsqueda a minúsculas
-				const termino = this.buscarSerie.toLowerCase();
-				
-				// Paso 3: Filtra las series que incluyen el término de búsqueda
-				return this.listadoSeries.filter(serie => 
-					serie.serie_codigo.toLowerCase().includes(termino)
-				);
-			}
+                console.log("Filtro de series activado:", this.buscarSerie);
+                // Paso 1: Si no hay texto de búsqueda, devuelve todas las series
+                if (!this.buscarSerie) return this.listadoSeries;
+
+                // Paso 2: Convierte el texto de búsqueda a minúsculas
+                const termino = this.buscarSerie.toLowerCase();
+
+                // Paso 3: Filtra las series que incluyen el término de búsqueda
+                return this.listadoSeries.filter(serie =>
+                    serie.serie_codigo.toLowerCase().includes(termino)
+                );
+            }
 
         },
         methods: {
-			
+
             phuyu_nuevoproducto: function() {
                 $(".compose").removeClass("col-md-4").addClass("col-md-9");
                 phuyu_sistema.phuyu_loader("phuyu_formulario", 180);
@@ -489,11 +490,11 @@
 
 
                 var buscar = "buscar_salidas";
-                if (phuyu_controller == "almacen/ingresos"  || phuyu_controller == "compras/compras") {
+                if (phuyu_controller == "almacen/ingresos" || phuyu_controller == "compras/compras") {
                     var buscar = "buscar_ingresos";
                     this.verprecios = 0;
                 }
-              
+
 
                 this.cargando = true;
                 this.$http.post(url + "almacen/productos/" + buscar, {
@@ -520,28 +521,28 @@
 
                 // inf para identificar si es egreso o ventas asi debe selecionar la serie de producto 
                 if ((phuyu_controller == 'ventas/ventas' || phuyu_controller == 'almacen/salidas') && producto.controlarseries == 1) {
-                   // console.log("ENTRO A VENTAS O EGRESOS", phuyu_controller);
-					let detalleActual = phuyu_operacion.detalle || [];
-					// Lista completa de series del producto
-					let listaSeriesSinFiltro = producto.series;
-					// Productos del mismo tipo que ya están en el detalle
-					let FiltroProductos = detalleActual.filter(dp => dp.codproducto == producto.codproducto);
-					// Filtrar: quitar las series que ya están en FiltroProductos
-					this.listadoSeries = listaSeriesSinFiltro.filter(serie => {
-						// Verificar si esta serie ya existe en los productos filtrados
-						let serieYaExiste = FiltroProductos.some(productoDetalle => 
-							productoDetalle.serie_seleccionada && 
-							productoDetalle.serie_seleccionada.id_serie == serie.id_serie
-						);
-						// Mantener solo las series que NO existen
-						return !serieYaExiste;
-					});
-					console.log("Series originales:", listaSeriesSinFiltro);
-					console.log("Productos en detalle:", FiltroProductos);
-					console.log("Series disponibles:", this.listadoSeries);
-					// this.listadoSeries = producto.series;
-					this.listadoSeriesFiltrado = this.listadoSeries;
-					this.ProductoSelecionado = producto;
+                    // console.log("ENTRO A VENTAS O EGRESOS", phuyu_controller);
+                    let detalleActual = phuyu_operacion.detalle || [];
+                    // Lista completa de series del producto
+                    let listaSeriesSinFiltro = producto.series;
+                    // Productos del mismo tipo que ya están en el detalle
+                    let FiltroProductos = detalleActual.filter(dp => dp.codproducto == producto.codproducto);
+                    // Filtrar: quitar las series que ya están en FiltroProductos
+                    this.listadoSeries = listaSeriesSinFiltro.filter(serie => {
+                        // Verificar si esta serie ya existe en los productos filtrados
+                        let serieYaExiste = FiltroProductos.some(productoDetalle =>
+                            productoDetalle.serie_seleccionada &&
+                            productoDetalle.serie_seleccionada.id_serie == serie.id_serie
+                        );
+                        // Mantener solo las series que NO existen
+                        return !serieYaExiste;
+                    });
+                    console.log("Series originales:", listaSeriesSinFiltro);
+                    console.log("Productos en detalle:", FiltroProductos);
+                    console.log("Series disponibles:", this.listadoSeries);
+                    // this.listadoSeries = producto.series;
+                    this.listadoSeriesFiltrado = this.listadoSeries;
+                    this.ProductoSelecionado = producto;
 
                     $('#listadoSeries').modal('show');
                     return false;
@@ -554,8 +555,11 @@
             },
             phuyu_seleccionado: async function(index, producto) {
 
-    // Validar stock antes de agregar
-    if (parseInt(producto.controlstock) === 1 && parseFloat(producto.stock) <= 0) {
+    const validaStock =
+        (phuyu_controller == 'ventas/ventas' || phuyu_controller == 'almacen/salidas');
+
+    // Solo bloquear en ventas o salidas
+    if (validaStock && parseInt(producto.controlstock) === 1 && parseFloat(producto.stock) <= 0) {
         phuyu_sistema.phuyu_alerta(
             "NO HAY STOCK DISPONIBLE PARA ESTE PRODUCTO",
             producto.descripcion + " · STOCK: " + producto.stock + " " + producto.unidad,
@@ -565,10 +569,9 @@
     }
 
     // Si controla series
-    if ((phuyu_controller == 'ventas/ventas' || phuyu_controller == 'almacen/salidas') && producto.controlarseries == 1) {
-
+    if (validaStock && producto.controlarseries == 1) {
         let detalleActual = phuyu_operacion.detalle || [];
-        let listaSeriesSinFiltro = producto.series;
+        let listaSeriesSinFiltro = producto.series || [];
         let FiltroProductos = detalleActual.filter(dp => dp.codproducto == producto.codproducto);
 
         this.listadoSeries = listaSeriesSinFiltro.filter(serie => {
@@ -588,14 +591,17 @@
     phuyu_operacion.phuyu_additem(producto, producto.precio);
     timeout = setTimeout(removerColumna, 100, index);
 },
-			SerieSeleccionada_07032026 : function(serie) {
-				console.log("Serie seleccionada:", serie);
-				this.ProductoSelecionado.serie_seleccionada = serie;
-				phuyu_operacion.phuyu_additem(this.ProductoSelecionado,this.ProductoSelecionado.precio);
-				$('#listadoSeries').modal('hide');
-			},
+            SerieSeleccionada_07032026: function(serie) {
+                console.log("Serie seleccionada:", serie);
+                this.ProductoSelecionado.serie_seleccionada = serie;
+                phuyu_operacion.phuyu_additem(this.ProductoSelecionado, this.ProductoSelecionado.precio);
+                $('#listadoSeries').modal('hide');
+            },
 SerieSeleccionada: function(serie) {
-    if (parseInt(this.ProductoSelecionado.controlstock) === 1 && parseFloat(this.ProductoSelecionado.stock) <= 0) {
+    const validaStock =
+        (phuyu_controller == 'ventas/ventas' || phuyu_controller == 'almacen/salidas');
+
+    if (validaStock && parseInt(this.ProductoSelecionado.controlstock) === 1 && parseFloat(this.ProductoSelecionado.stock) <= 0) {
         phuyu_sistema.phuyu_alerta(
             "NO HAY STOCK DISPONIBLE PARA ESTE PRODUCTO",
             this.ProductoSelecionado.descripcion + " · STOCK: " + this.ProductoSelecionado.stock + " " + this.ProductoSelecionado.unidad,
@@ -749,7 +755,7 @@ SerieSeleccionada: function(serie) {
             phuyu_cerrar: function() {
                 $(".compose").slideToggle();
             },
-			
+
         },
         created: function() {
             this.phuyu_productos();
