@@ -516,7 +516,7 @@
                 this.paginacion.actual = pagina;
                 this.phuyu_productos();
             },
-            phuyu_seleccionado: async function(index, producto) {
+            phuyu_seleccionado_07022026: async function(index, producto) {
 
                 // inf para identificar si es egreso o ventas asi debe selecionar la serie de producto 
                 if ((phuyu_controller == 'ventas/ventas' || phuyu_controller == 'almacen/salidas') && producto.controlarseries == 1) {
@@ -552,12 +552,63 @@
                 phuyu_operacion.phuyu_additem(producto, producto.precio);
                 timeout = setTimeout(removerColumna, 100, index);
             },
-			SerieSeleccionada : function(serie) {
+            phuyu_seleccionado: async function(index, producto) {
+
+    // Validar stock antes de agregar
+    if (parseInt(producto.controlstock) === 1 && parseFloat(producto.stock) <= 0) {
+        phuyu_sistema.phuyu_alerta(
+            "NO HAY STOCK DISPONIBLE PARA ESTE PRODUCTO",
+            producto.descripcion + " · STOCK: " + producto.stock + " " + producto.unidad,
+            "error"
+        );
+        return false;
+    }
+
+    // Si controla series
+    if ((phuyu_controller == 'ventas/ventas' || phuyu_controller == 'almacen/salidas') && producto.controlarseries == 1) {
+
+        let detalleActual = phuyu_operacion.detalle || [];
+        let listaSeriesSinFiltro = producto.series;
+        let FiltroProductos = detalleActual.filter(dp => dp.codproducto == producto.codproducto);
+
+        this.listadoSeries = listaSeriesSinFiltro.filter(serie => {
+            let serieYaExiste = FiltroProductos.some(productoDetalle =>
+                productoDetalle.serie_seleccionada &&
+                productoDetalle.serie_seleccionada.id_serie == serie.id_serie
+            );
+            return !serieYaExiste;
+        });
+
+        this.ProductoSelecionado = producto;
+        $('#listadoSeries').modal('show');
+        return false;
+    }
+
+    $('.projects tr:eq(' + index + ') td').addClass("columna");
+    phuyu_operacion.phuyu_additem(producto, producto.precio);
+    timeout = setTimeout(removerColumna, 100, index);
+},
+			SerieSeleccionada_07032026 : function(serie) {
 				console.log("Serie seleccionada:", serie);
 				this.ProductoSelecionado.serie_seleccionada = serie;
 				phuyu_operacion.phuyu_additem(this.ProductoSelecionado,this.ProductoSelecionado.precio);
 				$('#listadoSeries').modal('hide');
 			},
+SerieSeleccionada: function(serie) {
+    if (parseInt(this.ProductoSelecionado.controlstock) === 1 && parseFloat(this.ProductoSelecionado.stock) <= 0) {
+        phuyu_sistema.phuyu_alerta(
+            "NO HAY STOCK DISPONIBLE PARA ESTE PRODUCTO",
+            this.ProductoSelecionado.descripcion + " · STOCK: " + this.ProductoSelecionado.stock + " " + this.ProductoSelecionado.unidad,
+            "error"
+        );
+        $('#listadoSeries').modal('hide');
+        return false;
+    }
+
+    this.ProductoSelecionado.serie_seleccionada = serie;
+    phuyu_operacion.phuyu_additem(this.ProductoSelecionado, this.ProductoSelecionado.precio);
+    $('#listadoSeries').modal('hide');
+},
             phuyu_masprecios: function(producto, index) {
                 this.masprecios.producto = producto.descripcion;
                 this.masprecios.unidad = producto.unidad;

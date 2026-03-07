@@ -259,11 +259,14 @@ class Ventas extends CI_Controller
                 $tipopagos = $this->db->query('select *from caja.tipopagos where ingreso=1 and estado=1 order by codtipopago')->result_array();
                 $vendedores = $this->db
                     ->query(
-                        "select persona.codpersona,persona.razonsocial 
-                            from public.personas as persona 
+                        "select persona.codpersona,persona.razonsocial
+                            from public.personas as persona
                             inner join public.empleados as
                             empleado on(persona.codpersona=empleado.codpersona) where empleado.estado=1 " .
-                            $perfil . '', ) ->result_array();
+                            $perfil .
+                            '',
+                    )
+                    ->result_array();
                 $sucursal = $this->db->query('select coalesce(codcomprobantetipo,12) as codcomprobantetipo, seriecomprobante from public.sucursales where codsucursal=' . $_SESSION['phuyu_codsucursal'])->result_array();
                 $centrocostos = $this->db->query('select *from caja.centrocostos where estado=1')->result_array();
                 $afectacionigv = $this->db->query('select *from afectacionigv where estado = 1')->result_array();
@@ -290,7 +293,8 @@ class Ventas extends CI_Controller
                             INNER JOIN public.personas as p on (kardex.codpersona=p.codpersona)
                             INNER JOIN almacen.movimientotipos as mt on (kardex.codmovimientotipo=mt.codmovimientotipo)
                             where kardex.codkardex=" . $codregistro,
-                    ) ->result_array();
+                    )
+                    ->result_array();
 
                 $detalle = $this->db->query('select kd.*,p.descripcion as producto,u.descripcion as unidad,p.codigo from kardex.kardexdetalle as kd inner join almacen.productos as p on(kd.codproducto=p.codproducto) inner join almacen.unidades as u on(kd.codunidad=u.codunidad) where kd.codkardex=' . $codregistro . ' and kd.estado=1 order by kd.item')->result_array();
 
@@ -304,7 +308,10 @@ class Ventas extends CI_Controller
                             from caja.movimientos as m
                             inner join caja.movimientosdetalle as md on(m.codmovimiento=md.codmovimiento)
                             inner join caja.tipopagos as p on(md.codtipopago=p.codtipopago)
-                            where m.codkardex=" . $codregistro .  ' and m.estado=1 order by p.codtipopago', )
+                            where m.codkardex=" .
+                            $codregistro .
+                            ' and m.estado=1 order by p.codtipopago',
+                    )
                     ->result_array();
                 $this->load->view('ventas/ventas/ver', compact('info', 'detalle', 'pagos'));
             } else {
@@ -315,7 +322,7 @@ class Ventas extends CI_Controller
         }
     }
 
-    function guardar()
+    function guardar_07032026()
     {
         if ($this->input->is_ajax_request()) {
             if (isset($_SESSION['phuyu_codusuario'])) {
@@ -439,21 +446,24 @@ class Ventas extends CI_Controller
                     $this->db->trans_commit();
                 }
 
-                
                 $data['estado'] = $estado;
                 $data['codkardex'] = $codkardex;
 
-                if($this->request->campos->condicionpago == 2 && $this->request->campos->inicial > 0){
-                $data['info_credito'] = $this->db->query("
+                if ($this->request->campos->condicionpago == 2 && $this->request->campos->inicial > 0) {
+                    $data['info_credito'] = $this->db
+                        ->query(
+                            "
                             SELECT *
-                            FROM kardex.creditos 
-                            WHERE codkardex = " . (int)$codkardex . " 
-                            AND estado <> 0 
-                            ORDER BY codcredito DESC 
-                            LIMIT 1 ")->row_array();
-                    
+                            FROM kardex.creditos
+                            WHERE codkardex = " .
+                                (int) $codkardex .
+                                "
+                            AND estado <> 0
+                            ORDER BY codcredito DESC
+                            LIMIT 1 ",
+                        )
+                        ->row_array();
                 }
-
 
                 echo json_encode($data);
             } else {
@@ -463,6 +473,250 @@ class Ventas extends CI_Controller
             $this->load->view('phuyu/404');
         }
     }
+
+function guardar()
+{
+    if ($this->input->is_ajax_request()) {
+        if (isset($_SESSION['phuyu_codusuario'])) {
+            $this->request = json_decode(file_get_contents('php://input'));
+
+            // REVISAMOS SI EL PEDIDO SIGUE ACTIVO
+            if ($this->request->codpedido != 0) {
+                $info = $this->db->query('select *from kardex.pedidos where codpedido=' . (int)$this->request->codpedido)->result_array();
+                if (count($info) > 0 && $info[0]['estado'] == 0) {
+                    echo json_encode('e');
+                    return;
+                }
+            }
+
+            if ($this->request->codproforma != 0) {
+                $info = $this->db->query('select *from kardex.proformas where codproforma=' . (int)$this->request->codproforma)->result_array();
+                if (count($info) > 0 && $info[0]['estado'] == 0) {
+                    echo json_encode('e');
+                    return;
+                }
+            }
+
+            $this->request->campos->codpersona = $this->request->codpersonapedido == 0
+                ? $this->request->campos->codpersona
+                : $this->request->codpersonapedido;
+
+            // VALIDAMOS SI ES BOLETA Y EL IMPORTE SEA MENOR A 700
+            if ($this->request->campos->codpersona == 2 && $this->request->campos->codcomprobantetipo == 12) {
+                if ($this->request->totales->importe >= 700) {
+                    echo json_encode('e');
+                    return;
+                }
+            }
+
+            $this->request->campos->codlote = !isset($this->request->campos->codlote) || empty($this->request->campos->codlote)
+                ? 0
+                : $this->request->campos->codlote;
+
+            $this->db->trans_begin();
+
+            try {
+                /* REGISTRO KARDEX Y KARDEX DETALLE */
+                $codkardex = $this->Kardex_model->phuyu_kardex($this->request->campos, $this->request->totales, 0);
+                $codkardexalmacen = 0;
+                $retirar = $this->request->campos->retirar;
+                $estado = 1;
+
+                if ($retirar == 1) {
+                    $codkardexalmacen = $this->Kardex_model->phuyu_kardexalmacen($codkardex, 4, $this->request->campos);
+                }
+
+                $detalle = $this->Kardex_model->phuyu_kardexdetalle(
+                    $codkardex,
+                    $codkardexalmacen,
+                    $this->request->detalle,
+                    $retirar,
+                    0,
+                    $this->request->codpedido,
+                    $this->request->codproforma
+                );
+
+                // SI FALLA STOCK O DETALLE, HACER ROLLBACK Y SALIR
+                if (!isset($detalle['success']) || !$detalle['success']) {
+                    $this->db->trans_rollback();
+
+                    $data = [];
+                    $data['estado'] = 0;
+                    $data['informacion'] = $detalle;
+                    echo json_encode($data);
+                    return;
+                }
+
+                if ($this->request->codpedido != 0) {
+                    $this->phuyu_model->phuyu_pedidodetalle($this->request->codpedido, $this->request->detalle);
+
+                    if ($this->request->campos->terminarpedido == true) {
+                        $campos = ['estadoproceso'];
+                        $valores = [1];
+                        $this->phuyu_model->phuyu_editar('kardex.pedidos', $campos, $valores, 'codpedido', $this->request->codpedido);
+                    }
+                }
+
+                if ($this->request->codproforma != 0) {
+                    $this->phuyu_model->phuyu_proformadetalle($this->request->codproforma, $this->request->detalle);
+
+                    if ($this->request->campos->terminarpedido == true) {
+                        $campos = ['estadoproceso'];
+                        $valores = [1];
+                        $this->phuyu_model->phuyu_editar('kardex.proformas', $campos, $valores, 'codproforma', $this->request->codproforma);
+                    }
+                }
+
+                /* REGISTRO MOVIMIENTO DE CAJA */
+                if ($this->request->campos->codmoneda != 1) {
+                    $importe = round($this->request->totales->importe * $this->request->campos->tipocambio, 2);
+                    $importemoneda = $this->request->totales->importe;
+                } else {
+                    $importe = $this->request->totales->importe;
+                    $importemoneda = $this->request->totales->importe;
+                }
+
+                $codmovimiento = $this->Caja_model->phuyu_movimientos(
+                    $codkardex,
+                    1,
+                    1,
+                    $importe,
+                    $this->request->campos,
+                    $importemoneda
+                );
+
+                if ($codmovimiento == 0) {
+                    $this->db->trans_rollback();
+
+                    $data = [];
+                    $data['estado'] = 3;
+                    $data['informacion'] = 'La venta se interrumpió porque la caja que usted está utilizando está cerrada, vuelve a iniciar sesión';
+                    echo json_encode($data);
+                    return;
+                }
+
+                if ($this->request->campos->condicionpago == 1) {
+                    $estado = $this->Caja_model->phuyu_movimientosdetalle($codmovimiento, $this->request->pagos);
+                    if ($estado != 1) {
+                        $this->db->trans_rollback();
+
+                        $data = [];
+                        $data['estado'] = 0;
+                        $data['informacion'] = 'No se pudo registrar el detalle del pago.';
+                        echo json_encode($data);
+                        return;
+                    }
+                }
+
+                /* REGISTRO CREDITO POR COBRAR */
+                if ($this->request->campos->condicionpago == 2) {
+                    $persona = $this->db->query(
+                        'select documento,d.abreviatura as tipo 
+                         from public.personas p 
+                         inner join public.documentotipos d on(p.coddocumentotipo=d.coddocumentotipo) 
+                         where p.codpersona=' . (int)$this->request->campos->codpersona
+                    )->result_array();
+
+                    $estado = $this->Caja_model->phuyu_credito(
+                        $codkardex,
+                        $codmovimiento,
+                        1,
+                        $this->request->campos,
+                        $this->request->totales,
+                        $this->request->cuotas,
+                        $persona[0]['tipo'] . '-' . $persona[0]['documento']
+                    );
+
+                    if ($estado != 1) {
+                        $this->db->trans_rollback();
+
+                        $data = [];
+                        $data['estado'] = 0;
+                        $data['informacion'] = 'No se pudo registrar el crédito.';
+                        echo json_encode($data);
+                        return;
+                    }
+                }
+
+                /* COMPROBANTE ELECTRONICO PARA SUNAT */
+                if ($this->request->campos->codcomprobantetipo == 10 || $this->request->campos->codcomprobantetipo == 12) {
+                    $kardex = $this->db->query('select nrocomprobante from kardex.kardex where codkardex=' . (int)$codkardex)->result_array();
+
+                    if ($this->request->campos->codcomprobantetipo == 10) {
+                        $xml = $_SESSION['phuyu_ruc'] . '-01-' . $this->request->campos->seriecomprobante . '-' . $kardex[0]['nrocomprobante'];
+                    } else {
+                        $xml = $_SESSION['phuyu_ruc'] . '-03-' . $this->request->campos->seriecomprobante . '-' . $kardex[0]['nrocomprobante'];
+                    }
+
+                    $campos = ['codkardex', 'codsucursal', 'codusuario', 'fechacreado', 'nombre_xml'];
+                    $valores = [
+                        (int)$codkardex,
+                        (int)$_SESSION['phuyu_codsucursal'],
+                        (int)$_SESSION['phuyu_codusuario'],
+                        $this->request->campos->fechacomprobante,
+                        $xml
+                    ];
+
+                    $estadoSunat = $this->phuyu_model->phuyu_guardar('sunat.kardexsunat', $campos, $valores);
+
+                    if (!$estadoSunat) {
+                        $this->db->trans_rollback();
+
+                        $data = [];
+                        $data['estado'] = 0;
+                        $data['informacion'] = 'No se pudo registrar el comprobante para SUNAT.';
+                        echo json_encode($data);
+                        return;
+                    }
+                }
+
+                if ($this->db->trans_status() === false) {
+                    $this->db->trans_rollback();
+
+                    $data = [];
+                    $data['estado'] = 0;
+                    $data['informacion'] = 'Ocurrió un problema al guardar la venta.';
+                    echo json_encode($data);
+                    return;
+                }
+
+                $this->db->trans_commit();
+
+                $data = [];
+                $data['estado'] = 1;
+                $data['codkardex'] = $codkardex;
+
+                if ($this->request->campos->condicionpago == 2 && $this->request->campos->inicial > 0) {
+                    $data['info_credito'] = $this->db->query("
+                        SELECT *
+                        FROM kardex.creditos 
+                        WHERE codkardex = " . (int)$codkardex . " 
+                        AND estado <> 0 
+                        ORDER BY codcredito DESC 
+                        LIMIT 1
+                    ")->row_array();
+                }
+
+                echo json_encode($data);
+                return;
+
+            } catch (Throwable $e) {
+                $this->db->trans_rollback();
+
+                $data = [];
+                $data['estado'] = 0;
+                $data['informacion'] = $e->getMessage();
+                echo json_encode($data);
+                return;
+            }
+
+        } else {
+            echo json_encode('e');
+        }
+    } else {
+        $this->load->view('phuyu/404');
+    }
+}
 
     function editar()
     {
