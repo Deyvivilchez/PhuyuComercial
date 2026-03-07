@@ -381,7 +381,6 @@
             cargando: true,
             buscar: "",
             rubro: "<?php echo $_SESSION['phuyu_rubro']; ?>",
-            almacenControlStock: <?php echo isset($_SESSION['phuyu_stockalmacen']) ? (int)$_SESSION['phuyu_stockalmacen'] : 1; ?>,
             verprecios: 1,
             putunidades: [],
             mostrarprecio: 0,
@@ -432,7 +431,6 @@
             buscarSerie: '',
             // fin selección de series
             ProductoSelecionado: {},
-           
         },
         computed: {
             phuyu_actual: function() {
@@ -555,17 +553,13 @@
                 phuyu_operacion.phuyu_additem(producto, producto.precio);
                 timeout = setTimeout(removerColumna, 100, index);
             },
-phuyu_seleccionado: async function(index, producto) {
-
-    const esSalidaOVenta =
-        (phuyu_controller == 'ventas/ventas' || phuyu_controller == 'almacen/salidas');
+            phuyu_seleccionado: async function(index, producto) {
 
     const validaStock =
-        esSalidaOVenta &&
-        parseInt(this.almacenControlStock) === 1 &&
-        parseInt(producto.controlstock) === 1;
+        (phuyu_controller == 'ventas/ventas' || phuyu_controller == 'almacen/salidas');
 
-    if (validaStock && parseFloat(producto.stock) <= 0) {
+    // Solo bloquear en ventas o salidas
+    if (validaStock && parseInt(producto.controlstock) === 1 && parseFloat(producto.stock) <= 0) {
         phuyu_sistema.phuyu_alerta(
             "NO HAY STOCK DISPONIBLE PARA ESTE PRODUCTO",
             producto.descripcion + " · STOCK: " + producto.stock + " " + producto.unidad,
@@ -574,7 +568,8 @@ phuyu_seleccionado: async function(index, producto) {
         return false;
     }
 
-    if (esSalidaOVenta && producto.controlarseries == 1) {
+    // Si controla series
+    if (validaStock && producto.controlarseries == 1) {
         let detalleActual = phuyu_operacion.detalle || [];
         let listaSeriesSinFiltro = producto.series || [];
         let FiltroProductos = detalleActual.filter(dp => dp.codproducto == producto.codproducto);
@@ -603,15 +598,10 @@ phuyu_seleccionado: async function(index, producto) {
                 $('#listadoSeries').modal('hide');
             },
 SerieSeleccionada: function(serie) {
-    const esSalidaOVenta =
+    const validaStock =
         (phuyu_controller == 'ventas/ventas' || phuyu_controller == 'almacen/salidas');
 
-    const validaStock =
-        esSalidaOVenta &&
-        parseInt(this.almacenControlStock) === 1 &&
-        parseInt(this.ProductoSelecionado.controlstock) === 1;
-
-    if (validaStock && parseFloat(this.ProductoSelecionado.stock) <= 0) {
+    if (validaStock && parseInt(this.ProductoSelecionado.controlstock) === 1 && parseFloat(this.ProductoSelecionado.stock) <= 0) {
         phuyu_sistema.phuyu_alerta(
             "NO HAY STOCK DISPONIBLE PARA ESTE PRODUCTO",
             this.ProductoSelecionado.descripcion + " · STOCK: " + this.ProductoSelecionado.stock + " " + this.ProductoSelecionado.unidad,
