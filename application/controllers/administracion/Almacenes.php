@@ -60,61 +60,136 @@ class Almacenes extends CI_Controller {
 		}
 	}
 
-	function guardar(){
-		if ($this->input->is_ajax_request()) {
-			$campos = ["codsucursal","descripcion","direccion","telefonos","controlstock","codubigeo","codafectacionigv"];
-			$this->request = json_decode(file_get_contents('php://input'));
-			$valores = [$this->request->codsucursal,$this->request->descripcion,$this->request->direccion,$this->request->telefonos,$this->request->controlstock,$this->request->codubigeo,$this->request->codafectacionigv];
+function guardar(){
+	if ($this->input->is_ajax_request()) {
+		$campos = ["codsucursal","descripcion","direccion","telefonos","controlstock","codubigeo","codafectacionigv"];
+		$this->request = json_decode(file_get_contents('php://input'));
+		$valores = [
+			$this->request->codsucursal,
+			$this->request->descripcion,
+			$this->request->direccion,
+			$this->request->telefonos,
+			$this->request->controlstock,
+			$this->request->codubigeo,
+			$this->request->codafectacionigv
+		];
 
-			$this->db->trans_begin();
+		$estado = 1;
 
-			if($this->request->codregistro=="") {
-				$estado = $this->phuyu_model->phuyu_guardar("almacen.almacenes", $campos, $valores,"true");
-				$codalmacen = $estado;
-				$lineas = $this->db->query("select *from almacen.lineasxsucursales where codsucursal = ".$this->request->codsucursal)->result_array();
+		$this->db->trans_begin();
 
-				$item = 0; $lineasxsucursales = "(";
-				foreach ($lineas as $key => $value) { 
-					$item = $item + 1;
-					if ($item==count($lineas)) {
-						$lineasxsucursales .= " codlinea=".$value["codlinea"]." ) AND";
-					}else{
-						$lineasxsucursales .= " codlinea=".$value["codlinea"]." or ";
+		if ($this->request->codregistro == "") {
+
+			$codalmacen = $this->phuyu_model->phuyu_guardar("almacen.almacenes", $campos, $valores, "true");
+
+			if (!$codalmacen || !is_numeric($codalmacen)) {
+				$estado = 0;
+			} else {
+				$lineas = $this->db->query("
+					select * 
+					from almacen.lineasxsucursales 
+					where codsucursal = ".(int)$this->request->codsucursal
+				)->result_array();
+
+				$productos = [];
+
+				if (!empty($lineas)) {
+					$codlineas = [];
+
+					foreach ($lineas as $value) {
+						$codlineas[] = (int)$value["codlinea"];
 					}
+
+					$this->db->from("almacen.productos");
+					$this->db->where("estado", 1);
+					$this->db->where_in("codlinea", $codlineas);
+					$productos = $this->db->get()->result_array();
 				}
 
-				$productos = $this->db->query("select *from almacen.productos where ".$lineasxsucursales." estado=1")->result_array();
+				foreach ($productos as $value) {
+					$productosuni = $this->db->query("
+						select codproducto, codunidad 
+						from almacen.productounidades 
+						where codproducto = ".(int)$value["codproducto"]." 
+						and estado = 1
+					")->result_array();
 
-				foreach ($productos as $key => $value) {
-					$productosuni = $this->db->query("select codproducto,codunidad from almacen.productounidades where codproducto = ".$value["codproducto"]." AND estado=1")->result_array();
-					foreach ($productosuni as $key => $val) {
-						$campos = ["codalmacen","codproducto","codunidad","codsucursal","codafectacionigvcompra","codafectacionigvventa"];
-						$valores =[$codalmacen,$value["codproducto"],$val["codunidad"],$this->request->codsucursal,$this->request->codafectacionigv,$this->request->codafectacionigv];
-						$estado = $this->phuyu_model->phuyu_guardar("almacen.productoubicacion", $campos, $valores);
+					foreach ($productosuni as $val) {
+						$camposUbicacion = [
+							"codalmacen",
+							"codproducto",
+							"codunidad",
+							"codsucursal",
+							"codafectacionigvcompra",
+							"codafectacionigvventa"
+						];
+
+						$valoresUbicacion = [
+							$codalmacen,
+							$value["codproducto"],
+							$val["codunidad"],
+							$this->request->codsucursal,
+							$this->request->codafectacionigv,
+							$this->request->codafectacionigv
+						];
+
+						$guardarUbicacion = $this->phuyu_model->phuyu_guardar(
+							"almacen.productoubicacion",
+							$camposUbicacion,
+							$valoresUbicacion
+						);
+
+						if (!$guardarUbicacion) {
+							$estado = 0;
+							break;
+						}
 					}
-				}
 
-			}else{
-				$estado = $this->phuyu_model->phuyu_editar("almacen.almacenes", $campos, $valores, "codalmacen", $this->request->codregistro);
-
-				$estado = $this->phuyu_model->phuyu_editar("almacen.productoubicacion",["codafectacionigvcompra","codafectacionigvventa"],[$this->request->codafectacionigv,$this->request->codafectacionigv],"codalmacen",$this->request->codregistro);
-
-				if($_SESSION["phuyu_codalmacen"] == $this->request->codregistro){
-					$_SESSION["phuyu_stockalmacen"] = $this->request->controlstock; 
-					$_SESSION["phuyu_afectacionigv"] = (int)$this->request->codafectacionigv;
+					if ($estado == 0) {
+						break;
+					}
 				}
 			}
 
-			if ($this->db->trans_status() === FALSE){
-			    $this->db->trans_rollback(); $estado = 0;
-			}else{
-				$this->db->trans_commit();
+		} else {
+
+			$editarAlmacen = $this->phuyu_model->phuyu_editar(
+				"almacen.almacenes",
+				$campos,
+				$valores,
+				"codalmacen",
+				$this->request->codregistro
+			);
+
+			$editarUbicacion = $this->phuyu_model->phuyu_editar(
+				"almacen.productoubicacion",
+				["codafectacionigvcompra","codafectacionigvventa"],
+				[$this->request->codafectacionigv,$this->request->codafectacionigv],
+				"codalmacen",
+				$this->request->codregistro
+			);
+
+			if (!$editarAlmacen || !$editarUbicacion) {
+				$estado = 0;
 			}
-			echo $estado;
-		}else{
-			$this->load->view("phuyu/404");
+
+			if ($_SESSION["phuyu_codalmacen"] == $this->request->codregistro) {
+				$_SESSION["phuyu_stockalmacen"] = $this->request->controlstock;
+				$_SESSION["phuyu_afectacionigv"] = (int)$this->request->codafectacionigv;
+			}
 		}
+
+		if ($this->db->trans_status() === FALSE || $estado == 0){
+			$this->db->trans_rollback();
+			echo 0;
+		}else{
+			$this->db->trans_commit();
+			echo 1;
+		}
+	}else{
+		$this->load->view("phuyu/404");
 	}
+}
 
 	function editar(){
 		if ($this->input->is_ajax_request()) {
