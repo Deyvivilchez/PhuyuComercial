@@ -1432,8 +1432,11 @@ class Formato extends CI_Controller {
 			if ($empresa[0]["documento"]=="20570793986") {
 				$ticket = "ticket_20570793986";
 			}
+			$logoEmpresa =$_SESSION["phuyu_logo"];
 
-			$this->load->view("facturacion/formato/".$ticket,compact("empresa","sucursal","venta","totales","detalle","vendedor","credito","texto_importe","direccionlogo","formato","nombre","slogan","publicidad","fechavencimiento","detallemovimiento","efectivo"));
+			$this->load->view("facturacion/formato/".$ticket,
+			compact("empresa","sucursal","venta","totales","detalle","vendedor","credito","texto_importe","direccionlogo","formato","nombre","slogan","publicidad",
+			"fechavencimiento","detallemovimiento","efectivo",'logoEmpresa'));
 		}else{
 			$this->load->view("phuyu/404");
 		}

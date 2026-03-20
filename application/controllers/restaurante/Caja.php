@@ -226,10 +226,23 @@ class Caja extends CI_Controller
 					.no-print {
 						display: none !important
 					}
-					.subbold{ font-size:11px; font-weight:700; margin:0; }
 
-					.no-print button { padding: 6px 10px; border:1px solid #000; background:#fff; cursor:pointer }
-.no-print button:active { transform: scale(0.98) }
+					.subbold {
+						font-size: 11px;
+						font-weight: 700;
+						margin: 0;
+					}
+
+					.no-print button {
+						padding: 6px 10px;
+						border: 1px solid #000;
+						background: #fff;
+						cursor: pointer
+					}
+
+					.no-print button:active {
+						transform: scale(0.98)
+					}
 
 
 				}
@@ -315,13 +328,13 @@ class Caja extends CI_Controller
 				</div>
 				<div class="center sub" style="margin-top:4px;">SON <?= $esc($totalLetras) ?></div>
 				<hr class="sep">
-					<!-- Datos para facturación -->
+				<!-- Datos para facturación -->
 				<div class="center subbold">DATOS PARA FACTURACIÓN</div>
 				<div class="sub">NOMBRE / RAZÓN SOCIAL: _______________________________</div>
 				<div class="sub">DNI / RUC: ______________</div>
 				<div class="sub">TELÉFONO: __________</div>
 
-			
+
 				<div class="no-print center" style="margin-top:6px">
 					<button onclick="window.print()">Imprimir</button>
 				</div>
@@ -572,7 +585,7 @@ class Caja extends CI_Controller
 		}
 	}
 
-	function venta_diaria($codcontroldiario = 0)
+	function venta_diaria_090326($codcontroldiario = 0)
 	{
 		if (isset($_SESSION["phuyu_usuario"])) {
 			$empresa = $this->db->query("select *from public.personas where codpersona=1")->result_array();
@@ -649,7 +662,130 @@ class Caja extends CI_Controller
 		}
 	}
 
-	function balance_caja($codcontroldiario = 0)
+	function venta_diaria($codcontroldiario = 0)
+{
+	if (isset($_SESSION["phuyu_usuario"])) {
+
+		$empresa = $this->db->query("SELECT * FROM public.personas WHERE codpersona = 1")->result_array();
+
+		$this->load->library("Ticket");
+		$pdf = new Ticket();
+		$pdf->AddPage();
+
+		// Logo
+		$logoSesion = isset($_SESSION['phuyu_logo']) ? trim($_SESSION['phuyu_logo']) : '';
+		$rutaLogo = FCPATH . 'public/img/' . $logoSesion;
+
+		if (!empty($logoSesion) && file_exists($rutaLogo)) {
+			$pdf->Image($rutaLogo, 13, 10, 50, 30);
+		} else {
+			$pdf->SetFont('Arial', 'B', 10);
+			$pdf->SetXY(13, 18);
+			$pdf->Cell(50, 5, utf8_decode('SIN LOGO'), 0, 0, 'C');
+		}
+
+		$pdf->SetFont('Arial', 'B', 12);
+		$pdf->setY(45);
+		$pdf->setX(2);
+		$pdf->MultiCell(75, 4, utf8_decode($empresa[0]["nombrecomercial"]), 0, "C", false);
+
+		$pdf->SetFont('Arial', 'B', 9);
+		$pdf->setX(2);
+		$pdf->MultiCell(75, 4, "DE: " . utf8_decode($empresa[0]["razonsocial"]), 0, "C", false);
+
+		$pdf->setX(2);
+		$pdf->MultiCell(75, 4, "RUC: " . utf8_decode($empresa[0]["documento"]), 0, "C", false);
+
+		$pdf->SetFont('Arial', 'B', 8);
+		$pdf->setX(2);
+		$pdf->MultiCell(75, 3, '-----------------------------------------------------------------------------', 0, "C", false);
+
+		$pdf->SetFont('Arial', 'B', 10);
+		$pdf->setX(2);
+		$pdf->MultiCell(75, 4, "VENTA DIARIA POR PRODUCTO", 0, "C", false);
+
+		$pdf->SetFont('Arial', '', 8);
+		$pdf->setX(2);
+		$pdf->MultiCell(75, 3, "FECHA: " . date("d-m-Y") . " 		HORA: " . date("H:i:s"), 0, "C", false);
+		$pdf->Ln(5);
+
+		$columnas = array("PRODUCTO O SERVICIO", "CANTIDAD", "IMPORTE");
+		$w = array(35, 20, 20);
+		$pdf->setX(4);
+		$pdf->pdf_tabla_head($columnas, $w, 8);
+
+		if ($codcontroldiario == 0) {
+			$codcontroldiario = $_SESSION["phuyu_codcontroldiario"];
+		}
+
+		$lineas = $this->db->query("SELECT * FROM almacen.lineas")->result_array();
+
+		$pdf->SetWidths(array(35, 20, 20));
+		$pdf->SetLineHeight(3);
+		$pdf->SetFont('Arial', '', 7);
+
+		$total = 0;
+		$cantidad = 0;
+
+		foreach ($lineas as $v) {
+			$lista = $this->db->query("
+				SELECT 
+					kd.codproducto,
+					kd.codunidad,
+					p.descripcion AS producto,
+					u.descripcion AS unidad,
+					COALESCE(SUM(kd.cantidad), 0) AS cantidad,
+					COALESCE(SUM(kd.subtotal), 0) AS importe
+				FROM kardex.kardex AS k
+				INNER JOIN caja.movimientos AS mov ON (k.codkardex = mov.codkardex)
+				INNER JOIN kardex.kardexdetalle AS kd ON (k.codkardex = kd.codkardex)
+				INNER JOIN almacen.productos AS p ON (kd.codproducto = p.codproducto)
+				INNER JOIN almacen.unidades AS u ON (kd.codunidad = u.codunidad)
+				WHERE k.codmovimientotipo = 20
+					AND k.codsucursal = " . (int)$_SESSION["phuyu_codsucursal"] . "
+					AND mov.codcontroldiario = " . (int)$codcontroldiario . "
+					AND p.codlinea = " . (int)$v["codlinea"] . "
+					AND k.estado = 1
+				GROUP BY kd.codproducto, kd.codunidad, p.descripcion, u.descripcion
+			")->result_array();
+
+			if (count($lista) > 0) {
+				$pdf->SetFont('Arial', 'B', 8);
+				$pdf->MultiCell(73, 5, "LINEA: " . utf8_decode($v["descripcion"]), 0, "L", false);
+				$pdf->SetFont('Arial', '', 7);
+			}
+
+			foreach ($lista as $value) {
+				$pdf->setX(4);
+
+				$datos = array(
+					utf8_decode($value["producto"] . " - " . $value["unidad"]),
+					number_format($value["cantidad"], 2),
+					number_format($value["importe"], 2)
+				);
+
+				$pdf->Row($datos);
+
+				$total += $value["importe"];
+				$cantidad += $value["cantidad"];
+			}
+		}
+
+		$pdf->SetFont('Arial', '', 8);
+		$pdf->setX(2);
+		$pdf->MultiCell(75, 3, '-----------------------------------------------------------------------------', 0, "C", false);
+
+		$columnas = array("TOTALES", number_format($cantidad, 2), number_format($total, 2));
+		$w = array(35, 20, 20);
+		$pdf->setX(4);
+		$pdf->pdf_tabla_head($columnas, $w, 8);
+
+		$pdf->AutoPrint();
+		$pdf->Output();
+	}
+}
+
+	function balance_caja090326($codcontroldiario = 0)
 	{
 		if (isset($_SESSION["phuyu_usuario"])) {
 			$empresa = $this->db->query("select *from public.personas where codpersona=1")->result_array();
@@ -834,7 +970,322 @@ class Caja extends CI_Controller
 			$pdf->Output();
 		}
 	}
+function balance_caja($codcontroldiario = 0)
+{
+	if (isset($_SESSION["phuyu_usuario"])) {
 
+		$empresa = $this->db->query("SELECT * FROM public.personas WHERE codpersona = 1")->result_array();
+
+		$this->load->library("Ticket");
+		$pdf = new Ticket();
+		$pdf->AddPage();
+
+		// LOGO
+		$logoSesion = isset($_SESSION['phuyu_logo']) ? trim($_SESSION['phuyu_logo']) : '';
+		$rutaLogo = FCPATH . 'public/img/' . $logoSesion;
+
+		if (!empty($logoSesion) && file_exists($rutaLogo)) {
+			$pdf->Image($rutaLogo, 13, 10, 50, 30);
+		} else {
+			$pdf->SetFont('Arial', 'B', 10);
+			$pdf->SetXY(13, 18);
+			$pdf->Cell(50, 5, utf8_decode('SIN LOGO'), 0, 0, 'C');
+		}
+
+		$pdf->SetFont('Arial', 'B', 12);
+		$pdf->setY(45);
+		$pdf->setX(2);
+		$pdf->MultiCell(75, 4, utf8_decode($empresa[0]["nombrecomercial"]), 0, "C", false);
+
+		$pdf->SetFont('Arial', 'B', 9);
+		$pdf->setX(2);
+		$pdf->MultiCell(75, 4, "DE: " . utf8_decode($empresa[0]["razonsocial"]), 0, "C", false);
+
+		$pdf->setX(2);
+		$pdf->MultiCell(75, 4, "RUC: " . utf8_decode($empresa[0]["documento"]), 0, "C", false);
+
+		$pdf->SetFont('Arial', 'B', 8);
+		$pdf->setX(2);
+		$pdf->MultiCell(75, 3, '-----------------------------------------------------------------------------', 0, "C", false);
+
+		$pdf->SetFont('Arial', 'B', 10);
+		$pdf->setX(2);
+		$pdf->MultiCell(75, 4, "BALANCE DE CAJA", 0, "C", false);
+
+		$pdf->SetFont('Arial', '', 8);
+		$pdf->setX(2);
+		$pdf->MultiCell(75, 3, "FECHA: " . date("d-m-Y") . " 		HORA: " . date("H:i:s"), 0, "C", false);
+		$pdf->Ln(5);
+
+		if ($codcontroldiario == 0) {
+			$codcontroldiario = isset($_SESSION["phuyu_codcontroldiario"]) ? (int)$_SESSION["phuyu_codcontroldiario"] : 0;
+		} else {
+			$codcontroldiario = (int)$codcontroldiario;
+		}
+
+		$fechas = $this->db->query("
+			SELECT DISTINCT(fechamovimiento) 
+			FROM caja.movimientos 
+			WHERE codcontroldiario = " . $codcontroldiario . "
+		")->result_array();
+
+		foreach ($fechas as $value) {
+
+			$pdf->SetFillColor(230, 230, 230);
+			$pdf->setX(2);
+			$pdf->MultiCell(75, 6, "FECHA PROCESO: " . $value["fechamovimiento"], 0, "C", true);
+			$pdf->Ln(5);
+
+			$w = array(55, 20);
+			$pdf->SetWidths($w);
+			$pdf->SetLineHeight(3);
+			$pdf->SetFont('Arial', '', 8);
+			$pdf->setX(4);
+
+			$tipopagos = $this->db->query("
+				SELECT * 
+				FROM caja.tipopagos 
+				WHERE estado = 1 
+				ORDER BY codtipopago
+			")->result_array();
+
+			$fechaMovimiento = $this->db->escape($value["fechamovimiento"]);
+
+			$otros = $this->db->query("
+				SELECT ROUND(COALESCE(SUM(md.importe),0),2) AS importe
+				FROM caja.movimientos AS m
+				INNER JOIN caja.movimientosdetalle AS md ON (m.codmovimiento = md.codmovimiento)
+				WHERE m.codcontroldiario = " . $codcontroldiario . "
+					AND m.codkardex = 0
+					AND m.fechamovimiento = " . $fechaMovimiento . "
+					AND m.tipomovimiento = 1
+					AND m.estado = 1
+			")->result_array();
+
+			$importeOtros = isset($otros[0]["importe"]) ? (float)$otros[0]["importe"] : 0;
+
+			$datos = array("OTROS INGRESOS", number_format($importeOtros, 2));
+			$pdf->Row($datos);
+			$pdf->Ln(2);
+
+			$columnas = array("VENTAS", "IMPORTE");
+			$pdf->setX(4);
+			$pdf->pdf_tabla_head($columnas, $w, 8);
+			$pdf->SetFont('Arial', '', 8);
+			$pdf->Ln(1);
+
+			$total_ventas = $importeOtros;
+
+			foreach ($tipopagos as $val) {
+				$venta = $this->db->query("
+					SELECT ROUND(COALESCE(SUM(md.importe),0),2) AS importe
+					FROM caja.movimientos AS m
+					INNER JOIN caja.movimientosdetalle AS md ON (m.codmovimiento = md.codmovimiento)
+					WHERE m.codcontroldiario = " . $codcontroldiario . "
+						AND m.codkardex > 0
+						AND m.fechamovimiento = " . $fechaMovimiento . "
+						AND m.tipomovimiento = 1
+						AND md.codtipopago = " . (int)$val["codtipopago"] . "
+						AND m.estado = 1
+				")->result_array();
+
+				$importeVenta = isset($venta[0]["importe"]) ? (float)$venta[0]["importe"] : 0;
+				$total_ventas += $importeVenta;
+
+				$pdf->setX(4);
+				$datos = array(
+					utf8_decode($val["descripcion"]),
+					number_format($importeVenta, 2)
+				);
+				$pdf->Row($datos);
+				$pdf->Ln(1);
+			}
+
+			$columnas = array("TOTAL INGRESOS", number_format($total_ventas, 2));
+			$pdf->setX(4);
+			$pdf->pdf_tabla_head($columnas, $w, 8);
+			$pdf->Ln(1);
+
+			$pdf->SetFont('Arial', '', 8);
+			$pdf->setX(2);
+			$pdf->MultiCell(75, 3, '-------------------------------------------------------------------------', 0, "C", false);
+
+			$totalingresos = $this->db->query("
+				SELECT ROUND(COALESCE(SUM(md.importe),0),2) AS importe
+				FROM caja.movimientos AS m
+				INNER JOIN caja.movimientosdetalle AS md ON (m.codmovimiento = md.codmovimiento)
+				WHERE m.codcontroldiario = " . $codcontroldiario . "
+					AND m.fechamovimiento = " . $fechaMovimiento . "
+					AND codkardex > 0
+					AND m.tipomovimiento = 1
+					AND md.codtipopago = 1
+					AND m.estado = 1
+			")->result_array();
+
+			$totalegresos = $this->db->query("
+				SELECT ROUND(COALESCE(SUM(md.importe),0),2) AS importe
+				FROM caja.movimientos AS m
+				INNER JOIN caja.movimientosdetalle AS md ON (m.codmovimiento = md.codmovimiento)
+				WHERE m.codcontroldiario = " . $codcontroldiario . "
+					AND m.fechamovimiento = " . $fechaMovimiento . "
+					AND m.tipomovimiento = 2
+					AND md.codtipopago = 1
+					AND m.estado = 1
+			")->result_array();
+
+			$importeIngresosEfectivo = isset($totalingresos[0]["importe"]) ? (float)$totalingresos[0]["importe"] : 0;
+			$importeEgresosEfectivo = isset($totalegresos[0]["importe"]) ? (float)$totalegresos[0]["importe"] : 0;
+
+			$pdf->setX(4);
+			$datos = array("TOTAL INGRESOS EFECTIVO", number_format($importeIngresosEfectivo, 2));
+			$pdf->Row($datos);
+			$pdf->Ln(2);
+
+			$pdf->setX(4);
+			$datos = array("TOTAL EGRESOS EFECTIVO", number_format($importeEgresosEfectivo, 2));
+			$pdf->Row($datos);
+			$pdf->Ln(0);
+
+			$pdf->setX(2);
+			$pdf->MultiCell(75, 3, '-------------------------------------------------------------------------', 0, "C", false);
+
+			$pdf->setX(4);
+			$datos = array("TOTAL EFECTIVO DISP.", number_format($importeIngresosEfectivo - $importeEgresosEfectivo, 2));
+			$pdf->Row($datos);
+			$pdf->Ln(2);
+		}
+
+		$pdf->Ln(5);
+		$pdf->setX(2);
+		$pdf->MultiCell(75, 3, '-------------------------------------------------------------------------', 0, "C", false);
+
+		$pdf->SetFillColor(230, 230, 230);
+		$pdf->setX(2);
+		$pdf->MultiCell(75, 6, "TOTAL GENERAL CAJA", 0, "C", true);
+		$pdf->Ln(5);
+
+		$w = array(55, 20);
+		$pdf->SetWidths($w);
+		$pdf->SetLineHeight(3);
+		$pdf->SetFont('Arial', '', 8);
+		$pdf->setX(4);
+
+		$tipopagos = $this->db->query("
+			SELECT * 
+			FROM caja.tipopagos 
+			WHERE estado = 1 
+			ORDER BY codtipopago
+		")->result_array();
+
+		$otros = $this->db->query("
+			SELECT ROUND(COALESCE(SUM(md.importe),0),2) AS importe
+			FROM caja.movimientos AS m
+			INNER JOIN caja.movimientosdetalle AS md ON (m.codmovimiento = md.codmovimiento)
+			WHERE m.codcontroldiario = " . $codcontroldiario . "
+				AND m.codkardex = 0
+				AND m.tipomovimiento = 1
+				AND m.estado = 1
+		")->result_array();
+
+		$importeOtrosGeneral = isset($otros[0]["importe"]) ? (float)$otros[0]["importe"] : 0;
+
+		$datos = array("OTROS INGRESOS", number_format($importeOtrosGeneral, 2));
+		$pdf->Row($datos);
+		$pdf->Ln(2);
+
+		$columnas = array("VENTAS", "IMPORTE");
+		$pdf->setX(4);
+		$pdf->pdf_tabla_head($columnas, $w, 8);
+		$pdf->SetFont('Arial', '', 8);
+		$pdf->Ln(1);
+
+		$total_ventas = $importeOtrosGeneral;
+		$total_otros = $importeOtrosGeneral;
+
+		foreach ($tipopagos as $val) {
+			$venta = $this->db->query("
+				SELECT ROUND(COALESCE(SUM(md.importe),0),2) AS importe
+				FROM caja.movimientos AS m
+				INNER JOIN caja.movimientosdetalle AS md ON (m.codmovimiento = md.codmovimiento)
+				WHERE m.codcontroldiario = " . $codcontroldiario . "
+					AND m.codkardex > 0
+					AND m.tipomovimiento = 1
+					AND md.codtipopago = " . (int)$val["codtipopago"] . "
+					AND m.estado = 1
+			")->result_array();
+
+			$importeVenta = isset($venta[0]["importe"]) ? (float)$venta[0]["importe"] : 0;
+
+			if ((int)$val["codtipopago"] == 1) {
+				$total_otros += $importeVenta;
+			}
+
+			$total_ventas += $importeVenta;
+
+			$pdf->setX(4);
+			$datos = array(
+				utf8_decode($val["descripcion"]),
+				number_format($importeVenta, 2)
+			);
+			$pdf->Row($datos);
+			$pdf->Ln(1);
+		}
+
+		$columnas = array("TOTAL INGRESOS", number_format($total_ventas, 2));
+		$pdf->setX(4);
+		$pdf->pdf_tabla_head($columnas, $w, 8);
+		$pdf->Ln(1);
+
+		$pdf->SetFont('Arial', '', 8);
+		$pdf->setX(2);
+		$pdf->MultiCell(75, 3, '-------------------------------------------------------------------------', 0, "C", false);
+
+		$totalingresos = $this->db->query("
+			SELECT ROUND(COALESCE(SUM(md.importe),0),2) AS importe
+			FROM caja.movimientos AS m
+			INNER JOIN caja.movimientosdetalle AS md ON (m.codmovimiento = md.codmovimiento)
+			WHERE m.codcontroldiario = " . $codcontroldiario . "
+				AND codkardex > 0
+				AND m.tipomovimiento = 1
+				AND md.codtipopago = 1
+				AND m.estado = 1
+		")->result_array();
+
+		$totalegresos = $this->db->query("
+			SELECT ROUND(COALESCE(SUM(md.importe),0),2) AS importe
+			FROM caja.movimientos AS m
+			INNER JOIN caja.movimientosdetalle AS md ON (m.codmovimiento = md.codmovimiento)
+			WHERE m.codcontroldiario = " . $codcontroldiario . "
+				AND m.tipomovimiento = 2
+				AND md.codtipopago = 1
+				AND m.estado = 1
+		")->result_array();
+
+		$importeIngresosGeneral = isset($totalingresos[0]["importe"]) ? (float)$totalingresos[0]["importe"] : 0;
+		$importeEgresosGeneral = isset($totalegresos[0]["importe"]) ? (float)$totalegresos[0]["importe"] : 0;
+
+		$pdf->setX(4);
+		$datos = array("TOTAL INGRESOS EFECTIVO", number_format($importeIngresosGeneral, 2));
+		$pdf->Row($datos);
+		$pdf->Ln(2);
+
+		$pdf->setX(4);
+		$datos = array("TOTAL EGRESOS EFECTIVO", number_format($importeEgresosGeneral, 2));
+		$pdf->Row($datos);
+		$pdf->Ln(0);
+
+		$pdf->setX(2);
+		$pdf->MultiCell(75, 3, '-------------------------------------------------------------------------', 0, "C", false);
+
+		$pdf->setX(4);
+		$datos = array("TOTAL EFECTIVO DISP.", number_format($total_otros - $importeEgresosGeneral, 2));
+		$pdf->Row($datos);
+		$pdf->Ln(2);
+
+		$pdf->AutoPrint();
+		$pdf->Output();
+	}
+}
 	function pdf_vendedores_caja_directo($codcontroldiario = 0)
 	{
 		if ($codcontroldiario == 0) {
@@ -885,7 +1336,7 @@ class Caja extends CI_Controller
 		$this->load->view("restaurante/atender/ventas", compact("productos", "vendedores"));
 	}
 
-	function pdf_vendedores_caja($codcontroldiario = 0)
+	function pdf_vendedores_caja_090326($codcontroldiario = 0)
 	{
 		$this->load->library('Pdf2');
 		$pdf = new Pdf2();
@@ -954,6 +1405,212 @@ class Caja extends CI_Controller
 		$pdf->SetTitle("phuyu Peru - Ventas Empleados");
 		$pdf->Output();
 	}
+
+	function pdf_vendedores_caja($codcontroldiario = 0)
+{
+	if (!isset($_SESSION["phuyu_usuario"])) {
+		show_error("Sesión no válida");
+		return;
+	}
+
+	$this->load->library('Pdf2');
+	$pdf = new Pdf2();
+	$pdf->AddPage();
+	$pdf->pdf_header("REPORTE VENTAS EMPLEADOS", "");
+
+	if ($codcontroldiario == 0) {
+		$codcontroldiario = isset($_SESSION["phuyu_codcontroldiario"]) ? (int)$_SESSION["phuyu_codcontroldiario"] : 0;
+	} else {
+		$codcontroldiario = (int)$codcontroldiario;
+	}
+
+	$pdf->SetFont('Arial', '', 9);
+	$pdf->Ln(3);
+	$pdf->Cell(0, 6, utf8_decode("CONTROL DIARIO: " . $codcontroldiario), 0, 1, 'L');
+	$pdf->Ln(2);
+
+	if ($codcontroldiario <= 0) {
+		$pdf->SetFont('Arial', 'B', 11);
+		$pdf->SetTextColor(180, 0, 0);
+		$pdf->Cell(0, 8, utf8_decode("NO SE ENCONTRO UN CONTROL DIARIO VALIDO"), 0, 1, 'C');
+		$pdf->SetTextColor(0, 0, 0);
+		$pdf->Output();
+		return;
+	}
+	// vendedores como tal 
+	$vendedores_original = $this->db->query("
+				SELECT 
+					persona.codpersona,
+					persona.razonsocial
+				FROM public.personas AS persona
+				INNER JOIN public.empleados AS empleado 
+					ON persona.codpersona = empleado.codpersona
+				WHERE empleado.estado = 1
+					AND empleado.codcargo = 4
+				ORDER BY persona.razonsocial ASC
+			")->result_array();
+	// vededores con perfil de cajero tambien
+	$vendedores = $this->db->query("
+				select 
+					persona.codpersona,
+					persona.razonsocial
+				from public.personas as persona
+				inner join public.empleados as empleado 
+					on(persona.codpersona = empleado.codpersona)
+				where empleado.estado = 1
+				and empleado.codcargo in (3,4)
+				order by persona.razonsocial asc
+			")->result_array();
+
+	if (empty($vendedores)) {
+		$pdf->SetFont('Arial', 'B', 11);
+		$pdf->SetTextColor(180, 0, 0);
+		$pdf->Cell(0, 8, utf8_decode("NO SE ENCONTRARON VENDEDORES ACTIVOS"), 0, 1, 'C');
+		$pdf->SetTextColor(0, 0, 0);
+		$pdf->Output();
+		return;
+	}
+
+	$hayDatosGenerales = false;
+
+	foreach ($vendedores as $value) {
+
+		$productos = $this->db->query("
+			SELECT 
+				kd.codproducto,
+				kd.codunidad,
+				p.descripcion AS producto,
+				u.descripcion AS unidad,
+				COALESCE(SUM(kd.cantidad), 0) AS cantidad,
+				AVG(kd.preciounitario) AS preciounitario,
+				COALESCE(SUM(kd.subtotal), 0) AS importe
+			FROM kardex.kardex AS k
+			INNER JOIN kardex.kardexdetalle AS kd 
+				ON k.codkardex = kd.codkardex
+			INNER JOIN almacen.productos AS p 
+				ON kd.codproducto = p.codproducto
+			INNER JOIN almacen.unidades AS u 
+				ON kd.codunidad = u.codunidad
+			INNER JOIN caja.movimientos AS m 
+				ON k.codkardex = m.codkardex
+			WHERE k.codmovimientotipo = 20
+				AND p.codlinea = 3
+				AND k.codempleado = " . (int)$value["codpersona"] . "
+				AND m.codcontroldiario = " . $codcontroldiario . "
+				AND k.estado = 1
+			GROUP BY kd.codproducto, kd.codunidad, p.descripcion, u.descripcion
+			ORDER BY preciounitario DESC
+		")->result_array();
+
+		// Si no tiene productos, igual mostramos al vendedor con mensaje
+		if ($pdf->GetY() > 230) {
+			$pdf->AddPage();
+			$pdf->pdf_header("REPORTE VENTAS EMPLEADOS", "");
+		}
+
+		$pdf->SetFont('Arial', 'B', 11);
+		$pdf->Cell(0, 7, utf8_decode($value["razonsocial"]), 0, 1, 'C', 0);
+		$pdf->Ln(2);
+
+		if (empty($productos)) {
+			$pdf->SetFont('Arial', 'I', 9);
+			$pdf->Cell(0, 6, utf8_decode("Sin ventas registradas para este vendedor en el control diario."), 0, 1, 'L');
+			$pdf->Ln(4);
+			continue;
+		}
+
+		$hayDatosGenerales = true;
+
+		$columnas = array("DESCRIPCION", "CANTIDAD", "CANTIDAD - 2", "PRECIO UNI.", "TOTAL", "COMISION 40%", "DESC", "PAGAR");
+		$w = array(60, 17, 22, 20, 20, 25, 10, 18);
+		$pdf->pdf_tabla_head($columnas, $w, 8);
+
+		$pdf->SetWidths($w);
+		$pdf->SetLineHeight(5);
+		$pdf->SetFont('Arial', '', 8);
+
+		$total = 0;
+		$cantidad_descontar = 2;
+
+		foreach ($productos as $val) {
+
+			if ($pdf->GetY() > 250) {
+				$pdf->AddPage();
+				$pdf->pdf_header("REPORTE VENTAS EMPLEADOS", "");
+
+				$pdf->SetFont('Arial', 'B', 11);
+				$pdf->Cell(0, 7, utf8_decode($value["razonsocial"]), 0, 1, 'C', 0);
+				$pdf->Ln(2);
+
+				$pdf->pdf_tabla_head($columnas, $w, 8);
+				$pdf->SetWidths($w);
+				$pdf->SetLineHeight(5);
+				$pdf->SetFont('Arial', '', 8);
+			}
+
+			$cantidadOriginal = (float)$val["cantidad"];
+			$cantidad = $cantidadOriginal;
+
+			if ($cantidad_descontar > 0) {
+				if ($cantidadOriginal >= $cantidad_descontar) {
+					$cantidad = $cantidadOriginal - $cantidad_descontar;
+					$cantidad_descontar = 0;
+				} else {
+					$cantidad = 0;
+					$cantidad_descontar = $cantidad_descontar - $cantidadOriginal;
+				}
+			}
+
+			$precioUnitario = (float)$val["preciounitario"];
+			$totalProducto = $precioUnitario * $cantidad;
+			$comision = $totalProducto * 0.40;
+			$descuento = $cantidad * 1;
+			$pagar = $comision - $descuento;
+
+			$datos = array(
+				utf8_decode($val["producto"] . " - " . $val["unidad"]),
+				number_format($cantidadOriginal, 2),
+				number_format($cantidad, 2),
+				number_format($precioUnitario, 2),
+				number_format($totalProducto, 2),
+				number_format($comision, 2),
+				number_format($descuento, 2),
+				number_format($pagar, 2)
+			);
+
+			$pdf->Row($datos);
+			$total += $pagar;
+		}
+
+		$pdf->Ln(2);
+
+		$wTotal = array(99, 75, 18);
+		$pdf->SetWidths($wTotal);
+		$pdf->SetLineHeight(5);
+		$pdf->SetFont('Arial', 'B', 8);
+
+		$datos = array(
+			"",
+			"TOTAL A PAGAR POR EL DIA: S/.",
+			number_format($total, 2)
+		);
+
+		$pdf->Row($datos);
+		$pdf->Ln(6);
+	}
+
+	if (!$hayDatosGenerales) {
+		$pdf->SetFont('Arial', 'B', 10);
+		$pdf->SetTextColor(180, 0, 0);
+		$pdf->Cell(0, 8, utf8_decode("NO HAY VENTAS REGISTRADAS PARA LOS VENDEDORES EN ESTE CONTROL DIARIO"), 0, 1, 'C');
+		$pdf->SetTextColor(0, 0, 0);
+	}
+
+	$pdf->SetTitle("phuyu Peru - Ventas Empleados");
+	$pdf->Output();
+}
+
+
 
 	public function comanda($codpedido)
 	{
@@ -1153,6 +1810,14 @@ class Caja extends CI_Controller
 					.no-print {
 						display: none !important;
 					}
+
+				}
+
+				.note {
+					font-weight: bold;
+					text-transform: uppercase;
+					color: #333;
+					font-size: 0.95em;
 				}
 			</style>
 		</head>
@@ -1209,7 +1874,9 @@ class Caja extends CI_Controller
 						<div class="c-desc">
 							<?= $esc($producto) ?>
 							<?php if ($notaProducto !== ''): ?>
-								<span class="note">(<?= $esc($notaProducto) ?>)</span>
+								<span class="note bold" style="font-weight: 900; text-transform: uppercase;">
+									(<?= $esc($notaProducto) ?>)
+								</span>
 							<?php endif; ?>
 						</div>
 						<div class="c-est"><span class="badge <?= $estadoCls ?>"><?= $estadoTxt ?></span></div>
@@ -1220,13 +1887,13 @@ class Caja extends CI_Controller
 
 				<!-- Total (opcional en comanda; útil si cocina lo revisa) -->
 				<!-- <div class="row">
-    <div class="c-desc bold">TOTAL</div>
-    <div class="c-est right bold">S/ <?= number_format((float)$info[0]['importe'], 2) ?></div>
-  </div>
-  <div class="center sub">SON <?= $esc($totalLetras) ?></div>
+					<div class="c-desc bold">TOTAL</div>
+					<div class="c-est right bold">S/ <?= number_format((float)$info[0]['importe'], 2) ?></div>
+				</div>
+				<div class="center sub">SON <?= $esc($totalLetras) ?></div>
 
-  <hr class="sep">
-  <div class="center sub">Gracias por su pedido</div> -->
+				<hr class="sep">
+				<div class="center sub">Gracias por su pedido</div> -->
 				<div class="center sub">Impreso: <?= date('d/m/Y H:i') ?></div>
 
 				<div class="no-print center" style="margin-top:6px">

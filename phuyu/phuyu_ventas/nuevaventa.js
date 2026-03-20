@@ -294,6 +294,8 @@ var phuyu_operacion = new Vue({
 
 		},
 		phuyu_additem: function(producto,precio){
+
+			console.log("Producto test:", producto);
 			var existe_item = [];
 			if ($("#itemrepetir").val()==0) {
 				var existe_item = this.detalle.filter(function(p){
