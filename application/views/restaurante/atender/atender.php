@@ -686,185 +686,185 @@
 
 
         <div id="modal_pago" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title text-white">
-                    <b>Total Venta: S/. {{ totales.importe }}</b>
-                </h5>
-                <button type="button" class="btn-close text-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-
-            <div class="modal-body">
-                <form class="px-3 py-2" v-on:submit.prevent="phuyu_pagar()">
-
-                    <!-- Cliente -->
-                    <div class="row mb-3 align-items-end">
-                        <div class="col-md-10">
-                            <label class="form-label">Cliente de la Venta</label>
-                            <select class="form-select" name="codpersona" v-model="campos.codpersona" id="codpersona" required>
-                                <option value="2">CLIENTES VARIOS</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <button type="button" class="btn btn-primary w-100" v-on:click="phuyu_addcliente()" title="Agregar Cliente">
-                                <i data-acorn-icon="user"></i> Añadir
-                            </button>
-                        </div>
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title text-white">
+                            <b>Total Venta: S/. {{ totales.importe }}</b>
+                        </h5>
+                        <button type="button" class="btn-close text-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
 
-                    <!-- Comprobante -->
-                    <div class="row mb-3">
-                        <div class="col-md-5">
-                            <label class="form-label">Tipo Comprobante</label>
-                            <select class="form-select" name="codcomprobantetipo" v-model="campos.codcomprobantetipo" required v-on:change="phuyu_series()">
-                                <?php foreach ($comprobantes as $key => $value) { ?>
-                                    <option value="<?php echo $value['codcomprobantetipo']; ?>">
-                                        <?php echo $value['descripcion']; ?>
-                                    </option>
-                                <?php } ?>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Serie</label>
-                            <select class="form-select" id="seriecomprobante" v-model="campos.seriecomprobante" v-on:change="phuyu_correlativo()" required>
-                                <option value="">SERIE</option>
-                                <option v-for="dato in series" v-bind:value="dato.seriecomprobante">
-                                    {{ dato.seriecomprobante }}
-                                </option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Condición Pago</label>
-                            <select class="form-select" name="condicionpago" v-model="campos.condicionpago" v-on:change="phuyu_condicionpago()" disabled>
-                                <option value="1">CONTADO</option>
-                                <option value="2">CRÉDITO</option>
-                            </select>
-                        </div>
-                    </div>
+                    <div class="modal-body">
+                        <form class="px-3 py-2" v-on:submit.prevent="phuyu_pagar()">
 
-                    <!-- Vendedor -->
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <label class="form-label">
-                                Seleccionar Vendedor
-                                <span class="text-danger" style="float:right;">Comprobante: {{ campos.seriecomprobante }} - {{ campos.nro }}</span>
-                            </label>
-                            <select class="form-select" name="codempleado" v-model="campos.codempleado" required>
-                                <option value="0">SIN VENDEDOR</option>
-                                <?php foreach ($vendedores as $key => $value) { ?>
-                                    <option value="<?php echo $value['codpersona']; ?>"> <?php echo $value['razonsocial']; ?> </option>
-                                <?php } ?>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Condición Crédito -->
-                    <div class="row mb-3" v-if="campos.condicionpago==2">
-                        <div class="col-md-5">
-                            <label class="form-label">Nro Días</label>
-                            <input class="form-control" name="nrodias" v-model="campos.nrodias" v-on:keyup="phuyu_cuotas()" required>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Cuotas</label>
-                            <input class="form-control" name="nrocuotas" v-model="campos.nrocuotas" v-on:keyup="phuyu_cuotas()" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Interés (%)</label>
-                            <input class="form-control" name="tasainteres" v-model="campos.tasainteres" v-on:keyup="phuyu_cuotas()" required>
-                        </div>
-                    </div>
-
-                    <!-- Pago Contado -->
-                    <div v-if="campos.condicionpago==1">
-                        <h5 class="text-center mb-3"><b><i class="fa fa-money"></i> Registrar Pago de la Venta</b></h5>
-                        <hr>
-                        <div class="row mb-3">
-                            <div class="col-md-4 text-center">
-                                <label><i class="fa fa-money fa-2x"></i><br>Pago en Efectivo</label>
+                            <!-- Cliente -->
+                            <div class="row mb-3 align-items-end">
+                                <div class="col-md-10">
+                                    <label class="form-label">Cliente de la Venta</label>
+                                    <select class="form-select" name="codpersona" v-model="campos.codpersona" id="codpersona" required>
+                                        <option value="2">CLIENTES VARIOS</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="button" class="btn btn-primary w-100" v-on:click="phuyu_addcliente()" title="Agregar Cliente">
+                                        <i data-acorn-icon="user"></i> Añadir
+                                    </button>
+                                </div>
                             </div>
-                            <div class="col-md-4">
-                                <label>Monto Recibido</label>
-                                <input type="number" step="0.01" class="form-control" min="0" required
-                                    v-model="pagos.monto_efectivo" placeholder="S/. 0.00" v-on:keyup="phuyu_vuelto()">
-                            </div>
-                            <div class="col-md-4">
-                                <label>Vuelto</label>
-                                <input type="number" step="0.01" class="form-control" readonly v-model="pagos.vuelto_efectivo">
-                            </div>
-                        </div>
 
-                        <hr>
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <label>Tarjeta o Cheque</label>
-                                <select class="form-select" v-model="pagos.codtipopago_tarjeta" v-on:change="phuyu_pagotarjeta()" required>
-                                    <option value="0">SIN TARJETA</option>
-                                    <?php foreach ($tipopagos as $key => $value) {
-                                        if ($value["codtipopago"] != 1) { ?>
-                                            <option value="<?php echo $value['codtipopago']; ?>">
+                            <!-- Comprobante -->
+                            <div class="row mb-3">
+                                <div class="col-md-5">
+                                    <label class="form-label">Tipo Comprobante</label>
+                                    <select class="form-select" name="codcomprobantetipo" v-model="campos.codcomprobantetipo" required v-on:change="phuyu_series()">
+                                        <?php foreach ($comprobantes as $key => $value) { ?>
+                                            <option value="<?php echo $value['codcomprobantetipo']; ?>">
                                                 <?php echo $value['descripcion']; ?>
                                             </option>
-                                    <?php }
-                                    } ?>
-                                </select>
+                                        <?php } ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Serie</label>
+                                    <select class="form-select" id="seriecomprobante" v-model="campos.seriecomprobante" v-on:change="phuyu_correlativo()" required>
+                                        <option value="">SERIE</option>
+                                        <option v-for="dato in series" v-bind:value="dato.seriecomprobante">
+                                            {{ dato.seriecomprobante }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Condición Pago</label>
+                                    <select class="form-select" name="condicionpago" v-model="campos.condicionpago" v-on:change="phuyu_condicionpago()" disabled>
+                                        <option value="1">CONTADO</option>
+                                        <option value="2">CRÉDITO</option>
+                                    </select>
+                                </div>
                             </div>
-                            <div class="col-md-4">
-                                <label>Monto</label>
-                                <input type="number" step="0.01" class="form-control" min="0.01"
-                                    id="monto_tarjeta" v-model="pagos.monto_tarjeta" placeholder="S/. 0.00" readonly>
+
+                            <!-- Vendedor -->
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <label class="form-label">
+                                        Seleccionar Vendedor
+                                        <span class="text-danger" style="float:right;">Comprobante: {{ campos.seriecomprobante }} - {{ campos.nro }}</span>
+                                    </label>
+                                    <select class="form-select" name="codempleado" v-model="campos.codempleado" required>
+                                        <option value="0">SIN VENDEDOR</option>
+                                        <?php foreach ($vendedores as $key => $value) { ?>
+                                            <option value="<?php echo $value['codpersona']; ?>"> <?php echo $value['razonsocial']; ?> </option>
+                                        <?php } ?>
+                                    </select>
+                                </div>
                             </div>
-                            <div class="col-md-4">
-                                <label>Nro Voucher</label>
-                                <input type="text" class="form-control" id="nrovoucher" v-model.trim="pagos.nrovoucher" autocomplete="off" readonly>
+
+                            <!-- Condición Crédito -->
+                            <div class="row mb-3" v-if="campos.condicionpago==2">
+                                <div class="col-md-5">
+                                    <label class="form-label">Nro Días</label>
+                                    <input class="form-control" name="nrodias" v-model="campos.nrodias" v-on:keyup="phuyu_cuotas()" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Cuotas</label>
+                                    <input class="form-control" name="nrocuotas" v-model="campos.nrocuotas" v-on:keyup="phuyu_cuotas()" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Interés (%)</label>
+                                    <input class="form-control" name="tasainteres" v-model="campos.tasainteres" v-on:keyup="phuyu_cuotas()" required>
+                                </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <!-- Cuotas Crédito -->
-                    <div v-if="campos.condicionpago==2">
-                        <div class="table-responsive mb-3" style="max-height:150px;">
-                            <table class="table table-bordered table-striped">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Fecha Vence</th>
-                                        <th>Importe</th>
-                                        <th>Interés</th>
-                                        <th>Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="dato in cuotas">
-                                        <td>{{ dato.fechavence }}</td>
-                                        <td>{{ dato.importe }}</td>
-                                        <td>{{ dato.interes }}</td>
-                                        <td>{{ dato.total }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="text-center mb-3">
-                            <button type="button" class="btn btn-warning btn-sm me-2"><b>INTERÉS: S/. {{ totales.interes }}</b></button>
-                            <button type="button" class="btn btn-danger btn-sm"><b>TOTAL CRÉDITO: S/. {{ campos.totalcredito }}</b></button>
-                        </div>
-                    </div>
+                            <!-- Pago Contado -->
+                            <div v-if="campos.condicionpago==1">
+                                <h5 class="text-center mb-3"><b><i class="fa fa-money"></i> Registrar Pago de la Venta</b></h5>
+                                <hr>
+                                <div class="row mb-3">
+                                    <div class="col-md-4 text-center">
+                                        <label><i class="fa fa-money fa-2x"></i><br>Pago en Efectivo</label>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label>Monto Recibido</label>
+                                        <input type="number" step="0.01" class="form-control" min="0" required
+                                            v-model="pagos.monto_efectivo" placeholder="S/. 0.00" v-on:keyup="phuyu_vuelto()">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label>Vuelto</label>
+                                        <input type="number" step="0.01" class="form-control" readonly v-model="pagos.vuelto_efectivo">
+                                    </div>
+                                </div>
 
-                    <!-- Botones -->
-                    <div class="d-flex justify-content-center gap-3 mt-3">
-                        <button type="button" class="btn btn-success btn-lg" :disabled="estado == 1" @click.prevent="phuyu_pagar">
-                            <b v-if="estado != 1">GUARDAR VENTA</b>
-                            <b v-else>GUARDANDO...</b>
-                        </button>
-                        <button type="button" class="btn btn-danger btn-lg" data-bs-dismiss="modal">
-                            <b>CANCELAR</b>
-                        </button>
-                    </div>
+                                <hr>
+                                <div class="row mb-3">
+                                    <div class="col-md-4">
+                                        <label>Tarjeta o Cheque</label>
+                                        <select class="form-select" v-model="pagos.codtipopago_tarjeta" v-on:change="phuyu_pagotarjeta()" required>
+                                            <option value="0">SIN TARJETA</option>
+                                            <?php foreach ($tipopagos as $key => $value) {
+                                                if ($value["codtipopago"] != 1) { ?>
+                                                    <option value="<?php echo $value['codtipopago']; ?>">
+                                                        <?php echo $value['descripcion']; ?>
+                                                    </option>
+                                            <?php }
+                                            } ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label>Monto</label>
+                                        <input type="number" step="0.01" class="form-control" min="0.01"
+                                            id="monto_tarjeta" v-model="pagos.monto_tarjeta" placeholder="S/. 0.00" readonly>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label>Nro Voucher</label>
+                                        <input type="text" class="form-control" id="nrovoucher" v-model.trim="pagos.nrovoucher" autocomplete="off" readonly>
+                                    </div>
+                                </div>
+                            </div>
 
-                </form>
+                            <!-- Cuotas Crédito -->
+                            <div v-if="campos.condicionpago==2">
+                                <div class="table-responsive mb-3" style="max-height:150px;">
+                                    <table class="table table-bordered table-striped">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Fecha Vence</th>
+                                                <th>Importe</th>
+                                                <th>Interés</th>
+                                                <th>Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="dato in cuotas">
+                                                <td>{{ dato.fechavence }}</td>
+                                                <td>{{ dato.importe }}</td>
+                                                <td>{{ dato.interes }}</td>
+                                                <td>{{ dato.total }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="text-center mb-3">
+                                    <button type="button" class="btn btn-warning btn-sm me-2"><b>INTERÉS: S/. {{ totales.interes }}</b></button>
+                                    <button type="button" class="btn btn-danger btn-sm"><b>TOTAL CRÉDITO: S/. {{ campos.totalcredito }}</b></button>
+                                </div>
+                            </div>
+
+                            <!-- Botones -->
+                            <div class="d-flex justify-content-center gap-3 mt-3">
+                                <button type="button" class="btn btn-success btn-lg" :disabled="estado == 1" @click.prevent="phuyu_pagar">
+                                    <b v-if="estado != 1">GUARDAR VENTA</b>
+                                    <b v-else>GUARDANDO...</b>
+                                </button>
+                                <button type="button" class="btn btn-danger btn-lg" data-bs-dismiss="modal">
+                                    <b>CANCELAR</b>
+                                </button>
+                            </div>
+
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
-</div>
 
 
 
@@ -958,132 +958,167 @@
 
 
 
-     <!-- MODAL FORMULARIO PERSONA -->
-<div class="modal fade" id="modal_persona" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
+        <!-- MODAL FORMULARIO PERSONA -->
+        <div class="modal fade" id="modal_persona" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
 
-            <!-- CABECERA -->
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">Registro de Persona</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-
-            <!-- CUERPO -->
-            <div class="modal-body">
-                <form class="px-3 py-2" v-on:submit.prevent="phuyu_guardar()">
-                    <input type="hidden" name="codregistro" v-model="formPersona.codregistro">
-                    <input type="hidden" name="codsociotipo" v-model="formPersona.codsociotipo">
-
-                    <!-- Tipo Documento y Número -->
-                    <div class="row mb-3 align-items-end">
-                        <div class="col-md-6">
-                            <label class="form-label">TIPO DOCUMENTO</label>
-                            <select class="form-select" name="coddocumentotipo" v-model="formPersona.coddocumentotipo" required
-                                v-on:change="phuyu_tipodocumento()" ref="coddocumentotipo">
-                                <option value="">SELECCIONE</option>
-                                <?php foreach ($tipodocumentos as $key => $value) { ?>
-                                    <option value="<?php echo $value['coddocumentotipo']; ?>"><?php echo $value["descripcion"]; ?></option>
-                                <?php } ?>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">DOCUMENTO</label>
-                            <input type="text" class="form-control" name="documento" v-model="formPersona.documento"
-                                placeholder="Número" required autocomplete="off" minlength="8" maxlength="15" ref="documento">
-                        </div>
-                        <div class="col-md-2">
-                            <button type="button" class="btn btn-success w-100" v-on:click="phuyu_consultar();" title="Consultar">
-                                <i data-acorn-icon="search"></i>
-                            </button>
-                        </div>
+                    <!-- CABECERA -->
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">Registro de Persona</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                     </div>
 
-                    <!-- Razón Social -->
-                    <div class="mb-3">
-                        <label class="form-label">RAZÓN SOCIAL</label>
-                        <input type="text" class="form-control" name="razonsocial" v-model="formPersona.razonsocial"
-                            placeholder="Razón social" required autocomplete="off">
+                    <!-- CUERPO -->
+                    <div class="modal-body">
+                        <form class="px-3 py-2" v-on:submit.prevent="phuyu_GuardarCliente()">
+                            <input type="hidden" name="codregistro" v-model="formPersona.codregistro">
+                            <input type="hidden" name="codsociotipo" v-model="formPersona.codsociotipo">
+
+                            <!-- Tipo Documento y Número -->
+                            <div class="row mb-3 align-items-end">
+                                <div class="col-md-6">
+                                    <label class="form-label">TIPO DOCUMENTO</label>
+                                    <select
+                                        class="form-select"
+                                        name="coddocumentotipo"
+                                        id="coddocumentotipo"
+                                        v-model.number="formPersona.coddocumentotipo"
+                                        required
+                                        @change="phuyu_tipodocumento()"
+                                        ref="coddocumentotipo">
+                                        <option value="">SELECCIONE</option>
+                                        <?php foreach ($tipodocumentos as $key => $value) { ?>
+                                            <option value="<?php echo (int)$value['coddocumentotipo']; ?>">
+                                                <?php echo $value["descripcion"]; ?>
+                                            </option>
+                                        <?php } ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">DOCUMENTO</label>
+                                    <input
+                                        type="number"
+                                        class="form-control"
+                                        name="documento"
+                                        id="documento"
+                                        v-model="formPersona.documento"
+                                        placeholder="Número"
+                                        required
+                                        autocomplete="off"
+                                        minlength="8"
+                                        maxlength="15"
+                                        inputmode="numeric"
+                                        ref="documento" />
+
+                                </div>
+                                <div class="col-md-2">
+
+                                    <button
+                                        type="button"
+                                        class="btn btn-success w-100 btn-consultar"
+                                        @click="phuyu_consultar()"
+                                        title="Consultar">
+                                        <i data-acorn-icon="search"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Razón Social -->
+                            <div class="mb-3">
+                                <label class="form-label">RAZÓN SOCIAL / nombres</label>
+                                <input type="text" class="form-control" name="razonsocial" v-model="formPersona.razonsocial"
+                                    placeholder="Razón social" required autocomplete="off">
+                            </div>
+
+                            <!-- Nombre Comercial -->
+                            <div class="mb-3">
+                                <label class="form-label">NOMBRE COMERCIAL</label>
+                                <input type="text" class="form-control" name="nombrecomercial" v-model="formPersona.nombrecomercial"
+                                    placeholder="Nombre comercial" autocomplete="off">
+                            </div>
+
+                            <!-- Dirección -->
+                            <div class="mb-3">
+                                <label class="form-label">DIRECCIÓN</label>
+                                <input type="text" class="form-control" name="direccion" v-model="formPersona.direccion"
+                                    placeholder="Dirección" required autocomplete="off">
+                            </div>
+
+                            <!-- Email y Teléfono -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">EMAIL</label>
+                                    <input type="text" class="form-control" name="email" v-model="formPersona.email"
+                                        placeholder="Email" autocomplete="off">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">TELF./CEL.</label>
+                                    <input type="number" class="form-control" name="telefono" v-model="formPersona.telefono"
+                                        placeholder="Telf./Cel." autocomplete="off">
+                                </div>
+                            </div>
+
+                            <!-- Ubicación -->
+                            <div class="row form-group">
+                                <div class="col-md-6">
+                                    <label class="form-label">DEPARTAMENTO</label>
+                                    <select class="form-select" name="departamento" v-model="formPersona.departamento" required
+                                        v-on:change="phuyu_provincias()">
+                                        <option value="">SELECCIONE</option>
+                                        <?php foreach ($departamentos as $value) { ?>
+                                            <option value="<?php echo $value['ubidepartamento']; ?>">
+                                                <?php echo $value['departamento']; ?>
+                                            </option>
+                                        <?php } ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">PROVINCIA</label>
+                                    <select class="form-select" name="provincia" v-model="formPersona.provincia" id="provincia" required
+                                        v-on:change="phuyu_distritos()">
+                                        <option value="">SELECCIONE</option>
+                                    </select>
+                                </div>
+
+                            </div>
+
+                            <div class="row mb-3">
+                                
+                                <div class="col-md-6">
+                                    <label class="form-label">DISTRITO</label>
+                                    <select class="form-select" name="codubigeo" v-model="formPersona.codubigeo" id="codubigeo" required>
+                                        <option value="">SELECCIONE</option>
+                                    </select>
+                                </div>
+                                  <div class="col-md-6 ">
+                                    <label>SEXO / EMPRESA</label>
+                                    <select class="form-select" name="sexo" v-model="formPersona.sexo" required >
+                                        <option value="">SELECCIONE</option>
+                                        <option value="M">MASCULINO</option>
+                                        <option value="F">FEMENINO</option>
+                                        <option value="E">EMPRESA</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <hr class="my-3">
+
+                            <!-- Botones -->
+                            <div class="d-flex justify-content-center gap-3 mt-3">
+                                <button type="submit" class="btn btn-success btn-lg" :disabled="estado==1">
+                                    <i class="fa fa-save"></i> GUARDAR
+                                </button>
+                                <button type="button" class="btn btn-danger btn-lg" data-bs-dismiss="modal" v-on:click="phuyu_cerrar()">
+                                    CERRAR
+                                </button>
+                            </div>
+
+                        </form>
                     </div>
-
-                    <!-- Nombre Comercial -->
-                    <div class="mb-3">
-                        <label class="form-label">NOMBRE COMERCIAL</label>
-                        <input type="text" class="form-control" name="nombrecomercial" v-model="formPersona.nombrecomercial"
-                            placeholder="Nombre comercial" autocomplete="off">
-                    </div>
-
-                    <!-- Dirección -->
-                    <div class="mb-3">
-                        <label class="form-label">DIRECCIÓN</label>
-                        <input type="text" class="form-control" name="direccion" v-model="formPersona.direccion"
-                            placeholder="Dirección" required autocomplete="off">
-                    </div>
-
-                    <!-- Email y Teléfono -->
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">EMAIL</label>
-                            <input type="text" class="form-control" name="email" v-model="formPersona.email"
-                                placeholder="Email" autocomplete="off">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">TELF./CEL.</label>
-                            <input type="number" class="form-control" name="telefono" v-model="formPersona.telefono"
-                                placeholder="Telf./Cel." autocomplete="off">
-                        </div>
-                    </div>
-
-                    <!-- Ubicación -->
-                     <div class="row form-group">
-                    <div class="mb-3">
-    <label class="form-label">DEPARTAMENTO</label>
-    <select class="form-select" name="departamento" v-model="formPersona.departamento" required
-        v-on:change="phuyu_provincias()">
-        <option value="">SELECCIONE</option>
-        <?php foreach ($departamentos as $value) { ?>
-            <option value="<?php echo $value['ubidepartamento']; ?>">
-                <?php echo $value['departamento']; ?>
-            </option>
-        <?php } ?>
-    </select>
-</div>
-
                 </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">PROVINCIA</label>
-                            <select class="form-select" name="provincia" v-model="formPersona.provincia" id="provincia" required
-                                v-on:change="phuyu_distritos()">
-                                <option value="">SELECCIONE</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">DISTRITO</label>
-                            <select class="form-select" name="codubigeo" v-model="formPersona.codubigeo" id="codubigeo" required>
-                                <option value="">SELECCIONE</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <hr class="my-3">
-
-                    <!-- Botones -->
-                    <div class="d-flex justify-content-center gap-3 mt-3">
-                        <button type="submit" class="btn btn-success btn-lg" :disabled="estado==1">
-                            <i class="fa fa-save"></i> GUARDAR
-                        </button>
-                        <button type="button" class="btn btn-danger btn-lg" data-bs-dismiss="modal" v-on:click="phuyu_cerrar()">
-                            CERRAR
-                        </button>
-                    </div>
-
-                </form>
             </div>
         </div>
-    </div>
-</div>
 
 
 
@@ -1264,27 +1299,27 @@
                 codtipodocumento: 0,
                 cargando: false,
 
-                 formPersona: {
-            codregistro: '',
-            codsociotipo: '',
-            coddocumentotipo: '',
-            documento: '',
-            razonsocial: '',
-            nombrecomercial: '',
-            direccion: '',
-            email: '',
-            telefono: '',
-            departamento: '',
-            provincia: '',
-            codubigeo: ''
-            // Si quieres agregar más campos luego, solo añádelos aquí
-        },
+                formPersona: {
+                    codregistro: '',
+                    codsociotipo: 1,
+                    coddocumentotipo: '',
+                    documento: '',
+                    razonsocial: '',
+                    nombrecomercial: '',
+                    direccion: '',
+                    email: '',
+                    telefono: '',
+                    departamento: '',
+                    provincia: '',
+                    codubigeo: '',
+                    sexo: '',
+                    //codsociotipo: "1",
+                    // Si quieres agregar más campos luego, solo añádelos aquí
+                },
+                 tipo: "CLIENTE", urltipo: "ventas/clientes",
             },
 
             computed: {
-
-
-
                 productosVisibles() {
                     if (!this.productos || this.productos.length === 0) return [];
 
@@ -1317,12 +1352,24 @@
 
             methods: {
 
-
-                
-                
-
                 phuyu_addcliente: function() {
                     $("#modal_persona").modal("show");
+                    this. formPersona= {
+                            codregistro: '',
+                            codsociotipo: 1,
+                            coddocumentotipo: '',
+                            documento: '',
+                            razonsocial: '',
+                            nombrecomercial: '',
+                            direccion: '',
+                            email: '',
+                            telefono: '',
+                            departamento: '',
+                            provincia: '',
+                            codubigeo: '',
+                            sexo: '',
+                        };
+                    
                 },
                 phuyu_cerrar_itemdetalle: function() {
                     // 1. Cerrar el modal de detalle
@@ -1696,8 +1743,6 @@
 
                     this.actualizarStockVisual(producto);
                 },
-
-
                 configurarScroll() {
                     // Esperar a que Vue renderice el DOM
                     this.$nextTick(() => {
@@ -1707,7 +1752,6 @@
                         }
                     });
                 },
-
                 manejarScroll(event) {
                     const elemento = event.target;
                     const scrollTop = elemento.scrollTop;
@@ -1750,8 +1794,6 @@
                     this.productos = getProd.data;
                     this.cargando = false;
                 },
-
-
                 async phuyu_mesas() {
                     try {
                         // Vue Resource no devuelve una Promise nativa, por eso no funciona con await
@@ -1785,18 +1827,9 @@
                 guardarVendedor() {
                     phuyu_sistema.phuyu_noti("MOZO SELECIONADO", "", "success");
                     $("#modalVendedor").modal("hide");
-
-
-
                 },
-
                 // Seleccionar mesa
                 async selectMesa(mesa) {
-
-
-
-
-
 
                     //ABIR MODAL PARA SELECIONAR MOZO QUE ATENDERA//
 
@@ -1843,7 +1876,6 @@
                     this.campos.codmesa = mesa.codmesa;
                     this.campos.mesa = mesa.nromesa;
                     //  $("#" + this.campos.codmesa).addClass("mesa-activa");
-
                     this.$http.post(url + "ventas/pedidos/phuyu_pedido", {
                         "codmesa": this.campos.codmesa
                     }).then(function(data) {
@@ -2098,8 +2130,6 @@
                         phuyu_sistema.phuyu_modulo();
                     });
                 },
-
-
                 phuyu_pagar: function() {
 
                     if (this.estado == 1) {
@@ -2200,10 +2230,160 @@
                 delItem(i) {
                     this.items.splice(i, 1)
                 },
-
                 guardar() {
                     this.phuyu_guardar_pedido();
                 },
+                phuyu_tipodocumento() {
+                    const tipo = Number(this.formPersona.coddocumentotipo); // 👈 asegura número
+                    const $documento = $("#documento");
+                    const $btnConsultar = $(".btn-consultar");
+
+                    // Longitudes deseadas (solo tendrán efecto si el input es text)
+                    switch (tipo) {
+                        case 2: // DNI
+                            $documento.attr({
+                                minlength: 8,
+                                maxlength: 8
+                            });
+                            break;
+                        case 4: // RUC
+                            $documento.attr({
+                                minlength: 11,
+                                maxlength: 11
+                            });
+                            break;
+                        default:
+                            $documento.attr({
+                                minlength: 8,
+                                maxlength: 15
+                            });
+                            break;
+                    }
+
+                    if (tipo === 1) {
+                        $documento.removeAttr("required").attr("readonly", true);
+                        $btnConsultar.attr("disabled", true);
+                    } else {
+                        $documento.attr("required", true).removeAttr("readonly");
+                        $btnConsultar.removeAttr("disabled");
+                    }
+                },
+                phuyu_consultar: async function() {
+                    let urlPost = "";
+                    if (this.formPersona.coddocumentotipo == "") {
+                        phuyu_sistema.phuyu_noti("SELECCIONE TIPO DE DOCUMENTO", "DEBE SELECCIONAR . . .", "danger");
+                        this.$refs.coddocumentotipo.focus();
+                        return false;
+                    }
+                    if (this.formPersona.coddocumentotipo == 2) {
+                        urlPost = url + "web/phuyu_dni/" + this.formPersona.documento;
+                        if (this.formPersona.documento.length != 8) {
+                            this.$refs.documento.focus();
+                            return false;
+                        }
+                    }
+                    if (this.formPersona.coddocumentotipo == 4) {
+                        urlPost = url + "web/phuyu_ruc/" + this.formPersona.documento;
+                        if (this.formPersona.documento.length != 11) {
+                            this.$refs.documento.focus();
+                            return false;
+                        }
+                    }
+                    let respuesta = await this.$http.get(url + "web/phuyu_buscarsocio/" + this.formPersona.documento);
+                    console.log(respuesta);
+                    if (respuesta.body != "") {
+                        phuyu_sistema.phuyu_noti("DOCUMENTO EXISTE EN EL SISTEMA", "DOCUMENTO YA REGISTRADO", "warning");
+                        $(".btn-consultar").removeAttr("disabled");
+                        return false;
+
+                    } else {
+
+                        let respuestaRuc = await this.$http.get(urlPost);
+                        console.log(respuestaRuc);
+                        if (this.formPersona.coddocumentotipo == 2) {
+                            if (!respuestaRuc.body.result.nombre) {
+                                phuyu_sistema.phuyu_noti("NO SE ENCONTRARON DATOS", "DOCUMENTO NO EXISTE", "danger");
+                                return false;
+                            }
+                            this.formPersona.razonsocial = respuestaRuc.body.result.nombre;
+                            this.formPersona.nombrecomercial = respuestaRuc.body.result.nombre;
+                            this.formPersona.direccion = "-";
+                            $(".btn-consultar").removeAttr("disabled");
+                            return false;
+
+                        }
+                        if (this.formPersona.coddocumentotipo == 4) {
+                            if (respuestaRuc.body.persona) {
+                                this.formPersona.razonsocial = respuestaRuc.body.persona.razonSocial;
+                                this.formPersona.direccion = respuestaRuc.body.persona.direccion;
+                                this.formPersona.nombrecomercial = respuestaRuc.body.persona.razonSocial;
+                                $(".btn-consultar").removeAttr("disabled");
+                                return false;
+                            } else {
+                                phuyu_sistema.phuyu_noti("NO SE ENCONTRARON DATOS", "DOCUMENTO NO EXISTE", "danger");
+                            }
+                        }
+                        phuyu_sistema.phuyu_noti("NO SE ENCONTRARON DATOS", "POSIBLE DOCUMENTO NO EXISTE", "danger");
+                        $(".btn-consultar").removeAttr("disabled");
+                    }
+                },
+                phuyu_provincias: function() {
+                    if (this.formPersona.departamento != undefined) {
+                        this.$http.get(url + "ventas/clientes/provincias/" + this.formPersona.departamento).then(function(data) {
+                            $("#provincia").empty().html(data.body);
+                            $("#codubigeo").empty().html('<option value="">SELECCIONE</option>');
+                        });
+                    }
+                },
+                phuyu_distritos: function() {
+                    if (this.formPersona.provincia != undefined) {
+                        //formPersona.provincia formPersona.provincia
+                        this.$http.get(url + "ventas/clientes/distritos/" + this.formPersona.departamento + "/" + this.formPersona.provincia)
+                            .then(function(data) {
+                                $("#codubigeo").empty().html(data.body);
+                            });
+                    }
+                },
+                phuyu_zonas: function() {
+                    if (this.formPerson.codubigeo != undefined) {
+                        this.$http.get(url + "ventas/clientes/zonas/" + this.formPerson.codubigeo).then(function(data) {
+                            $("#codzona").empty().html(data.body);
+                        });
+                    }
+                },
+                phuyu_GuardarCliente: async function() {
+
+                    this.estado = 1;
+                    let data = await this.$http.post(url + this.urltipo + "/guardar_1", this.formPersona);
+                    console.log(data);
+                        if (data.body == 0) {
+                            phuyu_sistema.phuyu_alerta("OCURRIO UN ERROR AL REGISTRAR", "NO SE PUEDE REGISTRAR", "error");
+                        } 
+                        else {
+                            phuyu_sistema.phuyu_noti(this.tipo + " REGISTRADO CORRECTAMENTE", "UN NUEVO " + this.tipo + " EN EL SISTEMA", "success");
+                            var socio = eval(data.body);
+                                $("#modal_persona").modal("toggle");
+                                this. formPersona= {
+                                        codregistro: '',
+                                        codsociotipo: 1,
+                                        coddocumentotipo: '',
+                                        documento: '',
+                                        razonsocial: '',
+                                        nombrecomercial: '',
+                                        direccion: '',
+                                        email: '',
+                                        telefono: '',
+                                        departamento: '',
+                                        provincia: '',
+                                        codubigeo: '',
+                                        sexo: '',
+                                    };
+                            
+                        } 
+                    this.estado = 0;
+                },
+
+
             },
             created() {
 
@@ -2260,4 +2440,3 @@
 <script>
     phuyu_sistema.phuyu_fin();
 </script>
-

@@ -133,19 +133,16 @@ class Compras extends CI_Controller {
 			//echo "1";exit;
 			if (isset( $_SESSION["phuyu_codusuario"]) ) {
 				$this->request = json_decode(file_get_contents('php://input'));
-
 				if($this->request->campos->codcomprobantetipo == 13){
                      $this->request->campos->nro = $this->phuyu_correlativo($this->request->campos->codcomprobantetipo,$this->request->campos->seriecomprobanteliq);
-
                      $this->request->campos->seriecomprobante = $this->request->campos->seriecomprobanteliq;
 				}
 
 				$this->db->trans_begin();
-
 				/* REGISTRO KARDEX Y KARDEXDETALLE */
-
-				$proveedor = $this->db->query("select razonsocial,direccion,documento,d.abreviatura as tipo from public.personas p inner join public.documentotipos d on(p.coddocumentotipo=d.coddocumentotipo) where p.codpersona=".$this->request->campos->codpersona)->result_array();
-
+				$proveedor = $this->db->query("select razonsocial,direccion,documento,d.abreviatura as tipo 
+				from public.personas p inner join public.documentotipos d on(p.coddocumentotipo=d.coddocumentotipo)
+				 where p.codpersona=".$this->request->campos->codpersona)->result_array();
 				$this->request->campos->cliente = $proveedor[0]["razonsocial"];
 				$this->request->campos->direccion = $proveedor[0]["direccion"];
 				$this->request->campos->documento = $proveedor[0]["tipo"].'-'.$proveedor[0]["documento"];
@@ -156,7 +153,11 @@ class Compras extends CI_Controller {
 				if ($retirar == true) {
 					$codkardexalmacen = $this->Kardex_model->phuyu_kardexalmacen($codkardex, 3, $this->request->campos);
 				}
-				$detalle = $this->Kardex_model->phuyu_kardexdetalle($codkardex, $codkardexalmacen, $this->request->detalle, $retirar, 1, 0, 0, $this->request->campos->tipocambio);
+				$detalle = $this->Kardex_model->phuyu_kardexdetalle(
+				$codkardex, $codkardexalmacen,
+				$this->request->detalle, 
+				$retirar, 1, 0, 0, 
+				$this->request->campos->tipocambio);
                 
                 /* COMPROBANTE ELECTRONICO PARA SUNAT: REGISTRO EN KARDEX SUNAT */
 

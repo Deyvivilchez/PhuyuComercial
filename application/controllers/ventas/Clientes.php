@@ -316,7 +316,6 @@ class Clientes extends CI_Controller {
 	function guardar_1(){
 		if ($this->input->is_ajax_request()) {
 			$this->request = json_decode(file_get_contents('php://input'));
-
 			// SI EL TIPO DE DOCUMENTO ES SIN DOCUMENTO
 			if($this->request->coddocumentotipo==1){				
 				$sql = $this->db->query("Select MAX(codpersona) as codpersona from public.personas")->result_array();
@@ -344,7 +343,6 @@ class Clientes extends CI_Controller {
 						$this->request->codsociotipo = 3;
 					}
 				}
-
 				$codpersona = $existe[0]["codpersona"];
 				$estado = $this->phuyu_model->phuyu_editar("public.personas", $campos, $valores, "codpersona", $codpersona);
 			}else{

@@ -1,78 +1,187 @@
 var phuyu_operacion = new Vue({
 	el: "#phuyu_operacion",
 	data: {
-		campos:{
-			"codkardex_ref":0,"codmovimientotipo":"","codpersona":1,"cliente":$("#codpersona option:selected").text(),"codcomprobantetipo":"","seriecomprobante":"","codalmacen_ref":"",
-			"codcomprobantetipo_ref":0,"seriecomprobante_ref":"","nrocomprobante_ref":"","descripcion":"","fechakardex":""
+		campos: {
+			"codkardex_ref": 0, "codmovimientotipo": "", "codpersona": 1, "cliente": $("#codpersona option:selected").text(), "codcomprobantetipo": "", "seriecomprobante": "", "codalmacen_ref": "",
+			"codcomprobantetipo_ref": 0, "seriecomprobante_ref": "", "nrocomprobante_ref": "", "descripcion": "", "fechakardex": ""
 		},
-		estado:0,kardex_id:0, igvsunat:$("#igvsunat").val(), detalle: [],detalle_prestamo: [],putunidades : [], totales: {"valorventa":0.00,"igv":0.00,"importe":0.00},
+		estado: 0, kardex_id: 0, igvsunat: $("#igvsunat").val(), detalle: [], detalle_prestamo: [], putunidades: [], totales: { "valorventa": 0.00, "igv": 0.00, "importe": 0.00 },
+		productoSeleccionado: {},
+		nuevaSerie: null,
 	},
 	methods: {
-		phuyu_infocliente: function(){
+
+			eliminarSerie(index) {
+			const ps = this.productoSeleccionado;
+			if (!ps || !Array.isArray(ps.series)) return;
+			if (index < 0 || index >= ps.series.length) return;
+			if (ps.index == null || !this.detalle[ps.index]) return;
+
+			// 1) Crea copia y elimina en la copia (no sobre el array compartido)
+			const nuevasSeries = ps.series.slice();
+			nuevasSeries.splice(index, 1);
+
+			// 2) Actualiza el modal con copia
+			ps.series = nuevasSeries;
+
+			// 3) Actualiza el detalle con copia y fuerza reactividad
+			this.$set(this.detalle[ps.index], "series", nuevasSeries);
+			
+
+			this.detalle[ps.index].cantidad = nuevasSeries.length;
+			this.detalle[ps.index].subtotal = parseFloat(this.detalle[ps.index].precio) * nuevasSeries.length;
+			const item = this.detalle[ps.index];
+			this.phuyu_calcular(item);
+
+			phuyu_sistema.phuyu_noti(
+				"Serie eliminada",
+				"La serie se eliminó correctamente.",
+				"warning"
+			);
+
+		},
+
+
+		async agregarSerie_original() {
+			if (!this.nuevaSerie) {
+				phuyu_sistema.phuyu_noti("Serie requerida", "Ingrese el número de serie", "warning");
+				return;
+			}
+
+			const serie = this.nuevaSerie.trim().toUpperCase();
+
+			if (this.productoSeleccionado.series.length === 0) {
+				this.agregarSerieLista(serie, "Primera serie agregada");
+				return;
+			}
+
+			if (this.productoSeleccionado.series.some(s => s.serie_codigo === serie)) {
+				phuyu_sistema.phuyu_noti("Serie duplicada", "Ya existe en la lista", "info");
+				return;
+			}
+
+			this.agregarSerieLista(serie, "Serie agregada");
+		},
+		async agregarSerie() {
+
+			if (!this.nuevaSerie) {
+				phuyu_sistema.phuyu_noti("Serie requerida", "Ingrese el número de serie", "warning");
+				return false;
+			}
+			const serie = this.nuevaSerie.trim().toUpperCase();
+
+			resp = await this.$http.post(url + "almacen/productos/buscar_serie",{ serie : serie });
+			if(resp.body.existe){
+				phuyu_sistema.phuyu_noti("Serie duplicada", resp.body.mensaje , "info");
+				return false;
+			}
+			if (this.productoSeleccionado.series.some(s => s.serie_codigo === serie)) {
+				phuyu_sistema.phuyu_noti("Serie duplicada", "Ya existe en la lista", "info");
+				return false;
+			}
+
+			this.agregarSerieLista(serie, "Serie agregada");
+
+		},
+
+		agregarSerieLista(serie, mensaje) {
+			this.productoSeleccionado.series.push({ serie_codigo: serie });
+			this.detalle[this.productoSeleccionado.index].series = this.productoSeleccionado.series;
+			// RECALCULAO DEL SUB TOTAL DEL ITEM
+			this.detalle[this.productoSeleccionado.index].cantidad = this.detalle[this.productoSeleccionado.index].series.length;
+			this.phuyu_calcular(this.detalle[this.productoSeleccionado.index]);
+			// FIN RECALCULAO DEL SUB TOTAL DEL ITEM
+			this.nuevaSerie = '';
+			phuyu_sistema.phuyu_noti("Éxito", mensaje, "success");
+		},
+		/* FUNCIONES MODAL SERIES */
+		phuyu_ModalSeries(producto, index) {
+			this.productoSeleccionado = producto;
+
+			// ✅ CORRECTO: Verificar si existe el array de series
+			if (this.detalle[index].series === undefined) {
+				this.detalle[index].series = []; // Inicializar si no existe				
+			}
+
+			this.productoSeleccionado.series = this.detalle[index].series;
+			this.productoSeleccionado.index = index;
+			//
+			$("#modalSeries").modal('show');
+		},
+
+
+
+
+
+
+
+
+
+		phuyu_infocliente: function () {
 			this.campos.codpersona = $("#codpersona").val();
 			this.campos.cliente = $(".select2-selection__rendered").text();
 			this.phuyu_prestamos();
-        },
-        phuyu_verprestamo: function(codkardex){
-        	$(".compose").removeClass("col-md-4").addClass("col-md-7");
-			$(".compose").slideToggle(); phuyu_sistema.phuyu_loader("phuyu_formulario",180);
-			this.$http.get(url+phuyu_controller+"/verprestamo/"+codkardex).then(function(data){
+		},
+		phuyu_verprestamo: function (codkardex) {
+			$(".compose").removeClass("col-md-4").addClass("col-md-7");
+			$(".compose").slideToggle(); phuyu_sistema.phuyu_loader("phuyu_formulario", 180);
+			this.$http.get(url + phuyu_controller + "/verprestamo/" + codkardex).then(function (data) {
 				$("#phuyu_formulario").empty().html(data.body);
 				phuyu_sistema.phuyu_finloader("phuyu_formulario");
-			},function(){
-				phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED","error"); 
+			}, function () {
+				phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED", "error");
 				phuyu_sistema.phuyu_finloader("phuyu_formulario");
 			});
-        },
-        phuyu_prestamos: function(){
-        	if(this.campos.codmovimientotipo==11){
-				if (this.campos.codpersona!="") {
+		},
+		phuyu_prestamos: function () {
+			if (this.campos.codmovimientotipo == 11) {
+				if (this.campos.codpersona != "") {
 					this.estado = 1;
-					this.$http.get(url+phuyu_controller+"/prestamosotorgados/"+this.campos.codpersona).then(function(data){
+					this.$http.get(url + phuyu_controller + "/prestamosotorgados/" + this.campos.codpersona).then(function (data) {
 						this.detalle_prestamo = data.body.prestamo; this.estado = 0;
-					},function(){
-						phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED","error");
+					}, function () {
+						phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED", "error");
 					});
-				}else{
-					this.comprobantes = []; phuyu_sistema.phuyu_noti("SELECCIONAR A LA PERSONA Y EL TIPO MOVIMIENTO", "PARA FILTRAR LOS PRESTAMOS","error");
+				} else {
+					this.comprobantes = []; phuyu_sistema.phuyu_noti("SELECCIONAR A LA PERSONA Y EL TIPO MOVIMIENTO", "PARA FILTRAR LOS PRESTAMOS", "error");
 				}
-			}else{
+			} else {
 
 			}
 		},
-		phuyu_seleccionar: function(datos){
-			$("#"+this.kardex_id).css({"background-color":"#fff","color":"#000"}); 
+		phuyu_seleccionar: function (datos) {
+			$("#" + this.kardex_id).css({ "background-color": "#fff", "color": "#000" });
 			this.kardex_id = datos.codkardex;
-			$("#"+datos.codkardex).css({"background-color":"#13a89e","color":"#fff"});
+			$("#" + datos.codkardex).css({ "background-color": "#13a89e", "color": "#fff" });
 
-			this.campos.codkardex_ref = datos.codkardex; 
+			this.campos.codkardex_ref = datos.codkardex;
 			this.campos.codcomprobantetipo_ref = datos.codcomprobantetipo;
 			this.campos.seriecomprobante_ref = datos.seriecomprobante; this.campos.nrocomprobante_ref = datos.nrocomprobante;
 			this.campos.cliente = datos.cliente; this.campos.direccion = datos.direccion;
 
-			this.$http.get(url+phuyu_controller+"/detalle/"+datos.codkardex).then(function(data){
+			this.$http.get(url + phuyu_controller + "/detalle/" + datos.codkardex).then(function (data) {
 				var productos = eval(data.body.detalle);
 				var filas = [];
-				$.each( productos, function( k, v ) {
-				    var unidades = []; var factores = []; var logo = []; arreglo = [];
-		    		unidades = (v.unidades).split(";"); var funidades = [];
+				$.each(productos, function (k, v) {
+					var unidades = []; var factores = []; var logo = []; arreglo = [];
+					unidades = (v.unidades).split(";"); var funidades = [];
 
-			    	for (var i = 0; i < unidades.length; i++) {
-	                    factores = (unidades[i]).split("|");
-			    		logo = {descripcion:factores[1],codunidad:factores[0],factor:factores[8]};
-			    		funidades.push(logo)
-			    		if(factores[8]==1){
-			    			v.codunidad = factores[0];
-			    		}
-			    	}
-			    	this.putunidades = funidades;
-			    	v.subtotal = parseFloat(v.cantidad)*parseFloat(v.precio);
-			    	v.valorventa = parseFloat(v.cantidad)*parseFloat(v.preciosinigv);
+					for (var i = 0; i < unidades.length; i++) {
+						factores = (unidades[i]).split("|");
+						logo = { descripcion: factores[1], codunidad: factores[0], factor: factores[8] };
+						funidades.push(logo)
+						if (factores[8] == 1) {
+							v.codunidad = factores[0];
+						}
+					}
+					this.putunidades = funidades;
+					v.subtotal = parseFloat(v.cantidad) * parseFloat(v.precio);
+					v.valorventa = parseFloat(v.cantidad) * parseFloat(v.preciosinigv);
 					filas.push({
-						"itemorigen":v.item,"codproducto":v.codproducto,"producto":v.producto,"codunidad":v.codunidad,"unidades": this.putunidades,
-						"unidad":v.unidad,"cantidad":v.cantidad,"stock":v.stock,"control":v.controlstock,"precio":parseFloat(v.precio).toFixed(2),
-						"preciorefunitario":v.precio,"subtotal":v.subtotal,"valorventa":v.valorventa,"codafectacionigv":v.codafectacionigv,"igv":v.igv,
-						"preciosinigv" : v.preciosinigv
+						"itemorigen": v.item, "codproducto": v.codproducto, "producto": v.producto, "codunidad": v.codunidad, "unidades": this.putunidades,
+						"unidad": v.unidad, "cantidad": v.cantidad, "stock": v.stock, "control": v.controlstock, "precio": parseFloat(v.precio).toFixed(2),
+						"preciorefunitario": v.precio, "subtotal": v.subtotal, "valorventa": v.valorventa, "codafectacionigv": v.codafectacionigv, "igv": v.igv,
+						"preciosinigv": v.preciosinigv
 					});
 					this.putunidades = [];
 				});
@@ -81,78 +190,115 @@ var phuyu_operacion = new Vue({
 				var datos = eval(data.body.totales);
 				//this.totales.valorventa = datos[0]["valorventa"]; this.totales.igv = datos[0]["igv"]; this.totales.importe = datos[0]["importe"];
 				this.phuyu_totales();
-			},function(){
-				phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED","error");
+			}, function () {
+				phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED", "error");
 			});
 		},
-		phuyu_item: function(){
+		phuyu_item: function () {
 			$(".compose").removeClass("col-md-7").addClass("col-md-4");
-			$(".compose").slideToggle(); $("#phuyu_tituloform").text("BUSCAR PRODUCTO"); 
-			phuyu_sistema.phuyu_loader("phuyu_formulario",180); 
+			$(".compose").slideToggle(); $("#phuyu_tituloform").text("BUSCAR PRODUCTO");
+			phuyu_sistema.phuyu_loader("phuyu_formulario", 180);
 
-			this.$http.post(url+"almacen/productos/buscar/compras").then(function(data){
+			this.$http.post(url + "almacen/productos/buscar/compras").then(function (data) {
 				$("#phuyu_formulario").empty().html(data.body);
 				phuyu_sistema.phuyu_finloader("phuyu_formulario");
-			},function(){
-				phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED","error"); 
+			}, function () {
+				phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED", "error");
 				phuyu_sistema.phuyu_modulo();
 			});
 		},
-		phuyu_additem: function(producto){
-			var existeproducto = this.detalle.filter(function(p){
-			    if(p.codproducto == producto.codproducto && p.codunidad == producto.codunidad ){
-			    	p.cantidad = p.cantidad + 1; return p;
-			    };
-			});
+		phuyu_additem: function (producto) {
 
-		    if (existeproducto.length==0) {
-		    	var unidades = []; var factores = []; var logo = []; arreglo = [];
-		    	unidades = (producto.unidades).split(";");
+			// limpia putunidades por si quedó de antes
+			this.putunidades = [];
+			const encontrado = this.detalle.find(p => p.codproducto == producto.codproducto && p.codunidad == producto.codunidad);
 
-		    	for (var i = 0; i < unidades.length; i++) {
-                    factores = (unidades[i]).split("|");
-		    		logo = {descripcion:factores[1],codunidad:factores[0],factor:factores[8]};
-		    		this.putunidades.push(logo)
-		    		if(factores[8]==1){
-		    			producto.codunidad = factores[0];
-		    			producto.afectacionigv = factores[14];
-		    			producto.factor = factores[8];
-		    		}
-		    	}
-		    	producto.preciosinigv = producto.precio;
-				producto.valorventa =producto.precio;
+			// SI YA EXISTE: sube cantidad y recalcula
+			if (encontrado) {	encontrado.cantidad = Number(encontrado.cantidad || 0) + 1;	this.phuyu_calcular(encontrado, 3); // recalcula con el item real
+				return;
+			}
+			// --- SI NO EXISTE: arma unidades ---
+			let unidades = (producto.unidades || "").split(";");
 
-		    	producto.igv = 0; var porcentaje = 1;
-				if (producto.afectacionigv==10) {
-					var porcentaje = (1 + this.igvsunat) / 100;
-					producto.preciosinigv = Number((producto.precio / porcentaje).toFixed(4));
-					producto.valorventa = Number((producto.precio / porcentaje).toFixed(2));
-					producto.igv = Number((producto.precio - producto.valorventa).toFixed(2));
+			for (let i = 0; i < unidades.length; i++) {
+				const factores = (unidades[i] || "").split("|");
+				const logo = { descripcion: factores[1], codunidad: factores[0], factor: factores[8] };
+				this.putunidades.push(logo);
+
+				if (Number(factores[8]) === 1) {
+					producto.codunidad = factores[0];
+					producto.afectacionigv = factores[14];
+					producto.factor = factores[8];
 				}
-				this.detalle.push({
-					"itemorigen":0,"codproducto":producto.codproducto,"producto":producto.descripcion,"codunidad":producto.codunidad,"unidades": this.putunidades,
-					"unidad":producto.unidad,"cantidad":1,"stock":producto.stock,"control":producto.controlstock,"precio":parseFloat(producto.precio).toFixed(2),
-					"preciorefunitario":producto.precio,"preciosinigv":producto.preciosinigv,"igv":producto.igv,"subtotal":producto.precio,"valorventa":producto.valorventa,
-					"codafectacionigv": producto.afectacionigv,"factor": producto.factor
-				});
-				this.phuyu_calcular(producto,1);
-				this.putunidades = [];
-		    }else{
-		    	this.phuyu_calcular(existeproducto[0],3);
-		    }
+			}
+
+			// --- Normaliza precio ---
+			const precio = Number(producto.precio || 0);
+
+			// --- Calcula base/igv según afectación ---
+			producto.preciosinigv = precio;
+			producto.valorventa = precio;
+			producto.igv = 0;
+
+			if (Number(producto.afectacionigv) === 10) {
+				const factorIgv = 1 + (Number(this.igvsunat) / 100); // 1.18 si igvsunat=18
+				producto.preciosinigv = +(precio / factorIgv).toFixed(4);
+				producto.valorventa = +(precio / factorIgv).toFixed(2);
+				producto.igv = +(precio - producto.valorventa).toFixed(2);
+			}
+
+			// --- Cantidad inicial por series ---
+			const cantidad = (Number(producto.controlarseries) === 1) ? 0 : 1;
+
+			// --- Item del detalle (ojo: precio mostrado string, cálculos con números) ---
+			const item = {
+				itemorigen: 0,
+				codproducto: producto.codproducto,
+				producto: producto.descripcion,
+				codunidad: producto.codunidad,
+				unidades: [...this.putunidades], // copia, no referencia mutable
+				unidad: producto.unidad,
+
+				cantidad,
+				stock: producto.stock,
+				control: producto.controlstock,
+
+				precio: precio.toFixed(2),
+				preciorefunitario: precio,
+
+				preciosinigv: Number(producto.preciosinigv || 0),
+				igv: Number(producto.igv || 0),
+
+				// subtotal inicial (según tu lógica: precio con IGV * cantidad)
+				subtotal: +(precio * cantidad).toFixed(2),
+
+				valorventa: Number(producto.valorventa || 0),
+				codafectacionigv: producto.afectacionigv,
+				factor: producto.factor,
+				controlarseries: producto.controlarseries
+			};
+
+			this.detalle.push(item);
+
+			// recalcula con el item real del detalle
+			this.phuyu_calcular(item, 1);
+
+			// limpia putunidades para el siguiente add
+			this.putunidades = [];
 		},
-		informacion_unidad: function(index,producto,val){
+
+		informacion_unidad: function (index, producto, val) {
 			var codunidad = this.detalle[index].codunidad;
 			//console.log(codunidad)
-            var codproducto = producto.codproducto;
-            this.$http.post(url+"almacen/productos/informacion_item",{"codunidad": codunidad, "codproducto": codproducto, "salida": 1}).then(function(data){
+			var codproducto = producto.codproducto;
+			this.$http.post(url + "almacen/productos/informacion_item", { "codunidad": codunidad, "codproducto": codproducto, "salida": 1 }).then(function (data) {
 				//console.log(data)
-				producto.preciosinigv = data.body[0].precio; producto.precio = data.body[0].precio; 
-		    	producto.valorventa = data.body[0].precio; producto.subtotal = data.body[0].precio;
-		    	producto.subtotal_tem = data.body[0].precio;
-		    	producto.factor = data.body[0].factor;
-		    	this.detalle[index].afectacionigv = 20; this.detalle[index].igv = 0; var porcentaje = 1;
-				if (this.detalle[index].afectoigvventa==1) {
+				producto.preciosinigv = data.body[0].precio; producto.precio = data.body[0].precio;
+				producto.valorventa = data.body[0].precio; producto.subtotal = data.body[0].precio;
+				producto.subtotal_tem = data.body[0].precio;
+				producto.factor = data.body[0].factor;
+				this.detalle[index].afectacionigv = 20; this.detalle[index].igv = 0; var porcentaje = 1;
+				if (this.detalle[index].afectoigvventa == 1) {
 					var porcentaje = (1 + this.igvsunat) / 100;
 
 					this.detalle[index].afectacionigv = 10;
@@ -162,51 +308,54 @@ var phuyu_operacion = new Vue({
 				}
 				this.detalle[index].codunidad = codunidad;
 				this.detalle[index].stock = data.body[0].stock;
-				this.phuyu_itemcalcular(producto,1)
+				this.phuyu_itemcalcular(producto, 1)
 			});
 		},
-		phuyu_deleteitem: function(index,producto){
-			this.phuyu_calcular(producto,2); this.detalle.splice(index,1);
+		phuyu_deleteitem: function (index, producto) {
+			
+			this.detalle.splice(index, 1);
+			this.phuyu_calcular(producto, 2); 
 			this.putunidades = [];
+			this.phuyu_totales();
 		},
-		phuyu_itemcalcular: function (item,tipoprecio) {
+		phuyu_itemcalcular: function (item, tipoprecio) {
 			var porcentaje = 1;
-			if (item.codafectacionigv==21) {
-				item.preciobruto = 0; item.porcdescuento = 0; item.descuento = 0; item.preciosinigv = 0; item.precio = 0; 
-				item.igv = 0; item.valorventa = 0; item.subtotal = 0; 
+			if (item.codafectacionigv == 21) {
+				item.preciobruto = 0; item.porcdescuento = 0; item.descuento = 0; item.preciosinigv = 0; item.precio = 0;
+				item.igv = 0; item.valorventa = 0; item.subtotal = 0;
 			}
-			if (item.codafectacionigv==10) {
+			if (item.codafectacionigv == 10) {
 				var porcentaje = (1 + this.igvsunat) / 100;
 			}
 
-			if (tipoprecio==-1) {
+			if (tipoprecio == -1) {
 				item.porcdescuento = Number((item.descuento / item.preciobruto * 100).toFixed(2));
 				item.precio = Number((item.preciobruto - item.descuento).toFixed(4)); tipoprecio = 2;
 			}
-			if (tipoprecio==-2) {
+			if (tipoprecio == -2) {
 				item.descuento = Number((item.preciobruto * item.porcdescuento / 100).toFixed(4));
 				item.precio = Number((item.preciobruto - item.descuento).toFixed(4)); tipoprecio = 2;
 			}
-			if(tipoprecio==0){
+			if (tipoprecio == 0) {
 				item.precio = Number((item.preciobruto - item.descuento).toFixed(4));
 			}
-			
+
 			var descuento = item.descuento;
-			if (item.descuento=="") {
+			if (item.descuento == "") {
 				var descuento = 0;
 			}
-			
-			if (tipoprecio==1) {
+
+			if (tipoprecio == 1) {
 				item.precio = Number((item.preciosinigv * porcentaje).toFixed(4));
 				item.preciobruto = Number((item.precio + descuento).toFixed(4));
 			}
-			if (tipoprecio==2) {
+			if (tipoprecio == 2) {
 				item.preciosinigv = Number((item.precio / porcentaje).toFixed(4));
 				item.preciobruto = Number((item.precio + descuento).toFixed(4));
 			}
 
 			item.icbper = 0;
-			if (item.conicbper==1) {
+			if (item.conicbper == 1) {
 				item.icbper = Number((item.cantidad * this.icbpersunat).toFixed(2));
 			}
 
@@ -215,10 +364,10 @@ var phuyu_operacion = new Vue({
 			item.igv = Number((item.subtotal - item.valorventa).toFixed(2));
 			this.phuyu_totales();
 		},
-		phuyu_calcular: function(producto){
+		phuyu_calcular: function (producto) {
 			producto.preciooriginal = producto.precio;
 			var porcentaje = 1;
-			if (producto.codafectacionigv==10) {
+			if (producto.codafectacionigv == 10) {
 				var porcentaje = (1 + this.igvsunat) / 100;
 			}
 			producto.preciosinigv = Number((parseFloat(producto.precio) / porcentaje).toFixed(4));
@@ -227,49 +376,52 @@ var phuyu_operacion = new Vue({
 			producto.valorventa = Number((parseFloat(producto.cantidad) * parseFloat(producto.preciosinigv)).toFixed(2));
 			producto.subtotal = Number((parseFloat(producto.cantidad) * parseFloat(producto.precio)).toFixed(2));
 			producto.igv = Number((parseFloat(producto.subtotal) - parseFloat(producto.valorventa)).toFixed(2));
-			
+
 			this.phuyu_totales();
 		},
 		phuyu_totales: function () {
-			this.totales.valorventa = 0.00; this.totales.igv = 0.00; this.totales.subtotal = 0.00; this.totales.importe = 0.00;
+			this.totales.valorventa = 0.00; 
+			this.totales.igv = 0.00; 
+			this.totales.subtotal = 0.00; 
+			this.totales.importe = 0.00;
 			t = this;
-			var detalle = this.detalle.filter(function(p){
+			var detalle = this.detalle.filter(function (p) {
 				t.totales.igv = Number((t.totales.igv + parseFloat(p.igv)).toFixed(2));
-				t.totales.valorventa = Number((t.totales.valorventa + parseFloat(p.valorventa) ).toFixed(2));
+				t.totales.valorventa = Number((t.totales.valorventa + parseFloat(p.valorventa)).toFixed(2));
 			});
 
 			this.totales.importe = Number((this.totales.valorventa + this.totales.igv).toFixed(2));
 		},
-		phuyu_guardar: function(){
-			if (this.detalle.length==0) {
-				phuyu_sistema.phuyu_noti("REGISTRAR UN PRODUCTO EN EL DETALLE","REGISTRAR ITEM PARA EL INGRESO","error"); 
+		phuyu_guardar: function () {
+			if (this.detalle.length == 0) {
+				phuyu_sistema.phuyu_noti("REGISTRAR UN PRODUCTO EN EL DETALLE", "REGISTRAR ITEM PARA EL INGRESO", "error");
 				return false;
 			}
 
 			this.campos.fechakardex = $("#fechakardex").val();
 			this.estado = 1; phuyu_sistema.phuyu_inicio_guardar("GUARDANDO INGRESO DE ALMACEN . . .");
-			
-			this.$http.post(url+phuyu_controller+"/guardar", {"campos":this.campos,"detalle":this.detalle,"totales":this.totales}).then(function(data){
-				if (data.body=="e") {
-					phuyu_sistema.phuyu_alerta("SU SESION DE USUARIO A TERMINADO","DEBE INICIAR SESION NUEVAMENTE","error");
-				}else{
-					if (data.body==1) {
-						phuyu_sistema.phuyu_alerta("INGRESO DE ALMACEN REGISTRADO","INGRESO DE ALMACEN EN EL SISTEMA","success");
-					}else{
-						phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR INGRESO DE ALMACEN","ERROR DE RED","error");
+
+			this.$http.post(url + phuyu_controller + "/guardar", { "campos": this.campos, "detalle": this.detalle, "totales": this.totales }).then(function (data) {
+				if (data.body == "e") {
+					phuyu_sistema.phuyu_alerta("SU SESION DE USUARIO A TERMINADO", "DEBE INICIAR SESION NUEVAMENTE", "error");
+				} else {
+					if (data.body == 1) {
+						phuyu_sistema.phuyu_alerta("INGRESO DE ALMACEN REGISTRADO", "INGRESO DE ALMACEN EN EL SISTEMA", "success");
+					} else {
+						phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR INGRESO DE ALMACEN", "ERROR DE RED", "error");
 					}
 				}
 				phuyu_sistema.phuyu_fin(); phuyu_sistema.phuyu_modulo();
-			}, function(){
-				phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR INGRESO DE ALMACEN","ERROR DE RED","error");
+			}, function () {
+				phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR INGRESO DE ALMACEN", "ERROR DE RED", "error");
 			});
 		},
-		phuyu_cerrar: function(){
+		phuyu_cerrar: function () {
 			phuyu_sistema.phuyu_modulo();
 		},
-		phuyu_clonar: function(){
+		phuyu_clonar: function () {
 			this.titulo = "NUEVA COMPRA";
-			this.$http.post(url+phuyu_controller+"/clonar",{"codregistro":phuyu_ingresos.registro}).then(function(data){
+			this.$http.post(url + phuyu_controller + "/clonar", { "codregistro": phuyu_ingresos.registro }).then(function (data) {
 				var socio = eval(data.body.socio);
 				$("#select2-codpersona-container").empty().append(socio[0]["razonsocial"]);
 				this.campos.codpersona = socio[0]["codpersona"];
@@ -285,7 +437,7 @@ var phuyu_operacion = new Vue({
 				this.campos.seriecomprobante_ref = data.body.campos[0].seriecomprobante_ref;
 				this.campos.nrocomprobante_ref = data.body.campos[0].nrocomprobante_ref;
 				this.campos.codalmacen_ref = data.body.campos[0].codalmacen_ref;
-				if(data.body.campos[0].condicionpago==2){
+				if (data.body.campos[0].condicionpago == 2) {
 					this.campos.tasainteres = data.body.campos[0].tasainteres;
 					this.campos.nrodias = data.body.campos[0].nrodias;
 					this.campos.nrocuotas = data.body.campos[0].nrocuotas;
@@ -311,23 +463,23 @@ var phuyu_operacion = new Vue({
 				this.totales.descuentoglobal = data.body.campos[0].descglobal;
 				this.totales.igv = data.body.campos[0].igv;
 				this.totales.importe = data.body.campos[0].importe;
-				
+
 				/* this.detalle.push({
 					"stock":producto.stock,"control":producto.control, "descuentototal":0,"descuento":0,
 					"calcular":producto.calcular
 				}); */
-				
+
 				this.detalle = data.body.detalle;
 				this.phuyu_totales()
 				phuyu_sistema.phuyu_fin();
 			});
 		}
 	},
-	created: function(){
-		if (parseInt(phuyu_ingresos.registro)!=0) {
+	created: function () {
+		if (parseInt(phuyu_ingresos.registro) != 0) {
 			this.phuyu_clonar();
-		}else{
-			phuyu_sistema.phuyu_fin(); 
+		} else {
+			phuyu_sistema.phuyu_fin();
 		}
 	}
 });
