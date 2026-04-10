@@ -35,7 +35,14 @@ class Productos extends CI_Controller
             $limit = 12;
             $offset = $this->request->pagina * $limit - $limit;
 
-            $lista = $this->db->query("select productos.*, marcas.descripcion as marca from almacen.productos as productos inner join almacen.marcas as marcas on(productos.codmarca=marcas.codmarca) where (UPPER(productos.descripcion) like UPPER('%" . $this->request->buscar . "%') or UPPER(productos.codigo) like UPPER('%" . $this->request->buscar . "%') or UPPER(marcas.descripcion) like UPPER('%" . $this->request->buscar . "%') ) and productos.estado=1 order by productos.descripcion, productos.codproducto asc offset " . $offset . ' limit ' . $limit)->result_array();
+            $lista = $this->db->query("select productos.*, marcas.descripcion as marca 
+            from almacen.productos as productos 
+            inner join almacen.marcas as marcas on(productos.codmarca=marcas.codmarca)
+            where (UPPER(productos.descripcion)
+             like UPPER('%" . $this->request->buscar . "%') or UPPER(productos.codigo) 
+             like UPPER('%" . $this->request->buscar . "%') or UPPER(marcas.descripcion) 
+             like UPPER('%" . $this->request->buscar . "%') ) and productos.estado=1 
+             order by productos.descripcion, productos.codproducto asc offset " . $offset . ' limit ' . $limit)->result_array();
 
             foreach ($lista as $key => $value) {
                 $precio = $this->db->query('select pventapublico,codunidad,preciocosto from almacen.productounidades where codproducto=' . $value['codproducto'] . ' order by factor')->result_array();
@@ -220,6 +227,7 @@ class Productos extends CI_Controller
                 }
 
                 if (isset($this->request->unidades)) {
+                    
                     foreach ($this->request->unidades as $key => $value) {
                         $valores_1 = [(int) $codproducto, (int) $this->request->unidades[$key]->codunidad, (int) $_SESSION['phuyu_codsucursal'], $this->request->unidades[$key]->factor, (float) $this->request->unidades[$key]->preciocompra, (float) $this->request->unidades[$key]->preciocompra, (float) $this->request->unidades[$key]->pventapublico, (float) $this->request->unidades[$key]->pventamin, (float) $this->request->unidades[$key]->pventacredito, (float) $this->request->unidades[$key]->pventaxmayor, (float) $this->request->unidades[$key]->pventaadicional, $this->request->unidades[$key]->codigobarra, 1];
                         $estado = $this->phuyu_model->phuyu_guardar('almacen.productounidades', $campos_1, $valores_1);
@@ -232,7 +240,25 @@ class Productos extends CI_Controller
                                 $this->request->campos->codafectacionigvventa = $val['codafectacionigv'];
                             }
                             $campos = ['codalmacen', 'codproducto', 'codunidad', 'codsucursal', 'factor', 'preciocompra', 'preciocosto', 'pventapublico', 'pventamin', 'pventacredito', 'pventaxmayor', 'pventaadicional', 'codigobarra', 'estado', 'codafectacionigvcompra', 'codafectacionigvventa', 'comisionvendedor'];
-                            $valores = [(int) $val['codalmacen'], (int) $codproducto, (int) $this->request->unidades[$key]->codunidad, (int) $val['codsucursal'], $this->request->unidades[$key]->factor, (float) $this->request->unidades[$key]->preciocompra, (float) $this->request->unidades[$key]->preciocompra, (float) $this->request->unidades[$key]->pventapublico, (float) $this->request->unidades[$key]->pventamin, (float) $this->request->unidades[$key]->pventacredito, (float) $this->request->unidades[$key]->pventaxmayor, (float) $this->request->unidades[$key]->pventaadicional, $this->request->unidades[$key]->codigobarra, 1, (int) $this->request->campos->codafectacionigvcompra, (int) $this->request->campos->codafectacionigvventa, (int) $this->request->campos->comisionvendedor];
+                            $valores = [
+                                (int) $val['codalmacen'],
+                                (int) $codproducto,
+                                (int) $this->request->unidades[$key]->codunidad,
+                                (int) $val['codsucursal'],
+                                $this->request->unidades[$key]->factor,
+                                (float) $this->request->unidades[$key]->preciocompra,
+                                (float) $this->request->unidades[$key]->preciocompra,
+                                (float) $this->request->unidades[$key]->pventapublico,
+                                (float) $this->request->unidades[$key]->pventamin,
+                                (float) $this->request->unidades[$key]->pventacredito,
+                                (float) $this->request->unidades[$key]->pventaxmayor,
+                                (float) $this->request->unidades[$key]->pventaadicional,
+                                $this->request->unidades[$key]->codigobarra,
+                                1,
+                                (int) $this->request->campos->codafectacionigvcompra,
+                                (int) $this->request->campos->codafectacionigvventa,
+                                (int) $this->request->campos->comisionvendedor
+                            ];
                             $estado = $this->phuyu_model->phuyu_guardar('almacen.productoubicacion', $campos, $valores);
                         }
                     }
@@ -264,10 +290,13 @@ class Productos extends CI_Controller
                             $estado = $this->phuyu_model->phuyu_editar_1('almacen.productounidades', $campos_1, $valores_1, $f, $v);
                         }
 
-                        $existe_ubi = $this->db->query('select *from almacen.productoubicacion where codproducto=' . $codproducto . ' and codunidad=' . $this->request->unidades[$key]->codunidad)->result_array();
+                        $existe_ubi = $this->db->query(
+                            'select *from almacen.productoubicacion 
+                        where codproducto=' . $codproducto . ' and codunidad=' . $this->request->unidades[$key]->codunidad
+                        )->result_array();
 
                         if (count($existe_ubi) == 0) {
-                            $almacenes = $this->db->query('select *from almacen.almacenes where estado = 1')->result_array();
+                            $almacenes = $this->db->query('select * from almacen.almacenes where estado = 1')->result_array();
 
                             foreach ($almacenes as $k => $val) {
                                 if ($_SESSION['phuyu_codalmacen'] != (int) $val['codalmacen']) {
@@ -275,7 +304,25 @@ class Productos extends CI_Controller
                                     $this->request->campos->codafectacionigvventa = $val['codafectacionigv'];
                                 }
                                 $campos = ['codalmacen', 'codproducto', 'codunidad', 'codsucursal', 'factor', 'preciocompra', 'preciocosto', 'pventapublico', 'pventamin', 'pventacredito', 'pventaxmayor', 'pventaadicional', 'codigobarra', 'estado', 'codafectacionigvcompra', 'codafectacionigvventa', 'comisionvendedor'];
-                                $valores = [(int) $val['codalmacen'], (int) $codproducto, (int) $this->request->unidades[$key]->codunidad, (int) $val['codsucursal'], $this->request->unidades[$key]->factor, (float) $this->request->unidades[$key]->preciocompra, (float) $this->request->unidades[$key]->preciocompra, (float) $this->request->unidades[$key]->pventapublico, (float) $this->request->unidades[$key]->pventamin, (float) $this->request->unidades[$key]->pventacredito, (float) $this->request->unidades[$key]->pventaxmayor, (float) $this->request->unidades[$key]->pventaadicional, $this->request->unidades[$key]->codigobarra, 1, (int) $this->request->campos->codafectacionigvcompra, (int) $this->request->campos->codafectacionigvventa, (int) $this->request->campos->comisionvendedor];
+                                $valores = [
+                                    (int) $val['codalmacen'],
+                                    (int) $codproducto,
+                                    (int) $this->request->unidades[$key]->codunidad,
+                                    (int) $val['codsucursal'],
+                                    $this->request->unidades[$key]->factor,
+                                    (float) $this->request->unidades[$key]->preciocompra,
+                                    (float) $this->request->unidades[$key]->preciocompra,
+                                    (float) $this->request->unidades[$key]->pventapublico,
+                                    (float) $this->request->unidades[$key]->pventamin,
+                                    (float) $this->request->unidades[$key]->pventacredito,
+                                    (float) $this->request->unidades[$key]->pventaxmayor,
+                                    (float) $this->request->unidades[$key]->pventaadicional,
+                                    $this->request->unidades[$key]->codigobarra,
+                                    1,
+                                    (int) $this->request->campos->codafectacionigvcompra,
+                                    (int) $this->request->campos->codafectacionigvventa,
+                                    (int) $this->request->campos->comisionvendedor
+                                ];
                                 $estado = $this->phuyu_model->phuyu_guardar('almacen.productoubicacion', $campos, $valores);
                             }
                         } else {
@@ -520,22 +567,23 @@ class Productos extends CI_Controller
 
             // $lista = $this->db->query(
             //         "SELECT pun.codalmacen, p.codproducto, p.codigo,p.codfamilia, p.codlinea, p.codmarca, ma.descripcion AS marca,
-			// 		 p.descripcion, pun.unidades, p.afectoicbper, p.controlstock, p.afectoigvcompra, p.afectoigvventa, p.foto, p.calcular,
-			// 		  p.paraventa, p.codmodelo, p.codcolor, p.codtalla, p.tipo,p.controlarseries
-			// 		FROM almacen.productos p
-			// 		JOIN almacen.v_productounidades pun ON (p.codproducto = pun.codproducto AND p.estado = 1 )
-			// 		JOIN almacen.lineasxsucursales ls ON (pun.codsucursal = ls.codsucursal 
-			// 		AND p.codlinea = ls.codlinea AND ls.codsucursal = " .	$_SESSION['phuyu_codsucursal'] . " )
-			// 		JOIN almacen.marcas ma ON (p.codmarca = ma.codmarca)
-			// 		where (REPLACE(UPPER(p.descripcion),' ','%') 
-			// 		like REPLACE (UPPER('%" .$this->request->buscar ."%'),' ','%') or UPPER(p.codigo) 
-			// 		like UPPER('%" .$this->request->buscar ."%') or UPPER(ma.descripcion) 
-			// 		like UPPER('%" .$this->request->buscar ."%') ) 
-			// 		and p.estado=1 and pun.codalmacen=" .$_SESSION['phuyu_codalmacen'] .' 
-			// 		order by p.codproducto desc offset ' .$offset .' limit ' .$limit,)
+            // 		 p.descripcion, pun.unidades, p.afectoicbper, p.controlstock, p.afectoigvcompra, p.afectoigvventa, p.foto, p.calcular,
+            // 		  p.paraventa, p.codmodelo, p.codcolor, p.codtalla, p.tipo,p.controlarseries
+            // 		FROM almacen.productos p
+            // 		JOIN almacen.v_productounidades pun ON (p.codproducto = pun.codproducto AND p.estado = 1 )
+            // 		JOIN almacen.lineasxsucursales ls ON (pun.codsucursal = ls.codsucursal 
+            // 		AND p.codlinea = ls.codlinea AND ls.codsucursal = " .	$_SESSION['phuyu_codsucursal'] . " )
+            // 		JOIN almacen.marcas ma ON (p.codmarca = ma.codmarca)
+            // 		where (REPLACE(UPPER(p.descripcion),' ','%') 
+            // 		like REPLACE (UPPER('%" .$this->request->buscar ."%'),' ','%') or UPPER(p.codigo) 
+            // 		like UPPER('%" .$this->request->buscar ."%') or UPPER(ma.descripcion) 
+            // 		like UPPER('%" .$this->request->buscar ."%') ) 
+            // 		and p.estado=1 and pun.codalmacen=" .$_SESSION['phuyu_codalmacen'] .' 
+            // 		order by p.codproducto desc offset ' .$offset .' limit ' .$limit,)
             //     ->result_array();
 
-            $lista = $this->db->query("
+            $lista = $this->db->query(
+                "
                     SELECT 
                         pun.codalmacen, 
                         p.codproducto, 
@@ -586,7 +634,7 @@ class Productos extends CI_Controller
                     AND pun.codalmacen = " . $_SESSION['phuyu_codalmacen'] . "
                     ORDER BY p.codproducto DESC 
                     OFFSET " . $offset . " LIMIT " . $limit
-                )->result_array();
+            )->result_array();
 
             foreach ($lista as $key => $value) {
                 $factormaximo = $this->db->query('
@@ -623,7 +671,7 @@ class Productos extends CI_Controller
                     JOIN almacen.marcas ma ON (p.codmarca = ma.codmarca)
                     where (REPLACE(UPPER(p.descripcion),' ','%') 
                     like REPLACE (UPPER('%" . $this->request->buscar . "%'),' ','%') or UPPER(p.codigo) 
-                    like UPPER('%" .$this->request->buscar . "%') or UPPER(ma.descripcion) 
+                    like UPPER('%" . $this->request->buscar . "%') or UPPER(ma.descripcion) 
                     like UPPER('%" . $this->request->buscar . "%') ) and p.estado=1 
                     and pun.codalmacen=" . $_SESSION['phuyu_codalmacen'],
                 )
@@ -641,12 +689,12 @@ class Productos extends CI_Controller
             $paginacion['desde'] = $offset;
             $paginacion['hasta'] = $offset + $limit;
             foreach ($lista as &$producto) {
-            if (!empty($producto['series']) && is_string($producto['series'])) {
-                $producto['series'] = json_decode($producto['series'], true);
-            } else {
-                $producto['series'] = [];
+                if (!empty($producto['series']) && is_string($producto['series'])) {
+                    $producto['series'] = json_decode($producto['series'], true);
+                } else {
+                    $producto['series'] = [];
+                }
             }
-        }
 
 
             echo json_encode(['lista' => $lista, 'paginacion' => $paginacion]);
@@ -1082,7 +1130,8 @@ class Productos extends CI_Controller
         }
     }
 
-    public function buscar_serie() {
+    public function buscar_serie()
+    {
         if ($this->input->is_ajax_request()) {
 
             $request = json_decode(file_get_contents('php://input'));
