@@ -305,6 +305,178 @@
 		color: #212529;
 	}
 
+	.phuyu-cpe-velzon .card,
+	.phuyu-agricola-velzon .card {
+		border: 1px solid rgba(64, 81, 137, .12);
+		border-radius: .9rem;
+		box-shadow: 0 10px 28px rgba(15, 23, 42, .06);
+	}
+
+	.phuyu-cpe-velzon .card-body,
+	.phuyu-cpe-velzon .card-header,
+	.phuyu-agricola-velzon .card-body,
+	.phuyu-agricola-velzon .card-header {
+		padding: 1rem;
+	}
+
+	.phuyu-cpe-velzon h4,
+	.phuyu-cpe-velzon h5,
+	.phuyu-agricola-velzon h4,
+	.phuyu-agricola-velzon h5 {
+		color: #212529;
+		font-weight: 800;
+		letter-spacing: 0 !important;
+	}
+
+	.phuyu-cpe-velzon label,
+	.phuyu-agricola-velzon label {
+		font-size: .72rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		letter-spacing: .03em;
+		color: #495057;
+		margin-bottom: .35rem;
+	}
+
+	.phuyu-cpe-velzon .form-control,
+	.phuyu-cpe-velzon .form-select,
+	.phuyu-agricola-velzon .form-control,
+	.phuyu-agricola-velzon .form-select {
+		min-height: 40px;
+		border-radius: 9px;
+		border-color: rgba(64, 81, 137, .18);
+	}
+
+	.phuyu-cpe-velzon .btn,
+	.phuyu-agricola-velzon .btn {
+		border-radius: 9px;
+		font-weight: 700;
+	}
+
+	.phuyu-cpe-velzon .btn-block,
+	.phuyu-agricola-velzon .btn-block {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 100%;
+		gap: .35rem;
+	}
+
+	.phuyu-cpe-velzon .btn-xs,
+	.phuyu-agricola-velzon .btn-xs {
+		padding: .25rem .5rem;
+		font-size: .72rem;
+		line-height: 1.2;
+	}
+
+	.phuyu-cpe-velzon .table-responsive,
+	.phuyu-cpe-velzon .phuyu-table-wrap,
+	.phuyu-agricola-velzon .table-responsive,
+	.phuyu-agricola-velzon .phuyu-table-wrap {
+		border: 1px solid rgba(64, 81, 137, .12);
+		border-radius: .75rem;
+		overflow: auto;
+	}
+
+	.phuyu-cpe-velzon table,
+	.phuyu-agricola-velzon table {
+		margin-bottom: 0;
+	}
+
+	.phuyu-cpe-velzon table thead th,
+	.phuyu-cpe-velzon table th,
+	.phuyu-agricola-velzon table thead th,
+	.phuyu-agricola-velzon table th {
+		background: #f3f6f9;
+		color: #343a40;
+		font-size: .72rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		vertical-align: middle;
+		white-space: nowrap;
+	}
+
+	.phuyu-cpe-velzon table td,
+	.phuyu-agricola-velzon table td {
+		vertical-align: middle;
+	}
+
+	.phuyu-cpe-velzon .label,
+	.phuyu-agricola-velzon .label {
+		display: inline-flex;
+		align-items: center;
+		border-radius: 999px;
+		padding: .25rem .55rem;
+		font-size: .68rem;
+		font-weight: 800;
+		line-height: 1;
+	}
+
+	.phuyu-cpe-velzon .label-danger,
+	.phuyu-agricola-velzon .label-danger {
+		background: rgba(240, 101, 72, .12);
+		color: #f06548;
+	}
+
+	.phuyu-cpe-velzon .label-warning,
+	.phuyu-agricola-velzon .label-warning {
+		background: rgba(247, 184, 75, .16);
+		color: #b7791f;
+	}
+
+	.phuyu-cpe-velzon .label-success,
+	.phuyu-agricola-velzon .label-success {
+		background: rgba(10, 179, 156, .12);
+		color: #0ab39c;
+	}
+
+	.phuyu-cpe-velzon .badge-danger,
+	.phuyu-agricola-velzon .badge-danger {
+		background: #f06548;
+		color: #fff;
+	}
+
+	.phuyu-cpe-velzon .badge-warning,
+	.phuyu-agricola-velzon .badge-warning {
+		background: #f7b84b;
+		color: #212529;
+	}
+
+	.phuyu-cpe-velzon .badge-info,
+	.phuyu-cpe-velzon .badge-teal,
+	.phuyu-agricola-velzon .badge-info,
+	.phuyu-agricola-velzon .badge-teal {
+		background: #0ab39c;
+		color: #fff;
+	}
+
+	.phuyu-cpe-velzon .badge-secondary,
+	.phuyu-agricola-velzon .badge-secondary {
+		background: #74788d;
+		color: #fff;
+	}
+
+	.phuyu-cpe-velzon .x_panel,
+	.phuyu-agricola-velzon .x_panel {
+		border: 1px solid rgba(64, 81, 137, .12);
+		border-radius: .75rem;
+		background: #fff;
+		padding: 1rem;
+		margin-bottom: 1rem;
+	}
+
+	.phuyu-cpe-velzon .modal-header,
+	.phuyu-agricola-velzon .modal-header {
+		background: #f3f6f9;
+		border-bottom: 1px solid rgba(64, 81, 137, .12);
+	}
+
+	.phuyu-cpe-velzon .modal-title,
+	.phuyu-agricola-velzon .modal-title {
+		font-weight: 800;
+		color: #212529;
+	}
+
 	@media (max-width: 575.98px) {
 		.phuyu-velzon-list .phuyu-search,
 		.phuyu-velzon-list .phuyu-actions .btn,
