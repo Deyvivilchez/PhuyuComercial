@@ -1,4 +1,6 @@
-<div id="phuyu_datos">
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<div id="phuyu_datos" class="phuyu-reportes-velzon phuyu-velzon-list">
 	<div class="phuyu_body">
 		<div class="card">
 			<div class="card-body">
@@ -8,14 +10,14 @@
 					</div>
 					<div class="col-md-6" align="right">
 						<div style="padding-bottom: 1.5rem">
-							<button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#modal_vendedor"><i data-acorn-icon="content"></i> X VENDEDOR</button>
-							<button type="button" class="btn btn-info btn-sm" v-on:click="modal_clientes()"><i data-acorn-icon="content"></i> X CLIENTES</button>
-							<button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#modal_productos"><i data-acorn-icon="content"></i> X PRODUCTOS</button>
+							<button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#modal_vendedor"><i class="bi bi-layout-text-window"></i> X VENDEDOR</button>
+							<button type="button" class="btn btn-info btn-sm" v-on:click="modal_clientes()"><i class="bi bi-layout-text-window"></i> X CLIENTES</button>
+							<button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#modal_productos"><i class="bi bi-layout-text-window"></i> X PRODUCTOS</button>
 						</div>
 					</div>	
 					<div class="col-md-3">
 						<div align="right" style="padding-bottom: 1.5rem">
-							<button type="button" class="btn btn-danger btn-sm" v-on:click="mas_reportes()"><i data-acorn-icon="print"></i> REPORTE GENERAL CONTABLE</button>
+							<button type="button" class="btn btn-danger btn-sm" v-on:click="mas_reportes()"><i class="bi bi-printer"></i> REPORTE GENERAL CONTABLE</button>
 						</div>
 					</div>
 				</div>
@@ -46,15 +48,15 @@
 						</select>
 					</div>
 					<div class="col-md-2">
-						<label><i class="fa fa-calendar"></i> DESDE</label>
+						<label><i class="bi bi-calendar3"></i> DESDE</label>
 						<input type="date" class="form-control" id="fechadesde" value="<?php echo date('Y-m-d');?>" autocomplete="off">
 					</div>
 					<div class="col-md-2">
-						<label><i class="fa fa-calendar"></i> HASTA</label>
+						<label><i class="bi bi-calendar3"></i> HASTA</label>
 						<input type="date" class="form-control" id="fechahasta" value="<?php echo date('Y-m-d');?>" autocomplete="off">
 					</div>
 					<div class="col-md-1" style="margin-top: 1.2rem">
-						<button type="button" class="btn btn-warning btn-icon" v-on:click="ver_consulta()"><i data-acorn-icon="search"></i></button>
+						<button type="button" class="btn btn-warning btn-icon" v-on:click="ver_consulta()"><i class="bi bi-search"></i></button>
 					</div>
 				</div>
 				<div class="row form-group mt-4" id="consulta">
@@ -108,7 +110,7 @@
 	<div class="modal fade" id="modal_vendedor" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
 	  <div class="modal-dialog">
 	    <div class="modal-content">
-	      <div class="modal-header modal-phuyu-titulo">
+	      <div class="modal-header">
 	        <h4 class="modal-title">Reporte de ventas por vendedores</h4>
 	      </div>
 	      <div class="modal-body">
@@ -128,12 +130,12 @@
 	        <div class="row form-group">
 	        	<div class="col-md-12">
 	        		<div align="center">
-						<button type="button" class="btn btn-danger btn-sm" v-on:click="pdf_ventas_vendedor_resumen()" style="margin-bottom: 1rem"><i class="fa fa-print"></i> Reporte general PDF</button>
+						<button type="button" class="btn btn-danger btn-sm" v-on:click="pdf_ventas_vendedor_resumen()" style="margin-bottom: 1rem"><i class="bi bi-printer"></i> Reporte general PDF</button>
 						<button type="button" class="btn btn-danger btn-sm" v-on:click="pdf_ventas_vendedor()" style="margin-bottom: 1rem">
-							<i class="fa fa-print"></i> Reporte detallado PDF
+							<i class="bi bi-printer"></i> Reporte detallado PDF
 						</button>
 						<button type="button" class="btn btn-danger btn-sm" v-on:click="pdf_ventas_vendedor()" style="margin-bottom: 1rem">
-							<i class="fa fa-print"></i> Reporte segundo formato
+							<i class="bi bi-printer"></i> Reporte segundo formato
 						</button>
 					</div>
 				</div>
@@ -141,8 +143,8 @@
 			<div class="row form-group">
 				<div class="col-md-12">
 					<div align="center">
-						<button type="button" class="btn btn-success btn-sm" v-on:click="excel_ventas_vendedor_resumen()"><i class="fa fa-file-excel-o"></i> Reporte general EXCEL</button>
-						<button type="button" class="btn btn-success btn-sm" v-on:click="excel_ventas_vendedor()"><i class="fa fa-file-excel-o"></i> Reporte detallado EXCEL</button>
+						<button type="button" class="btn btn-success btn-sm" v-on:click="excel_ventas_vendedor_resumen()"><i class="bi bi-file-earmark-excel"></i> Reporte general EXCEL</button>
+						<button type="button" class="btn btn-success btn-sm" v-on:click="excel_ventas_vendedor()"><i class="bi bi-file-earmark-excel"></i> Reporte detallado EXCEL</button>
 					</div>
 	        	</div>
 	        </div>
@@ -157,7 +159,7 @@
 	<div class="modal" id="modal_clientes">
 	  <div class="modal-dialog">
 	    <div class="modal-content">
-	      <div class="modal-header modal-phuyu-titulo">
+	      <div class="modal-header">
 	        <h4 class="modal-title">Reporte de ventas por clientes</h4>
 	      </div>
 	      <div class="modal-body">
@@ -172,12 +174,12 @@
 	        <div class="row form-group">
 	        	<div class="col-md-12">
 	        		<div align="center">
-						<button type="button" class="btn btn-danger btn-sm" v-on:click="pdf_ventas_cliente()"><i class="fa fa-print"></i> Resumen PDF</button>
+						<button type="button" class="btn btn-danger btn-sm" v-on:click="pdf_ventas_cliente()"><i class="bi bi-printer"></i> Resumen PDF</button>
 						<button type="button" class="btn btn-danger btn-sm" v-on:click="pdf_ventas_cliente_detallado()">
-							<i class="fa fa-print"></i> Detallado PDF
+							<i class="bi bi-printer"></i> Detallado PDF
 						</button>
-						<button type="button" class="btn btn-success btn-sm" v-on:click="excel_ventas_cliente()"><i class="fa fa-file-excel-o"></i> Resumen EXCEL</button>
-						<button type="button" class="btn btn-success btn-sm" v-on:click="excel_ventas_cliente_detallado()"><i class="fa fa-file-excel-o"></i> Detallado EXCEL</button>
+						<button type="button" class="btn btn-success btn-sm" v-on:click="excel_ventas_cliente()"><i class="bi bi-file-earmark-excel"></i> Resumen EXCEL</button>
+						<button type="button" class="btn btn-success btn-sm" v-on:click="excel_ventas_cliente_detallado()"><i class="bi bi-file-earmark-excel"></i> Detallado EXCEL</button>
 					</div>
 				</div>
 			</div>
@@ -192,15 +194,15 @@
 	<div class="modal fade" id="modal_productos" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
 	  <div class="modal-dialog">
 	    <div class="modal-content">
-	      <div class="modal-header modal-phuyu-titulo">
+	      <div class="modal-header">
 	        <h4 class="modal-title">Reporte de ventas por productos</h4>
 	      </div>
 	      <div class="modal-body">
 	        <div class="row form-group">
 	        	<div class="col-md-12">
 					<div align="center">
-						<button type="button" class="btn btn-danger btn-sm btn-block" v-on:click="pdf_productos_vendidos()"><i class="fa fa-print"></i> Resumen formato PDF</button>
-						<button type="button" class="btn btn-success btn-sm btn-block" v-on:click="excel_productos_vendidos()"><i class="fa fa-file-excel-o"></i> Resumen formato EXCEL</button>
+						<button type="button" class="btn btn-danger btn-sm w-100" v-on:click="pdf_productos_vendidos()"><i class="bi bi-printer"></i> Resumen formato PDF</button>
+						<button type="button" class="btn btn-success btn-sm w-100" v-on:click="excel_productos_vendidos()"><i class="bi bi-file-earmark-excel"></i> Resumen formato EXCEL</button>
 					</div>
 				</div>
 			</div>
@@ -215,17 +217,17 @@
 	<div id="modal_reportes" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
 		<div class="modal-dialog">
 			<div class="modal-content">
-				<div class="modal-header modal-phuyu-titulo">
+				<div class="modal-header">
 					<h5 class="modal-title"> <b>GENERAR REPORTES DE VENTAS POR COMPROBANTE</b> </h5>
 					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 				</div>
 				<div class="modal-body">
 					<div class="row">
-						<div class="col-md-2"> <label style="padding-top:6px;"><i class="fa fa-calendar"></i> DESDE</label></div>
+						<div class="col-md-2"> <label style="padding-top:6px;"><i class="bi bi-calendar3"></i> DESDE</label></div>
 						<div class="col-md-4">
 							<input type="date" class="form-control" id="fechadesde_mas" value="<?php echo date('Y-m-d');?>" autocomplete="off">
 						</div>
-						<div class="col-md-2"> <label style="padding-top:6px;"><i class="fa fa-calendar"></i> HASTA</label></div>
+						<div class="col-md-2"> <label style="padding-top:6px;"><i class="bi bi-calendar3"></i> HASTA</label></div>
 						<div class="col-md-4">
 							<input type="date" class="form-control" id="fechahasta_mas" value="<?php echo date('Y-m-d');?>" autocomplete="off">
 						</div>
@@ -257,28 +259,28 @@
 						<div class="col-md-4">
 							<div class="row form-group">
 								<div class="col-md-12">
-									<button type="button" class="btn btn-success btn-sm btn-block " v-on:click="pdf_reporte_ventas(1)">
+									<button type="button" class="btn btn-success btn-sm w-100 " v-on:click="pdf_reporte_ventas(1)">
 										REPORTE DE VENTAS
 									</button>
 								</div>
 							</div>
 							<div class="row form-group">
 								<div class="col-md-12">
-									<button type="button" class="btn btn-success btn-sm btn-block" v-on:click="pdf_reporte_ventas_det(1)">
+									<button type="button" class="btn btn-success btn-sm w-100" v-on:click="pdf_reporte_ventas_det(1)">
 									VENTAS DETALLADO
 								</button>
 								</div>
 							</div>	
 							<div class="row form-group">
 								<div class="col-md-12">
-									<button type="button" class="btn btn-danger btn-sm btn-block" v-on:click="pdf_reporte_ventas(0)">
+									<button type="button" class="btn btn-danger btn-sm w-100" v-on:click="pdf_reporte_ventas(0)">
 										VENTAS ANULADAS
 									</button>
 								</div>
 							</div>	
 							<div class="row form-group">
 								<div class="col-md-12">
-									<button type="button" class="btn btn-danger btn-sm btn-block" v-on:click="pdf_reporte_ventas_det(0)">
+									<button type="button" class="btn btn-danger btn-sm w-100" v-on:click="pdf_reporte_ventas_det(0)">
 										ANULADAS DETALLADO
 									</button>
 								</div>

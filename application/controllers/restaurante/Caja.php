@@ -10,21 +10,85 @@ class Caja extends CI_Controller
 		$this->load->model("Caja_model");
 	}
 
+	private function phuyu_datos_atender()
+	{
+		$ambientes = $this->db
+			->select("*")
+			->from("restaurante.ambientes")
+			->where("codsucursal", $_SESSION["phuyu_codsucursal"])
+			->where("estado", 1)
+			->order_by("codambiente", "ASC")
+			->get()
+			->result_array();
+
+		$lineas = $this->db
+			->select("*")
+			->from("almacen.lineas")
+			->where("estado", 1)
+			->order_by("descripcion", "ASC")
+			->get()
+			->result_array();
+
+		$comprobantes = $this->db->query(
+			"select distinct(ct.codcomprobantetipo) as codigo, ct.* from caja.comprobantetipos as ct
+			inner join caja.comprobantes as c on(ct.codcomprobantetipo=c.codcomprobantetipo)
+			where c.codsucursal=" . $_SESSION["phuyu_codsucursal"] . " and c.codcomprobantetipo>=5 and c.estado=1"
+		)->result_array();
+
+		$conceptos = $this->db
+			->select("*")
+			->from("caja.conceptos")
+			->where_in("codconcepto", [13, 15])
+			->get()
+			->result_array();
+
+		$tipopagos = $this->db
+			->select("*")
+			->from("caja.tipopagos")
+			->where("ingreso", 1)
+			->where("estado", 1)
+			->order_by("codtipopago", "ASC")
+			->get()
+			->result_array();
+
+		$vendedores = $this->db->query(
+			"select persona.codpersona,persona.razonsocial from public.personas as persona
+			inner join public.empleados as empleado on(persona.codpersona=empleado.codpersona)
+			where empleado.estado=1 and empleado.codcargo=4"
+		)->result_array();
+
+		$configuracion = $this->db
+			->select("sinstockventa,itemrepetirventa")
+			->from("public.empresas")
+			->where("codempresa", $_SESSION["phuyu_codempresa"])
+			->get()
+			->result_array();
+
+		$tipodocumentos = $this->db->query("select *from public.documentotipos where estado=1")->result_array();
+
+		$departamentos = $this->db
+			->distinct()
+			->select("ubidepartamento, departamento")
+			->from("public.ubigeo")
+			->order_by("ubidepartamento", "ASC")
+			->get()
+			->result_array();
+
+		$sucursal = $this->db
+			->select("codcomprobantetipo, seriecomprobante")
+			->from("public.sucursales")
+			->where("codsucursal", $_SESSION["phuyu_codsucursal"])
+			->get()
+			->result_array();
+
+		return compact("ambientes", "lineas", "comprobantes", "conceptos", "tipopagos", "vendedores", "configuracion", "sucursal", "tipodocumentos", "departamentos");
+	}
+
 	public function index()
 	{
 		if ($this->input->is_ajax_request()) {
 			if (isset($_SESSION["phuyu_usuario"])) {
-				$ambientes = $this->db->query("select *from restaurante.ambientes where codsucursal=" . $_SESSION["phuyu_codsucursal"] . " and estado=1 order by codambiente asc")->result_array();
-				$lineas = $this->db->query("select *from almacen.lineas where estado=1 order by descripcion asc")->result_array();
-
-				$comprobantes = $this->db->query("select distinct(ct.codcomprobantetipo) as codigo, ct.* from caja.comprobantetipos as ct inner join caja.comprobantes as c on(ct.codcomprobantetipo=c.codcomprobantetipo) where c.codsucursal=" . $_SESSION["phuyu_codsucursal"] . " and c.codcomprobantetipo>=5 and c.estado=1")->result_array();
-				$conceptos = $this->db->query("select *from caja.conceptos where codconcepto=13 or codconcepto=15")->result_array();
-				$tipopagos = $this->db->query("select *from caja.tipopagos where ingreso=1 and estado=1 order by codtipopago")->result_array();
-				$vendedores = $this->db->query("select persona.codpersona,persona.razonsocial from public.personas as persona inner join public.empleados as empleado on(persona.codpersona=empleado.codpersona) where empleado.estado=1 and empleado.codcargo=4")->result_array();
-				$configuracion = $this->db->query("select sinstockventa,itemrepetirventa from public.empresas where codempresa=" . $_SESSION["phuyu_codempresa"])->result_array();
-				$sucursal = $this->db->query("select codcomprobantetipo, seriecomprobante from public.sucursales where codsucursal=" . $_SESSION["phuyu_codsucursal"])->result_array();
-
-				$this->load->view("restaurante/atender/index", compact("ambientes", "lineas", "comprobantes", "conceptos", "tipopagos", "vendedores", "configuracion", "sucursal"));
+				$this->load->view("restaurante/atender/index", $this->phuyu_datos_atender());
 			} else {
 				$this->load->view("phuyu/505");
 			}

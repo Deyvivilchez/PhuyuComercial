@@ -1,18 +1,6 @@
-<!--
-Phuyu – Configuración de Empresa (UI renovada v2)
-- Mantiene los mismos name/id/v-model y eventos para no romper lógica.
-- Estilo completamente distinto: encabezado glass + gradientes, tarjetas neumórficas,
-  tipografía compacta, campos con bordes fluidos, switch y file-drop custom.
-- Paleta corporativa tomada del logo (azules/navy) y aplicada con CSS vars.
-- Responsive mejorado y sticky bar con botón Guardar siempre visible.
--->
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
 
-
-
-<div id="phuyu_datos" class="phuyu-theme">
-	<!-- Top bar -->
-
-
+<div id="phuyu_datos" class="phuyu-theme phuyu-velzon-form phuyu-configuraciones">
 	<main class="container-xxl py-4">
 		<header class="phuyu-topbar">
 			<div class="phuyu-topbar__inner container-xxl">
@@ -34,7 +22,6 @@ Phuyu – Configuración de Empresa (UI renovada v2)
 			<input type="hidden" name="itemrepetircomprobante" v-model="campos.itemrepetircomprobante" />
 
 			<div class="row g-4">
-				<!-- Izquierda -->
 				<div class="col-12 col-lg-6">
 					<section class="phy-card">
 						<div class="phy-card__head">
@@ -54,7 +41,7 @@ Phuyu – Configuración de Empresa (UI renovada v2)
     <button type="button"
             class="btn phy-btn-sunat w-100"
             v-on:click="phuyu_consultar()">
-      <i data-acorn-icon="search"></i>
+      <i class="bi bi-search"></i>
       <span class="ms-1">Consultar SUNAT</span>
     </button>
   </div>
@@ -144,7 +131,6 @@ Phuyu – Configuración de Empresa (UI renovada v2)
 					</section>
 				</div>
 
-				<!-- Derecha -->
 				<div class="col-12 col-lg-6">
 					<section class="phy-card">
 						<div class="phy-card__head">
@@ -188,7 +174,7 @@ Phuyu – Configuración de Empresa (UI renovada v2)
 									<label class="form-label">Logo empresa</label>
 									<label class="phy-drop">
 										<input type="file" name="logo" accept="image/*" />
-										<span class="ico" aria-hidden>🖼️</span>
+										<i class="bi bi-image ico" aria-hidden="true"></i>
 										<span class="txt">Arrastra o <u>selecciona</u> (PNG/JPG 400×400)</span>
 									</label>
 								</div>
@@ -196,7 +182,7 @@ Phuyu – Configuración de Empresa (UI renovada v2)
 									<label class="form-label">Logo auspiciador</label>
 									<label class="phy-drop">
 										<input type="file" name="auspiciador" accept="image/*" />
-										<span class="ico" aria-hidden>🏷️</span>
+										<i class="bi bi-tag ico" aria-hidden="true"></i>
 										<span class="txt">Arrastra o <u>selecciona</u></span>
 									</label>
 								</div>
@@ -227,7 +213,7 @@ Phuyu – Configuración de Empresa (UI renovada v2)
 								<button form="formulario"
 									type="submit"
 									class="btn phy-btn-primary btn-lg">
-									<i data-acorn-icon="save"></i>
+									<i class="bi bi-save"></i>
 									<span class="ms-1">Guardar configuración</span>
 								</button>
 							</div>
@@ -241,7 +227,6 @@ Phuyu – Configuración de Empresa (UI renovada v2)
 	</main>
 </div>
 
-<!-- ICONS INIT (igual que antes) -->
 <script>
 	if (typeof AcornIcons !== 'undefined') {
 		new AcornIcons().replace();
@@ -251,7 +236,6 @@ Phuyu – Configuración de Empresa (UI renovada v2)
 	}
 </script>
 
-<!-- DATA (sin cambios) -->
 <script>
 	var campos = {
 		codpersona: "<?php echo $info[0]["codpersona"]; ?>",

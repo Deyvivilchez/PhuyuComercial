@@ -1068,6 +1068,107 @@ class Pedidos extends CI_Controller {
 		}
 	}
 
+	function cambiar_mesa(){
+		$responder = function($data) {
+			$this->output
+				->set_content_type("application/json")
+				->set_output(json_encode($data));
+		};
+
+		if (!$this->input->is_ajax_request()) {
+			$this->load->view("phuyu/404");
+			return;
+		}
+
+		if (!isset($_SESSION["phuyu_codusuario"])) {
+			$responder(["estado" => 0, "mensaje" => "SESION DEL USUARIO TERMINADA"]);
+			return;
+		}
+
+		$this->request = json_decode(file_get_contents('php://input'));
+		$codpedido = (int)($this->request->codpedido ?? 0);
+		$codmesaDestino = (int)($this->request->codmesa_destino ?? 0);
+
+		if ($codpedido <= 0 || $codmesaDestino <= 0) {
+			$responder(["estado" => 0, "mensaje" => "DATOS INCOMPLETOS PARA CAMBIAR DE MESA"]);
+			return;
+		}
+
+		$mesaPedido = $this->db->query(
+			"select codmesa from restaurante.mesaspedido where codpedido=? and estado=1 limit 1",
+			[$codpedido]
+		)->result_array();
+
+		if (count($mesaPedido) == 0) {
+			$responder(["estado" => 0, "mensaje" => "NO SE ENCONTRO UN PEDIDO ACTIVO PARA CAMBIAR"]);
+			return;
+		}
+
+		$codmesaOrigen = (int)$mesaPedido[0]["codmesa"];
+		if ($codmesaOrigen == $codmesaDestino) {
+			$responder(["estado" => 2, "mensaje" => "EL PEDIDO YA ESTA EN ESA MESA"]);
+			return;
+		}
+
+		$mesaDestino = $this->db->query(
+			"select codmesa,nromesa,situacion from restaurante.mesas where codmesa=? and estado=1 limit 1",
+			[$codmesaDestino]
+		)->result_array();
+
+		if (count($mesaDestino) == 0) {
+			$responder(["estado" => 0, "mensaje" => "LA MESA DESTINO NO EXISTE"]);
+			return;
+		}
+
+		$ocupada = $this->db->query(
+			"select codpedido from restaurante.mesaspedido where codmesa=? and codpedido<>? and estado=1 limit 1",
+			[$codmesaDestino, $codpedido]
+		)->result_array();
+
+		if (count($ocupada) > 0) {
+			$responder(["estado" => 2, "mensaje" => "LA MESA DESTINO YA TIENE UN PEDIDO ACTIVO"]);
+			return;
+		}
+
+		$this->db->trans_begin();
+
+		$this->db->where("codpedido", $codpedido);
+		$this->db->where("estado", 1);
+		$this->db->update("restaurante.mesaspedido", [
+			"codmesa" => $codmesaDestino,
+			"nromesa" => $mesaDestino[0]["nromesa"],
+		]);
+
+		$origenOcupada = $this->db->query(
+			"select codpedido from restaurante.mesaspedido where codmesa=? and estado=1 limit 1",
+			[$codmesaOrigen]
+		)->result_array();
+
+		if (count($origenOcupada) == 0) {
+			$this->db->where("codmesa", $codmesaOrigen);
+			$this->db->update("restaurante.mesas", ["situacion" => 1]);
+		}
+
+		$this->db->where("codmesa", $codmesaDestino);
+		$this->db->update("restaurante.mesas", ["situacion" => 2]);
+
+		if ($this->db->trans_status() === FALSE) {
+			$this->db->trans_rollback();
+			$responder(["estado" => 0, "mensaje" => "NO SE PUDO CAMBIAR LA MESA"]);
+			return;
+		}
+
+		$this->db->trans_commit();
+		$responder([
+			"estado" => 1,
+			"mensaje" => "PEDIDO CAMBIADO DE MESA CORRECTAMENTE",
+			"mesa" => [
+				"codmesa" => $codmesaDestino,
+				"nromesa" => $mesaDestino[0]["nromesa"],
+			],
+		]);
+	}
+
 	function clonar(){
 		if ($this->input->is_ajax_request()) {
 			if (isset( $_SESSION["phuyu_codusuario"]) ) {

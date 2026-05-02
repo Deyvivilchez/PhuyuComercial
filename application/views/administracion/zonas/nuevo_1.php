@@ -1,4 +1,6 @@
-<div id="phuyu_form_1">
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<div id="phuyu_form_1" class="phuyu-velzon-form">
 	<form id="formulario" class="form-horizontal" v-on:submit.prevent="phuyu_guardar_1()">
 		<div class="row form-group">
 			<div class="col-md-12">
@@ -36,7 +38,7 @@
 
 		<div class="ln_solid"></div>
 		<div class="form-group" align="center">
-			<button type="submit" class="btn btn-success" v-bind:disabled="estado_1==1"> <i class="fa fa-save"></i> GUARDAR </button>
+			<button type="submit" class="btn btn-success" v-bind:disabled="estado_1==1"> <i class="bi bi-save me-1"></i> GUARDAR </button>
 			<button type="button" class="btn btn-danger" data-bs-dismiss="modal">CERRAR</button>
 		</div>
 	</form>
