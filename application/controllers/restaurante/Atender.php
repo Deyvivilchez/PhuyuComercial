@@ -8,7 +8,7 @@ class Atender extends CI_Controller
 		$this->load->model('phuyu_model');
 	}
 
-	public function index_original()
+	public function index()
 	{
 		if ($this->input->is_ajax_request()) {
 			if (isset($_SESSION['phuyu_usuario'])) {
@@ -31,7 +31,7 @@ class Atender extends CI_Controller
 			$this->load->view('phuyu/404');
 		}
 	}
-	public function index()
+	public function index_1()
 	{
 		if ($this->input->is_ajax_request()) {
 			if (isset($_SESSION['phuyu_usuario'])) {
