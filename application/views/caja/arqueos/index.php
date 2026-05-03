@@ -58,10 +58,16 @@
 						<tbody>
 							<tr v-for="dato in datos">
 								<td>{{dato.codcontroldiario}}</td>
-								<td>{{dato.fechaapertura}}</td>
 								<td>
-									<span v-if="dato.fechacierre!=null">{{dato.fechacierre}}</span>
-									<span class="badge bg-danger" v-else="dato.fechacierre==''">SIN CERRAR</span>
+									{{dato.fechaapertura}}
+									<span class="text-muted small ms-1">{{dato.horaapertura_texto || 'S/H'}}</span>
+								</td>
+								<td>
+									<span v-if="dato.fechacierre!=null">
+										{{dato.fechacierre}}
+										<span class="text-muted small ms-1">{{dato.horacierre_texto || 'S/H'}}</span>
+									</span>
+									<span class="badge bg-danger" v-else>SIN CERRAR</span>
 								</td>
 								<td>{{dato.codigodiario}}</td>
 								<td>S/. {{dato.saldoinicialcaja}}</td>

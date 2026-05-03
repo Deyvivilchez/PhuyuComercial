@@ -132,7 +132,8 @@
     <?php include("ventana.php"); ?>
 
     <div class="settings-buttons-container">
-        <button type="button" class="btn settings-button btn-primary p-0" data-bs-toggle="offcanvas" data-bs-target="#theme-settings-offcanvas" aria-controls="theme-settings-offcanvas" id="settingsButton">
+        <button type="button" class="btn settings-button btn-primary p-0" data-bs-toggle="offcanvas" 
+        data-bs-target="#theme-settings-offcanvas" aria-controls="theme-settings-offcanvas" id="settingsButton">
             <span class="d-inline-block">
                 <i class="ri-settings-3-line fs-22"></i>
             </span>
@@ -144,10 +145,15 @@
             <h5 class="offcanvas-title">
                 <b id="phuyu_tituloform">FORMULARIO REGISTRO</b>
             </h5>
-            <button type="button" class="close compose-close btn-close text-reset" aria-label="Close"></button>
+             <button type="button"
+                class="compose-close btn-close"
+                aria-label="Close">
+            </button>
         </div>
         <div class="compose-body" id="phuyu_formulario" style="font-size: 11px"></div>
     </div>
+
+ 
 
     <?php include("phuyu_js.php"); ?>
     <script src="<?php echo base_url(); ?>phuyu/phuyu_base.js"></script>

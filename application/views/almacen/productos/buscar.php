@@ -1,15 +1,20 @@
 <div id="phuyu_buscar">
   <!-- Encabezado con búsqueda y botón nuevo producto -->
   <div class="row g-3 mb-4 align-items-center">
-    <div class="col-md-10 col-9">
+    <div class="col-md-8 col-12">
       <div class="position-relative">
         <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
         <input type="text" class="form-control ps-5" v-model="buscar" v-on:keyup="phuyu_buscar()" placeholder="BUSCAR PRODUCTO ..." autofocus>
       </div>
     </div>
-    <div class="col-md-2 col-3 text-end">
+    <div class="col-md-2 col-6 text-end">
       <button type="button" class="btn btn-warning w-100" v-on:click="phuyu_nuevoproducto()" title="Nuevo Producto">
         <i class="bi bi-plus-circle me-1"></i> <i class="bi bi-box-seam"></i>
+      </button>
+    </div>
+    <div class="col-md-2 col-6 text-end">
+      <button type="button" class="btn btn-light border w-100" v-on:click="phuyu_cerrar()" title="Cerrar busqueda">
+        <i class="bi bi-x-lg me-1"></i> Cerrar
       </button>
     </div>
   </div>
@@ -385,7 +390,6 @@
             // AGREGAR ESTE COMPUTED PARA FILTRAR SERIES
             listadoSeriesFiltrado: function() {
 
-                console.log("Filtro de series activado:", this.buscarSerie);
                 // Paso 1: Si no hay texto de búsqueda, devuelve todas las series
                 if (!this.buscarSerie) return this.listadoSeries;
 
@@ -447,7 +451,6 @@
 
                 // inf para identificar si es egreso o ventas asi debe selecionar la serie de producto 
                 if ((phuyu_controller == 'ventas/ventas' || phuyu_controller == 'almacen/salidas') && producto.controlarseries == 1) {
-                    // console.log("ENTRO A VENTAS O EGRESOS", phuyu_controller);
                     let detalleActual = phuyu_operacion.detalle || [];
                     // Lista completa de series del producto
                     let listaSeriesSinFiltro = producto.series;
@@ -463,9 +466,6 @@
                         // Mantener solo las series que NO existen
                         return !serieYaExiste;
                     });
-                    console.log("Series originales:", listaSeriesSinFiltro);
-                    console.log("Productos en detalle:", FiltroProductos);
-                    console.log("Series disponibles:", this.listadoSeries);
                     // this.listadoSeries = producto.series;
                     this.listadoSeriesFiltrado = this.listadoSeries;
                     this.ProductoSelecionado = producto;
@@ -473,7 +473,6 @@
                     $('#listadoSeries').modal('show');
                     return false;
                 }
-                //console.log(producto);
                 index = index;
                 $('.projects tr:eq(' + index + ') td').addClass("columna");
                 phuyu_operacion.phuyu_additem(producto, producto.precio);
@@ -521,7 +520,6 @@
                 timeout = setTimeout(removerColumna, 100, index);
             },
             SerieSeleccionada_07032026: function(serie) {
-                console.log("Serie seleccionada:", serie);
                 this.ProductoSelecionado.serie_seleccionada = serie;
                 phuyu_operacion.phuyu_additem(this.ProductoSelecionado, this.ProductoSelecionado.precio);
                 $('#listadoSeries').modal('hide');

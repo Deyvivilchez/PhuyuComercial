@@ -466,9 +466,25 @@
         }
 
         .compose .offcanvas-header {
+            position: sticky;
+            top: 0;
+            z-index: 3;
             border-bottom: 1px solid rgba(64, 81, 137, 0.10);
             padding: 1rem 1.25rem;
             background: linear-gradient(135deg, #fff 0%, #f6faff 100%);
+        }
+
+        .compose .compose-close {
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: 999px;
+            background-color: #eef2f7;
+            opacity: 1;
+        }
+
+        .compose .compose-close:hover {
+            background-color: #e2e8f0;
+            opacity: 1;
         }
 
         .compose .compose-body {
@@ -526,6 +542,222 @@
             to {
                 transform: rotate(360deg);
             }
+        }
+
+        .col-xs-1,
+        .col-xs-2,
+        .col-xs-3,
+        .col-xs-4,
+        .col-xs-5,
+        .col-xs-6,
+        .col-xs-7,
+        .col-xs-8,
+        .col-xs-9,
+        .col-xs-10,
+        .col-xs-11,
+        .col-xs-12 {
+            flex: 0 0 auto;
+            padding-right: calc(var(--vz-gutter-x, 1.5rem) * .5);
+            padding-left: calc(var(--vz-gutter-x, 1.5rem) * .5);
+        }
+
+        .col-xs-1 { width: 8.33333333%; }
+        .col-xs-2 { width: 16.66666667%; }
+        .col-xs-3 { width: 25%; }
+        .col-xs-4 { width: 33.33333333%; }
+        .col-xs-5 { width: 41.66666667%; }
+        .col-xs-6 { width: 50%; }
+        .col-xs-7 { width: 58.33333333%; }
+        .col-xs-8 { width: 66.66666667%; }
+        .col-xs-9 { width: 75%; }
+        .col-xs-10 { width: 83.33333333%; }
+        .col-xs-11 { width: 91.66666667%; }
+        .col-xs-12 { width: 100%; }
+
+        .pull-right { float: right !important; }
+        .pull-left { float: left !important; }
+
+        .btn-default {
+            --vz-btn-color: #212529;
+            --vz-btn-bg: #fff;
+            --vz-btn-border-color: #d9dde3;
+            --vz-btn-hover-color: #212529;
+            --vz-btn-hover-bg: #f3f6f9;
+            --vz-btn-hover-border-color: #cbd3dc;
+            --vz-btn-focus-shadow-rgb: 64, 81, 137;
+            --vz-btn-active-color: #212529;
+            --vz-btn-active-bg: #e9edf2;
+            --vz-btn-active-border-color: #cbd3dc;
+        }
+
+        .input-group-addon {
+            display: flex;
+            align-items: center;
+            padding: .47rem .75rem;
+            font-size: .8125rem;
+            font-weight: 600;
+            color: #495057;
+            text-align: center;
+            white-space: nowrap;
+            background-color: #f3f6f9;
+            border: 1px solid #ced4da;
+        }
+
+        .input-group .input-group-addon:first-child {
+            border-right: 0;
+            border-radius: .25rem 0 0 .25rem;
+        }
+
+        .input-group .input-group-addon:last-child {
+            border-left: 0;
+            border-radius: 0 .25rem .25rem 0;
+        }
+
+        .x_panel {
+            background: #fff;
+            border: 1px solid rgba(64, 81, 137, .12);
+            border-radius: .9rem;
+            box-shadow: 0 10px 28px rgba(15, 23, 42, .06);
+            margin-bottom: 1rem;
+            padding: 1rem;
+        }
+
+        .x_title {
+            border-bottom: 1px solid rgba(64, 81, 137, .12);
+            margin-bottom: 1rem;
+            padding-bottom: .75rem;
+        }
+
+        .x_content {
+            width: 100%;
+        }
+
+        .ln_solid {
+            border-top: 1px solid rgba(64, 81, 137, .12);
+            margin: 1rem 0;
+        }
+
+        .phuyu-module-stage .modal-content {
+            border: 0;
+            border-radius: .95rem;
+            box-shadow: 0 24px 80px rgba(15, 23, 42, .24);
+            overflow: hidden;
+        }
+
+        .phuyu-module-stage .modal-header {
+            align-items: center;
+            gap: .75rem;
+            background: #f8fafc;
+            border-bottom: 1px solid rgba(64, 81, 137, .10);
+            padding: 1rem 1.25rem;
+        }
+
+        .phuyu-module-stage .modal-title {
+            color: #1f2937;
+            flex: 1 1 auto;
+            font-size: 1rem;
+            font-weight: 800;
+            line-height: 1.25;
+            margin: 0;
+            order: 1;
+        }
+
+        .phuyu-module-stage .modal-body {
+            color: #334155;
+        }
+
+        .phuyu-module-stage .modal-footer {
+            background: #f8fafc;
+            border-top: 1px solid rgba(64, 81, 137, .10);
+        }
+
+        .phuyu-module-stage .modal .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            justify-content: center;
+            min-height: 34px;
+            white-space: normal;
+        }
+
+        .phuyu-module-stage .modal .btn-close {
+            flex: 0 0 auto;
+            margin-left: auto;
+            order: 2;
+            opacity: .75;
+        }
+
+        .phuyu-module-stage .modal-header > .close:not(.btn-close) {
+            flex: 0 0 auto;
+            margin-left: auto;
+            order: 2;
+        }
+
+        .phuyu-module-stage .modal-header > .close:not(.btn-close) + .modal-title {
+            order: 1;
+        }
+
+        .phuyu-module-stage .modal .btn-close:hover {
+            opacity: 1;
+        }
+
+        .phuyu-report-action-grid {
+            display: grid;
+            gap: .65rem;
+        }
+
+        .phuyu-report-action-grid .btn {
+            min-height: 42px;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .phuyu-report-checklist {
+            max-height: 280px;
+            overflow-y: auto;
+            border: 1px solid rgba(64, 81, 137, .10);
+            border-radius: .75rem;
+        }
+
+        .phuyu-report-checklist .table {
+            margin-bottom: 0;
+        }
+
+        .phuyu-report-checklist .form-check-input {
+            width: 1.15rem;
+            height: 1.15rem;
+            cursor: pointer;
+        }
+
+        .close:not(.btn-close) {
+            background: transparent;
+            border: 0;
+            color: #495057;
+            cursor: pointer;
+            font-size: 1.25rem;
+            line-height: 1;
+            opacity: .75;
+        }
+
+        .close:not(.btn-close):hover {
+            opacity: 1;
+        }
+
+        .close.btn-close,
+        .btn-close.close {
+            background: transparent var(--bs-btn-close-bg) center / 1em auto no-repeat;
+            border: 0;
+            opacity: .75;
+        }
+
+        .close.btn-close:hover,
+        .btn-close.close:hover {
+            opacity: 1;
+        }
+
+        .modal-header.modal-phuyu-titulo .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+            opacity: .95;
         }
 
         @media (max-width: 991.98px) {

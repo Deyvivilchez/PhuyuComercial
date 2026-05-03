@@ -8,7 +8,7 @@
 		</h5>
 		<p class="text-muted mb-3">Si ya está registrada, solo debes buscarla y seleccionarla.</p>
 
-		<form id="formulario" class="form-horizontal" v-on:submit.prevent="phuyu_guardar_1('almacen/marcas')">
+		<form id="formulario" v-on:submit.prevent="phuyu_guardar_1('almacen/marcas')">
 			<input type="hidden" id="codigo_extencion" value="codmarca">
 
 			<div class="mb-3">
@@ -17,11 +17,11 @@
 			</div>
 
 			<div class="text-center pt-2">
-				<button type="submit" class="btn btn-success" v-bind:disabled="estado_1==1">
+				<button type="submit" class="btn btn-primary" v-bind:disabled="estado_1==1">
 					<i class="bi bi-save me-1"></i>
 					Guardar
 				</button>
-				<button type="button" class="btn btn-danger" data-bs-dismiss="modal">
+				<button type="button" class="btn btn-light" data-bs-dismiss="modal">
 					<i class="bi bi-x-circle me-1"></i>
 					Cerrar
 				</button>

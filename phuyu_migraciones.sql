@@ -103,3 +103,17 @@ WHERE codmodulo IN (121,125)
   AND codpadre = 0;
 
 -- fin unificacion de modulos duplicados de Reportes y Creditos
+
+
+-- horas de apertura y cierre para arqueos de caja
+
+ALTER TABLE caja.controldiario
+ADD COLUMN IF NOT EXISTS horaapertura TIME WITHOUT TIME ZONE;
+
+ALTER TABLE caja.controldiario
+ALTER COLUMN horaapertura SET DEFAULT CURRENT_TIME;
+
+ALTER TABLE caja.controldiario
+ADD COLUMN IF NOT EXISTS horacierre TIME WITHOUT TIME ZONE;
+
+-- fin horas de apertura y cierre para arqueos de caja

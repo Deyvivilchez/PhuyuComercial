@@ -15,7 +15,7 @@
 		</div>
 	</div>
 
-	<div class="phuyu_body_card">
+	<div class="phuyu_body">
 		<input type="hidden" id="phuyu_opcion" value="1">
 		<div class="card phuyu-card">
 			<div class="card-body">

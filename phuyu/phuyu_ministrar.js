@@ -79,16 +79,21 @@ var phuyu_administrar = new Vue({
 	},
 	methods: {
 		phuyu_noti: function(titulo, mensaje, tipo){
-			new PNotify({
-				title: titulo,
-				text: mensaje,
-				type: tipo,
-				styling: "bootstrap3"
-			});
+			if (typeof swal === "function") {
+				swal({ title: titulo, text: mensaje || "", icon: tipo || "error" });
+				return;
+			}
+
+			if (window.jQuery && jQuery.notify) {
+				jQuery.notify({ title: titulo, message: mensaje || "" }, { type: tipo === "error" ? "danger" : tipo || "warning" });
+				return;
+			}
+
+			window.alert(titulo + (mensaje ? "\n" + mensaje : ""));
 		},
 		mostrarErrorRed: function(){
-			if (typeof phuyu_sistema !== "undefined" && phuyu_sistema.alerta) {
-				phuyu_sistema.alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED", "error");
+			if (typeof phuyu_sistema !== "undefined" && phuyu_sistema.phuyu_alerta) {
+				phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED", "error");
 				return;
 			}
 

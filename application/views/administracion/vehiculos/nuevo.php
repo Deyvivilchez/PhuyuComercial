@@ -1,7 +1,7 @@
 <?php include("application/views/phuyu/phuyu_velzon_module.php");?>
 
 <div id="phuyu_form" class="phuyu-velzon-form">
-	<form id="formulario" class="form-horizontal" v-on:submit.prevent="phuyu_guardar()">
+	<form id="formulario" v-on:submit.prevent="phuyu_guardar()">
 		<input type="hidden" name="codregistro" v-model="campos.codregistro">
 
 		<div class="card phuyu-card">
@@ -30,10 +30,10 @@
 				</div>
 
 				<div class="phuyu-form-actions">
-					<button type="submit" class="btn btn-success" v-bind:disabled="estado==1">
+					<button type="submit" class="btn btn-primary" v-bind:disabled="estado==1">
 						<i class="bi bi-save me-1"></i> Guardar
 					</button>
-					<button type="button" class="btn btn-danger" v-on:click="phuyu_cerrar()">
+					<button type="button" class="btn btn-light" v-on:click="phuyu_cerrar()">
 						<i class="bi bi-x-circle me-1"></i> Cerrar
 					</button>
 				</div>

@@ -78,14 +78,14 @@ class Controlcajas extends CI_Controller {
 					$saldoinicialbanco = $this->Caja_model->phuyu_saldobanco($caja[0]["codcontroldiario"]);
 				}
 
-				$campos = ["codcaja","codusuario","codsucursal","saldoinicialcaja","saldoinicialbanco","codigodiario","cerrado"];
+				$campos = ["codcaja","codusuario","codsucursal","saldoinicialcaja","saldoinicialbanco","codigodiario","cerrado","horaapertura"];
 				$valores = [
 					(int)$_SESSION["phuyu_codcaja"],
 					(int)$_SESSION["phuyu_codusuario"],
 					(int)$_SESSION["phuyu_codsucursal"],
 					((double)$saldoinicialcaja["total"] + (double)$saldoinicialcaja["saldoinicial"]),
 					((double)$saldoinicialbanco["total"] + (double)$saldoinicialbanco["saldoinicial"]),
-					date("dmY"),1
+					date("dmY"),1,date("H:i:s")
 				];
 				$estado = $this->phuyu_model->phuyu_guardar("caja.controldiario", $campos, $valores);
 
@@ -205,9 +205,9 @@ class Controlcajas extends CI_Controller {
                 $saldocaja = $this->Caja_model->phuyu_saldocaja($_SESSION["phuyu_codcontroldiario"]);
 				$saldobanco = $this->Caja_model->phuyu_saldobanco($_SESSION["phuyu_codcontroldiario"]);
 
-				$campos = ["codusuariocierre","fechacierre","saldofinalcaja","totalingresoscaja","totalegresoscaja","saldofinalbanco","totalingresosbanco","totalegresosbanco","cerrado"];
+				$campos = ["codusuariocierre","fechacierre","horacierre","saldofinalcaja","totalingresoscaja","totalegresoscaja","saldofinalbanco","totalingresosbanco","totalegresosbanco","cerrado"];
 				$valores = [
-					(int)$_SESSION["phuyu_codusuario"],date("Y-m-d"),
+					(int)$_SESSION["phuyu_codusuario"],date("Y-m-d"),date("H:i:s"),
 					(double)($saldocaja["total"]),
 					(double)($saldocaja["ingresos"]),
 					(double)($saldocaja["egresos"]),

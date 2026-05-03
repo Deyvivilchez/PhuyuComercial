@@ -39,7 +39,7 @@ var phuyu_sistemabd = new Vue({
 				}).then(function(response) {
 					if (!response.ok) {
 						return response.text().then(function(texto) {
-							throw new Error(texto || "No se pudo generar el backup");
+							throw new Error(phuyu_limpia_error_backup(texto) || "No se pudo generar el backup");
 						});
 					}
 
@@ -78,3 +78,9 @@ var phuyu_sistemabd = new Vue({
 		phuyu_sistema.phuyu_fin()
 	}
 });
+
+function phuyu_limpia_error_backup(texto) {
+	var contenedor = document.createElement("div");
+	contenedor.innerHTML = texto || "";
+	return (contenedor.textContent || contenedor.innerText || texto || "").replace(/\s+/g, " ").trim();
+}

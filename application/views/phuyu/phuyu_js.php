@@ -116,7 +116,7 @@
         });
     }
 
-    function phuyuBindLayoutFallback() {
+	    function phuyuBindLayoutFallback() {
         var $hamburger = $('#topnav-hamburger-icon');
         var $overlay = $('#phuyu-vertical-overlay');
         var $verticalHover = $('#vertical-hover');
@@ -219,21 +219,58 @@
         });
 
         syncHamburgerState();
-        window.phuyuLayoutReady = true;
-    }
+	        window.phuyuLayoutReady = true;
+	    }
 
-    $(function () {
-        phuyuBindLayoutFallback();
-    });
+	    function phuyuBindBootstrapLegacyBridge() {
+	        if (!window.bootstrap || !window.jQuery) {
+	            return;
+	        }
+
+	        $(document).off('click.phuyuLegacyModalDismiss').on('click.phuyuLegacyModalDismiss', '[data-dismiss="modal"]', function (e) {
+	            e.preventDefault();
+	            var modal = this.closest('.modal');
+	            if (modal) {
+	                bootstrap.Modal.getOrCreateInstance(modal).hide();
+	            }
+	        });
+
+	        $(document).off('click.phuyuLegacyModalToggle').on('click.phuyuLegacyModalToggle', '[data-toggle="modal"]', function (e) {
+	            var selector = this.getAttribute('data-target') || this.getAttribute('href');
+	            if (!selector || selector === '#') {
+	                return;
+	            }
+
+	            var modal = document.querySelector(selector);
+	            if (modal) {
+	                e.preventDefault();
+	                bootstrap.Modal.getOrCreateInstance(modal).show();
+	            }
+	        });
+
+	        $(document).off('click.phuyuLegacyDropdownToggle').on('click.phuyuLegacyDropdownToggle', '[data-toggle="dropdown"]', function (e) {
+	            e.preventDefault();
+	            bootstrap.Dropdown.getOrCreateInstance(this).toggle();
+	        });
+
+	        $('[data-toggle="tooltip"]').each(function () {
+	            bootstrap.Tooltip.getOrCreateInstance(this);
+	        });
+	    }
+
+	    $(function () {
+	        phuyuBindLayoutFallback();
+	        phuyuBindBootstrapLegacyBridge();
+	    });
 
     $('#codsistema').on('change', function () {
         phuyu_sistema.phuyu_inicio();
-        $.post(url + "phuyu/cambiarsistema/" + $("#codsistema").val()).then(function (data) {
-            window.location.href = url + "phuyu/w";
-        }, function () {
-            phuyu_sistema.alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED", "error");
-        });
-    });
+	        $.post(url + "phuyu/cambiarsistema/" + $("#codsistema").val()).then(function (data) {
+	            window.location.href = url + "phuyu/w";
+	        }, function () {
+	            phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED", "error");
+	        });
+	    });
 
     function cerrar_sesion() {
         phuyu_sistema.phuyu_inicio();
@@ -241,18 +278,18 @@
             phuyu_sistema.phuyu_fin();
             if (data > 0) {
                 $("#modal_electronicos").modal('show');
-                $.post(url + "phuyu/obtenercomprobanteselectronicos").then(function (data) {
-                    $("#modalver").empty().html(data);
-                }, function () {
-                    phuyu_sistema.alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED", "error");
-                });
+	                $.post(url + "phuyu/obtenercomprobanteselectronicos").then(function (data) {
+	                    $("#modalver").empty().html(data);
+	                }, function () {
+	                    phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED", "error");
+	                });
             } else {
                 $.get(url + "phuyu/phuyu_logout2").then(function (data) {
                     window.location = url;
                 });
             }
-        }, function () {
-            phuyu_sistema.alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED", "error");
-        });
-    }
+	        }, function () {
+	            phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED", "error");
+	        });
+	    }
 </script>

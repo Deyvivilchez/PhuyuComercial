@@ -214,108 +214,127 @@
 	  </div>
 	</div>
 
-	<div id="modal_reportes" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
-		<div class="modal-dialog">
-			<div class="modal-content">
-				<div class="modal-header">
-					<h5 class="modal-title"> <b>GENERAR REPORTES DE VENTAS POR COMPROBANTE</b> </h5>
-					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-				</div>
-				<div class="modal-body">
-					<div class="row">
-						<div class="col-md-2"> <label style="padding-top:6px;"><i class="bi bi-calendar3"></i> DESDE</label></div>
-						<div class="col-md-4">
-							<input type="date" class="form-control" id="fechadesde_mas" value="<?php echo date('Y-m-d');?>" autocomplete="off">
-						</div>
-						<div class="col-md-2"> <label style="padding-top:6px;"><i class="bi bi-calendar3"></i> HASTA</label></div>
-						<div class="col-md-4">
-							<input type="date" class="form-control" id="fechahasta_mas" value="<?php echo date('Y-m-d');?>" autocomplete="off">
-						</div>
-					</div> <br>
+<div id="modal_reportes" class="modal fade" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
 
-					<div class="row">
-						<div class="col-md-8" style="height:260px;overflow-y:scroll;">
-							<table class="table table-bordered">
-								<thead>
-									<tr>
-										<th>MARCAR</th>
-										<th>TIPO COMPROBANTE</th>
-									</tr>
-								</thead>
-								<tbody>
-									<?php 
-										foreach ($comprobantes as $key => $value) { ?>
-											<tr>
-												<td align="center">
-													<input type="checkbox" name="comprobantes" value="<?php echo $value['codcomprobantetipo'];?>" style="height:20px;width:20px;" checked>
-												</td>
-												<td><?php echo $value["descripcion"];?></td>
-											</tr>
-										<?php }
-									?>
-								</tbody>
-							</table>
-						</div>
-						<div class="col-md-4">
-							<div class="row form-group">
-								<div class="col-md-12">
-									<button type="button" class="btn btn-success btn-sm w-100 " v-on:click="pdf_reporte_ventas(1)">
-										REPORTE DE VENTAS
-									</button>
-								</div>
-							</div>
-							<div class="row form-group">
-								<div class="col-md-12">
-									<button type="button" class="btn btn-success btn-sm w-100" v-on:click="pdf_reporte_ventas_det(1)">
-									VENTAS DETALLADO
-								</button>
-								</div>
-							</div>	
-							<div class="row form-group">
-								<div class="col-md-12">
-									<button type="button" class="btn btn-danger btn-sm w-100" v-on:click="pdf_reporte_ventas(0)">
-										VENTAS ANULADAS
-									</button>
-								</div>
-							</div>	
-							<div class="row form-group">
-								<div class="col-md-12">
-									<button type="button" class="btn btn-danger btn-sm w-100" v-on:click="pdf_reporte_ventas_det(0)">
-										ANULADAS DETALLADO
-									</button>
-								</div>
-							</div>
+            <!-- HEADER -->
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold">
+                    GENERAR REPORTES DE VENTAS
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
 
-							<h5 class="text-center"><b>FORMATOS CONTABLE</b></h5>
-							<div class="row form-group">
-								<div class="col-md-12">
-									<div class="d-grid gap-2">
-										<button type="button" class="btn btn-warning btn-icon" v-on:click="pdf_contable_ventas()"> VENTAS PDF</button>
-									</div>
-								</div>
-							</div>
-							<div class="row form-group">
-								<div class="col-md-12">
-									<div class="d-grid gap-2">
-										<button type="button" class="btn btn-warning btn-icon" v-on:click="excel_contable_ventas()">VENTAS EXCEL</button>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
+            <!-- BODY -->
+            <div class="modal-body">
+
+                <!-- FECHAS -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            <i class="ri-calendar-line"></i> Desde
+                        </label>
+                        <input type="date" class="form-control"
+                               id="fechadesde_mas"
+                               value="<?php echo date('Y-m-d');?>">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            <i class="ri-calendar-line"></i> Hasta
+                        </label>
+                        <input type="date" class="form-control"
+                               id="fechahasta_mas"
+                               value="<?php echo date('Y-m-d');?>">
+                    </div>
+                </div>
+
+                <div class="row g-3">
+
+                    <!-- TABLA -->
+                    <div class="col-lg-7">
+                        <div class="table-responsive border rounded" style="max-height:300px;">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th class="text-center">✔</th>
+                                        <th>Tipo Comprobante</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($comprobantes as $value) { ?>
+                                        <tr>
+                                            <td class="text-center">
+                                                <input type="checkbox"
+                                                       class="form-check-input"
+                                                       name="comprobantes"
+                                                       value="<?php echo $value['codcomprobantetipo'];?>"
+                                                       checked>
+                                            </td>
+                                            <td><?php echo $value["descripcion"];?></td>
+                                        </tr>
+                                    <?php } ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- BOTONES -->
+                    <div class="col-lg-5">
+
+                        <div class="d-grid gap-2 mb-3">
+                            <button class="btn btn-success"
+                                    v-on:click="pdf_reporte_ventas(1)">
+                                <i class="ri-file-pdf-line"></i> Ventas
+                            </button>
+
+                            <button class="btn btn-success"
+                                    v-on:click="pdf_reporte_ventas_det(1)">
+                                <i class="ri-file-list-line"></i> Ventas Detallado
+                            </button>
+
+                            <button class="btn btn-danger"
+                                    v-on:click="pdf_reporte_ventas(0)">
+                                <i class="ri-close-circle-line"></i> Ventas Anuladas
+                            </button>
+
+                            <button class="btn btn-danger"
+                                    v-on:click="pdf_reporte_ventas_det(0)">
+                                <i class="ri-file-warning-line"></i> Anuladas Detallado
+                            </button>
+                        </div>
+
+                        <hr>
+
+                        <h6 class="text-center fw-bold mb-3">
+                            FORMATOS CONTABLES
+                        </h6>
+
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-warning"
+                                    v-on:click="pdf_contable_ventas()">
+                                <i class="ri-file-pdf-line"></i> Ventas PDF
+                            </button>
+
+                            <button class="btn btn-warning"
+                                    v-on:click="excel_contable_ventas()">
+                                <i class="ri-file-excel-line"></i> Ventas Excel
+                            </button>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
 </div>
-<script>
-	if (typeof AcornIcons !== 'undefined') {
-      new AcornIcons().replace();
-    }
-    if (typeof Icons !== 'undefined') {
-      const icons = new Icons();
-    }
-</script>
+
+
+</div>
+
 <script> 
 	var campos = {"codsucursal":'<?php echo $_SESSION['phuyu_codsucursal'];?>',"codcaja":0,"codalmacen":0,"codpersona":0,"codvendedor":"","fechadesde":"","fechahasta":"","estado":1};
 

@@ -58,10 +58,9 @@ function destinatario(){
           markup += '<div class="text-muted">' + result.razonsocial + '</div>';
         }
         return markup;
-      },
-      templateSelection: function formatResultSelection(result) {
-        console.log(result.razonsocial);
-        if(typeof result.razonsocial != "undefined" && phuyu_datos.campos.codpersona!= result.codpersona && phuyu_controller != 'compras/compras'){
+	      },
+	      templateSelection: function formatResultSelection(result) {
+	        if(typeof result.razonsocial != "undefined" && phuyu_datos.campos.codpersona!= result.codpersona && phuyu_controller != 'compras/compras'){
             phuyu_datos.phuyu_infocliente(result.codpersona);
         }
         if(typeof result.razonsocial == "undefined"){

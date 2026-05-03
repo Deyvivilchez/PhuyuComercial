@@ -41,7 +41,7 @@
 				<div class="row form-group">
 					<div class="col-md-12">
 						<label>Subir archivo excel <span class="text-danger">*</span></label>
-						<input type="file" class="form-control" name="archivo" accept=".xlsx, .xls" required />
+						<input type="file" class="form-control" name="archivo" accept=".xls,.xlsx,.csv" required />
 					</div>
 				</div>
 				<div class="phuyu-actions mt-3">
@@ -59,10 +59,11 @@
 				<div class="row form-group">
 					<div class="col-md-12">
 						<label>Subir archivo excel <span class="text-danger">*</span></label>
-						<input type="file" class="form-control" name="archivo" accept=".xlsx, .xls" required />
+						<input type="file" class="form-control" name="archivo" accept=".xls,.xlsx,.csv" required />
 					</div>
 				</div>
 				<div class="phuyu-actions mt-3">
+					<button type="button" class="btn btn-success" v-on:click="np_formato_stockextra()"><i class="bi bi-file-earmark-spreadsheet me-1"></i> Descargar formato</button>
 					<button type="submit" class="btn btn-primary" v-bind:disabled="estado==1"><i class="bi bi-save me-1"></i> Guardar</button>
 				</div>
 			</form>

@@ -21,7 +21,7 @@
 					</div>
 
 					<div class="phuyu-actions">
-						<button type="button" class="btn btn-success" v-on:click="phuyu_nuevo()">
+						<button type="button" class="btn btn-primary" v-on:click="phuyu_nuevo()">
 							<i class="bi bi-plus-circle me-1"></i> Nuevo
 						</button>
 						<button type="button" class="btn btn-warning" v-on:click="phuyu_editar()">
