@@ -1,13 +1,19 @@
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
 
-<div id="phuyu_operacion">
+<div id="phuyu_operacion" class="phuyu-velzon-form phuyu-agricola-velzon">
 	<form id="formulario" class="form-horizontal" v-on:submit.prevent="phuyu_guardar()">
 		<input type="hidden" id="empresa" value="<?php echo $_SESSION['phuyu_empresa']; ?>" name="">
 		<div class="phuyu_body">
-			<div class="card">
+			<div class="phuyu-form-title">
+				<div class="phuyu-form-icon"><i class="bi bi-flower1"></i></div>
+				<div>
+					<div class="text-muted small text-uppercase fw-semibold">Agricola</div>
+					<h4 class="mb-0 fw-bold">Registro nueva chacra</h4>
+				</div>
+			</div>
+
+			<div class="card phuyu-card">
 				<div class="card-body">
-					<div class="row form-group">
-						<div class="col-md-6 col-xs-12"> <h5><b>REGISTRO NUEVA CHACRA</b></h5> </div>
-					</div>
 					<div class="row form-group">
 						<div class="col-md-3">
 							<label>DEPARTAMENTO</label>
@@ -38,9 +44,7 @@
 					            <select class="form-select" name="codzona" v-model="campos.codzona" id="codzona" required>
 					                <option value="">SELECCIONE</option>
 					            </select>
-					            <span class="input-group-btn">
-									<button type="button" class="btn btn-success btn-icon" title="AGREGAR NUEVA ZONA" v-on:click="phuyu_nuevo_zona()"><i data-acorn-icon="plus"></i></button>
-								</span>
+								<button type="button" class="btn btn-success btn-icon" title="AGREGAR NUEVA ZONA" v-on:click="phuyu_nuevo_zona()"><i class="bi bi-plus-circle"></i></button>
 							</div>
 						</div>
 					</div>
@@ -116,13 +120,13 @@
 						</div>
 						<div class="col-md-7 col-xs-12" align="right">
 							<button type="button" class="btn btn-warning btn-icon" v-on:click="phuyu_venta()"> 
-								<b> <i data-acorn-icon="plus"></i> NUEVA LINEA CREDITO</b> 
+								<b><i class="bi bi-plus-circle me-1"></i> NUEVA LINEA CREDITO</b>
 							</button>
 							<button type="submit" class="btn btn-info btn-icon" v-bind:disabled="estado==1"> 
-								<b><i data-acorn-icon="arrow-right"></i> GUARDAR LINEA CREDITO</b> 
+								<b><i class="bi bi-check2-circle me-1"></i> GUARDAR LINEA CREDITO</b>
 							</button>
 							<button type="button" class="btn btn-danger btn-icon" v-on:click="phuyu_atras()"> 
-								<b> <i data-acorn-icon="arrow-left"></i> ATRAS</b> 
+								<b><i class="bi bi-arrow-left-circle me-1"></i> ATRAS</b>
 							</button>
 						</div>
 					</div>
@@ -148,13 +152,3 @@
 
 <script src="<?php echo base_url();?>phuyu/phuyu_chacra/nuevo.js"> </script>
 <script src="<?php echo base_url();?>phuyu/phuyu_personas_2.js"> </script>
-
-<script>
-	var pantalla = jQuery(document).height(); $("#reportes_modal").css({height: pantalla - 65});
-	if (typeof AcornIcons !== 'undefined') {
-      new AcornIcons().replace();
-    }
-    if (typeof Icons !== 'undefined') {
-      const icons = new Icons();
-    }
-</script>

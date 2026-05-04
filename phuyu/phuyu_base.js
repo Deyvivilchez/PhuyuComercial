@@ -47,14 +47,18 @@ var phuyu_sistema = new Vue({
 		phuyu_modulo: function(){
 			this.phuyu_inicio();
 			this.$http.post(url+phuyu_controller).then((data) => {
-				// ✅ Esto silencia el error inmediatamente
 				try {
 					$("#phuyu_sistema").empty().html(data.body).show();
 				} catch (e) {
-					console.log('Error ignorado:', e.message);
+					this.phuyu_alerta("ATENCION USUARIO", "No se pudo renderizar el modulo solicitado.", "error");
+				} finally {
+					this.phuyu_fin();
 				}
 			}, (error) => {
-				this.phuyu_alerta("ATENCION USUARIO","ERROR DE RED (INTERNET)","error"); 
+				var mensaje = error && error.status === 403
+					? "No tienes permiso para acceder a este modulo."
+					: "ERROR DE RED (INTERNET)";
+				this.phuyu_alerta("ATENCION USUARIO", mensaje, "error"); 
 				this.phuyu_fin();
 			});
 		},

@@ -9,7 +9,7 @@ class Phuyu extends CI_Controller
 
 	public function index(){
 		if (isset($_SESSION["phuyu_usuario"])) {
-			$info = $this->db->query("select sucursal.* from public.sucursales as sucursal inner join seguridad.sucursalusuarios as sucursalusuario on(sucursal.codsucursal=sucursalusuario.codsucursal) where sucursalusuario.codusuario=".$_SESSION["phuyu_codusuario"]." and sucursal.estado=1 order by sucursal.codsucursal")->result_array();
+			$info = $this->db->query("select sucursal.* from public.sucursales as sucursal inner join seguridad.sucursalusuarios as sucursalusuario on(sucursal.codsucursal=sucursalusuario.codsucursal) where sucursalusuario.codusuario=? and sucursal.estado=1 order by sucursal.codsucursal", [(int) $_SESSION["phuyu_codusuario"]])->result_array();
 			$this->load->view("phuyu/administrar",compact("info"));
 		}else{
 			$this->load->view("phuyu/login");
@@ -17,11 +17,25 @@ class Phuyu extends CI_Controller
 	}
 
 	public function phuyu_sucursal(){
-		if($this->input->is_ajax_request()){
+		if($this->input->is_ajax_request() && isset($_SESSION["phuyu_codusuario"])){
 			$this->request = json_decode(file_get_contents('php://input'));
-			$info["almacenes"] = $this->db->query("select *from almacen.almacenes where estado=1 and codsucursal=".$this->request->codsucursal)->result_array();
-			$info["cajas"] = $this->db->query("select *from caja.cajas where estado=1 and codsucursal=".$this->request->codsucursal)->result_array();
+			$codsucursal = isset($this->request->codsucursal) ? (int) $this->request->codsucursal : 0;
+			$autorizado = $this->db->query(
+				"select count(*) as total from seguridad.sucursalusuarios where codusuario=? and codsucursal=?",
+				[(int) $_SESSION["phuyu_codusuario"], $codsucursal]
+			)->row_array();
+			if (empty($autorizado) || (int) $autorizado["total"] == 0) {
+				$this->output->set_status_header(403);
+				echo json_encode(["almacenes" => [], "cajas" => []]);
+				return;
+			}
+
+			$info["almacenes"] = $this->db->query("select *from almacen.almacenes where estado=1 and codsucursal=?", [$codsucursal])->result_array();
+			$info["cajas"] = $this->db->query("select *from caja.cajas where estado=1 and codsucursal=?", [$codsucursal])->result_array();
+			$this->output->set_content_type("application/json", "utf-8");
 			echo json_encode($info);
+		}else{
+			$this->load->view("phuyu/404");
 		}
 	}
 
@@ -38,8 +52,14 @@ class Phuyu extends CI_Controller
 	public function phuyu_web(){
 		if (isset($_SESSION["phuyu_codusuario"])){
 			$this->request = json_decode(file_get_contents('php://input'));
-			//echo $this->request->sistema;exit;
-			$estado = $this->phuyu_model->phuyu_web($this->request->codsucursal,$this->request->codalmacen,$this->request->codcaja);
+			$estado = 0;
+			if (is_object($this->request)) {
+				$estado = $this->phuyu_model->phuyu_web(
+					isset($this->request->codsucursal) ? $this->request->codsucursal : 0,
+					isset($this->request->codalmacen) ? $this->request->codalmacen : 0,
+					isset($this->request->codcaja) ? $this->request->codcaja : 0
+				);
+			}
 	        echo $estado;
         }else{
             $this->load->view("phuyu/404");
@@ -61,9 +81,14 @@ class Phuyu extends CI_Controller
 			if(!isset($_SESSION["phuyu_codsistema"])){
 				$_SESSION["phuyu_codsistema"] = 1;
 			}
+			$url_modulo = trim($phuyu_modulo . "/" . $phuyu_submodulo, "/");
+			if ($url_modulo !== "" && !$this->phuyu_model->phuyu_tiene_permiso_modulo($url_modulo)) {
+				$this->output->set_status_header(403);
+				$this->load->view("phuyu/404");
+				return;
+			}
 			$sistemas = $this->db->query("select *from sistemas where estado = 1")->result_array();
 			$phuyu_modulos = $this->phuyu_model->phuyu_modulos();
-			// FALTA CONSULTAR SI TIENE PERMISO A ESTE MODULO //
             $this->load->view("phuyu/index",compact("phuyu_modulos","sistemas"));
         }else{
             $this->load->view("phuyu/404");
@@ -72,8 +97,14 @@ class Phuyu extends CI_Controller
 
 	public function cambiarsistema($codsistema){
 		if (isset($_SESSION["phuyu_codsucursal"])){
-			$_SESSION["phuyu_codsistema"] = $codsistema;
-			echo 1;
+			$sistema = $this->db->query("select codsistema from sistemas where codsistema=? and estado=1", [(int) $codsistema])->row_array();
+			if (!empty($sistema)) {
+				$_SESSION["phuyu_codsistema"] = (int) $sistema["codsistema"];
+				echo 1;
+				return;
+			}
+			$this->output->set_status_header(404);
+			echo 0;
         }else{
             $this->load->view("phuyu/404");
         }

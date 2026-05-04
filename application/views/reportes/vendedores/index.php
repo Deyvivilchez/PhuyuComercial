@@ -1,5 +1,7 @@
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
 
-<div id="phuyu_datos">
+
+<div id="phuyu_datos" class="phuyu-reportes-velzon phuyu-velzon-list">
 	<div class="phuyu_body">
 		<div class="card">
 			<div class="card-body">
@@ -8,15 +10,15 @@
 						<p style="font-size: 16px;font-weight: bold;">REPORTE VENDEDORES</p>
 					</div>
 					<div class="col-md-9" align="right">
-						<button type="button" class="btn btn-danger btn-sm" v-on:click="pdf_ventas_vendedor_resumen()"><i data-acorn-icon="print"></i> PDF RESUMEN</button>
+						<button type="button" class="btn btn-danger btn-sm" v-on:click="pdf_ventas_vendedor_resumen()"><i class="bi bi-printer"></i> PDF RESUMEN</button>
 						<button type="button" class="btn btn-danger btn-sm" v-on:click="pdf_ventas_vendedor()">
-							<i data-acorn-icon="print"></i> PDF DETALLADO
+							<i class="bi bi-printer"></i> PDF DETALLADO
 						</button>
 						<button type="button" class="btn btn-danger btn-sm" v-on:click="pdf_ventas_vendedor()" >
-							<i data-acorn-icon="print"></i> F2
+							<i class="bi bi-printer"></i> F2
 						</button>
-						<button type="button" class="btn btn-success btn-sm" v-on:click="excel_ventas_vendedor_resumen()"><i data-acorn-icon="file-text"></i> EXCEL RESUMEN</button>
-						<button type="button" class="btn btn-success btn-sm" v-on:click="excel_ventas_vendedor()"><i data-acorn-icon="file-text"></i> EXCEL DETALLADO</button>
+						<button type="button" class="btn btn-success btn-sm" v-on:click="excel_ventas_vendedor_resumen()"><i class="bi bi-file-earmark-excel"></i> EXCEL RESUMEN</button>
+						<button type="button" class="btn btn-success btn-sm" v-on:click="excel_ventas_vendedor()"><i class="bi bi-file-earmark-excel"></i> EXCEL DETALLADO</button>
 					</div>
 				</div>
 				<div class="row form-group">
@@ -34,15 +36,15 @@
 						</select>
 					</div>
 					<div class="col-md-3">
-						<label><i data-acorn-data="calendar"></i> DESDE</label>
+						<label><i class="bi bi-calendar3"></i> DESDE</label>
 						<input type="date" class="form-control" id="fechadesde" value="<?php echo date('Y-m-01');?>" autocomplete="off">
 					</div>
 					<div class="col-md-3">
-						<label><i class="fa fa-calendar"></i> HASTA</label>
+						<label><i class="bi bi-calendar3"></i> HASTA</label>
 						<input type="date" class="form-control" id="fechahasta" value="<?php echo date('Y-m-d');?>" autocomplete="off">
 					</div>
 					<div class="col-md-2" style="margin-top: 1.2rem">
-						<button type="button" class="btn btn-warning btn-icon" v-on:click="consulta_vendedores()"><i data-acorn-icon="search"></i> CONSULTAR</button>
+						<button type="button" class="btn btn-warning btn-icon" v-on:click="consulta_vendedores()"><i class="bi bi-search"></i> CONSULTAR</button>
 					</div>
 				</div>
 				<div class="row form-group mt-4" id="consulta">

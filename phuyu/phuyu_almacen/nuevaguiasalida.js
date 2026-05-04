@@ -5,7 +5,7 @@ var phuyu_operacion = new Vue({
 		campos:{
 
             codpersona:$("#codpersona").val(),codcomprobantetipo:16,seriecomprobante:$("#serie").val(), nro:"",codmotivotraslado:4,codmodalidadtraslado:'',
-			fechaguia:$("#fechatraslado").val(), fechatraslado:$("#fechatraslado").val(), descripcion:"REGISTRO POR GUIA DE REMISION", destinatario:"", direccionpartida:$("#direccionpartida").val(),descripcionmotivo:"",
+			fechaguia:$("#fechatraslado").val(), fechatraslado:$("#fechatraslado").val(), descripcion:"REGISTRO POR GUIA DE REMISION", destinatario:$("#destinatarios").val(), direccionpartida:$("#direccionpartida").val(),descripcionmotivo:"",
 			direccionllegada:$("#direccionllegada").val(),codempleado:0, codmoneda:1, tipocambio:1.00, codcentrocosto:0, nroplaca:"", retirar:true, almacenpartida:$("#almacen_principal").val(),
 			almacendestino: $("#almacen_llegada").val(),codunidad:'',peso:0,nropaquetes:0,observaciones:"",codubigeopartida:$("#ubigeopartida").val(),codubigeollegada:$("#ubigeollegada").val(),
 			coddocumentotipotransportista:0,documentotransportista:'',razonsocialtransportista:'',coddocumentotipoconductor:0,

@@ -4,6 +4,32 @@ transportista();
 conductor();
 vehiculo();
 
+function phuyu_select2_velzon(selector){
+  var $select = jQuery(selector);
+  if (!$select.length) {
+    return;
+  }
+
+  phuyu_select2_velzon_style();
+  $select.next('.select2-container').addClass('phuyu-select2-velzon');
+}
+
+function phuyu_select2_velzon_style(){
+  if (document.getElementById('phuyu-select2-velzon-style')) {
+    return;
+  }
+
+  jQuery('head').append(
+    '<style id="phuyu-select2-velzon-style">' +
+      '.phuyu-select2-velzon.select2-container{width:100%!important;}' +
+      '.phuyu-select2-velzon .select2-selection--single{display:flex!important;align-items:center!important;height:40px!important;min-height:40px!important;border:1px solid rgba(64,81,137,.16)!important;border-radius:.375rem!important;background:#fff!important;box-shadow:none!important;}' +
+      '.phuyu-select2-velzon .select2-selection__rendered{line-height:40px!important;padding-left:.75rem!important;padding-right:2rem!important;font-size:.86rem!important;font-weight:600!important;color:#343a40!important;}' +
+      '.phuyu-select2-velzon .select2-selection__arrow{height:40px!important;right:.25rem!important;}' +
+      '.phuyu-select2-velzon.select2-container--default.select2-container--focus .select2-selection--single,.phuyu-select2-velzon.select2-container--default.select2-container--open .select2-selection--single,.phuyu-select2-velzon.select2-container--bootstrap4.select2-container--focus .select2-selection--single,.phuyu-select2-velzon.select2-container--bootstrap4.select2-container--open .select2-selection--single{border-color:#405189!important;}' +
+    '</style>'
+  );
+}
+
 function destinatario(){
    var tipo = 0;
     jQuery('#codpersona').select2({
@@ -25,7 +51,7 @@ function destinatario(){
         },
         cache: true,
       },
-      placeholder: 'Search',
+      placeholder: 'Buscar...',
       escapeMarkup: function (markup) {
         return markup;
       },
@@ -39,7 +65,6 @@ function destinatario(){
         return markup;
       },
       templateSelection: function formatResultSelection(result) {
-        console.log(result.razonsocial);
         if(typeof result.razonsocial != "undefined" && phuyu_operacion.campos.codpersona!= result.codpersona && phuyu_controller != 'compras/compras'){
             phuyu_operacion.phuyu_infodestinatario(result.codpersona,result.razonsocial,result.coddocumentotipo);
         }
@@ -50,6 +75,7 @@ function destinatario(){
         return result.razonsocial;
       },
     });
+    phuyu_select2_velzon('#codpersona');
 }
 
 function remitente(){
@@ -73,7 +99,7 @@ function remitente(){
         },
         cache: true,
       },
-      placeholder: 'Search',
+      placeholder: 'Buscar...',
       escapeMarkup: function (markup) {
         return markup;
       },
@@ -87,7 +113,6 @@ function remitente(){
         return markup;
       },
       templateSelection: function formatResultSelection(result) {
-        console.log(result.razonsocial);
         if(typeof result.razonsocial != "undefined" && phuyu_operacion.campos.codremitente!= result.codpersona && phuyu_controller != 'compras/compras'){
             phuyu_operacion.phuyu_inforemitente(result.codpersona,result.razonsocial,result.coddocumentotipo,result.documento);
         }
@@ -98,6 +123,7 @@ function remitente(){
         return result.razonsocial;
       },
     });
+    phuyu_select2_velzon('#codremitente');
 }
 
 function transportista(){
@@ -121,7 +147,7 @@ function transportista(){
         },
         cache: true,
       },
-      placeholder: 'Search',
+      placeholder: 'Buscar...',
       escapeMarkup: function (markup) {
         return markup;
       },
@@ -135,7 +161,6 @@ function transportista(){
         return markup;
       },
       templateSelection: function formatResultSelection(result) {
-        console.log(result.razonsocial);
         if(typeof result.razonsocial != "undefined" && phuyu_operacion.campos.codtransportista!= result.codpersona && phuyu_controller != 'compras/compras'){
             phuyu_operacion.phuyu_infotransportista(result.codpersona,result.razonsocial,result.coddocumentotipo,result.documento);
         }
@@ -146,6 +171,7 @@ function transportista(){
         return result.razonsocial;
       },
     });
+    phuyu_select2_velzon('#codtransportista');
 }
 
 function conductor(){
@@ -168,7 +194,7 @@ function conductor(){
         },
         cache: true,
       },
-      placeholder: 'Search',
+      placeholder: 'Buscar...',
       escapeMarkup: function (markup) {
         return markup;
       },
@@ -182,7 +208,6 @@ function conductor(){
         return markup;
       },
       templateSelection: function formatResultSelection(result) {
-        //console.log(result.razonsocial);
         if(typeof result.razonsocial != "undefined" && phuyu_operacion.campos.codconductor!= result.codpersona && phuyu_controller != 'compras/compras'){
             phuyu_operacion.phuyu_infoconductor(result.codpersona,result.razonsocial,result.licenciadeconducir,result.documento,result.coddocumentotipo);
         }
@@ -193,6 +218,7 @@ function conductor(){
         return result.razonsocial;
       },
     });
+    phuyu_select2_velzon('#codconductor');
 }
 
 function vehiculo(){
@@ -215,7 +241,7 @@ function vehiculo(){
         },
         cache: true,
       },
-      placeholder: 'Search',
+      placeholder: 'Buscar...',
       escapeMarkup: function (markup) {
         return markup;
       },
@@ -226,15 +252,14 @@ function vehiculo(){
         return markup;
       },
       templateSelection: function formatResultSelection(result) {
-        console.log(result.nroplaca);
         if(typeof result.nroplaca != "undefined" && phuyu_operacion.campos.codvehiculo!= result.codvehiculo && phuyu_controller != 'compras/compras'){
             phuyu_operacion.phuyu_infovehiculo(result.codvehiculo,result.nroplaca);
         }
         if(typeof result.nroplaca == "undefined"){
-          result.nroplaca = phuyu_operacion.campos.cliente;
+          result.nroplaca = phuyu_operacion.campos.nroplaca || result.text || "Seleccione vehículo";
         }
-        //
         return result.nroplaca;
       },
     });
+    phuyu_select2_velzon('#codvehiculo');
 }

@@ -1,9 +1,11 @@
-<div id="phuyu_datos" class="container-fluid">
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<div id="phuyu_datos" class="container-fluid phuyu-velzon-list phuyu-creditos-velzon">
 	<input type="hidden" id="sessioncaja" value="<?php echo $_SESSION["phuyu_codcontroldiario"]; ?>">
 
 	<div class="row align-items-center mb-4">
 		<div class="col-12 col-lg-6 mb-3 mb-lg-0">
-			<h1 class="display-5 fw-bold mb-1" id="title">Créditos por Cobrar</h1>
+			<h4 class="fw-bold mb-1" id="title">Créditos por Cobrar</h4>
 			<nav aria-label="breadcrumb">
 				<ol class="breadcrumb mb-0">
 					<li class="breadcrumb-item"><a href="javascript:;">Inicio</a></li>
@@ -16,7 +18,7 @@
 			<div class="row g-2 justify-content-lg-end">
 				<div class="col-12 col-sm-4">
 					<label for="fechadesde" class="form-label small fw-semibold">
-						<i class="fa fa-calendar me-1"></i> DESDE
+						<i class="bi bi-calendar3 me-1"></i> DESDE
 					</label>
 					<input
 						type="date"
@@ -29,7 +31,7 @@
 
 				<div class="col-12 col-sm-4">
 					<label for="fechahasta" class="form-label small fw-semibold">
-						<i class="fa fa-calendar me-1"></i> HASTA
+						<i class="bi bi-calendar3 me-1"></i> HASTA
 					</label>
 					<input
 						type="date"
@@ -63,7 +65,7 @@
 						type="button"
 						class="btn btn-warning w-100"
 						v-on:click="phuyu_editar('CLIENTE')">
-						<i class="fa fa-edit me-1"></i> Cambiar Cliente
+						<i class="bi bi-pencil-square me-1"></i> Cambiar Cliente
 					</button>
 				</div>
 
@@ -79,12 +81,12 @@
 						<ul class="dropdown-menu w-100">
 							<li>
 								<a class="dropdown-item" href="javascript:;" v-on:click="phuyu_imprimir(0)">
-									<i class="fa fa-file-pdf-o me-2"></i> Archivo PDF
+									<i class="bi bi-file-earmark-pdf me-2"></i> Archivo PDF
 								</a>
 							</li>
 							<li>
 								<a class="dropdown-item" href="javascript:;" v-on:click="phuyu_imprimir(1)">
-									<i class="fa fa-file-excel-o me-2"></i> Archivo Excel
+									<i class="bi bi-file-earmark-excel me-2"></i> Archivo Excel
 								</a>
 							</li>
 						</ul>
@@ -103,12 +105,12 @@
 						<ul class="dropdown-menu w-100">
 							<li>
 								<a class="dropdown-item" href="javascript:;" v-on:click="phuyu_imprimirlista(0)">
-									<i class="fa fa-file-pdf-o me-2"></i> Archivo PDF
+									<i class="bi bi-file-earmark-pdf me-2"></i> Archivo PDF
 								</a>
 							</li>
 							<li>
 								<a class="dropdown-item" href="javascript:;" v-on:click="phuyu_imprimirlista(1)">
-									<i class="fa fa-file-excel-o me-2"></i> Archivo Excel
+									<i class="bi bi-file-earmark-excel me-2"></i> Archivo Excel
 								</a>
 							</li>
 						</ul>
@@ -136,7 +138,7 @@
 							v-on:keyup="phuyu_buscar()"
 							placeholder="Buscar registro...">
 						<span class="position-absolute top-50 end-0 translate-middle-y me-3 text-muted">
-							<i class="fa fa-search"></i>
+							<i class="bi bi-search"></i>
 						</span>
 					</div>
 				</div>
@@ -191,7 +193,7 @@
 										class="btn btn-info btn-sm text-white"
 										v-on:click="phuyu_imprimircronograma(dato.codcredito)"
 										title="Imprimir cronograma">
-										<i class="fa fa-print me-1"></i> Cronograma
+										<i class="bi bi-printer me-1"></i> Cronograma
 									</button>
 								</td>
 								<td class="text-center">

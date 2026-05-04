@@ -36,21 +36,64 @@ var phuyu_datos = new Vue({
 				this.campos.itemrepetircomprobante = 1;
 			}
 		},
-		phuyu_guardar: function(){
-			this.estado = 1; const formulario = new FormData($("#formulario")[0]);
-			this.$http.post(url+phuyu_controller+"/guardar", formulario).then(function(data){
-				if (data.body==1) {
-					phuyu_sistema.phuyu_noti("CONFIGURACION REGISTRADA CORRECTAMENTE","DATOS GUARDADOS EN EL SISTEMA","success");
-					setTimeout(function() {
-						location.reload();
-				    }, 1000);
-				}else{
-					phuyu_sistema.phuyu_alerta("ATENCION USUARIO","OCURRIO UN ERROR AL GUARDAR LA CONFIGURACION","error");
-				}
-			}, function(){
-				phuyu_sistema.phuyu_alerta("ATENCION USUARIO","ERROR DE RED (INTERNET)","error");
-			});
-		},
+phuyu_guardar: function(){
+
+    var formulario = new FormData(document.getElementById("formulario"));
+
+    // DEBUG: ver qué se está enviando
+    for (var pair of formulario.entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
+    }
+
+    $.ajax({
+        url: url + phuyu_controller + "/guardar",
+        type: "POST",
+        data: formulario,
+        processData: false,
+        contentType: false,
+        cache: false,
+        success: function(respuesta){
+
+            console.log("RESPUESTA BACKEND:", respuesta);
+
+            var data = respuesta;
+
+            try {
+                data = JSON.parse(respuesta);
+            } catch(e) {}
+
+            if (respuesta == 1 || data == 1) {
+
+                phuyu_sistema.phuyu_noti(
+                    "CONFIGURACION REGISTRADA CORRECTAMENTE",
+                    "DATOS GUARDADOS EN EL SISTEMA",
+                    "success"
+                );
+
+                setTimeout(function() {
+                    location.reload();
+                }, 1000);
+
+            } else {
+
+                phuyu_sistema.phuyu_alerta(
+                    "ERROR DETECTADO",
+                    typeof data === "object" ? JSON.stringify(data) : respuesta,
+                    "error"
+                );
+            }
+        },
+        error: function(xhr){
+            console.log("ERROR AJAX:", xhr.responseText);
+
+            phuyu_sistema.phuyu_alerta(
+                "ATENCION USUARIO",
+                "ERROR DE RED O SERVIDOR",
+                "error"
+            );
+        }
+    });
+},
 		obtener_ubicacion: function(){
 			var prov = this.campos.provinciacod;
 			var dis = this.campos.codubigeocod;

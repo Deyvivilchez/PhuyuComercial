@@ -8,11 +8,11 @@ $query_builder = TRUE;
 
 $db['default'] = array(
 	'dsn'	=> '',
-	'hostname' => '127.0.0.1',
-	'port' => '5432',
-	'username' => 'postgres',
-	'password' => '2204',
-	'database' => 'motorepuestos',
+	'hostname' => getenv('DB_HOST') ?: '127.0.0.1',
+	'port' => getenv('DB_PORT') ?: '5432',
+	'username' => getenv('DB_USER') ?: 'postgres',
+	'password' => getenv('DB_PASS') !== false ? getenv('DB_PASS') : '2204',
+	'database' => getenv('DB_NAME') ?: 'motorepuestos',
 	'dbdriver' => 'postgre',
 	'dbprefix' => '',
 	'pconnect' => FALSE,
@@ -26,7 +26,7 @@ $db['default'] = array(
 	'compress' => FALSE,
 	'stricton' => FALSE,
 	'failover' => array(),
-	'save_queries' => TRUE
+	'save_queries' => (ENVIRONMENT !== 'production')
 );
 
 // $db['default'] = array(
