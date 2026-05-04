@@ -23,7 +23,7 @@ class Configuraciones extends CI_Controller {
 		}
 	}
 
-	function guardar(){
+	function guardar1(){
 		if ($this->input->is_ajax_request()) {
 			/* $dep = substr($_POST["ubigeo"],0,2); $pro = substr($_POST["ubigeo"],2,2); $dis = substr($_POST["ubigeo"],4,2); $codubigeo = 0;
 			$ubigeo = $this->db->query("select codubigeo from public.ubigeo where ubidepartamento='".$dep."' and ubiprovincia='".$pro."' and ubidistrito='".$dis."'")->result_array();
@@ -93,6 +93,8 @@ class Configuraciones extends CI_Controller {
 			$this->load->view("phuyu/404");
 		}
 	}
+
+	
 
 	// application/controllers/administracion/Configuraciones.php ///
 
