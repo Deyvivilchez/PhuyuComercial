@@ -116,4 +116,13 @@ ALTER COLUMN horaapertura SET DEFAULT CURRENT_TIME;
 ALTER TABLE caja.controldiario
 ADD COLUMN IF NOT EXISTS horacierre TIME WITHOUT TIME ZONE;
 
--- fin horas de apertura y cierre para arqueos de caja
+-- fin horas de apertura y cierre para arqueos de caja 
+
+-- /usr/bin/php7.4 $(which composer) install
+
+--/usr/bin/php7.4 $(which composer) dump-autoload -o.   
+---  los comoando s de arriba son para acutlizar el composer y generar el 
+-- autoload optimizado para que reconozca las nuevas clases de migraciones y se puedan ejecutar sin problemas.
+
+-- /usr/bin/php7.4 $(which composer) install   # para proyectos viejos
+-- /usr/bin/php8.2 $(which composer) install   # para proyectos nuevos
