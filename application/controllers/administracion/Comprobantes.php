@@ -147,23 +147,23 @@ class Comprobantes extends CI_Controller {
 
 	function guardar(){
 		if ($this->input->is_ajax_request()) {
-			$this->request = json_decode(file_get_contents('php://input'));
-			//echo 1;exit;
 			$this->db->trans_begin();
 
 			$_POST["publicidad"] = (isset($_POST["publicidad"])) ? $_POST["publicidad"] : "";
 			$_POST["agradecimiento"] = (isset($_POST["agradecimiento"])) ? $_POST["agradecimiento"] : "";
+			$_POST["slogan"] = (isset($_POST["slogan"])) ? $_POST["slogan"] : "";
+			$_POST["impresion"] = (isset($_POST["impresion"])) ? $_POST["impresion"] : 0;
+			$_POST["formato"] = (isset($_POST["formato"])) ? $_POST["formato"] : "a4";
+			$_POST["orientacion"] = (isset($_POST["orientacion"])) ? $_POST["orientacion"] : "p";
+			$_POST["impresora"] = (isset($_POST["impresora"])) ? $_POST["impresora"] : "";
+			$_POST["impresionlogo"] = (isset($_POST["impresionlogo"])) ? $_POST["impresionlogo"] : 1;
+
 			if($_POST["codregistro"]=="") {
-				$campos = ["codsucursal","codcomprobantetipo","codcaja","codalmacen","seriecomprobante","nroinicial","nrocorrelativo","codcomprobantetipo_ref","seriecomprobante_ref","impresion","formato","orientacion","impresora","logo","logoauspiciador","tipoconleyendaamazonia","nombrecomercial","publicidad","agradecimiento","impresionlogo"];
+				$campos = ["codsucursal","codcomprobantetipo","codcaja","codalmacen","seriecomprobante","nroinicial","nrocorrelativo","codcomprobantetipo_ref","seriecomprobante_ref","impresion","formato","orientacion","impresora","logo","logoauspiciador","slogan","tipoconleyendaamazonia","nombrecomercial","publicidad","agradecimiento","impresionlogo"];
 
 				$_POST["codcaja"] = (isset($_POST["codcaja"])) ? $_POST["codcaja"] : "";
 				$_POST["codalmacen"] = (isset($_POST["codalmacen"])) ? $_POST["codalmacen"] : "";
 				$_POST["codcomprobantetipo_ref"] = (isset($_POST["codcomprobantetipo_ref"])) ? $_POST["codcomprobantetipo_ref"] : "";
-				$_POST["impresion"] = (isset($_POST["impresion"])) ? $_POST["impresion"] : 1;
-				$_POST["formato"] = (isset($_POST["formato"])) ? $_POST["formato"] : "a4"; 
-				$_POST["orientacion"] = (isset($_POST["orientacion"])) ? $_POST["orientacion"] : "p";
-				$_POST["impresora"] = (isset($_POST["impresora"])) ? $_POST["impresora"] : "";
-				$_POST["impresionlogo"] = (isset($_POST["impresionlogo"])) ? $_POST["impresionlogo"] : 1;
 
 				if ($_POST["codcaja"]=="") {
 					$_POST["codcaja"] = 0;
@@ -172,18 +172,26 @@ class Comprobantes extends CI_Controller {
 					$_POST["codalmacen"] = 0;
 				}
 
-				if ($_FILES["logoa"]["name"]!="") {
-					$logo = "logo_".substr($_FILES["logoa"]["name"],-5);
-					move_uploaded_file($_FILES["logoa"]["tmp_name"],"./public/img/empresa/".$file);
-					
+				$logoSubido = $this->guardar_imagen_comprobante("logoa", "logo");
+				if ($logoSubido === false) {
+					$this->db->trans_rollback();
+					echo 0;
+					return;
+				}
+				if ($logoSubido !== null) {
+					$logo = $logoSubido;
 				}else{
 					$persona = $this->db->query("select *from public.personas where codpersona=1")->result_array();
 					$logo = $persona[0]["foto"];
 				}
-				if ($_FILES["auspiciadora"]["name"]!="") {
-					$auspiciador = "auspiciador_".substr($_FILES["auspiciadora"]["name"],-5);
-					move_uploaded_file($_FILES["auspiciadora"]["tmp_name"],"./public/img/empresa/".$file);
-					
+				$auspiciadorSubido = $this->guardar_imagen_comprobante("auspiciadora", "auspiciador");
+				if ($auspiciadorSubido === false) {
+					$this->db->trans_rollback();
+					echo 0;
+					return;
+				}
+				if ($auspiciadorSubido !== null) {
+					$auspiciador = $auspiciadorSubido;
 				}else{
 					$persona = $this->db->query("select *from public.empresas where codempresa=1")->result_array();
 					$auspiciador = $persona[0]["logoauspiciador"];
@@ -206,41 +214,40 @@ class Comprobantes extends CI_Controller {
 					(int)$comprobantetipo_ref,$seriecomprobante_ref,
 					(int)$_POST["impresion"],
 					$_POST["formato"],$_POST["orientacion"],$_POST["impresora"],
-					$logo,$auspiciador,(int)$_POST["tipoconleyendaamazonia"],
+					$logo,$auspiciador,$_POST["slogan"],(int)$_POST["tipoconleyendaamazonia"],
 					$_POST["nombrecomercial"],
 					$_POST["publicidad"],
 					$_POST["agradecimiento"], $_POST["impresionlogo"]
 				];
 				$estado = $this->phuyu_model->phuyu_guardar("caja.comprobantes", $campos, $valores);
 			}else{
-				$_POST["slogan"] = (isset($_POST["slogan"])) ? $_POST["slogan"] : "";
 				$_POST["logo"] = (isset($_POST["logo"])) ? $_POST["logo"] : "";
 				$_POST["auspiciador"] = (isset($_POST["auspiciador"])) ? $_POST["auspiciador"] : "";
-				if(isset($_FILES["logoa"]["name"])){
-					if ($_FILES["logoa"]["name"]!=$_POST["logo"] && $_FILES["logoa"]["name"] !="") {
-						$logo = "logo_".substr($_FILES["logoa"]["name"],-5);
-						move_uploaded_file($_FILES["logoa"]["tmp_name"],"./public/img/empresa/".$logo);
-						
-					}else{
-						$logo = $_POST["logo"];
-					}
+				$logoSubido = $this->guardar_imagen_comprobante("logoa", "logo");
+				if ($logoSubido === false) {
+					$this->db->trans_rollback();
+					echo 0;
+					return;
+				}
+				if ($logoSubido !== null) {
+					$logo = $logoSubido;
 				}else{
 					$logo = $_POST["logo"];
 				}
-				if(isset($_FILES["auspiciadora"]["name"])){
-					if ($_FILES["auspiciadora"]["name"]!=$_POST["auspiciador"]) {
-						$auspiciador = "auspiciador_".substr($_FILES["auspiciadora"]["name"],-5);
-						move_uploaded_file($_FILES["auspiciadora"]["tmp_name"],"./public/img/empresa/".$auspiciador);
-						
-					}else{
-						$auspiciador = $_POST["logoauspiciador"];
-					}
+				$auspiciadorSubido = $this->guardar_imagen_comprobante("auspiciadora", "auspiciador");
+				if ($auspiciadorSubido === false) {
+					$this->db->trans_rollback();
+					echo 0;
+					return;
+				}
+				if ($auspiciadorSubido !== null) {
+					$auspiciador = $auspiciadorSubido;
 				}else{
 					$auspiciador = $_POST["logoauspiciador"];
 				}
 
-				$campos = ["nroinicial","nrocorrelativo","logo","logoauspiciador","slogan","tipoconleyendaamazonia","nombrecomercial","publicidad","agradecimiento","impresionlogo"];
-				$valores = [(int)$_POST["nroinicial"],(int)$_POST["nrocorrelativo"],$logo,$auspiciador,$_POST["slogan"],(int)$_POST["tipoconleyendaamazonia"],$_POST["nombrecomercial"],$_POST["publicidad"],$_POST["agradecimiento"],$_POST["impresionlogo"]];
+				$campos = ["nroinicial","nrocorrelativo","impresion","formato","orientacion","impresora","logo","logoauspiciador","slogan","tipoconleyendaamazonia","nombrecomercial","publicidad","agradecimiento","impresionlogo"];
+				$valores = [(int)$_POST["nroinicial"],(int)$_POST["nrocorrelativo"],(int)$_POST["impresion"],$_POST["formato"],$_POST["orientacion"],$_POST["impresora"],$logo,$auspiciador,$_POST["slogan"],(int)$_POST["tipoconleyendaamazonia"],$_POST["nombrecomercial"],$_POST["publicidad"],$_POST["agradecimiento"],$_POST["impresionlogo"]];
 				$f = ["codsucursal","codcomprobantetipo","seriecomprobante"];
 				$v = [$_POST["codsucursal_editar"],$_POST["codcomprobantetipo_editar"],$_POST["seriecomprobante_editar"]];
 				$estado = $this->phuyu_model->phuyu_editar_1("caja.comprobantes", $campos, $valores, $f, $v);
@@ -250,13 +257,49 @@ class Comprobantes extends CI_Controller {
 			}else{
 				if ($estado!=1) { 
 					$this->db->trans_rollback(); $estado = 0; 
+				}else{
+					$this->db->trans_commit();
 				}
-				$this->db->trans_commit();
 			}
 			echo $estado;
 		}else{
 			$this->load->view("phuyu/404");
 		}
+	}
+
+	private function guardar_imagen_comprobante($campo, $prefijo){
+		if (!isset($_FILES[$campo]) || $_FILES[$campo]["name"] == "") {
+			return null;
+		}
+
+		if ($_FILES[$campo]["error"] !== UPLOAD_ERR_OK || !is_uploaded_file($_FILES[$campo]["tmp_name"])) {
+			log_message("error", "Upload invalido en comprobantes. Campo=" . $campo . " error=" . $_FILES[$campo]["error"]);
+			return false;
+		}
+
+		$destino = FCPATH . "public/img/empresa/";
+		if (!is_dir($destino)) {
+			@mkdir($destino, 0775, true);
+		}
+		if (!is_dir($destino) || !is_writable($destino)) {
+			log_message("error", "Directorio de logos de comprobantes no escribible: " . $destino);
+			return false;
+		}
+
+		$extension = strtolower(pathinfo($_FILES[$campo]["name"], PATHINFO_EXTENSION));
+		$extensionesPermitidas = ["jpg", "jpeg", "png", "gif", "webp"];
+		if (!in_array($extension, $extensionesPermitidas, true)) {
+			log_message("error", "Extension de imagen no permitida en comprobantes. Campo=" . $campo . " extension=" . $extension);
+			return false;
+		}
+
+		$nombre = $prefijo . "_comprobante_" . date("YmdHis") . "_" . mt_rand(1000, 9999) . "." . $extension;
+		if (!@move_uploaded_file($_FILES[$campo]["tmp_name"], $destino . $nombre)) {
+			log_message("error", "No se pudo guardar imagen de comprobante. Campo=" . $campo . " destino=" . $destino . $nombre);
+			return false;
+		}
+
+		return $nombre;
 	}
 
 	function editar(){

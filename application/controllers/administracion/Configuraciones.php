@@ -66,13 +66,22 @@ class Configuraciones extends CI_Controller {
 			$estado = $this->phuyu_model->phuyu_editar("public.empresas", $campos, $valores,"codempresa",$_POST["codempresa"]);
 
 			$file = $this->guardar_imagen_configuracion("logo", "logo");
-			if ($file !== "") {
+			if ($file === false) {
+				echo 0;
+				return;
+			}
+			if ($file !== null) {
 				$data = array("foto" => $file);
 				$this->db->where("codpersona",$_POST["codpersona"]);
 				$estado = $this->db->update("public.personas",$data);
+				$_SESSION["phuyu_logo"] = "empresa/".$file;
 			}
 			$file = $this->guardar_imagen_configuracion("auspiciador", "auspiciador");
-			if ($file !== "") {
+			if ($file === false) {
+				echo 0;
+				return;
+			}
+			if ($file !== null) {
 				$data = array("logoauspiciador" => $file);
 				$this->db->where("codempresa",$_POST["codempresa"]);
 				$estado = $this->db->update("public.empresas",$data);
@@ -96,28 +105,34 @@ class Configuraciones extends CI_Controller {
 
 	private function guardar_imagen_configuracion($campo, $prefijo){
 		if (!isset($_FILES[$campo]) || $_FILES[$campo]["name"] == "") {
-			return "";
+			return null;
 		}
 
 		if ($_FILES[$campo]["error"] !== UPLOAD_ERR_OK || !is_uploaded_file($_FILES[$campo]["tmp_name"])) {
-			return "";
+			log_message("error", "Upload invalido en configuracion. Campo=" . $campo . " error=" . $_FILES[$campo]["error"]);
+			return false;
 		}
 
 		$destino = FCPATH . "public/img/empresa/";
 		if (!is_dir($destino)) {
 			@mkdir($destino, 0775, true);
 		}
+		if (!is_dir($destino) || !is_writable($destino)) {
+			log_message("error", "Directorio de logos no escribible: " . $destino);
+			return false;
+		}
 
 		$extension = strtolower(pathinfo($_FILES[$campo]["name"], PATHINFO_EXTENSION));
 		$extensionesPermitidas = ["jpg", "jpeg", "png", "gif", "webp"];
 		if (!in_array($extension, $extensionesPermitidas, true)) {
-			return "";
+			log_message("error", "Extension de imagen no permitida en configuracion. Campo=" . $campo . " extension=" . $extension);
+			return false;
 		}
 
 		$nombre = $prefijo . "_" . date("YmdHis") . "_" . mt_rand(1000, 9999) . "." . $extension;
 		if (!@move_uploaded_file($_FILES[$campo]["tmp_name"], $destino . $nombre)) {
 			log_message("error", "No se pudo guardar imagen de configuracion. Campo=" . $campo . " destino=" . $destino . $nombre);
-			return "";
+			return false;
 		}
 
 		return $nombre;

@@ -124,6 +124,37 @@
             transition: height 0.2s ease;
         }
 
+        .app-menu {
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-menu #scrollbar {
+            height: calc(100vh - 70px);
+            max-height: calc(100vh - 70px);
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+        }
+
+        .app-menu #scrollbar .container-fluid {
+            padding-bottom: 1.75rem;
+        }
+
+        .app-menu #scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .app-menu #scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.28);
+            border-radius: 999px;
+        }
+
+        .app-menu #scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
         .app-menu .navbar-nav .menu-link.collapsed[aria-expanded="false"]::after {
             transform: rotate(0deg);
         }

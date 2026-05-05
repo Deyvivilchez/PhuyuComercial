@@ -8,6 +8,7 @@
 		<input type="hidden" v-model="campos.codcomprobantetipo_editar" name="codcomprobantetipo_editar">
 		<input type="hidden" v-model="campos.logo" name="logo">
 		<input type="hidden" v-model="campos.logoauspiciador" name="logoauspiciador">
+		<input type="hidden" v-model="campos.impresion" name="impresion">
 
 		<div class="card phuyu-card">
 			<div class="card-body">
@@ -98,7 +99,7 @@
 					<div class="row g-3">
 						<div class="col-12 col-md-6">
 							<label class="form-label">Formato</label>
-							<select v-model="campos.formato" class="form-select" required>
+							<select v-model="campos.formato" class="form-select" name="formato" required>
 								<option value="a4">A4</option>
 								<option value="a5">A5</option>
 								<option value="ticket">TICKET</option>
@@ -107,7 +108,7 @@
 
 						<div class="col-12 col-md-6">
 							<label class="form-label">Orientacion</label>
-							<select v-model="campos.orientacion" class="form-select" required>
+							<select v-model="campos.orientacion" class="form-select" name="orientacion" required>
 								<option value="h">HORIZONTAL</option>
 								<option value="p">VERTICAL</option>
 							</select>
