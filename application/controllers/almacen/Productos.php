@@ -1739,7 +1739,7 @@ class Productos extends CI_Controller
         $codmarca = $this->resolver_catalogo('marcas', 'codmarca', $marca, 'GENERICO');
         $codunidad = $this->resolver_unidad($unidad);
 
-        if ($codfamilia == 0 || $codlinea == 0 || $codmarca == 0 || $codunidad == 0) {
+        if ($codfamilia === null || $codlinea === null || $codmarca === null || $codunidad === null) {
             return ['estado' => 0, 'mensaje' => 'Fila ' . $row . ': no se pudo resolver familia, linea, marca o unidad.'];
         }
 
@@ -1906,7 +1906,7 @@ class Productos extends CI_Controller
             $this->asegurar_linea_sucursal($codigo);
         }
 
-        return $codigo;
+        return $codigo > 0 ? $codigo : null;
     }
 
     private function resolver_unidad($valor)
@@ -1940,7 +1940,8 @@ class Productos extends CI_Controller
             'estado' => 1
         ]);
 
-        return $this->ultimo_id_insertado('almacen.unidades', 'codunidad');
+        $codigo = $this->ultimo_id_insertado('almacen.unidades', 'codunidad');
+        return $codigo > 0 ? $codigo : null;
     }
 
     private function resolver_afectacion($valor, $defecto)

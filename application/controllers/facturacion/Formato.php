@@ -56,6 +56,46 @@ class Formato extends CI_Controller
         return file_exists($cachePath) ? $cachePath : $path;
     }
 
+    private function phuyu_whatsapp_secret()
+    {
+        $secret = getenv('WHATSAPP_SHARE_SECRET');
+        if ($secret !== false && $secret !== '') {
+            return $secret;
+        }
+
+        return $this->config->item('encryption_key');
+    }
+
+    private function phuyu_whatsapp_token($codkardex, $formato, $expira)
+    {
+        return hash_hmac('sha256', (int)$codkardex . '|' . $formato . '|' . (int)$expira, $this->phuyu_whatsapp_secret());
+    }
+
+    private function phuyu_whatsapp_autorizado($codkardex, $formato)
+    {
+        $token = $this->input->get('wa', true);
+        $expira = (int)$this->input->get('exp');
+
+        if (empty($token) || $expira < time()) {
+            return false;
+        }
+
+        return hash_equals($this->phuyu_whatsapp_token($codkardex, $formato, $expira), $token);
+    }
+
+    private function phuyu_codsucursal_comprobante($codkardex)
+    {
+        if (!empty($_SESSION['phuyu_codsucursal'])) {
+            return (int)$_SESSION['phuyu_codsucursal'];
+        }
+
+        $venta = $this->db->query(
+            'select codsucursal from kardex.kardex where codkardex=' . (int)$codkardex . ' limit 1'
+        )->row_array();
+
+        return !empty($venta['codsucursal']) ? (int)$venta['codsucursal'] : 0;
+    }
+
     public function formato_guia($codguiar)
     {
         $estilo = 'border-left:1px solid #000; border-right:1px solid #000;';
@@ -878,16 +918,18 @@ class Formato extends CI_Controller
     // }
     public function a4($codkardex)
 {
-    if (!isset($_SESSION["phuyu_usuario"])) {
-        $this->load->view("phuyu/505");
-        return;
-    }
-
     $codkardex = (int)$codkardex;
     if ($codkardex <= 0) {
         show_error("Código de comprobante inválido.", 400);
         return;
     }
+
+    if (!isset($_SESSION["phuyu_usuario"]) && !$this->phuyu_whatsapp_autorizado($codkardex, 'a4')) {
+        $this->load->view("phuyu/505");
+        return;
+    }
+
+    $codsucursal = $this->phuyu_codsucursal_comprobante($codkardex);
 
     $empresa = $this->db->query("
         SELECT documento, razonsocial, nombrecomercial
@@ -898,7 +940,7 @@ class Formato extends CI_Controller
     $sucursal = $this->db->query("
         SELECT *
         FROM public.sucursales
-        WHERE codsucursal = " . (int)$_SESSION['phuyu_codsucursal']
+        WHERE codsucursal = " . (int)$codsucursal
     )->row_array();
 
     $principal = $this->db->query("
@@ -1008,7 +1050,7 @@ class Formato extends CI_Controller
         FROM caja.comprobantes
         WHERE codcomprobantetipo = " . (int)$venta['codcomprobantetipo'] . "
           AND seriecomprobante = " . $this->db->escape($venta['seriecomprobante']) . "
-          AND codsucursal = " . (int)$_SESSION['phuyu_codsucursal'] . "
+          AND codsucursal = " . (int)$codsucursal . "
         LIMIT 1
     ")->row_array();
 
@@ -1683,16 +1725,18 @@ class Formato extends CI_Controller
 
     public function a5($codkardex)
 {
-    if (!isset($_SESSION["phuyu_usuario"])) {
-        $this->load->view("phuyu/505");
-        return;
-    }
-
     $codkardex = (int)$codkardex;
     if ($codkardex <= 0) {
         show_error("Código de comprobante inválido.", 400);
         return;
     }
+
+    if (!isset($_SESSION["phuyu_usuario"]) && !$this->phuyu_whatsapp_autorizado($codkardex, 'a5')) {
+        $this->load->view("phuyu/505");
+        return;
+    }
+
+    $codsucursal = $this->phuyu_codsucursal_comprobante($codkardex);
 
     $empresa = $this->db->query("
         SELECT documento, razonsocial, nombrecomercial
@@ -1703,7 +1747,7 @@ class Formato extends CI_Controller
     $sucursal = $this->db->query("
         SELECT *
         FROM public.sucursales
-        WHERE codsucursal = " . (int)$_SESSION['phuyu_codsucursal']
+        WHERE codsucursal = " . (int)$codsucursal
     )->row_array();
 
     $parametros = $this->db->query("
@@ -1802,7 +1846,7 @@ class Formato extends CI_Controller
         FROM caja.comprobantes
         WHERE codcomprobantetipo = " . (int)$venta['codcomprobantetipo'] . "
           AND seriecomprobante = " . $this->db->escape($venta['seriecomprobante']) . "
-          AND codsucursal = " . (int)$_SESSION['phuyu_codsucursal'] . "
+          AND codsucursal = " . (int)$codsucursal . "
         LIMIT 1
     ")->row_array();
 
@@ -1954,16 +1998,18 @@ class Formato extends CI_Controller
 
      public function ticket($codkardex)
     {
-        if (!isset($_SESSION['phuyu_codusuario'])) {
-            $this->load->view('phuyu/404');
-            return;
-        }
-
         $codkardex = (int)$codkardex;
         if ($codkardex <= 0) {
             show_error('Código inválido.', 400);
             return;
         }
+
+        if (!isset($_SESSION['phuyu_codusuario']) && !$this->phuyu_whatsapp_autorizado($codkardex, 'ticket')) {
+            $this->load->view('phuyu/404');
+            return;
+        }
+
+        $codsucursal = $this->phuyu_codsucursal_comprobante($codkardex);
 
         $empresa = $this->db->query("
         SELECT documento, razonsocial, nombrecomercial
@@ -1975,7 +2021,7 @@ class Formato extends CI_Controller
                 SELECT sucursal.*, empresa.*
                 FROM public.sucursales AS sucursal
                 INNER JOIN public.empresas AS empresa ON (sucursal.codempresa = empresa.codempresa)
-                WHERE sucursal.codsucursal = " . (int)$_SESSION['phuyu_codsucursal'] . "
+                WHERE sucursal.codsucursal = " . (int)$codsucursal . "
             ")->row_array();
 
                 $parametros = $this->db->query("
@@ -2084,7 +2130,7 @@ class Formato extends CI_Controller
                 FROM caja.comprobantes
                 WHERE codcomprobantetipo = " . (int)$venta['codcomprobantetipo'] . "
                 AND seriecomprobante = " . $this->db->escape($venta['seriecomprobante']) . "
-                AND codsucursal = " . (int)$_SESSION['phuyu_codsucursal'] . "
+                AND codsucursal = " . (int)$codsucursal . "
                 LIMIT 1
             ")->row_array();
 
