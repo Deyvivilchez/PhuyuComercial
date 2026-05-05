@@ -23,7 +23,7 @@ class Configuraciones extends CI_Controller {
 		}
 	}
 
-	function guardar1(){
+	function guardar(){
 		if ($this->input->is_ajax_request()) {
 			/* $dep = substr($_POST["ubigeo"],0,2); $pro = substr($_POST["ubigeo"],2,2); $dis = substr($_POST["ubigeo"],4,2); $codubigeo = 0;
 			$ubigeo = $this->db->query("select codubigeo from public.ubigeo where ubidepartamento='".$dep."' and ubiprovincia='".$pro."' and ubidistrito='".$dis."'")->result_array();
@@ -65,18 +65,14 @@ class Configuraciones extends CI_Controller {
 			$_POST["urlconsultacomprobantes"]];
 			$estado = $this->phuyu_model->phuyu_editar("public.empresas", $campos, $valores,"codempresa",$_POST["codempresa"]);
 
-			if ($_FILES["logo"]["name"]!="") {
-				$file = "logo_".substr($_FILES["logo"]["name"],-5);
-				move_uploaded_file($_FILES["logo"]["tmp_name"],"./public/img/empresa/".$file);
-				
+			$file = $this->guardar_imagen_configuracion("logo", "logo");
+			if ($file !== "") {
 				$data = array("foto" => $file);
 				$this->db->where("codpersona",$_POST["codpersona"]);
 				$estado = $this->db->update("public.personas",$data);
 			}
-			if ($_FILES["auspiciador"]["name"]!="") {
-				$file = "auspiciador_".substr($_FILES["auspiciador"]["name"],-5);
-				move_uploaded_file($_FILES["auspiciador"]["tmp_name"],"./public/img/empresa/".$file);
-				
+			$file = $this->guardar_imagen_configuracion("auspiciador", "auspiciador");
+			if ($file !== "") {
 				$data = array("logoauspiciador" => $file);
 				$this->db->where("codempresa",$_POST["codempresa"]);
 				$estado = $this->db->update("public.empresas",$data);
@@ -92,6 +88,39 @@ class Configuraciones extends CI_Controller {
 		}else{
 			$this->load->view("phuyu/404");
 		}
+	}
+
+	function guardar1(){
+		return $this->guardar();
+	}
+
+	private function guardar_imagen_configuracion($campo, $prefijo){
+		if (!isset($_FILES[$campo]) || $_FILES[$campo]["name"] == "") {
+			return "";
+		}
+
+		if ($_FILES[$campo]["error"] !== UPLOAD_ERR_OK || !is_uploaded_file($_FILES[$campo]["tmp_name"])) {
+			return "";
+		}
+
+		$destino = FCPATH . "public/img/empresa/";
+		if (!is_dir($destino)) {
+			@mkdir($destino, 0775, true);
+		}
+
+		$extension = strtolower(pathinfo($_FILES[$campo]["name"], PATHINFO_EXTENSION));
+		$extensionesPermitidas = ["jpg", "jpeg", "png", "gif", "webp"];
+		if (!in_array($extension, $extensionesPermitidas, true)) {
+			return "";
+		}
+
+		$nombre = $prefijo . "_" . date("YmdHis") . "_" . mt_rand(1000, 9999) . "." . $extension;
+		if (!@move_uploaded_file($_FILES[$campo]["tmp_name"], $destino . $nombre)) {
+			log_message("error", "No se pudo guardar imagen de configuracion. Campo=" . $campo . " destino=" . $destino . $nombre);
+			return "";
+		}
+
+		return $nombre;
 	}
 
 	
