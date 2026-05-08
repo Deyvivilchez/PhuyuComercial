@@ -7,6 +7,46 @@ class Empresa extends CI_Controller {
 		$this->load->model("phuyu_model"); $this->load->model("Caja_model"); $this->load->model("Kardex_model");
 	}
 
+	private function phuyu_generar_pem_desde_pfx($archivo_pfx, $clave, $carpeta_certificados){
+		if (!is_readable($archivo_pfx)) {
+			throw new Exception("No se puede leer el certificado PFX: ".$archivo_pfx);
+		}
+
+		$carpeta_certificados = rtrim($carpeta_certificados, "/");
+		if (!is_dir($carpeta_certificados) || !is_writable($carpeta_certificados)) {
+			throw new Exception("La carpeta de certificados no tiene permisos de escritura: ".$carpeta_certificados);
+		}
+
+		$pkcs12 = file_get_contents($archivo_pfx);
+		$certificados = array();
+		$respuesta = openssl_pkcs12_read($pkcs12, $certificados, $clave);
+
+		if (!$respuesta || empty($certificados["cert"]) || empty($certificados["pkey"])) {
+			$errores = array();
+			while ($error = openssl_error_string()) {
+				$errores[] = $error;
+			}
+			throw new Exception("No se pudo leer el PFX. Verifica la clave del certificado. ".implode(" | ", $errores));
+		}
+
+		$this->phuyu_reemplazar_archivo_pem($carpeta_certificados."/private_key.pem", $certificados["pkey"]);
+		$this->phuyu_reemplazar_archivo_pem($carpeta_certificados."/public_key.pem", $certificados["cert"]);
+	}
+
+	private function phuyu_reemplazar_archivo_pem($ruta, $contenido){
+		$tmp = dirname($ruta)."/.".basename($ruta).".".getmypid().".tmp";
+		if (file_put_contents($tmp, $contenido, LOCK_EX) === false) {
+			throw new Exception("No se pudo escribir el archivo temporal: ".$tmp);
+		}
+		chmod($tmp, 0644);
+
+		if (!@rename($tmp, $ruta)) {
+			@unlink($tmp);
+			throw new Exception("No se pudo reemplazar el archivo PEM: ".$ruta);
+		}
+		chmod($ruta, 0644);
+	}
+
 	public function index(){
 		if ($this->input->is_ajax_request()) {
 			$info = $this->db->query("select *from public.personas where codpersona=".$_SESSION["phuyu_codempresa"])->result_array();
@@ -167,63 +207,7 @@ class Empresa extends CI_Controller {
                 $this->db->where("codempresa", $_POST["codempresa"]);
                 $estado = $this->db->update("public.webservice", $data);
 
-                // SOLUCIÓN: CREAR ARCHIVOS PEM USANDO OPENSSL COMMAND LINE
-                $clave = $_POST["certificado_clave"];
-                $private_key_file = $carpeta_certificados . "private_key.pem";
-                $cert_file = $carpeta_certificados . "public_key.pem";
-
-                // PRIMER INTENTO: Con legacy
-                $command_private = "openssl pkcs12 -in '" . $destination . "' -nocerts -out '" . $private_key_file . "' -nodes -passin pass:'" . $clave . "' -legacy 2>&1";
-                $command_cert = "openssl pkcs12 -in '" . $destination . "' -nokeys -out '" . $cert_file . "' -nodes -passin pass:'" . $clave . "' -legacy 2>&1";
-
-                exec($command_private, $output_private, $return_var_private);
-                exec($command_cert, $output_cert, $return_var_cert);
-
-                // SEGUNDO INTENTO: Si falla, probar con algoritmos específicos
-                if ($return_var_private !== 0 || $return_var_cert !== 0) {
-                    $command_private = "openssl pkcs12 -in '" . $destination . "' -nocerts -out '" . $private_key_file . "' -nodes -passin pass:'" . $clave . "' -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES 2>&1";
-                    $command_cert = "openssl pkcs12 -in '" . $destination . "' -nokeys -out '" . $cert_file . "' -nodes -passin pass:'" . $clave . "' -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES 2>&1";
-                    
-                    exec($command_private, $output_private, $return_var_private);
-                    exec($command_cert, $output_cert, $return_var_cert);
-                }
-
-                // TERCER INTENTO: Si aún falla, probar sin opciones
-                if ($return_var_private !== 0 || $return_var_cert !== 0) {
-                    $command_private = "openssl pkcs12 -in '" . $destination . "' -nocerts -out '" . $private_key_file . "' -nodes -passin pass:'" . $clave . "' 2>&1";
-                    $command_cert = "openssl pkcs12 -in '" . $destination . "' -nokeys -out '" . $cert_file . "' -nodes -passin pass:'" . $clave . "' 2>&1";
-                    
-                    exec($command_private, $output_private, $return_var_private);
-                    exec($command_cert, $output_cert, $return_var_cert);
-                }
-
-                // VERIFICAR RESULTADO
-                if ($return_var_private === 0 && $return_var_cert === 0) {
-                    // Verificar que los archivos se crearon correctamente
-                    if (file_exists($private_key_file) && filesize($private_key_file) > 0 && 
-                        file_exists($cert_file) && filesize($cert_file) > 0) {
-                        
-                        chmod($private_key_file, 0644);
-                        chmod($cert_file, 0644);
-                        error_log("✅ Certificado procesado exitosamente");
-                    } else {
-                        throw new Exception("Archivos PEM creados pero vacíos");
-                    }
-                } else {
-                    $error_msg = "Error al procesar certificado:\n";
-                    if ($return_var_private !== 0) {
-                        $error_msg .= "Clave privada: " . implode(" ", $output_private) . "\n";
-                    }
-                    if ($return_var_cert !== 0) {
-                        $error_msg .= "Certificado: " . implode(" ", $output_cert);
-                    }
-                    
-                    // Limpiar archivos en caso de error
-                    if (file_exists($private_key_file)) unlink($private_key_file);
-                    if (file_exists($cert_file)) unlink($cert_file);
-                    
-                    throw new Exception($error_msg);
-                }
+                $this->phuyu_generar_pem_desde_pfx($destination, $_POST["certificado_clave"], $carpeta_certificados);
             }
 
             // Actualizar sesión

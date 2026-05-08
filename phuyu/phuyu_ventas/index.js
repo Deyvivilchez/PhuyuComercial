@@ -3,7 +3,7 @@ var phuyu_ventas = new Vue({
 	data: {
 		cargando: true, registro:0, estado:0, buscar: "", formato_impresion: $("#formato").val(), datos: [], fechas:{"filtro":1,"desde":"","hasta":""},
 		paginacion: {"total":0, "actual":1, "ultima":0, "desde":0, "hasta":0}, offset: 3,
-		whatsapp: {codkardex:0, codigo:'+51', tipo_envio:'pdf', telefono:"", comprobante:"", enviando:false, error:""}
+		whatsapp: {codkardex:0, codigo:'+51', tipo_envio:'link', telefono:"", comprobante:"", enviando:false, error:""}
 	},
 	computed: {
 		phuyu_actual: function(){
@@ -271,7 +271,7 @@ var phuyu_ventas = new Vue({
 			var telefono = this.phuyu_whatsapp_telefono(dato.telefono);
 			this.whatsapp.codkardex = dato.codkardex;
 			this.whatsapp.codigo = telefono.codigo;
-			this.whatsapp.tipo_envio = 'pdf';
+			this.whatsapp.tipo_envio = 'link';
 			this.whatsapp.telefono = telefono.numero;
 			this.whatsapp.comprobante = dato.abreviatura+": "+dato.seriecomprobante+"-"+dato.nrocomprobante;
 			this.whatsapp.error = "";
@@ -304,7 +304,7 @@ var phuyu_ventas = new Vue({
 			this.$http.post(url+phuyu_controller+"/enviar_whatsapp", {
 				codkardex: this.whatsapp.codkardex,
 				telefono: telefono,
-				tipo_envio: this.whatsapp.tipo_envio || 'pdf',
+				tipo_envio: this.whatsapp.tipo_envio || 'link',
 				formato: this.formato_impresion || $("#formato").val()
 			}).then(function(data){
 				var respuesta = data.body || {};
