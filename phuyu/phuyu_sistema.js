@@ -1,6 +1,6 @@
 var phuyu_sistemabd = new Vue({
 	el: "#phuyu_index",
-	data: {phuyu_almacen : "1", phuyu_caja : "1"},
+	data: {phuyu_almacen : "1", phuyu_caja : "1", tipo_backup: "backup"},
 	methods: {
 		phuyu_limpiarbd: function(){
 			swal({
@@ -22,9 +22,11 @@ var phuyu_sistemabd = new Vue({
 			});
 		},
 		phuyu_backup: function(){
+			var tipo = this.tipo_backup || "backup";
+			var descripcion = tipo === "sql" ? "SQL plano (.sql)" : "backup PostgreSQL (.backup)";
 			swal({
 				title: "GENERAR COPIA DE SEGURIDAD",
-				text: "Se descargará un backup de la base de datos actual.",
+				text: "Se descargará un " + descripcion + " de la base de datos actual.",
 				icon: "warning",
 				buttons: ["CANCELAR", "SI, GENERAR"],
 			}).then((willBackup) => {
@@ -33,9 +35,18 @@ var phuyu_sistemabd = new Vue({
 				}
 
 				phuyu_sistema.phuyu_inicio_guardar("GENERANDO BACKUP . . .");
+				var controlador = window.AbortController ? new AbortController() : null;
+				var timeoutBackup = setTimeout(function() {
+					if (controlador) {
+						controlador.abort();
+					}
+				}, 600000);
 				fetch(url+"administracion/backup/database_backup", {
 					method: "POST",
-					credentials: "same-origin"
+					credentials: "same-origin",
+					headers: {"Content-Type": "application/json"},
+					body: JSON.stringify({tipo: tipo}),
+					signal: controlador ? controlador.signal : undefined
 				}).then(function(response) {
 					if (!response.ok) {
 						return response.text().then(function(texto) {
@@ -43,7 +54,7 @@ var phuyu_sistemabd = new Vue({
 						});
 					}
 
-					var nombre = "backup-phuyu.backup";
+					var nombre = tipo === "sql" ? "backup-phuyu.sql" : "backup-phuyu.backup";
 					var disposition = response.headers.get("Content-Disposition");
 					if (disposition) {
 						var match = disposition.match(/filename="?([^"]+)"?/i);
@@ -65,11 +76,16 @@ var phuyu_sistemabd = new Vue({
 						}, 1000);
 					});
 				}).then(function() {
+					clearTimeout(timeoutBackup);
 					phuyu_sistema.phuyu_fin();
 					swal({title: "BACKUP GENERADO", text: "La descarga de la copia de seguridad inició correctamente.", icon: "success", closeOnClickOutside: true});
 				}).catch(function(error) {
+					clearTimeout(timeoutBackup);
 					phuyu_sistema.phuyu_fin();
-					swal({title: "NO SE PUDO GENERAR EL BACKUP", text: error.message.substring(0, 500), icon: "error", closeOnClickOutside: true});
+					var mensaje = error && error.name === "AbortError"
+						? "El backup tardo demasiado y se cancelo la espera. Si Apache quedo ocupado, reinicia XAMPP antes de intentar otra vez."
+						: error.message.substring(0, 500);
+					swal({title: "NO SE PUDO GENERAR EL BACKUP", text: mensaje, icon: "error", closeOnClickOutside: true});
 				});
 			});
 		}
