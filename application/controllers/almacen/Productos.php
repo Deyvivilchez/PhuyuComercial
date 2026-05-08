@@ -92,19 +92,14 @@ class Productos extends CI_Controller
     {
         if ($this->input->is_ajax_request()) {
             if (isset($_POST['q'])) {
+                $condicionBusqueda = $this->condicion_busqueda_productos($_POST['q'], 'producto', 'marca');
                 $productos = $this->db
                     ->query(
                         "select producto.codproducto, producto.codigo,
                         producto.descripcion,
                         marca.descripcion as marca from almacen.productos as producto
                         inner join almacen.marcas as marca on (producto.codmarca=marca.codmarca)
-                        where (REPLACE(UPPER(producto.descripcion),' ','%') like REPLACE (UPPER('%" .
-                            $_POST['q'] .
-                            "%'),' ','%') or UPPER(producto.codigo) like UPPER('%" .
-                            $_POST['q'] .
-                            "%') or UPPER(marca.descripcion) like UPPER('%" .
-                            $_POST['q'] .
-                            "%') ) and producto.estado=1 limit 10",
+                        where " . $condicionBusqueda . " and producto.estado=1 limit 10",
                     )
                     ->result_array();
             } else {
@@ -112,6 +107,29 @@ class Productos extends CI_Controller
             }
             echo json_encode($productos);
         }
+    }
+
+    private function condicion_busqueda_productos($buscar, $productoAlias = 'p', $marcaAlias = 'ma')
+    {
+        $like = $this->db->escape('%' . $this->db->escape_like_str((string) $buscar) . '%');
+
+        return "(REPLACE(UPPER(" . $productoAlias . ".descripcion),' ','%') LIKE REPLACE(UPPER(" . $like . "),' ','%')
+            OR UPPER(" . $productoAlias . ".codigo) LIKE UPPER(" . $like . ")
+            OR UPPER(" . $marcaAlias . ".descripcion) LIKE UPPER(" . $like . ")
+            OR EXISTS (
+                SELECT 1
+                FROM almacen.productounidades pbu
+                WHERE pbu.codproducto = " . $productoAlias . ".codproducto
+                    AND pbu.estado = 1
+                    AND UPPER(COALESCE(pbu.codigobarra, '')) LIKE UPPER(" . $like . ")
+            )
+            OR EXISTS (
+                SELECT 1
+                FROM almacen.productoubicacion pbo
+                WHERE pbo.codproducto = " . $productoAlias . ".codproducto
+                    AND pbo.estado = 1
+                    AND UPPER(COALESCE(pbo.codigobarra, '')) LIKE UPPER(" . $like . ")
+            ))";
     }
 
     public function nuevo()
@@ -743,6 +761,7 @@ class Productos extends CI_Controller
             $this->request = json_decode(file_get_contents('php://input'));
             $limit = 10;
             $offset = $this->request->pagina * $limit - $limit;
+            $condicionBusqueda = $this->condicion_busqueda_productos($this->request->buscar, 'p', 'ma');
 
             // $lista = $this->db->query(
             //         "SELECT pun.codalmacen, p.codproducto, p.codigo,p.codfamilia, p.codlinea, p.codmarca, ma.descripcion AS marca,
@@ -805,10 +824,7 @@ class Productos extends CI_Controller
                     JOIN almacen.lineasxsucursales ls ON (pun.codsucursal = ls.codsucursal 
                         AND p.codlinea = ls.codlinea AND ls.codsucursal = " . $_SESSION['phuyu_codsucursal'] . ")
                     JOIN almacen.marcas ma ON (p.codmarca = ma.codmarca)
-                    WHERE (REPLACE(UPPER(p.descripcion),' ','%') 
-                        LIKE REPLACE(UPPER('%" . $this->request->buscar . "%'),' ','%') 
-                        OR UPPER(p.codigo) LIKE UPPER('%" . $this->request->buscar . "%') 
-                        OR UPPER(ma.descripcion) LIKE UPPER('%" . $this->request->buscar . "%'))
+                    WHERE " . $condicionBusqueda . "
                     AND p.estado = 1 
                     AND pun.codalmacen = " . $_SESSION['phuyu_codalmacen'] . "
                     ORDER BY p.codproducto DESC 
@@ -848,10 +864,7 @@ class Productos extends CI_Controller
                     JOIN almacen.lineasxsucursales ls ON (pun.codsucursal = ls.codsucursal AND p.codlinea = ls.codlinea 
                     AND ls.codsucursal = " . $_SESSION['phuyu_codsucursal'] . " )
                     JOIN almacen.marcas ma ON (p.codmarca = ma.codmarca)
-                    where (REPLACE(UPPER(p.descripcion),' ','%') 
-                    like REPLACE (UPPER('%" . $this->request->buscar . "%'),' ','%') or UPPER(p.codigo) 
-                    like UPPER('%" . $this->request->buscar . "%') or UPPER(ma.descripcion) 
-                    like UPPER('%" . $this->request->buscar . "%') ) and p.estado=1 
+                    where " . $condicionBusqueda . " and p.estado=1 
                     and pun.codalmacen=" . $_SESSION['phuyu_codalmacen'],
                 )
                 ->result_array();
@@ -940,6 +953,7 @@ class Productos extends CI_Controller
             $this->request = json_decode(file_get_contents('php://input'));
             $limit = 10;
             $offset = $this->request->pagina * $limit - $limit;
+            $condicionBusqueda = $this->condicion_busqueda_productos($this->request->buscar, 'p', 'ma');
 
             $lista = $this->db
                 ->query(
@@ -953,13 +967,7 @@ class Productos extends CI_Controller
                         $_SESSION['phuyu_codsucursal'] .
                         " )
    JOIN almacen.marcas ma ON (p.codmarca = ma.codmarca)
-   where (REPLACE(UPPER(p.descripcion),' ','%') like REPLACE (UPPER('%" .
-                        $this->request->buscar .
-                        "%'),' ','%') or UPPER(p.codigo) like UPPER('%" .
-                        $this->request->buscar .
-                        "%') or UPPER(ma.descripcion) like UPPER('%" .
-                        $this->request->buscar .
-                        "%') ) and p.estado=1 and pun.codalmacen=" .
+   where " . $condicionBusqueda . " and p.estado=1 and pun.codalmacen=" .
                         $_SESSION['phuyu_codalmacen'] .
                         ' order by p.codproducto desc offset ' .
                         $offset .
@@ -994,13 +1002,7 @@ class Productos extends CI_Controller
                         $_SESSION['phuyu_codsucursal'] .
                         " )
    JOIN almacen.marcas ma ON (p.codmarca = ma.codmarca)
-   where (REPLACE(UPPER(p.descripcion),' ','%') like REPLACE (UPPER('%" .
-                        $this->request->buscar .
-                        "%'),' ','%') or UPPER(p.codigo) like UPPER('%" .
-                        $this->request->buscar .
-                        "%') or UPPER(ma.descripcion) like UPPER('%" .
-                        $this->request->buscar .
-                        "%') ) and p.estado=1 and pun.codalmacen=" .
+   where " . $condicionBusqueda . " and p.estado=1 and pun.codalmacen=" .
                         $_SESSION['phuyu_codalmacen'],
                 )
                 ->result_array();
@@ -1739,7 +1741,7 @@ class Productos extends CI_Controller
         $codmarca = $this->resolver_catalogo('marcas', 'codmarca', $marca, 'GENERICO');
         $codunidad = $this->resolver_unidad($unidad);
 
-        if ($codfamilia == 0 || $codlinea == 0 || $codmarca == 0 || $codunidad == 0) {
+        if ($codfamilia === null || $codlinea === null || $codmarca === null || $codunidad === null) {
             return ['estado' => 0, 'mensaje' => 'Fila ' . $row . ': no se pudo resolver familia, linea, marca o unidad.'];
         }
 
@@ -1906,7 +1908,7 @@ class Productos extends CI_Controller
             $this->asegurar_linea_sucursal($codigo);
         }
 
-        return $codigo;
+        return $codigo > 0 ? $codigo : null;
     }
 
     private function resolver_unidad($valor)
@@ -1940,7 +1942,8 @@ class Productos extends CI_Controller
             'estado' => 1
         ]);
 
-        return $this->ultimo_id_insertado('almacen.unidades', 'codunidad');
+        $codigo = $this->ultimo_id_insertado('almacen.unidades', 'codunidad');
+        return $codigo > 0 ? $codigo : null;
     }
 
     private function resolver_afectacion($valor, $defecto)

@@ -325,3 +325,16 @@ RESPALDOS RECOMENDADOS
 */
 -- CREATE TABLE backup_productounidades AS SELECT * FROM almacen.productounidades;
 -- CREATE TABLE backup_productoubicacion AS SELECT * FROM almacen.productoubicacion;
+
+
+
+
+
+-- /usr/bin/php7.4 $(which composer) install
+
+--/usr/bin/php7.4 $(which composer) dump-autoload -o.
+---  los comoando s de arriba son para acutlizar el composer y generar el
+-- autoload optimizado para que reconozca las nuevas clases de migraciones y se puedan ejecutar sin problemas.
+
+-- /usr/bin/php7.4 $(which composer) install   # para proyectos viejos
+-- /usr/bin/php8.2 $(which composer) install   # para proyectos nuevos

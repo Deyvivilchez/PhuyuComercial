@@ -36,6 +36,16 @@
 						<div class="phuyu-page-icon mx-auto mb-3"><i class="bi bi-archive"></i></div>
 						<h5 class="fw-bold">Copia de seguridad</h5>
 						<p class="text-muted small mb-4">Genera un backup de la informacion del sistema.</p>
+						<div class="mb-3 text-start">
+							<label class="form-label small fw-semibold">Tipo de backup</label>
+							<select class="form-select" v-model="tipo_backup">
+								<option value="backup">Backup PostgreSQL (.backup)</option>
+								<option value="sql">SQL plano (.sql)</option>
+							</select>
+							<small class="text-muted d-block mt-1">
+								El SQL plano se puede restaurar con psql en otra version de PostgreSQL.
+							</small>
+						</div>
 						<button type="button" class="btn btn-warning" v-on:click="phuyu_backup()">
 							<i class="bi bi-cloud-download me-1"></i> Sacar backup
 						</button>

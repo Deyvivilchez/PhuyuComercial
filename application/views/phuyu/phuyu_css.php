@@ -124,6 +124,37 @@
             transition: height 0.2s ease;
         }
 
+        .app-menu {
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-menu #scrollbar {
+            height: calc(100vh - 70px);
+            max-height: calc(100vh - 70px);
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+        }
+
+        .app-menu #scrollbar .container-fluid {
+            padding-bottom: 1.75rem;
+        }
+
+        .app-menu #scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .app-menu #scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.28);
+            border-radius: 999px;
+        }
+
+        .app-menu #scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
         .app-menu .navbar-nav .menu-link.collapsed[aria-expanded="false"]::after {
             transform: rotate(0deg);
         }
@@ -527,20 +558,255 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 2rem;
-            height: 2rem;
-            margin-top: -1rem;
-            margin-left: -1rem;
-            border: 3px solid rgba(64, 81, 137, 0.20);
-            border-top-color: var(--vz-primary);
-            border-radius: 50%;
-            animation: phuyu-spin .8s linear infinite;
+            width: 22px;
+            height: 22px;
+            margin-top: -25px;
+            margin-left: -25px;
+            border-radius: 7px;
+            background: #4d4de0;
+            box-shadow: 28px 0 0 #6aa5e8, 0 28px 0 #9ec4f5, 28px 28px 0 #05056d;
+            animation: phuyu-mini-loader 1.2s ease-in-out infinite;
             z-index: 11;
         }
 
-        @keyframes phuyu-spin {
+        @keyframes phuyu-mini-loader {
+            0% {
+                transform: rotate(0deg) scale(1);
+            }
+
+            50% {
+                transform: rotate(180deg) scale(1.08);
+            }
+
+            100% {
+                transform: rotate(360deg) scale(1);
+            }
+        }
+
+        .phuyu-mini-brand-loader {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border-radius: 7px;
+            background: #4d4de0;
+            box-shadow: 28px 0 0 #6aa5e8, 0 28px 0 #9ec4f5, 28px 28px 0 #05056d;
+            animation: phuyu-mini-loader 1.2s ease-in-out infinite;
+        }
+
+        .phuyu-table-loading {
+            display: flex;
+            min-height: 92px;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: .85rem;
+            color: #1d1d75;
+            font-size: .78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .phuyu-table-wrapper-loading {
+            min-height: 220px;
+        }
+
+        .phuyu-table-wrapper-loading.overlay-spinner::before {
+            background: rgba(255, 255, 255, 0.82);
+        }
+
+        .phuyu-system-loading {
+            position: relative;
+            min-height: 260px;
+        }
+
+        .phuyu-system-loader {
+            position: absolute;
+            inset: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, rgba(244, 246, 251, 0.96), rgba(255, 255, 255, 0.98));
+            border-radius: inherit;
+            backdrop-filter: blur(4px);
+        }
+
+        .phuyu-system-loader-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.65rem;
+            width: min(340px, 100%);
+            text-align: center;
+        }
+
+        .phuyu-system-spinner {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            animation: phuyu-system-rotate 6s linear infinite;
+        }
+
+        .phuyu-system-ring {
+            position: absolute;
+            inset: -18px;
+            border: 4px dashed rgba(77, 77, 224, 0.3);
+            border-radius: 50%;
+            animation: phuyu-system-rotate-reverse 8s linear infinite;
+        }
+
+        .phuyu-system-square {
+            position: absolute;
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            box-shadow: 0 10px 20px rgba(5, 5, 109, 0.10);
+            animation: phuyu-system-pulse 1.8s infinite ease-in-out;
+        }
+
+        .phuyu-system-square-a {
+            top: 0;
+            left: 0;
+            background: #4d4de0;
+            animation-delay: 0s;
+        }
+
+        .phuyu-system-square-b {
+            top: 0;
+            right: 0;
+            background: #6aa5e8;
+            animation-delay: .3s;
+        }
+
+        .phuyu-system-square-c {
+            bottom: 0;
+            left: 0;
+            background: #9ec4f5;
+            animation-delay: .6s;
+        }
+
+        .phuyu-system-square-d {
+            right: 0;
+            bottom: 0;
+            background: #05056d;
+            animation-delay: .9s;
+        }
+
+        .phuyu-system-logo {
+            width: 220px;
+            max-width: 80%;
+            object-fit: contain;
+            animation: phuyu-system-float 3s ease-in-out infinite;
+        }
+
+        .phuyu-system-bar {
+            position: relative;
+            width: min(280px, 82vw);
+            height: 10px;
+            overflow: hidden;
+            border-radius: 20px;
+            background: #dfe5f0;
+        }
+
+        .phuyu-system-bar::before {
+            content: "";
+            position: absolute;
+            left: -40%;
+            width: 40%;
+            height: 100%;
+            border-radius: 20px;
+            background: linear-gradient(90deg, #4d4de0, #6aa5e8);
+            animation: phuyu-system-loading 2s infinite ease-in-out;
+        }
+
+        .phuyu-system-text {
+            color: #1d1d75;
+            font-size: 1rem;
+            font-weight: 600;
+            line-height: 1.35;
+            letter-spacing: 0;
+            animation: phuyu-system-blink 1.5s infinite;
+        }
+
+        @keyframes phuyu-system-rotate {
             to {
                 transform: rotate(360deg);
+            }
+        }
+
+        @keyframes phuyu-system-rotate-reverse {
+            from {
+                transform: rotate(360deg);
+            }
+
+            to {
+                transform: rotate(0deg);
+            }
+        }
+
+        @keyframes phuyu-system-pulse {
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.18);
+            }
+        }
+
+        @keyframes phuyu-system-loading {
+            0% {
+                left: -40%;
+            }
+
+            100% {
+                left: 100%;
+            }
+        }
+
+        @keyframes phuyu-system-float {
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-8px);
+            }
+        }
+
+        @keyframes phuyu-system-blink {
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: .5;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .phuyu-system-spinner {
+                width: 108px;
+                height: 108px;
+            }
+
+            .phuyu-system-ring {
+                inset: -14px;
+            }
+
+            .phuyu-system-square {
+                width: 38px;
+                height: 38px;
+                border-radius: 11px;
+            }
+
+            .phuyu-system-logo {
+                width: 180px;
             }
         }
 

@@ -114,16 +114,14 @@ class Phuyu_model extends CI_Model {
         return $modulos;
 	}
 
-	function phuyu_tiene_permiso_modulo($url){
+	function phuyu_tiene_permiso_modulo_valida_ruta($url){
 		$url = trim((string) $url, "/");
 		$modulos_libres = ["administracion/dashboard", "administracion/configuraciones"];
 		if ($url === "" || in_array($url, $modulos_libres, true)) {
 			return true;
 		}
 
-		if (!isset($_SESSION["phuyu_codperfil"])) {
-			return false;
-		}
+		if (!isset($_SESSION["phuyu_codperfil"])) {	return false;}
 
 		$codsistema = isset($_SESSION["phuyu_codsistema"]) ? (int) $_SESSION["phuyu_codsistema"] : 1;
 		$permiso = $this->db->query(
@@ -140,6 +138,32 @@ class Phuyu_model extends CI_Model {
 
 		return !empty($permiso) && (int) $permiso["total"] > 0;
 	}
+
+	function phuyu_tiene_permiso_modulo($url){
+    $url = trim((string) $url, "/");
+    $modulos_libres = ["administracion/dashboard", "administracion/configuraciones"];
+
+    if ($url === "" || in_array($url, $modulos_libres, true)) {
+        return true;
+    }
+
+    if (!isset($_SESSION["phuyu_codperfil"])) {
+        return false;
+    }
+
+    $permiso = $this->db->query(
+        "select count(*) as total
+        from seguridad.modulos as modulos
+        inner join seguridad.moduloperfiles as perfiles on(modulos.codmodulo=perfiles.codmodulo)
+        where perfiles.codperfil=?
+            and modulos.estado=1
+            and modulos.url<>'' 
+            and (?=modulos.url or ? like modulos.url || '/%')",
+        [(int) $_SESSION["phuyu_codperfil"], $url, $url]
+    )->row_array();
+
+    return !empty($permiso) && (int) $permiso["total"] > 0;
+}
 
 	function phuyu_guardar($tabla, $campos, $valores, $return_id="false"){
 		for($i = 0 ; $i < count($campos); $i++) {

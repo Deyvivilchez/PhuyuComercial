@@ -27,7 +27,7 @@ class Configuraciones extends CI_Controller
 		}
 	}
 
-	function guardar1(){
+	function guardar(){
 		if ($this->input->is_ajax_request()) {
 			/* $dep = substr($_POST["ubigeo"],0,2); $pro = substr($_POST["ubigeo"],2,2); $dis = substr($_POST["ubigeo"],4,2); $codubigeo = 0;
 			$ubigeo = $this->db->query("select codubigeo from public.ubigeo where ubidepartamento='".$dep."' and ubiprovincia='".$pro."' and ubidistrito='".$dis."'")->result_array();
@@ -78,6 +78,7 @@ class Configuraciones extends CI_Controller
 				$file = "logo_" . substr($_FILES["logo"]["name"], -5);
 				move_uploaded_file($_FILES["logo"]["tmp_name"], "./public/img/empresa/" . $file);
 
+<<<<<<< HEAD
 				$data = array("foto" => $file);
 				$this->db->where("codpersona", $_POST["codpersona"]);
 				$estado = $this->db->update("public.personas", $data);
@@ -86,6 +87,25 @@ class Configuraciones extends CI_Controller
 				$file = "auspiciador_" . substr($_FILES["auspiciador"]["name"], -5);
 				move_uploaded_file($_FILES["auspiciador"]["tmp_name"], "./public/img/empresa/" . $file);
 
+=======
+			$file = $this->guardar_imagen_configuracion("logo", "logo");
+			if ($file === false) {
+				echo 0;
+				return;
+			}
+			if ($file !== null) {
+				$data = array("foto" => $file);
+				$this->db->where("codpersona",$_POST["codpersona"]);
+				$estado = $this->db->update("public.personas",$data);
+				$_SESSION["phuyu_logo"] = "empresa/".$file;
+			}
+			$file = $this->guardar_imagen_configuracion("auspiciador", "auspiciador");
+			if ($file === false) {
+				echo 0;
+				return;
+			}
+			if ($file !== null) {
+>>>>>>> df096e30d33ed5e08fd5fa18f98ff97d27bb54eb
 				$data = array("logoauspiciador" => $file);
 				$this->db->where("codempresa", $_POST["codempresa"]);
 				$estado = $this->db->update("public.empresas", $data);
@@ -101,6 +121,45 @@ class Configuraciones extends CI_Controller
 		} else {
 			$this->load->view("phuyu/404");
 		}
+	}
+
+	function guardar1(){
+		return $this->guardar();
+	}
+
+	private function guardar_imagen_configuracion($campo, $prefijo){
+		if (!isset($_FILES[$campo]) || $_FILES[$campo]["name"] == "") {
+			return null;
+		}
+
+		if ($_FILES[$campo]["error"] !== UPLOAD_ERR_OK || !is_uploaded_file($_FILES[$campo]["tmp_name"])) {
+			log_message("error", "Upload invalido en configuracion. Campo=" . $campo . " error=" . $_FILES[$campo]["error"]);
+			return false;
+		}
+
+		$destino = FCPATH . "public/img/empresa/";
+		if (!is_dir($destino)) {
+			@mkdir($destino, 0775, true);
+		}
+		if (!is_dir($destino) || !is_writable($destino)) {
+			log_message("error", "Directorio de logos no escribible: " . $destino);
+			return false;
+		}
+
+		$extension = strtolower(pathinfo($_FILES[$campo]["name"], PATHINFO_EXTENSION));
+		$extensionesPermitidas = ["jpg", "jpeg", "png", "gif", "webp"];
+		if (!in_array($extension, $extensionesPermitidas, true)) {
+			log_message("error", "Extension de imagen no permitida en configuracion. Campo=" . $campo . " extension=" . $extension);
+			return false;
+		}
+
+		$nombre = $prefijo . "_" . date("YmdHis") . "_" . mt_rand(1000, 9999) . "." . $extension;
+		if (!@move_uploaded_file($_FILES[$campo]["tmp_name"], $destino . $nombre)) {
+			log_message("error", "No se pudo guardar imagen de configuracion. Campo=" . $campo . " destino=" . $destino . $nombre);
+			return false;
+		}
+
+		return $nombre;
 	}
 
 	
@@ -156,3 +215,8 @@ class Configuraciones extends CI_Controller
 			->set_output(json_encode(['ok' => true, 'path' => 'public/img/empresa/' . $nombreArchivo]));
 	}
 }
+<<<<<<< HEAD
+=======
+
+}
+>>>>>>> df096e30d33ed5e08fd5fa18f98ff97d27bb54eb

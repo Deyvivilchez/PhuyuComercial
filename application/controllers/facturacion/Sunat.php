@@ -6,32 +6,65 @@ use RobRichards\XMLSecLibs\XMLSecurityKey;
 
 class Sunat extends CI_Controller {
 
-	function phuyu_firmarXML($carpeta_phuyu,$phuyu){
+    protected function phuyu_respuesta_cpe($estado, $mensaje, $alerta = null){
+        $data = array("estado" => $estado, "mensaje" => $mensaje);
+        if ($alerta !== null) {
+            $data["alerta"] = $alerta;
+        }
+        return $data;
+    }
+
+    protected function phuyu_descripcion_cdr($descripcion){
+        $partes = explode("-", (string)$descripcion, 2);
+        return isset($partes[1]) ? trim($partes[1]) : (string)$descripcion;
+    }
+
+	function phuyu_firmarXML($carpeta_phuyu,$phuyu,$respuesta_detallada = false){
+        $xml_file = $carpeta_phuyu.".xml";
+        $private_key_file = "./sunat/certificados/private_key.pem";
+        $public_key_file = "./sunat/certificados/public_key.pem";
+
+        try {
+            if (!is_readable($xml_file)) {
+                throw new Exception("No se puede leer el XML a firmar: ".$xml_file);
+            }
+            if (!is_readable($private_key_file)) {
+                throw new Exception("No se puede leer la clave privada: ".$private_key_file);
+            }
+            if (!is_readable($public_key_file)) {
+                throw new Exception("No se puede leer el certificado publico: ".$public_key_file);
+            }
 
         // 1: CARGAMOS EL ARCHIVO XML A FIRMAR //
         $doc = new DOMDocument();
-        $doc->load($carpeta_phuyu.".xml");
+        if (!$doc->load($xml_file)) {
+            throw new Exception("El XML no es valido o no se pudo cargar: ".$xml_file);
+        }
         
         $objDSig = new XMLSecurityDSig();
         $objDSig->setCanonicalMethod(XMLSecurityDSig::EXC_C14N);
         $objDSig->addReference($doc,XMLSecurityDSig::SHA1,array("http://www.w3.org/2000/09/xmldsig#enveloped-signature"),array("force_uri" => true));
 
         $objKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA1, array("type" => "private"));
-        $objKey->loadKey("./sunat/certificados/private_key.pem", true);
+        $objKey->loadKey($private_key_file, true);
         $objDSig->sign($objKey);
 
-        $objDSig->add509Cert(file_get_contents("./sunat/certificados/public_key.pem"), true, false, array("subjectName" => true));
+        $objDSig->add509Cert(file_get_contents($public_key_file), true, false, array("subjectName" => true));
 
         $objDSig->appendSignature($doc->getElementsByTagName("ExtensionContent")->item($phuyu));
         
         // 2: GUARDAMOS EL XML FIRMADO //
-        $doc->save($carpeta_phuyu.".xml");
-        chmod($carpeta_phuyu.".xml", 0777);
+        if ($doc->save($xml_file) === false) {
+            throw new Exception("No se pudo guardar el XML firmado: ".$xml_file);
+        }
+        chmod($xml_file, 0777);
         
-        if (file_exists($carpeta_phuyu.".xml")) {
-            return 1;
-        }else{
-            return 0;
+        if (file_exists($xml_file)) {
+            return $respuesta_detallada ? $this->phuyu_respuesta_cpe(1, "XML firmado correctamente") : 1;
+        }
+        throw new Exception("El XML firmado no existe despues de guardar: ".$xml_file);
+        } catch (Throwable $e) {
+            return $respuesta_detallada ? $this->phuyu_respuesta_cpe(0, $e->getMessage()) : 0;
         }
     }
 
@@ -330,20 +363,18 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
                                 }
                             }
 
-                            $descripcion_explode = explode("-", $description_texto);
-
                             if ($responsecode_texto == "0") {
                                 $estado = 1;
                                 $mensaje = (string) $description_texto;
                             } elseif ($responsecode_texto >= 100 && $responsecode_texto <= 1999) {
                                 $estado = 2;
-                                $mensaje = isset($descripcion_explode[1]) ? trim($descripcion_explode[1]) : $description_texto;
+                                $mensaje = $this->phuyu_descripcion_cdr($description_texto);
                             } elseif ($responsecode_texto >= 2000 && $responsecode_texto <= 3999) {
                                 $estado = 3;
-                                $mensaje = isset($descripcion_explode[1]) ? trim($descripcion_explode[1]) : $description_texto;
+                                $mensaje = $this->phuyu_descripcion_cdr($description_texto);
                             } else {
                                 $estado = 4;
-                                $mensaje = isset($descripcion_explode[1]) ? trim($descripcion_explode[1]) : $description_texto;
+                                $mensaje = $this->phuyu_descripcion_cdr($description_texto);
                             }
 
                             $update = array(
@@ -370,6 +401,9 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
                             $mensaje = "NO HAY RESPUESTA DE LA SUNAT !!! INTENTALO MAS TARDE";
                         }
                     }
+                } else {
+                    $estado = 0;
+                    $mensaje = $consultarCDR["mensaje"];
                 }
             }
         } else {
@@ -431,20 +465,18 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
                     }
                 }
 
-                $descripcion_explode = explode("-", $description_texto);
-
                 if ($responsecode_texto == "0") {
                     $estado = 1;
                     $mensaje = (string) $description_texto;
                 } elseif ($responsecode_texto >= 100 && $responsecode_texto <= 1999) {
                     $estado = 2;
-                    $mensaje = isset($descripcion_explode[1]) ? trim($descripcion_explode[1]) : $description_texto;
+                    $mensaje = $this->phuyu_descripcion_cdr($description_texto);
                 } elseif ($responsecode_texto >= 2000 && $responsecode_texto <= 3999) {
                     $estado = 3;
-                    $mensaje = isset($descripcion_explode[1]) ? trim($descripcion_explode[1]) : $description_texto;
+                    $mensaje = $this->phuyu_descripcion_cdr($description_texto);
                 } else {
                     $estado = 4;
-                    $mensaje = isset($descripcion_explode[1]) ? trim($descripcion_explode[1]) : $description_texto;
+                    $mensaje = $this->phuyu_descripcion_cdr($description_texto);
                 }
 
                 $update = array(
@@ -595,7 +627,12 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
 
                 // 4: LEEMOS EL ARCHIVO XML RESPONSE //
                 $xml = simplexml_load_file($carpeta_phuyu."/C-".$archivo_phuyu.".xml");
-                foreach ($xml->xpath('//applicationResponse') as $response){ }
+                $response = "";
+                if ($xml !== false) {
+                    foreach ($xml->xpath('//applicationResponse') as $item){
+                        $response = (string)$item;
+                    }
+                }
 
                 if($response != ""){
                     // 5: CREAMOS UNA CARPETA PARA ALMACENAR LOS CDR POR AÑO//
@@ -624,24 +661,25 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
 
                     // 7: LEEMOS EL CDR Y ACTUALIZAMOS EN LA BASE DE DATOS EN KARDEXSUNAT //
                     $xml_respuesta = simplexml_load_file($carpeta_phuyu."/R-".$archivo_phuyu.'.xml');
-                    foreach ($xml_respuesta->xpath('//cbc:ResponseCode') as $responsecode){ 
-                        $responsecode_texto = $responsecode;
-                    }
-                    foreach ($xml_respuesta->xpath('//cbc:Description') as $description) {
-                        $description_texto = $description;
+                    $responsecode_texto = "";
+                    $description_texto = "";
+                    if ($xml_respuesta !== false) {
+                        foreach ($xml_respuesta->xpath('//cbc:ResponseCode') as $responsecode){ 
+                            $responsecode_texto = (string)$responsecode;
+                        }
+                        foreach ($xml_respuesta->xpath('//cbc:Description') as $description) {
+                            $description_texto = (string)$description;
+                        }
                     }
 
-                    //print_r($responsecode_texto);
-
-                    $descripcion_explode = explode("-",$description_texto);
                     if($responsecode_texto == 0){    
                         $estado = 1; $mensaje =  (string)($description_texto);
                     }elseif($responsecode_texto >= 100 and $responsecode_texto<=1999){
-                        $estado = 2; $mensaje = (string)($descripcion_explode[1]);
+                        $estado = 2; $mensaje = $this->phuyu_descripcion_cdr($description_texto);
                     }elseif($responsecode_texto >= 2000 and $responsecode_texto<=3999){
-                        $estado = 3; $mensaje = (string)($descripcion_explode[1]);
+                        $estado = 3; $mensaje = $this->phuyu_descripcion_cdr($description_texto);
                     }else{
-                        $estado = 4; $mensaje = (string)($descripcion_explode[1]);
+                        $estado = 4; $mensaje = $this->phuyu_descripcion_cdr($description_texto);
                     }
 
                     $update = array(
@@ -715,8 +753,12 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
 
             // 4: LEEMOS EL ARCHIVO XML //
             $xml = simplexml_load_file($carpeta_phuyu."/R-".$ticket.".xml"); 
-            //print_r($xml);exit;
-            foreach ($xml->xpath('//content') as $response){ }
+            $response = "";
+            if ($xml !== false) {
+                foreach ($xml->xpath('//content') as $item){
+                    $response = (string)$item;
+                }
+            }
 //print_r($response);exit;
             if($response != ""){
                 // 5: CREAMOS UNA CARPETA PARA ALMACENAR LOS TICKETS POR AÑO//
@@ -755,22 +797,25 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
 
                 // 7: LEEMOS EL CDR Y ACTUALIZAMOS EN LA BASE DE DATOS EN RESUMENES //
                 $xml_respuesta = simplexml_load_file($carpeta_phuyu."/R-".$nombre_xml.'.xml');
-                foreach ($xml_respuesta->xpath('//cbc:ResponseCode') as $responsecode){ 
-                    $responsecode_texto = $responsecode;
-                }
-                foreach ($xml_respuesta->xpath('//cbc:Description') as $description) {
-                    $description_texto = $description;
+                $responsecode_texto = "";
+                $description_texto = "";
+                if ($xml_respuesta !== false) {
+                    foreach ($xml_respuesta->xpath('//cbc:ResponseCode') as $responsecode){ 
+                        $responsecode_texto = (string)$responsecode;
+                    }
+                    foreach ($xml_respuesta->xpath('//cbc:Description') as $description) {
+                        $description_texto = (string)$description;
+                    }
                 }
 
-                $descripcion_explode = explode("-",$description_texto);
                 if($responsecode_texto == 0){    
                     $estado = 1; $mensaje =  (string)($description_texto);
                 }elseif($responsecode_texto >= 100 and $responsecode_texto<=1999){
-                    $estado = 2; $mensaje = (string)($descripcion_explode[1]);
+                    $estado = 2; $mensaje = $this->phuyu_descripcion_cdr($description_texto);
                 }elseif($responsecode_texto >= 2000 and $responsecode_texto<=3999){
-                    $estado = 3; $mensaje = (string)($descripcion_explode[1]);
+                    $estado = 3; $mensaje = $this->phuyu_descripcion_cdr($description_texto);
                 }else{
-                    $estado = 4; $mensaje = (string)($descripcion_explode[1]);
+                    $estado = 4; $mensaje = $this->phuyu_descripcion_cdr($description_texto);
                 }
 
                 $update = array(
@@ -924,16 +969,19 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
     }
 
     function soapCall($wsdlURL, $callFunction = "", $XMLString) {
-        $client = new funcionSoap($wsdlURL, array("trace" => true));
         try{
+            $client = new funcionSoap($wsdlURL, array("trace" => true, "exceptions" => true));
             $reply  = $client->SoapClientCall($XMLString);
             $client->__call("$callFunction", array(), array());
 
-
-
             return array("error" => "no", "mensaje" => $client->__getLastResponse());
         }catch(Exception $e){
-            return array("error" => "si", "mensaje" => $client->__getLastResponse());
+            $respuesta = isset($client) ? trim((string)$client->__getLastResponse()) : "";
+            $mensaje = trim($e->getMessage());
+            if ($respuesta != "") {
+                $mensaje .= "\n".$respuesta;
+            }
+            return array("error" => "si", "mensaje" => $mensaje);
         }
     }
 
