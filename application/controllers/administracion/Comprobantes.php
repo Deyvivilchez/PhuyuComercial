@@ -221,6 +221,17 @@ class Comprobantes extends CI_Controller {
 				];
 				$estado = $this->phuyu_model->phuyu_guardar("caja.comprobantes", $campos, $valores);
 			}else{
+				$codsucursalEditar = isset($_POST["codsucursal_editar"]) ? (int)$_POST["codsucursal_editar"] : 0;
+				$codtipoEditar = isset($_POST["codcomprobantetipo_editar"]) ? (int)$_POST["codcomprobantetipo_editar"] : 0;
+				$serieEditar = isset($_POST["seriecomprobante_editar"]) ? strtoupper(trim($_POST["seriecomprobante_editar"])) : "";
+
+				$actual = $this->obtener_comprobante($codsucursalEditar, $codtipoEditar, $serieEditar);
+				if (empty($actual)) {
+					$this->db->trans_rollback();
+					echo 0;
+					return;
+				}
+
 				$_POST["logo"] = (isset($_POST["logo"])) ? $_POST["logo"] : "";
 				$_POST["auspiciador"] = (isset($_POST["auspiciador"])) ? $_POST["auspiciador"] : "";
 				$logoSubido = $this->guardar_imagen_comprobante("logoa", "logo");
@@ -246,10 +257,42 @@ class Comprobantes extends CI_Controller {
 					$auspiciador = $_POST["logoauspiciador"];
 				}
 
-				$campos = ["nroinicial","nrocorrelativo","impresion","formato","orientacion","impresora","logo","logoauspiciador","slogan","tipoconleyendaamazonia","nombrecomercial","publicidad","agradecimiento","impresionlogo"];
-				$valores = [(int)$_POST["nroinicial"],(int)$_POST["nrocorrelativo"],(int)$_POST["impresion"],$_POST["formato"],$_POST["orientacion"],$_POST["impresora"],$logo,$auspiciador,$_POST["slogan"],(int)$_POST["tipoconleyendaamazonia"],$_POST["nombrecomercial"],$_POST["publicidad"],$_POST["agradecimiento"],$_POST["impresionlogo"]];
+				$puedeEditarIdentidad = $this->comprobante_identidad_editable($actual);
+				if ($puedeEditarIdentidad) {
+					$_POST["codcaja"] = (isset($_POST["codcaja"]) && $_POST["codcaja"]!="") ? $_POST["codcaja"] : 0;
+					$_POST["codalmacen"] = (isset($_POST["codalmacen"]) && $_POST["codalmacen"]!="") ? $_POST["codalmacen"] : 0;
+					$_POST["codcomprobantetipo_ref"] = (isset($_POST["codcomprobantetipo_ref"])) ? $_POST["codcomprobantetipo_ref"] : "";
+
+					$comprobantetipo_ref = ""; $seriecomprobante_ref = "";
+					if ($_POST["codcomprobantetipo_ref"]!="" && $_POST["codcomprobantetipo_ref"]!=0) {
+						$datos = explode("-",$_POST["codcomprobantetipo_ref"]);
+						$comprobantetipo_ref = isset($datos[0]) ? $datos[0] : "";
+						$seriecomprobante_ref = isset($datos[1]) ? $datos[1] : "";
+					}
+
+					$nuevoTipo = (int)$_POST["codcomprobantetipo"];
+					$nuevaSerie = strtoupper(trim($_POST["seriecomprobante"]));
+					$duplicado = $this->db->query(
+						"select count(*) as cantidad from caja.comprobantes
+						where codcomprobantetipo=? and seriecomprobante=? and not (codcomprobantetipo=? and seriecomprobante=?) and estado=1",
+						[$nuevoTipo, $nuevaSerie, $codtipoEditar, $serieEditar]
+					)->row_array();
+
+					if (!empty($duplicado) && (int)$duplicado["cantidad"] > 0) {
+						$this->db->trans_rollback();
+						echo 2;
+						return;
+					}
+
+					$campos = ["codsucursal","codcomprobantetipo","codcaja","codalmacen","seriecomprobante","nroinicial","nrocorrelativo","codcomprobantetipo_ref","seriecomprobante_ref","impresion","formato","orientacion","impresora","logo","logoauspiciador","slogan","tipoconleyendaamazonia","nombrecomercial","publicidad","agradecimiento","impresionlogo"];
+					$valores = [(int)$_POST["codsucursal"],$nuevoTipo,(int)$_POST["codcaja"],(int)$_POST["codalmacen"],$nuevaSerie,(int)$_POST["nroinicial"],(int)$_POST["nrocorrelativo"],(int)$comprobantetipo_ref,$seriecomprobante_ref,(int)$_POST["impresion"],$_POST["formato"],$_POST["orientacion"],$_POST["impresora"],$logo,$auspiciador,$_POST["slogan"],(int)$_POST["tipoconleyendaamazonia"],$_POST["nombrecomercial"],$_POST["publicidad"],$_POST["agradecimiento"],$_POST["impresionlogo"]];
+				}else{
+					$nrocorrelativo = max((int)$_POST["nrocorrelativo"], (int)$actual["nrocorrelativo"]);
+					$campos = ["nroinicial","nrocorrelativo","impresion","formato","orientacion","impresora","logo","logoauspiciador","slogan","tipoconleyendaamazonia","nombrecomercial","publicidad","agradecimiento","impresionlogo"];
+					$valores = [(int)$_POST["nroinicial"],$nrocorrelativo,(int)$_POST["impresion"],$_POST["formato"],$_POST["orientacion"],$_POST["impresora"],$logo,$auspiciador,$_POST["slogan"],(int)$_POST["tipoconleyendaamazonia"],$_POST["nombrecomercial"],$_POST["publicidad"],$_POST["agradecimiento"],$_POST["impresionlogo"]];
+				}
 				$f = ["codsucursal","codcomprobantetipo","seriecomprobante"];
-				$v = [$_POST["codsucursal_editar"],$_POST["codcomprobantetipo_editar"],$_POST["seriecomprobante_editar"]];
+				$v = [$codsucursalEditar,$codtipoEditar,$serieEditar];
 				$estado = $this->phuyu_model->phuyu_editar_1("caja.comprobantes", $campos, $valores, $f, $v);
 			}
 			if ($this->db->trans_status() === FALSE){
@@ -302,12 +345,90 @@ class Comprobantes extends CI_Controller {
 		return $nombre;
 	}
 
+	private function clave_comprobante($codregistro){
+		$partes = explode("-", (string)$codregistro);
+		if (count($partes) >= 3) {
+			return [
+				"codsucursal" => (int)$partes[0],
+				"codcomprobantetipo" => (int)$partes[1],
+				"seriecomprobante" => strtoupper(trim($partes[2]))
+			];
+		}
+
+		return [
+			"codsucursal" => 0,
+			"codcomprobantetipo" => isset($partes[0]) ? (int)$partes[0] : 0,
+			"seriecomprobante" => isset($partes[1]) ? strtoupper(trim($partes[1])) : ""
+		];
+	}
+
+	private function obtener_comprobante($codsucursal, $codcomprobantetipo, $seriecomprobante){
+		if ((int)$codsucursal > 0) {
+			$info = $this->db->query(
+				"select codcomprobantetipo as codregistro,* from caja.comprobantes
+				where codsucursal=? and codcomprobantetipo=? and seriecomprobante=?",
+				[(int)$codsucursal, (int)$codcomprobantetipo, strtoupper(trim($seriecomprobante))]
+			)->row_array();
+		}else{
+			$info = $this->db->query(
+				"select codcomprobantetipo as codregistro,* from caja.comprobantes
+				where codcomprobantetipo=? and seriecomprobante=?",
+				[(int)$codcomprobantetipo, strtoupper(trim($seriecomprobante))]
+			)->row_array();
+		}
+		return $info;
+	}
+
+	private function uso_comprobante($codsucursal, $codcomprobantetipo, $seriecomprobante){
+		$params = [];
+		$consultas = [
+			["kardex.kardex", "codcomprobantetipo", "seriecomprobante", true],
+			["kardex.kardex", "codcomprobantetipo_ref", "seriecomprobante_ref", true],
+			["kardex.kardexalmacen", "codcomprobantetipo", "seriecomprobante", true],
+			["kardex.pedidos", "codcomprobantetipo", "seriecomprobante", true],
+			["kardex.pedidos", "codcomprobantetiporeferencia", "seriecomprobantereferencia", true],
+			["kardex.proformas", "codcomprobantetipo", "seriecomprobante", true],
+			["kardex.creditos", "codcomprobantetipo", "seriecomprobante", true],
+			["kardex.creditospedidos", "codcomprobantetipo", "seriecomprobante", true],
+			["kardex.creditosproformas", "codcomprobantetipo", "seriecomprobante", true],
+			["kardex.cuotaspagos", "codcomprobantetipo", "seriecomprobante", true],
+			["caja.movimientos", "codcomprobantetipo", "seriecomprobante", false],
+			["caja.movimientos", "codcomprobantetipo_ref", "seriecomprobante_ref", false],
+			["almacen.guiasr", "codcomprobantetipo", "seriecomprobante", true],
+			["almacen.guiast", "codcomprobantetipo", "seriecomprobante", true]
+		];
+
+		$sql = [];
+		foreach ($consultas as $consulta) {
+			$filtroSucursal = $consulta[3] ? "codsucursal=? and " : "";
+			$sql[] = "select count(*) as cantidad from ".$consulta[0]." where ".$filtroSucursal.$consulta[1]."=? and ".$consulta[2]."=?";
+			if ($consulta[3]) {
+				$params[] = (int)$codsucursal;
+			}
+			$params[] = (int)$codcomprobantetipo;
+			$params[] = strtoupper(trim($seriecomprobante));
+		}
+
+		$uso = $this->db->query("select coalesce(sum(cantidad),0) as cantidad from (".implode(" union all ", $sql).") usos", $params)->row_array();
+		return !empty($uso) ? (int)$uso["cantidad"] : 0;
+	}
+
+	private function comprobante_identidad_editable($comprobante){
+		if (empty($comprobante)) {
+			return false;
+		}
+		if ((int)$comprobante["nrocorrelativo"] !== 0) {
+			return false;
+		}
+		return $this->uso_comprobante($comprobante["codsucursal"], $comprobante["codcomprobantetipo"], $comprobante["seriecomprobante"]) === 0;
+	}
+
 	function editar(){
 		if ($this->input->is_ajax_request()) {
 			$this->request = json_decode(file_get_contents('php://input'));
-			$codigo = explode("-", $this->request->codregistro);
-			$info = $this->db->query("select codcomprobantetipo as codregistro,* from caja.comprobantes where codcomprobantetipo=".$codigo[0]." and seriecomprobante='".$codigo[1]."' ")->result_array();
-			echo json_encode($info);
+			$codigo = $this->clave_comprobante($this->request->codregistro);
+			$info = $this->obtener_comprobante($codigo["codsucursal"], $codigo["codcomprobantetipo"], $codigo["seriecomprobante"]);
+			echo json_encode(empty($info) ? [] : [$info]);
 		}else{
 			$this->load->view("phuyu/404");
 		}
@@ -315,10 +436,13 @@ class Comprobantes extends CI_Controller {
 
 	function validar_serie($serie){
 		if ($this->input->is_ajax_request()) {
-			$codigo = explode("-", $serie);
-			$estado = $this->db->query("select count(*) as cantidad from kardex.kardexalmacen where seriecomprobante='".$codigo[1]."'")->result_array();
-			$data["serie"] = $codigo[1];
-			$data["estado"] = $estado[0]["cantidad"];
+			$codigo = $this->clave_comprobante($serie);
+			$comprobante = $this->obtener_comprobante($codigo["codsucursal"], $codigo["codcomprobantetipo"], $codigo["seriecomprobante"]);
+			$uso = empty($comprobante) ? 0 : $this->uso_comprobante($comprobante["codsucursal"], $comprobante["codcomprobantetipo"], $comprobante["seriecomprobante"]);
+			$editable = empty($comprobante) ? false : $this->comprobante_identidad_editable($comprobante);
+			$data["serie"] = $codigo["seriecomprobante"];
+			$data["estado"] = $uso;
+			$data["editable_identidad"] = $editable ? 1 : 0;
 			echo json_encode($data);
 		}
 	}
@@ -326,10 +450,15 @@ class Comprobantes extends CI_Controller {
 	function eliminar(){
 		if ($this->input->is_ajax_request()) {
 			$this->request = json_decode(file_get_contents('php://input'));
-			$codigo = explode("-", $this->request->codregistro);
+			$codigo = $this->clave_comprobante($this->request->codregistro);
+			$comprobante = $this->obtener_comprobante($codigo["codsucursal"], $codigo["codcomprobantetipo"], $codigo["seriecomprobante"]);
+			if (!empty($comprobante) && $this->uso_comprobante($comprobante["codsucursal"], $comprobante["codcomprobantetipo"], $comprobante["seriecomprobante"]) > 0) {
+				echo 0;
+				return;
+			}
 
 			$campos = ["estado"]; $valores = [0];
-			$f = ["codcomprobantetipo","seriecomprobante"]; $v = [$codigo[0],$codigo[1]];
+			$f = ["codsucursal","codcomprobantetipo","seriecomprobante"]; $v = [$codigo["codsucursal"],$codigo["codcomprobantetipo"],$codigo["seriecomprobante"]];
 			$estado = $this->phuyu_model->phuyu_editar_1("caja.comprobantes", $campos, $valores, $f, $v);
 			echo $estado;
 		}else{

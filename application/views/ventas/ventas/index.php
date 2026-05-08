@@ -252,13 +252,7 @@
           </div>
         </div>
 
-        <div class="phuyu_cargando text-center py-3" v-if="cargando">
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Cargando...</span>
-          </div>
-        </div>
-
-        <div class="table-responsive phuyu-table-wrapper">
+        <div class="table-responsive phuyu-table-wrapper" v-bind:class="{'overlay-spinner phuyu-table-wrapper-loading': cargando}">
           <table class="table table-hover table-sm align-middle mb-0 phuyu-table-ventas">
             <thead>
               <tr>

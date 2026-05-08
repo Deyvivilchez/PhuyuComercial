@@ -558,36 +558,78 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 2rem;
-            height: 2rem;
-            margin-top: -1rem;
-            margin-left: -1rem;
-            border: 3px solid rgba(64, 81, 137, 0.20);
-            border-top-color: var(--vz-primary);
-            border-radius: 50%;
-            animation: phuyu-spin .8s linear infinite;
+            width: 22px;
+            height: 22px;
+            margin-top: -25px;
+            margin-left: -25px;
+            border-radius: 7px;
+            background: #4d4de0;
+            box-shadow: 28px 0 0 #6aa5e8, 0 28px 0 #9ec4f5, 28px 28px 0 #05056d;
+            animation: phuyu-mini-loader 1.2s ease-in-out infinite;
             z-index: 11;
         }
 
-        @keyframes phuyu-spin {
-            to {
-                transform: rotate(360deg);
+        @keyframes phuyu-mini-loader {
+            0% {
+                transform: rotate(0deg) scale(1);
             }
+
+            50% {
+                transform: rotate(180deg) scale(1.08);
+            }
+
+            100% {
+                transform: rotate(360deg) scale(1);
+            }
+        }
+
+        .phuyu-mini-brand-loader {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border-radius: 7px;
+            background: #4d4de0;
+            box-shadow: 28px 0 0 #6aa5e8, 0 28px 0 #9ec4f5, 28px 28px 0 #05056d;
+            animation: phuyu-mini-loader 1.2s ease-in-out infinite;
+        }
+
+        .phuyu-table-loading {
+            display: flex;
+            min-height: 92px;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: .85rem;
+            color: #1d1d75;
+            font-size: .78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .phuyu-table-wrapper-loading {
+            min-height: 220px;
+        }
+
+        .phuyu-table-wrapper-loading.overlay-spinner::before {
+            background: rgba(255, 255, 255, 0.82);
         }
 
         .phuyu-system-loading {
             position: relative;
+            min-height: 260px;
         }
 
         .phuyu-system-loader {
-            position: fixed;
+            position: absolute;
             inset: 0;
-            z-index: 3000;
+            z-index: 50;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 1.5rem;
             background: linear-gradient(135deg, rgba(244, 246, 251, 0.96), rgba(255, 255, 255, 0.98));
+            border-radius: inherit;
             backdrop-filter: blur(4px);
         }
 
