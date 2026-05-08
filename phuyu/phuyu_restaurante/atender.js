@@ -240,34 +240,41 @@ var phuyu_operacion = new Vue({
 
 			this.estado = 1; 
 			phuyu_sistema.phuyu_inicio_guardar("GUARDANDO PEDIDO . . .");
+
 			this.$http.post(url+"ventas/pedidos/guardar_pedido", {"campos":this.campos,"detalle":this.detalle,"totales":this.totales}).then(function(data){
 				if (data.body=="e") {	phuyu_sistema.phuyu_alerta("SESION DEL USUARIO TERMINADA","DEBE INICIAR SESION NUEVAMENTE","error");}else{
 					
 					if (data.body.estado==1) {
 						phuyu_sistema.phuyu_noti("PEDIDO REGISTRADO CORRECTAMENTE","PEDIDO REGISTRADO EN EL SISTEMA","success");
-						this.$http.get(url+"restaurante/caja/comanda/"+data.body.codpedido).then(function(data){
-							$("#imprimir_pedido").empty().html(data.body); var id = "imprimir_pedido";
-							var data = document.getElementById(id).innerHTML;
-					        var myWindow = window.open('', 'IMPRIMIENDO', 'height=500,width=1000');
-					        myWindow.document.write('<html><head><title>TICKET</title>');
-					        // myWindow.document.write('<link rel="stylesheet" href="main.css" type="text/css" />');
-					        myWindow.document.write('</head><body >');
-					        myWindow.document.write(data);
-					        myWindow.document.write('</body></html>');
-					        myWindow.document.close();
+						// this.$http.get(url+"restaurante/caja/comanda/"+data.body.codpedido).then(function(data){
+						// 	$("#imprimir_pedido").empty().html(data.body); 
+						// 	var id = "imprimir_pedido";
+						// 	var data = document.getElementById(id).innerHTML;
+					    //     var myWindow = window.open('', 'IMPRIMIENDO', 'height=500,width=1000');
+					    //     myWindow.document.write('<html><head><title>TICKET</title>');
+					    //     // myWindow.document.write('<link rel="stylesheet" href="main.css" type="text/css" />');
+					    //     myWindow.document.write('</head><body >');
+					    //     myWindow.document.write(data);
+					    //     myWindow.document.write('</body></html>');
+					    //     myWindow.document.close();
 
-					        myWindow.onload=function(){
-					            myWindow.focus(); myWindow.print(); myWindow.close();
-					        };
-						});
+					    //     myWindow.onload=function(){
+					    //     myWindow.focus(); 
+						// 	myWindow.print(); 
+						// 	myWindow.close();
+					    //     };
+
+						// });
 					}else{
 						phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR PEDIDO","ERROR DE RED","error");
 					}
 				}
-				phuyu_sistema.phuyu_fin(); phuyu_sistema.phuyu_modulo();
+				phuyu_sistema.phuyu_fin(); 
+				phuyu_sistema.phuyu_modulo();
 			}, function(){
 				phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR PEDIDO","ERROR DE RED","error");
-				phuyu_sistema.phuyu_fin(); phuyu_sistema.phuyu_modulo();
+				phuyu_sistema.phuyu_fin(); 
+				phuyu_sistema.phuyu_modulo();
 			});
 		},
 
