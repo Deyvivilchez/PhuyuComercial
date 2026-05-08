@@ -36,8 +36,31 @@ var phuyu_datos = new Vue({
 				this.campos.itemrepetircomprobante = 1;
 			}
 		},
+		phuyu_cerrar_inactividad: function(){
+			this.campos.cerrar_inactividad = this.campos.cerrar_inactividad==1 ? 0 : 1;
+		},
+		phuyu_mostrar_aviso: function(){
+			this.campos.mostrar_aviso = this.campos.mostrar_aviso==1 ? 0 : 1;
+		},
 		phuyu_guardar: function(){
+			this.campos.tiempo_inactividad_minutos = parseInt(this.campos.tiempo_inactividad_minutos || 120);
+			this.campos.minutos_aviso = parseInt(this.campos.minutos_aviso || 5);
+			if (this.campos.tiempo_inactividad_minutos < 1) {
+				this.campos.tiempo_inactividad_minutos = 1;
+			}
+			if (this.campos.minutos_aviso < 1) {
+				this.campos.minutos_aviso = 1;
+			}
+			if (this.campos.minutos_aviso > this.campos.tiempo_inactividad_minutos) {
+				this.campos.minutos_aviso = this.campos.tiempo_inactividad_minutos;
+			}
+
 			this.estado = 1; const formulario = new FormData($("#formulario")[0]);
+			formulario.set("sesion_alcance", this.campos.sesion_alcance);
+			formulario.set("cerrar_inactividad", this.campos.cerrar_inactividad);
+			formulario.set("tiempo_inactividad_minutos", this.campos.tiempo_inactividad_minutos);
+			formulario.set("mostrar_aviso", this.campos.mostrar_aviso);
+			formulario.set("minutos_aviso", this.campos.minutos_aviso);
 			this.$http.post(url+phuyu_controller+"/guardar", formulario).then(function(data){
 				if (data.body==1) {
 					phuyu_sistema.phuyu_noti("CONFIGURACION REGISTRADA CORRECTAMENTE","DATOS GUARDADOS EN EL SISTEMA","success");
@@ -74,4 +97,3 @@ var phuyu_datos = new Vue({
 		phuyu_sistema.phuyu_fin();
 	}
 });
-

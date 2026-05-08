@@ -6,6 +6,8 @@
         <input type="hidden" name="codpersona" v-model="campos.codpersona">
         <input type="hidden" name="codempresa" v-model="campos.codempresa">
         <input type="hidden" name="itemrepetircomprobante" v-model="campos.itemrepetircomprobante">
+        <input type="hidden" name="cerrar_inactividad" v-model="campos.cerrar_inactividad">
+        <input type="hidden" name="mostrar_aviso" v-model="campos.mostrar_aviso">
 
         <div class="container-fluid">
 
@@ -309,6 +311,82 @@
                         </div>
                     </div>
 
+                    <!-- SESION E INACTIVIDAD -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="ri-timer-line me-1"></i>
+                                Sesión e inactividad
+                            </h5>
+                        </div>
+
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label">Aplicar configuración</label>
+                                    <select class="form-select" name="sesion_alcance" v-model="campos.sesion_alcance">
+                                        <option value="global">Global para todo el sistema</option>
+                                        <option value="empresa">Solo para esta empresa</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12">
+                                    <div class="form-check form-switch form-switch-md">
+                                        <input class="form-check-input"
+                                               type="checkbox"
+                                               id="cerrar_inactividad"
+                                               :checked="campos.cerrar_inactividad == 1"
+                                               @click="phuyu_cerrar_inactividad()">
+                                        <label class="form-check-label" for="cerrar_inactividad">
+                                            Cerrar sesión por inactividad
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">
+                                        Si está desactivado, la aplicación no cerrará sesión por inactividad.
+                                    </small>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">Tiempo máximo permitido (minutos)</label>
+                                    <input type="number"
+                                           class="form-control text-end"
+                                           name="tiempo_inactividad_minutos"
+                                           v-model.number="campos.tiempo_inactividad_minutos"
+                                           min="1"
+                                           max="1440"
+                                           required>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">Minutos antes del aviso</label>
+                                    <input type="number"
+                                           class="form-control text-end"
+                                           name="minutos_aviso"
+                                           v-model.number="campos.minutos_aviso"
+                                           min="1"
+                                           v-bind:max="campos.tiempo_inactividad_minutos"
+                                           required>
+                                </div>
+
+                                <div class="col-12">
+                                    <div class="form-check form-switch form-switch-md">
+                                        <input class="form-check-input"
+                                               type="checkbox"
+                                               id="mostrar_aviso"
+                                               :checked="campos.mostrar_aviso == 1"
+                                               @click="phuyu_mostrar_aviso()">
+                                        <label class="form-check-label" for="mostrar_aviso">
+                                            Mostrar aviso antes de cerrar sesión
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">
+                                        El aviso usa el tiempo configurado arriba y no modifica php.ini.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- LOGOS -->
                     <div class="card phuyu-logos-card">
                         <div class="card-header d-flex align-items-center justify-content-between">
@@ -488,7 +566,12 @@
         codleyendapamazonia: "<?php echo $empresa[0]["codleyendapamazonia"]; ?>",
         leyendasamazonia: "<?php echo $empresa[0]["leyendasamazonia"]; ?>",
         codleyendasamazonia: "<?php echo $empresa[0]["codleyendasamazonia"]; ?>",
-        urlconsultacomprobantes: "<?php echo $empresa[0]["urlconsultacomprobantes"]; ?>"
+        urlconsultacomprobantes: "<?php echo $empresa[0]["urlconsultacomprobantes"]; ?>",
+        sesion_alcance: "<?php echo $sesion_config["alcance"]; ?>",
+        cerrar_inactividad: "<?php echo (int)$sesion_config["cerrar_inactividad"]; ?>",
+        tiempo_inactividad_minutos: "<?php echo (int)$sesion_config["tiempo_inactividad_minutos"]; ?>",
+        mostrar_aviso: "<?php echo (int)$sesion_config["mostrar_aviso"]; ?>",
+        minutos_aviso: "<?php echo (int)$sesion_config["minutos_aviso"]; ?>"
     };
     function previewLogo(input, previewId, emptyId) {
         const preview = document.getElementById(previewId);

@@ -6,6 +6,90 @@ class Configuraciones extends CI_Controller {
 		parent::__construct(); $this->load->model("phuyu_model");
 	}
 
+	private function tabla_configuracion_sesion_existe(){
+		$tabla = $this->db->query("select to_regclass('public.configuracion_sesion') as tabla")->row_array();
+		return !empty($tabla) && !empty($tabla["tabla"]);
+	}
+
+	private function configuracion_sesion($codempresa){
+		$default = [
+			"alcance" => "global",
+			"codempresa" => $codempresa,
+			"cerrar_inactividad" => 0,
+			"tiempo_inactividad_minutos" => 120,
+			"mostrar_aviso" => 1,
+			"minutos_aviso" => 5
+		];
+
+		if (!$this->tabla_configuracion_sesion_existe()) {
+			return $default;
+		}
+
+		$global = $this->db->query(
+			"select * from public.configuracion_sesion where alcance='global' and estado=1 order by codconfiguracion desc limit 1"
+		)->row_array();
+		$empresa = $this->db->query(
+			"select * from public.configuracion_sesion where alcance='empresa' and codempresa=? and estado=1 order by codconfiguracion desc limit 1",
+			[(int)$codempresa]
+		)->row_array();
+
+		if (!empty($empresa)) {
+			return $empresa;
+		}
+		if (!empty($global)) {
+			return $global;
+		}
+		return $default;
+	}
+
+	private function guardar_configuracion_sesion($codempresa){
+		if (!$this->tabla_configuracion_sesion_existe()) {
+			return true;
+		}
+
+		$alcance = isset($_POST["sesion_alcance"]) && $_POST["sesion_alcance"] === "empresa" ? "empresa" : "global";
+		$codempresaConfig = $alcance === "empresa" ? (int)$codempresa : null;
+		$cerrar = isset($_POST["cerrar_inactividad"]) ? (int)$_POST["cerrar_inactividad"] : 0;
+		$tiempo = isset($_POST["tiempo_inactividad_minutos"]) ? (int)$_POST["tiempo_inactividad_minutos"] : 120;
+		$aviso = isset($_POST["mostrar_aviso"]) ? (int)$_POST["mostrar_aviso"] : 0;
+		$minutosAviso = isset($_POST["minutos_aviso"]) ? (int)$_POST["minutos_aviso"] : 5;
+
+		$cerrar = $cerrar === 1 ? 1 : 0;
+		$aviso = $aviso === 1 ? 1 : 0;
+		$tiempo = max(1, min($tiempo, 1440));
+		$minutosAviso = max(1, min($minutosAviso, $tiempo));
+
+		if ($alcance === "global") {
+			$actual = $this->db->query(
+				"select codconfiguracion from public.configuracion_sesion where alcance='global' and estado=1 order by codconfiguracion desc limit 1"
+			)->row_array();
+		}else{
+			$actual = $this->db->query(
+				"select codconfiguracion from public.configuracion_sesion where alcance='empresa' and codempresa=? and estado=1 order by codconfiguracion desc limit 1",
+				[$codempresaConfig]
+			)->row_array();
+		}
+
+		$data = [
+			"alcance" => $alcance,
+			"codempresa" => $codempresaConfig,
+			"cerrar_inactividad" => $cerrar,
+			"tiempo_inactividad_minutos" => $tiempo,
+			"mostrar_aviso" => $aviso,
+			"minutos_aviso" => $minutosAviso,
+			"estado" => 1,
+			"actualizado_en" => date("Y-m-d H:i:s")
+		];
+
+		if (!empty($actual)) {
+			$this->db->where("codconfiguracion", (int)$actual["codconfiguracion"]);
+			return $this->db->update("public.configuracion_sesion", $data);
+		}
+
+		$data["creado_en"] = date("Y-m-d H:i:s");
+		return $this->db->insert("public.configuracion_sesion", $data);
+	}
+
 	public function index(){
 		if ($this->input->is_ajax_request()) {
 			$info = $this->db->query("select *from public.personas where codpersona=".$_SESSION["phuyu_codempresa"])->result_array();
@@ -17,7 +101,8 @@ class Configuraciones extends CI_Controller {
 			$info[0]["provincia"] = $pro;
 			$info[0]["distrito"] = $dis;
 			$departamentos = $this->db->query("select distinct(ubidepartamento), departamento from public.ubigeo order by ubidepartamento")->result_array();
-			$this->load->view("administracion/configuraciones/index",compact("info","empresa","departamentos"));
+			$sesion_config = $this->configuracion_sesion($_SESSION["phuyu_codempresa"]);
+			$this->load->view("administracion/configuraciones/index",compact("info","empresa","departamentos","sesion_config"));
 		}else{
 			$this->load->view("phuyu/404");
 		}
@@ -85,6 +170,11 @@ class Configuraciones extends CI_Controller {
 				$data = array("logoauspiciador" => $file);
 				$this->db->where("codempresa",$_POST["codempresa"]);
 				$estado = $this->db->update("public.empresas",$data);
+			}
+
+			if (!$this->guardar_configuracion_sesion($_POST["codempresa"])) {
+				echo 0;
+				return;
 			}
 
 			$_SESSION["phuyu_ruc"] = $_POST["documento"];
