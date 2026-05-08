@@ -1,0 +1,38 @@
+
+
+# Carpetas necesarias
+
+sudo mkdir -p sunat/certificados
+
+sudo mkdir -p sunat/webphuyu
+
+sudo mkdir -p application/logs
+
+# Dueño correcto del servidor web
+
+sudo chown -R www-data:www-data sunat
+
+sudo chown -R www-data:www-data application/logs
+
+# Permisos seguros
+
+sudo find sunat -type d -exec chmod 775 {} \;
+
+sudo find sunat -type f -exec chmod 664 {} \;
+
+sudo find application/logs -type d -exec chmod 775 {} \;
+
+sudo find application/logs -type f -exec chmod 664 {} \;
+
+
+
+
+sudo mkdir -p sunat/certificados sunat/webphuyu application/logs
+
+sudo chown -R www-data:www-data sunat application/logs
+
+sudo find sunat -type d -exec chmod 775 {} \;
+sudo find sunat -type f -exec chmod 664 {} \;
+
+sudo find application/logs -type d -exec chmod 775 {} \;
+sudo find application/logs -type f -exec chmod 664 {} \;
