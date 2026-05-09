@@ -69,7 +69,7 @@
 
                                 <div class="col-md-5 d-flex align-items-end">
                                     <button type="button"
-                                            class="btn btn-info w-100"
+                                            class="btn btn-info w-100 btn-consultar"
                                             v-on:click="phuyu_consultar()">
                                         <i class="ri-search-line me-1"></i>
                                         Consultar SUNAT
@@ -539,40 +539,48 @@
     </form>
 </div>
 
-<script>
-    var campos = {
-        codpersona: "<?php echo $info[0]["codpersona"]; ?>",
-        codempresa: "<?php echo $empresa[0]["codempresa"]; ?>",
-        documento: "<?php echo $info[0]["documento"]; ?>",
-        razonsocial: "<?php echo $info[0]["razonsocial"]; ?>",
-        nombrecomercial: "<?php echo $info[0]["nombrecomercial"]; ?>",
-        direccion: "<?php echo $info[0]["direccion"]; ?>",
-        claveseguridad: "<?php echo $empresa[0]["claveseguridad"]; ?>",
-        email: "<?php echo $info[0]["email"]; ?>",
-        telefono: "<?php echo $info[0]["telefono"]; ?>",
-        slogan: "<?php echo $empresa[0]["slogan"]; ?>",
-        igvsunat: "<?php echo $empresa[0]["igvsunat"]; ?>",
-        icbpersunat: "<?php echo $empresa[0]["icbpersunat"]; ?>",
-        iscsunat: "<?php echo $empresa[0]["iscsunat"]; ?>",
-        itemrepetircomprobante: "<?php echo $empresa[0]["itemrepetircomprobante"]; ?>",
-        publicidad: "<?php echo $empresa[0]["publicidad"]; ?>",
-        agradecimiento: "<?php echo $empresa[0]["agradecimiento"]; ?>",
-        departamento: "<?php echo $info[0]["departamento"]; ?>",
-        provincia: "<?php echo $info[0]["provincia"]; ?>",
-        codubigeo: "<?php echo $info[0]["distrito"]; ?>",
-        provinciacod: "<?php echo $info[0]["provincia"]; ?>",
-        codubigeocod: "<?php echo $info[0]["codubigeo"]; ?>",
-        leyendapamazonia: "<?php echo $empresa[0]["leyendapamazonia"]; ?>",
-        codleyendapamazonia: "<?php echo $empresa[0]["codleyendapamazonia"]; ?>",
-        leyendasamazonia: "<?php echo $empresa[0]["leyendasamazonia"]; ?>",
-        codleyendasamazonia: "<?php echo $empresa[0]["codleyendasamazonia"]; ?>",
-        urlconsultacomprobantes: "<?php echo $empresa[0]["urlconsultacomprobantes"]; ?>",
-        sesion_alcance: "<?php echo $sesion_config["alcance"]; ?>",
-        cerrar_inactividad: "<?php echo (int)$sesion_config["cerrar_inactividad"]; ?>",
-        tiempo_inactividad_minutos: "<?php echo (int)$sesion_config["tiempo_inactividad_minutos"]; ?>",
-        mostrar_aviso: "<?php echo (int)$sesion_config["mostrar_aviso"]; ?>",
-        minutos_aviso: "<?php echo (int)$sesion_config["minutos_aviso"]; ?>"
+<?php
+    $info_configuracion = isset($info[0]) ? $info[0] : array();
+    $empresa_configuracion = isset($empresa[0]) ? $empresa[0] : array();
+    $valor_configuracion = function($datos, $campo, $default = "") {
+        return isset($datos[$campo]) ? $datos[$campo] : $default;
     };
+    $campos_configuracion = array(
+        "codpersona" => $valor_configuracion($info_configuracion, "codpersona"),
+        "codempresa" => $valor_configuracion($empresa_configuracion, "codempresa"),
+        "documento" => $valor_configuracion($info_configuracion, "documento"),
+        "razonsocial" => $valor_configuracion($info_configuracion, "razonsocial"),
+        "nombrecomercial" => $valor_configuracion($info_configuracion, "nombrecomercial"),
+        "direccion" => $valor_configuracion($info_configuracion, "direccion"),
+        "claveseguridad" => $valor_configuracion($empresa_configuracion, "claveseguridad"),
+        "email" => $valor_configuracion($info_configuracion, "email"),
+        "telefono" => $valor_configuracion($info_configuracion, "telefono"),
+        "slogan" => $valor_configuracion($empresa_configuracion, "slogan"),
+        "igvsunat" => $valor_configuracion($empresa_configuracion, "igvsunat"),
+        "icbpersunat" => $valor_configuracion($empresa_configuracion, "icbpersunat"),
+        "iscsunat" => $valor_configuracion($empresa_configuracion, "iscsunat"),
+        "itemrepetircomprobante" => $valor_configuracion($empresa_configuracion, "itemrepetircomprobante"),
+        "publicidad" => $valor_configuracion($empresa_configuracion, "publicidad"),
+        "agradecimiento" => $valor_configuracion($empresa_configuracion, "agradecimiento"),
+        "departamento" => $valor_configuracion($info_configuracion, "departamento"),
+        "provincia" => $valor_configuracion($info_configuracion, "provincia"),
+        "codubigeo" => $valor_configuracion($info_configuracion, "distrito"),
+        "provinciacod" => $valor_configuracion($info_configuracion, "provincia"),
+        "codubigeocod" => $valor_configuracion($info_configuracion, "codubigeo"),
+        "leyendapamazonia" => $valor_configuracion($empresa_configuracion, "leyendapamazonia"),
+        "codleyendapamazonia" => $valor_configuracion($empresa_configuracion, "codleyendapamazonia"),
+        "leyendasamazonia" => $valor_configuracion($empresa_configuracion, "leyendasamazonia"),
+        "codleyendasamazonia" => $valor_configuracion($empresa_configuracion, "codleyendasamazonia"),
+        "urlconsultacomprobantes" => $valor_configuracion($empresa_configuracion, "urlconsultacomprobantes"),
+        "sesion_alcance" => $valor_configuracion($sesion_config, "alcance", "global"),
+        "cerrar_inactividad" => (int)$valor_configuracion($sesion_config, "cerrar_inactividad", 0),
+        "tiempo_inactividad_minutos" => (int)$valor_configuracion($sesion_config, "tiempo_inactividad_minutos", 120),
+        "mostrar_aviso" => (int)$valor_configuracion($sesion_config, "mostrar_aviso", 1),
+        "minutos_aviso" => (int)$valor_configuracion($sesion_config, "minutos_aviso", 5)
+    );
+?>
+<script>
+    var campos = <?php echo json_encode($campos_configuracion, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
     function previewLogo(input, previewId, emptyId) {
         const preview = document.getElementById(previewId);
         const empty = document.getElementById(emptyId);
