@@ -943,30 +943,63 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_programacion_cpe_cola_pendiente
     ON sunat.programacion_cpe_cola (tipo, referencia)
     WHERE estado IN ('pendiente', 'procesando', 'error');
 
-INSERT INTO seguridad.modulos (
-    codmodulo, descripcion, icono, url, codpadre, orden, estado,
-    nuevo, editar, anular, consultar,
-    clavenuevo, clavemodificar, claveanular, claveconsultar, codsistema
-)
-SELECT
-    126, 'Programacion envios CPE', 'ri-timer-flash-line',
-    'facturacion/programacionsunat', 8, 99, 1,
-    1, 1, 1, 1,
-    '', '', '', '', 1
-WHERE NOT EXISTS (
-    SELECT 1 FROM seguridad.modulos WHERE url = 'facturacion/programacionsunat'
-);
+DO $$
+DECLARE
+    v_codmodulo INTEGER;
+BEGIN
+    SELECT codmodulo
+    INTO v_codmodulo
+    FROM seguridad.modulos
+    WHERE url = 'facturacion/programacionsunat'
+    LIMIT 1;
 
-INSERT INTO seguridad.moduloperfiles (codmodulo, codperfil, nuevo, editar, anular)
-SELECT 126, p.codperfil, 1, 1, 1
-FROM seguridad.perfiles p
-WHERE EXISTS (SELECT 1 FROM seguridad.modulos WHERE codmodulo = 126)
-  AND NOT EXISTS (
-    SELECT 1
-    FROM seguridad.moduloperfiles mp
-    WHERE mp.codmodulo = 126
-      AND mp.codperfil = p.codperfil
-  );
+    IF v_codmodulo IS NULL THEN
+        SELECT codmodulo
+        INTO v_codmodulo
+        FROM seguridad.modulos
+        WHERE codmodulo = 126
+        LIMIT 1;
+    END IF;
+
+    IF v_codmodulo IS NULL THEN
+        INSERT INTO seguridad.modulos (
+            codmodulo, descripcion, icono, url, codpadre, orden, estado,
+            nuevo, editar, anular, consultar,
+            clavenuevo, clavemodificar, claveanular, claveconsultar, codsistema
+        )
+        VALUES (
+            126, 'Programacion envios CPE', 'ri-timer-flash-line',
+            'facturacion/programacionsunat', 8, 99, 1,
+            1, 1, 1, 1,
+            '', '', '', '', 1
+        )
+        RETURNING codmodulo INTO v_codmodulo;
+    ELSE
+        UPDATE seguridad.modulos
+        SET descripcion = 'Programacion envios CPE',
+            icono = 'ri-timer-flash-line',
+            url = 'facturacion/programacionsunat',
+            codpadre = 8,
+            orden = 99,
+            estado = 1,
+            nuevo = 1,
+            editar = 1,
+            anular = 1,
+            consultar = 1,
+            codsistema = 1
+        WHERE codmodulo = v_codmodulo;
+    END IF;
+
+    INSERT INTO seguridad.moduloperfiles (codmodulo, codperfil, nuevo, editar, anular)
+    SELECT v_codmodulo, p.codperfil, 1, 1, 1
+    FROM seguridad.perfiles p
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM seguridad.moduloperfiles mp
+        WHERE mp.codmodulo = v_codmodulo
+          AND mp.codperfil = p.codperfil
+    );
+END $$;
 
 -- ============================================================
 -- NOTAS PROGRAMACION AUTOMATICA SUNAT / CPE
@@ -1002,6 +1035,117 @@ WHERE EXISTS (SELECT 1 FROM seguridad.modulos WHERE codmodulo = 126)
 -- Para proyectos nuevos:
 -- /usr/bin/php8.2 $(which composer) install
 -- /usr/bin/php8.2 $(which composer) dump-autoload -o
+-- ============================================================
+
+-- ============================================================
+-- MODULO ARQUEOS DE CAJA
+-- ============================================================
+
+DO $$
+DECLARE
+    v_codmodulo INTEGER;
+BEGIN
+    SELECT codmodulo
+    INTO v_codmodulo
+    FROM seguridad.modulos
+    WHERE url = 'caja/arqueos'
+    LIMIT 1;
+
+    IF v_codmodulo IS NULL THEN
+        SELECT codmodulo
+        INTO v_codmodulo
+        FROM seguridad.modulos
+        WHERE codmodulo = 127
+        LIMIT 1;
+    END IF;
+
+    IF v_codmodulo IS NULL THEN
+        INSERT INTO seguridad.modulos (
+            codmodulo, descripcion, icono, url, codpadre, orden, estado,
+            nuevo, editar, anular, consultar,
+            clavenuevo, clavemodificar, claveanular, claveconsultar, codsistema
+        )
+        VALUES (
+            127, 'Arqueos de caja', 'bi bi-clipboard-data',
+            'caja/arqueos', 4, 6, 1,
+            1, 1, 1, 1,
+            '', '', '', '', 1
+        )
+        RETURNING codmodulo INTO v_codmodulo;
+    ELSE
+        UPDATE seguridad.modulos
+        SET descripcion = 'Arqueos de caja',
+            icono = 'bi bi-clipboard-data',
+            url = 'caja/arqueos',
+            codpadre = 4,
+            orden = 6,
+            estado = 1,
+            nuevo = 1,
+            editar = 1,
+            anular = 1,
+            consultar = 1,
+            codsistema = 1
+        WHERE codmodulo = v_codmodulo;
+    END IF;
+
+    INSERT INTO seguridad.moduloperfiles (codmodulo, codperfil, nuevo, editar, anular)
+    SELECT v_codmodulo, p.codperfil, 1, 1, 1
+    FROM seguridad.perfiles p
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM seguridad.moduloperfiles mp
+        WHERE mp.codmodulo = v_codmodulo
+          AND mp.codperfil = p.codperfil
+    );
+END $$;
+
+-- Nota:
+-- Se registra la ruta caja/arqueos porque el wrapper phuyu/w valida
+-- seguridad.modulos antes de cargar el controlador.
+-- ============================================================
+
+-- ============================================================
+-- CONFIGURACION GLOBAL DE SESION E INACTIVIDAD
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS public.configuracion_sesion (
+    codconfiguracion SERIAL PRIMARY KEY,
+    alcance VARCHAR(10) NOT NULL DEFAULT 'global'
+        CHECK (alcance IN ('global', 'empresa')),
+    codempresa INTEGER NULL,
+    cerrar_inactividad INTEGER NOT NULL DEFAULT 0,
+    tiempo_inactividad_minutos INTEGER NOT NULL DEFAULT 120,
+    mostrar_aviso INTEGER NOT NULL DEFAULT 1,
+    minutos_aviso INTEGER NOT NULL DEFAULT 5,
+    estado INTEGER NOT NULL DEFAULT 1,
+    creado_en TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
+    actualizado_en TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_configuracion_sesion_global_activa
+    ON public.configuracion_sesion (alcance)
+    WHERE alcance = 'global' AND estado = 1;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_configuracion_sesion_empresa_activa
+    ON public.configuracion_sesion (codempresa)
+    WHERE alcance = 'empresa' AND estado = 1;
+
+INSERT INTO public.configuracion_sesion (
+    alcance, codempresa, cerrar_inactividad, tiempo_inactividad_minutos,
+    mostrar_aviso, minutos_aviso, estado
+)
+SELECT 'global', NULL, 0, 120, 1, 5, 1
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM public.configuracion_sesion
+    WHERE alcance = 'global'
+      AND estado = 1
+);
+
+-- Nota:
+-- cerrar_inactividad = 0 deja la sesion sin cierre por inactividad desde
+-- la aplicacion. sess_expiration y php.ini siguen siendo limites maximos
+-- del servidor.
 -- ============================================================
 -- FIN MIGRACIONES
 -- ============================================================

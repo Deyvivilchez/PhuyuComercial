@@ -1,28 +1,109 @@
-<?php defined('BASEPATH') or exit('No direct script access allowed');
+<?php defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Configuraciones extends CI_Controller
-{
+class Configuraciones extends CI_Controller {
 
-	public function __construct()
-	{
-		parent::__construct();
-		$this->load->model("phuyu_model");
+	public function __construct(){
+		parent::__construct(); $this->load->model("phuyu_model");
 	}
 
-	public function index()
-	{
+	private function tabla_configuracion_sesion_existe(){
+		$tabla = $this->db->query("select to_regclass('public.configuracion_sesion') as tabla")->row_array();
+		return !empty($tabla) && !empty($tabla["tabla"]);
+	}
+
+	private function configuracion_sesion($codempresa){
+		$default = [
+			"alcance" => "global",
+			"codempresa" => $codempresa,
+			"cerrar_inactividad" => 0,
+			"tiempo_inactividad_minutos" => 120,
+			"mostrar_aviso" => 1,
+			"minutos_aviso" => 5
+		];
+
+		if (!$this->tabla_configuracion_sesion_existe()) {
+			return $default;
+		}
+
+		$global = $this->db->query(
+			"select * from public.configuracion_sesion where alcance='global' and estado=1 order by codconfiguracion desc limit 1"
+		)->row_array();
+		$empresa = $this->db->query(
+			"select * from public.configuracion_sesion where alcance='empresa' and codempresa=? and estado=1 order by codconfiguracion desc limit 1",
+			[(int)$codempresa]
+		)->row_array();
+
+		if (!empty($empresa)) {
+			return $empresa;
+		}
+		if (!empty($global)) {
+			return $global;
+		}
+		return $default;
+	}
+
+	private function guardar_configuracion_sesion($codempresa){
+		if (!$this->tabla_configuracion_sesion_existe()) {
+			return true;
+		}
+
+		$alcance = isset($_POST["sesion_alcance"]) && $_POST["sesion_alcance"] === "empresa" ? "empresa" : "global";
+		$codempresaConfig = $alcance === "empresa" ? (int)$codempresa : null;
+		$cerrar = isset($_POST["cerrar_inactividad"]) ? (int)$_POST["cerrar_inactividad"] : 0;
+		$tiempo = isset($_POST["tiempo_inactividad_minutos"]) ? (int)$_POST["tiempo_inactividad_minutos"] : 120;
+		$aviso = isset($_POST["mostrar_aviso"]) ? (int)$_POST["mostrar_aviso"] : 0;
+		$minutosAviso = isset($_POST["minutos_aviso"]) ? (int)$_POST["minutos_aviso"] : 5;
+
+		$cerrar = $cerrar === 1 ? 1 : 0;
+		$aviso = $aviso === 1 ? 1 : 0;
+		$tiempo = max(1, min($tiempo, 1440));
+		$minutosAviso = max(1, min($minutosAviso, $tiempo));
+
+		if ($alcance === "global") {
+			$actual = $this->db->query(
+				"select codconfiguracion from public.configuracion_sesion where alcance='global' and estado=1 order by codconfiguracion desc limit 1"
+			)->row_array();
+		}else{
+			$actual = $this->db->query(
+				"select codconfiguracion from public.configuracion_sesion where alcance='empresa' and codempresa=? and estado=1 order by codconfiguracion desc limit 1",
+				[$codempresaConfig]
+			)->row_array();
+		}
+
+		$data = [
+			"alcance" => $alcance,
+			"codempresa" => $codempresaConfig,
+			"cerrar_inactividad" => $cerrar,
+			"tiempo_inactividad_minutos" => $tiempo,
+			"mostrar_aviso" => $aviso,
+			"minutos_aviso" => $minutosAviso,
+			"estado" => 1,
+			"actualizado_en" => date("Y-m-d H:i:s")
+		];
+
+		if (!empty($actual)) {
+			$this->db->where("codconfiguracion", (int)$actual["codconfiguracion"]);
+			return $this->db->update("public.configuracion_sesion", $data);
+		}
+
+		$data["creado_en"] = date("Y-m-d H:i:s");
+		return $this->db->insert("public.configuracion_sesion", $data);
+	}
+
+	public function index(){
 		if ($this->input->is_ajax_request()) {
-			$info = $this->db->query("select *from public.personas where codpersona=" . $_SESSION["phuyu_codempresa"])->result_array();
-			$empresa = $this->db->query("select *from public.empresas where codempresa=" . $_SESSION["phuyu_codempresa"])->result_array();
-			$dep = substr($empresa[0]["ubigeo"], 0, 2);
-			$pro = substr($empresa[0]["ubigeo"], 2, 2);
-			$dis = substr($empresa[0]["ubigeo"], 4, 2);
+			$info = $this->db->query("select *from public.personas where codpersona=".$_SESSION["phuyu_codempresa"])->result_array();
+			$empresa = $this->db->query("select *from public.empresas where codempresa=".$_SESSION["phuyu_codempresa"])->result_array();
+			$dep = substr($empresa[0]["ubigeo"],0,2);
+			$pro = substr($empresa[0]["ubigeo"],2,2); 
+			$dis = substr($empresa[0]["ubigeo"],4,2);
 			$info[0]["departamento"] = $dep;
 			$info[0]["provincia"] = $pro;
 			$info[0]["distrito"] = $dis;
 			$departamentos = $this->db->query("select distinct(ubidepartamento), departamento from public.ubigeo order by ubidepartamento")->result_array();
-			$this->load->view("administracion/configuraciones/index", compact("info", "empresa", "departamentos"));
-		} else {
+			$sesion_config = $this->configuracion_sesion($_SESSION["phuyu_codempresa"]);
+			$this->load->view("administracion/configuraciones/index",compact("info","empresa","departamentos","sesion_config"));
+		}else{
 			$this->load->view("phuyu/404");
 		}
 	}
@@ -36,58 +117,39 @@ class Configuraciones extends CI_Controller
 			} */
 			$codubigeo = $_POST["codubigeo"];
 
-			$ubigeo = $this->db->query("select *from public.ubigeo where codubigeo=" . $codubigeo)->result_array();
+			$ubigeo = $this->db->query("select *from public.ubigeo where codubigeo=".$codubigeo)->result_array();
 
-			$campos = ["coddocumentotipo", "documento", "razonsocial", "nombrecomercial", "direccion", "email", "telefono", "codubigeo"];
-			$valores = [
-				4,
-				$_POST["documento"],
-				$_POST["razonsocial"],
-				$_POST["nombrecomercial"],
-				$_POST["direccion"],
-				$_POST["email"],
-				$_POST["telefono"],
-				$codubigeo
-			];
+			$campos = ["coddocumentotipo","documento","razonsocial","nombrecomercial","direccion","email","telefono","codubigeo"];
+			$valores = [4,$_POST["documento"],
+			$_POST["razonsocial"],
+			$_POST["nombrecomercial"],
+			$_POST["direccion"],
+			$_POST["email"],
+			$_POST["telefono"],
+			$codubigeo];
 
-			$estado = $this->phuyu_model->phuyu_editar("public.personas", $campos, $valores, "codpersona", $_POST["codpersona"]);
+			$estado = $this->phuyu_model->phuyu_editar("public.personas", $campos, $valores,"codpersona",$_POST["codpersona"]);
 
-			$campos = ["igvsunat", "icbpersunat", "iscsunat", "slogan", "itemrepetircomprobante", "claveseguridad", "publicidad", "agradecimiento", "ubigeo", "departamento", "provincia", "distrito", "leyendapamazonia", "codleyendapamazonia", "leyendasamazonia", "codleyendasamazonia", "urlconsultacomprobantes"];
-			$valores = [
-				(float)$_POST["igvsunat"],
-				(float)$_POST["icbpersunat"],
-				(float)$_POST["iscsunat"],
-				$_POST["slogan"],
-				$_POST["itemrepetircomprobante"],
-				$_POST["claveseguridad"],
-				$_POST["publicidad"],
-				$_POST["agradecimiento"],
-				$ubigeo[0]["ubidepartamento"] . '' . $ubigeo[0]["ubiprovincia"] . '' . $ubigeo[0]["ubidistrito"],
-				$ubigeo[0]["departamento"],
-				$ubigeo[0]["provincia"],
-				$ubigeo[0]["distrito"],
-				$_POST["leyendapamazonia"],
-				$_POST["codleyendapamazonia"],
-				$_POST["leyendasamazonia"],
-				$_POST["codleyendasamazonia"],
-				$_POST["urlconsultacomprobantes"]
-			];
-			$estado = $this->phuyu_model->phuyu_editar("public.empresas", $campos, $valores, "codempresa", $_POST["codempresa"]);
+			$campos = ["igvsunat","icbpersunat","iscsunat","slogan","itemrepetircomprobante","claveseguridad","publicidad","agradecimiento","ubigeo","departamento","provincia","distrito","leyendapamazonia","codleyendapamazonia","leyendasamazonia","codleyendasamazonia","urlconsultacomprobantes"];
+			$valores = [(double)$_POST["igvsunat"],
+			(double)$_POST["icbpersunat"],
+			(double)$_POST["iscsunat"],
+			$_POST["slogan"],
+			$_POST["itemrepetircomprobante"],
+			$_POST["claveseguridad"],
+			$_POST["publicidad"],
+			$_POST["agradecimiento"],
+			$ubigeo[0]["ubidepartamento"].''.$ubigeo[0]["ubiprovincia"].''.$ubigeo[0]["ubidistrito"],
+			$ubigeo[0]["departamento"],
+			$ubigeo[0]["provincia"],
+			$ubigeo[0]["distrito"],
+			$_POST["leyendapamazonia"],
+			$_POST["codleyendapamazonia"],
+			$_POST["leyendasamazonia"],
+			$_POST["codleyendasamazonia"],
+			$_POST["urlconsultacomprobantes"]];
+			$estado = $this->phuyu_model->phuyu_editar("public.empresas", $campos, $valores,"codempresa",$_POST["codempresa"]);
 
-			if ($_FILES["logo"]["name"] != "") {
-				$file = "logo_" . substr($_FILES["logo"]["name"], -5);
-				move_uploaded_file($_FILES["logo"]["tmp_name"], "./public/img/empresa/" . $file);
-
-<<<<<<< HEAD
-				$data = array("foto" => $file);
-				$this->db->where("codpersona", $_POST["codpersona"]);
-				$estado = $this->db->update("public.personas", $data);
-			}
-			if ($_FILES["auspiciador"]["name"] != "") {
-				$file = "auspiciador_" . substr($_FILES["auspiciador"]["name"], -5);
-				move_uploaded_file($_FILES["auspiciador"]["tmp_name"], "./public/img/empresa/" . $file);
-
-=======
 			$file = $this->guardar_imagen_configuracion("logo", "logo");
 			if ($file === false) {
 				echo 0;
@@ -105,20 +167,24 @@ class Configuraciones extends CI_Controller
 				return;
 			}
 			if ($file !== null) {
->>>>>>> df096e30d33ed5e08fd5fa18f98ff97d27bb54eb
 				$data = array("logoauspiciador" => $file);
-				$this->db->where("codempresa", $_POST["codempresa"]);
-				$estado = $this->db->update("public.empresas", $data);
+				$this->db->where("codempresa",$_POST["codempresa"]);
+				$estado = $this->db->update("public.empresas",$data);
+			}
+
+			if (!$this->guardar_configuracion_sesion($_POST["codempresa"])) {
+				echo 0;
+				return;
 			}
 
 			$_SESSION["phuyu_ruc"] = $_POST["documento"];
-			$_SESSION["phuyu_empresa"] = ($_POST["nombrecomercial"] == '') ? $_POST["razonsocial"] : $_POST["nombrecomercial"];
-			$_SESSION["phuyu_igv"] = (float)$_POST["igvsunat"];
-			$_SESSION["phuyu_icbper"] = (float)$_POST["icbpersunat"];
+            $_SESSION["phuyu_empresa"] = ($_POST["nombrecomercial"]=='')?$_POST["razonsocial"]:$_POST["nombrecomercial"];
+			$_SESSION["phuyu_igv"] = (double)$_POST["igvsunat"];
+			$_SESSION["phuyu_icbper"] = (double)$_POST["icbpersunat"];
 			$_SESSION["phuyu_itemrepetir"] = $_POST["itemrepetircomprobante"];
 
 			echo $estado;
-		} else {
+		}else{
 			$this->load->view("phuyu/404");
 		}
 	}
@@ -166,57 +232,51 @@ class Configuraciones extends CI_Controller
 
 	// application/controllers/administracion/Configuraciones.php ///
 
-	public function guardar22()
-	{
-		$campo = 'logo';                 // <input type="file" name="logo">
-		$nombreArchivo = 'logo_4.png';   // o genera uno dinámico
+public function guardar22()
+{
+    $campo = 'logo';                 // <input type="file" name="logo">
+    $nombreArchivo = 'logo_4.png';   // o genera uno dinámico
 
-		// 1) Ruta ABSOLUTA dentro del proyecto (NADA de "./")
-		$destDir  = FCPATH . 'public/img/empresa/';     // p.ej. /Applications/XAMPP/.../motorepuestosmirsan/public/img/empresa/
-		$destPath = $destDir . $nombreArchivo;
+    // 1) Ruta ABSOLUTA dentro del proyecto (NADA de "./")
+    $destDir  = FCPATH . 'public/img/empresa/';     // p.ej. /Applications/XAMPP/.../motorepuestosmirsan/public/img/empresa/
+    $destPath = $destDir . $nombreArchivo;
 
-		// 2) Asegura carpeta
-		if (!is_dir($destDir)) {
-			if (!@mkdir($destDir, 0775, true)) {
-				show_error('No se pudo crear el directorio: ' . $destDir, 500);
-				return;
-			}
-		}
+    // 2) Asegura carpeta
+    if (!is_dir($destDir)) {
+        if (!@mkdir($destDir, 0775, true)) {
+            show_error('No se pudo crear el directorio: ' . $destDir, 500);
+            return;
+        }
+    }
 
-		// 3) Valida el upload
-		if (
-			!isset($_FILES[$campo]) ||
-			$_FILES[$campo]['error'] !== UPLOAD_ERR_OK ||
-			!is_uploaded_file($_FILES[$campo]['tmp_name'])
-		) {
-			show_error('Archivo inválido o no enviado (campo "logo").', 400);
-			return;
-		}
+    // 3) Valida el upload
+    if (
+        !isset($_FILES[$campo]) ||
+        $_FILES[$campo]['error'] !== UPLOAD_ERR_OK ||
+        !is_uploaded_file($_FILES[$campo]['tmp_name'])
+    ) {
+        show_error('Archivo inválido o no enviado (campo "logo").', 400);
+        return;
+    }
 
-		// (Opcional) Limpia un archivo previo con permisos raros
-		if (file_exists($destPath)) {
-			@unlink($destPath);
-		}
+    // (Opcional) Limpia un archivo previo con permisos raros
+    if (file_exists($destPath)) { @unlink($destPath); }
 
-		// 4) Mueve el archivo
-		if (!@move_uploaded_file($_FILES[$campo]['tmp_name'], $destPath)) {
-			// Log de diagnóstico útil
-			log_message('error', 'move_uploaded_file falló. TMP=' . ($_FILES[$campo]['tmp_name'] ?? 'null') . ' DEST=' . $destPath);
-			log_message('error', 'cwd=' . getcwd() . ' FCPATH=' . FCPATH);
+    // 4) Mueve el archivo
+    if (!@move_uploaded_file($_FILES[$campo]['tmp_name'], $destPath)) {
+        // Log de diagnóstico útil
+        log_message('error', 'move_uploaded_file falló. TMP=' . ($_FILES[$campo]['tmp_name'] ?? 'null') . ' DEST=' . $destPath);
+        log_message('error', 'cwd=' . getcwd() . ' FCPATH=' . FCPATH);
 
-			show_error('No se pudo guardar el archivo. Revisa permisos y ruta: ' . $destDir, 500);
-			return;
-		}
+        show_error('No se pudo guardar el archivo. Revisa permisos y ruta: ' . $destDir, 500);
+        return;
+    }
 
-		// 5) Éxito
-		// ... guarda en BD la ruta si hace falta ...
-		$this->output
-			->set_status_header(200)
-			->set_output(json_encode(['ok' => true, 'path' => 'public/img/empresa/' . $nombreArchivo]));
-	}
+    // 5) Éxito
+    // ... guarda en BD la ruta si hace falta ...
+    $this->output
+        ->set_status_header(200)
+        ->set_output(json_encode(['ok' => true, 'path' => 'public/img/empresa/'.$nombreArchivo]));
 }
-<<<<<<< HEAD
-=======
 
 }
->>>>>>> df096e30d33ed5e08fd5fa18f98ff97d27bb54eb

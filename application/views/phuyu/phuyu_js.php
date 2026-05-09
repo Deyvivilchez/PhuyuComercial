@@ -69,6 +69,104 @@
         phuyu_controller = "administracion/dashboard";
     }
 
+    var phuyuSesionConfig = {
+        cerrar: <?php echo isset($_SESSION["phuyu_sesion_cerrar_inactividad"]) ? (int)$_SESSION["phuyu_sesion_cerrar_inactividad"] : 0; ?>,
+        minutos: <?php echo isset($_SESSION["phuyu_sesion_tiempo_minutos"]) ? (int)$_SESSION["phuyu_sesion_tiempo_minutos"] : 120; ?>,
+        aviso: <?php echo isset($_SESSION["phuyu_sesion_mostrar_aviso"]) ? (int)$_SESSION["phuyu_sesion_mostrar_aviso"] : 1; ?>,
+        minutosAviso: <?php echo isset($_SESSION["phuyu_sesion_minutos_aviso"]) ? (int)$_SESSION["phuyu_sesion_minutos_aviso"] : 5; ?>
+    };
+
+    (function iniciarControlSesion() {
+        if (phuyuSesionConfig.cerrar != 1) {
+            return;
+        }
+
+        var temporizadorAviso = null;
+        var temporizadorCierre = null;
+        var ultimoPing = 0;
+        var avisoMostrado = false;
+
+        function segundos(valor) {
+            return Math.max(1, parseInt(valor || 1, 10)) * 1000;
+        }
+
+        function cerrarPorInactividad() {
+            $.get(url + "phuyu/phuyu_logout2").always(function () {
+                window.location = url;
+            });
+        }
+
+        function programarTemporizadores() {
+            clearTimeout(temporizadorAviso);
+            clearTimeout(temporizadorCierre);
+            avisoMostrado = false;
+
+            var totalMs = segundos(phuyuSesionConfig.minutos * 60);
+            var avisoMs = segundos(phuyuSesionConfig.minutosAviso * 60);
+            var esperaAviso = Math.max(1000, totalMs - avisoMs);
+
+            if (phuyuSesionConfig.aviso == 1 && phuyuSesionConfig.minutosAviso < phuyuSesionConfig.minutos) {
+                temporizadorAviso = setTimeout(mostrarAviso, esperaAviso);
+            }
+
+            temporizadorCierre = setTimeout(cerrarPorInactividad, totalMs);
+        }
+
+        function actualizarConfiguracion(data) {
+            if (!data || data.estado != 1) {
+                return;
+            }
+            phuyuSesionConfig.cerrar = parseInt(data.cerrar_inactividad || phuyuSesionConfig.cerrar, 10);
+            phuyuSesionConfig.minutos = parseInt(data.tiempo_inactividad_minutos || phuyuSesionConfig.minutos, 10);
+            phuyuSesionConfig.aviso = parseInt(data.mostrar_aviso || phuyuSesionConfig.aviso, 10);
+            phuyuSesionConfig.minutosAviso = parseInt(data.minutos_aviso || phuyuSesionConfig.minutosAviso, 10);
+        }
+
+        function pingSesion(forzar) {
+            var ahora = Date.now();
+            if (!forzar && (ahora - ultimoPing) < 60000) {
+                programarTemporizadores();
+                return;
+            }
+            ultimoPing = ahora;
+
+            $.get(url + "phuyu/phuyu_ping_sesion").then(function (data) {
+                actualizarConfiguracion(data);
+                if (phuyuSesionConfig.cerrar == 1) {
+                    programarTemporizadores();
+                }
+            }, cerrarPorInactividad);
+        }
+
+        function mostrarAviso() {
+            if (avisoMostrado || phuyuSesionConfig.aviso != 1) {
+                return;
+            }
+            avisoMostrado = true;
+            swal({
+                title: "Sesion por expirar",
+                text: "Tu sesion se cerrara por inactividad. Deseas continuar?",
+                icon: "warning",
+                buttons: ["Cerrar sesion", "Continuar"],
+                dangerMode: true
+            }).then(function (continuar) {
+                if (continuar) {
+                    pingSesion(true);
+                } else {
+                    cerrarPorInactividad();
+                }
+            });
+        }
+
+        ["click", "keydown", "mousemove", "scroll", "touchstart"].forEach(function (evento) {
+            document.addEventListener(evento, function () {
+                pingSesion(false);
+            }, { passive: true });
+        });
+
+        programarTemporizadores();
+    })();
+
     $('#compose, .compose-close').click(function () {
         $('.compose').slideToggle();
     });
