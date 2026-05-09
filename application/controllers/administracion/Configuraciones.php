@@ -92,16 +92,29 @@ class Configuraciones extends CI_Controller {
 
 	public function index(){
 		if ($this->input->is_ajax_request()) {
-			$info = $this->db->query("select *from public.personas where codpersona=".$_SESSION["phuyu_codempresa"])->result_array();
-			$empresa = $this->db->query("select *from public.empresas where codempresa=".$_SESSION["phuyu_codempresa"])->result_array();
-			$dep = substr($empresa[0]["ubigeo"],0,2);
-			$pro = substr($empresa[0]["ubigeo"],2,2); 
-			$dis = substr($empresa[0]["ubigeo"],4,2);
+			$codempresa = isset($_SESSION["phuyu_codempresa"]) ? (int)$_SESSION["phuyu_codempresa"] : 0;
+			$empresa = $this->db->query("select * from public.empresas where codempresa=?", [$codempresa])->result_array();
+			if (count($empresa) == 0) {
+				$this->load->view("phuyu/404");
+				return;
+			}
+
+			$codpersona = isset($empresa[0]["codpersona"]) ? (int)$empresa[0]["codpersona"] : $codempresa;
+			$info = $this->db->query("select * from public.personas where codpersona=?", [$codpersona])->result_array();
+			if (count($info) == 0) {
+				$this->load->view("phuyu/404");
+				return;
+			}
+
+			$ubigeoEmpresa = isset($empresa[0]["ubigeo"]) ? (string)$empresa[0]["ubigeo"] : "";
+			$dep = substr($ubigeoEmpresa,0,2);
+			$pro = substr($ubigeoEmpresa,2,2); 
+			$dis = substr($ubigeoEmpresa,4,2);
 			$info[0]["departamento"] = $dep;
 			$info[0]["provincia"] = $pro;
 			$info[0]["distrito"] = $dis;
 			$departamentos = $this->db->query("select distinct(ubidepartamento), departamento from public.ubigeo order by ubidepartamento")->result_array();
-			$sesion_config = $this->configuracion_sesion($_SESSION["phuyu_codempresa"]);
+			$sesion_config = $this->configuracion_sesion($codempresa);
 			$this->load->view("administracion/configuraciones/index",compact("info","empresa","departamentos","sesion_config"));
 		}else{
 			$this->load->view("phuyu/404");
@@ -115,9 +128,13 @@ class Configuraciones extends CI_Controller {
 			if(count($ubigeo)>0){
 				$codubigeo = $ubigeo[0]["codubigeo"];
 			} */
-			$codubigeo = $_POST["codubigeo"];
+			$codubigeo = isset($_POST["codubigeo"]) ? (int)$_POST["codubigeo"] : 0;
 
-			$ubigeo = $this->db->query("select *from public.ubigeo where codubigeo=".$codubigeo)->result_array();
+			$ubigeo = $this->db->query("select * from public.ubigeo where codubigeo=?", [$codubigeo])->result_array();
+			if (count($ubigeo) == 0) {
+				echo 0;
+				return;
+			}
 
 			$campos = ["coddocumentotipo","documento","razonsocial","nombrecomercial","direccion","email","telefono","codubigeo"];
 			$valores = [4,$_POST["documento"],
