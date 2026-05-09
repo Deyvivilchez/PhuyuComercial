@@ -8,6 +8,7 @@
 
   #phuyu_ventas .phuyu-card-ventas {
     border-radius: 16px;
+    max-width: 100%;
   }
 
   #phuyu_ventas .phuyu-search-box .form-control {
@@ -50,6 +51,7 @@
     border-radius: 14px;
     overflow: visible;
     border: 1px solid #eef1f4;
+    max-width: 100%;
   }
 
   #phuyu_ventas .phuyu-table-ventas {
@@ -128,6 +130,14 @@
   }
 
   @media (max-width: 768px) {
+    #phuyu_ventas {
+      overflow-x: hidden;
+    }
+
+    #phuyu_ventas .phuyu-card-ventas .card-body {
+      overflow: hidden;
+    }
+
     #phuyu_ventas #title {
       font-size: 1.6rem !important;
     }
@@ -137,12 +147,30 @@
     }
 
     #phuyu_ventas .phuyu-btn-group .phuyu-btn {
-      flex: 1 1 auto;
+      flex: 1 1 calc(50% - .5rem);
+      min-width: 0;
+      padding-inline: 8px;
+    }
+
+    #phuyu_ventas .phuyu-btn-group .phuyu-btn span {
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     #phuyu_ventas .phuyu-table-ventas tbody td,
     #phuyu_ventas .phuyu-table-ventas thead th {
       font-size: 12px;
+    }
+
+    #phuyu_ventas .phuyu-table-wrapper {
+      overflow-x: auto;
+      overflow-y: hidden;
+      border-radius: 12px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #phuyu_ventas .phuyu-table-ventas {
+      min-width: 980px;
     }
   }
 </style>

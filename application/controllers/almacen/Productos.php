@@ -736,12 +736,42 @@ class Productos extends CI_Controller
         if ($this->input->is_ajax_request()) {
             $info = $this->db
                 ->query(
-                    "select p.codproducto,p.descripcion,p.caracteristicas, p.afectoicbper,p.controlstock, p.afectoigvcompra, p.afectoigvventa, p.codigo,p.calcular,p.foto,u.codunidad,u.descripcion as unidad,round(pu.stockactual,3) as stock, m.descripcion as marca, puv.factor, puv.factor as factormaximo, round(puv.pventapublico,2) as precio, round(puv.pventamin,2) as preciomin, round(puv.pventacredito,2) as preciocredito, round(puv.pventaxmayor,2) as preciomayor, round(puv.preciocosto,2) as preciocosto, round(puv.pventaadicional,2) as precioadicional from almacen.productos as p inner join almacen.productoubicacion as pu on(p.codproducto=pu.codproducto) inner join almacen.unidades as u on(u.codunidad=pu.codunidad) inner join almacen.marcas as m on(p.codmarca=m.codmarca) inner join almacen.productounidades as puv on(pu.codproducto=puv.codproducto and pu.codunidad=puv.codunidad) where puv.codigobarra='" .
+                    "select p.codproducto,p.descripcion,p.caracteristicas, p.afectoicbper,p.controlstock, p.afectoigvcompra, p.afectoigvventa, p.codigo,p.calcular,p.foto,p.controlarseries,u.codunidad,u.descripcion as unidad,round(pu.stockactual,3) as stock, m.descripcion as marca, puv.factor, puv.factor as factormaximo, round(puv.pventapublico,2) as precio, round(puv.pventamin,2) as preciomin, round(puv.pventacredito,2) as preciocredito, round(puv.pventaxmayor,2) as preciomayor, round(puv.preciocosto,2) as preciocosto, round(puv.pventaadicional,2) as precioadicional,
+                    COALESCE(
+                        (SELECT vpun.unidades
+                        FROM almacen.v_productounidades vpun
+                        WHERE vpun.codproducto = p.codproducto
+                        AND vpun.codalmacen = pu.codalmacen
+                        LIMIT 1),
+                        ''
+                    ) AS unidades,
+                    COALESCE(
+                        (SELECT jsonb_agg(jsonb_build_object(
+                            'serie_codigo', s.serie_codigo,
+                            'estado', s.estado,
+                            'fecha_ingreso', s.fecha_ingreso,
+                            'id_serie', s.id_serie,
+                            'codproducto', p.codproducto
+                        ))
+                        FROM almacen.series s
+                        WHERE s.codproducto = p.codproducto
+                        AND s.estado = 'EN_ALMACEN'
+                        AND s.codalmacen = " . $_SESSION['phuyu_codalmacen'] . "),
+                        '[]'::jsonb
+                    ) AS series
+                    from almacen.productos as p inner join almacen.productoubicacion as pu on(p.codproducto=pu.codproducto) inner join almacen.unidades as u on(u.codunidad=pu.codunidad) inner join almacen.marcas as m on(p.codmarca=m.codmarca) inner join almacen.productounidades as puv on(pu.codproducto=puv.codproducto and pu.codunidad=puv.codunidad) where puv.codigobarra='" .
                         $codigobarra .
                         "' and p.estado=1 and pu.estado=1 and pu.codalmacen=" .
                         $_SESSION['phuyu_codalmacen'],
                 )
                 ->result_array();
+            foreach ($info as &$producto) {
+                if (!empty($producto['series']) && is_string($producto['series'])) {
+                    $producto['series'] = json_decode($producto['series'], true);
+                } else {
+                    $producto['series'] = [];
+                }
+            }
             $data = [];
             $precio = 0;
             if (count($info) > 0) {

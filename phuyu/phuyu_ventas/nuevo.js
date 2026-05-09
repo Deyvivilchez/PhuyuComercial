@@ -7,6 +7,11 @@ var phuyu_operacion = new Vue({
         importecredito: 0,
         interescredito: 0,
         codigobarra: "",
+        producto_rapido_seleccionado: null,
+        producto_rapido_procesando: false,
+        producto_rapido_feedback_timer: null,
+        series_rapidas: [],
+        serie_rapida_buscar: "",
         rubro: $("#rubro").val(),
         simbolo: "S/",
         codtipodocumento: 0,
@@ -105,6 +110,18 @@ var phuyu_operacion = new Vue({
             importe: 0.00
         },
         inicialActivado: 0,
+    },
+    computed: {
+        series_rapidas_filtradas: function() {
+            if (!this.serie_rapida_buscar) {
+                return this.series_rapidas;
+            }
+
+            var termino = this.serie_rapida_buscar.toLowerCase();
+            return this.series_rapidas.filter(function(serie) {
+                return String(serie.serie_codigo || "").toLowerCase().indexOf(termino) !== -1;
+            });
+        }
     },
     methods: {
 
@@ -268,7 +285,7 @@ var phuyu_operacion = new Vue({
             phuyu_sistema.phuyu_modulo();
         },
         phuyu_addcliente: function() {
-            $(".compose").removeClass("col-md-6").addClass("col-md-4");
+            $(".compose").removeClass("col-md-4 col-md-6 col-md-7").addClass("col-md-5");
             $(".compose").slideToggle();
             $("#phuyu_tituloform").text("CREAR CLIENTE");
             phuyu_sistema.phuyu_loader("phuyu_formulario", 180);
@@ -360,8 +377,337 @@ var phuyu_operacion = new Vue({
                 });
             }
         },
+        phuyu_clase_stock_rapido: function(stock) {
+            var cantidad = parseFloat(stock);
+            if (isNaN(cantidad) || cantidad <= 0) {
+                return "stock-empty";
+            }
+
+            if (cantidad <= 5) {
+                return "stock-low";
+            }
+
+            return "stock-ok";
+        },
+        phuyu_producto_rapido_match_exacto: function(producto, texto) {
+            var termino = String(texto || "").trim().toUpperCase();
+            if (termino == "") {
+                return false;
+            }
+
+            return String(producto.codigo || "").trim().toUpperCase() === termino;
+        },
+        phuyu_escape_producto_rapido: function(texto) {
+            return String(texto || "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        },
+        phuyu_formato_producto_rapido: function(resultado) {
+            if (resultado.loading) {
+                return resultado.text;
+            }
+
+            var producto = resultado.producto || resultado;
+            var stockClase = this.phuyu_clase_stock_rapido(producto.stock);
+            var serie = parseInt(producto.controlarseries) === 1 ?
+                '<span class="badge bg-info">SERIE</span>' :
+                '<span class="badge bg-success-subtle text-success border border-success-subtle">DIRECTO</span>';
+
+            return '' +
+                '<div class="phuyu-product-result">' +
+                    '<div>' +
+                        '<div class="phuyu-product-result-name">' + this.phuyu_escape_producto_rapido(producto.descripcion) + '</div>' +
+                        '<div class="phuyu-product-result-meta">' +
+                            this.phuyu_escape_producto_rapido(producto.codigo) + ' · ' +
+                            '<span class="phuyu-product-result-stock ' + stockClase + '">' +
+                                '<i class="bi bi-box-seam"></i> Stock ' + this.phuyu_escape_producto_rapido(producto.stock) + ' ' + this.phuyu_escape_producto_rapido(producto.unidad) +
+                            '</span>' +
+                            ' · S/. ' + this.phuyu_escape_producto_rapido(producto.precio) +
+                        '</div>' +
+                    '</div>' +
+                    serie +
+                '</div>';
+        },
+        phuyu_inicializar_producto_rapido_select: function() {
+            var vm = this;
+            var $select = $("#producto_rapido_select");
+
+            if (!$select.length || typeof $select.select2 !== "function") {
+                return;
+            }
+
+            if ($select.data("select2")) {
+                $select.select2("destroy");
+            }
+
+            $select.select2({
+                ajax: {
+                    url: url + "almacen/productos/buscar_salidas",
+                    type: "POST",
+                    dataType: "json",
+                    contentType: "application/json",
+                    processData: false,
+                    delay: 90,
+                    data: function(params) {
+                        return JSON.stringify({
+                            buscar: params.term || "",
+                            pagina: params.page || 1
+                        });
+                    },
+                    processResults: function(data, params) {
+                        params.page = params.page || 1;
+                        var termino = String(params.term || "").trim().toUpperCase();
+                        var lista = data.lista || [];
+
+                        lista.sort(function(a, b) {
+                            var aExacto = vm.phuyu_producto_rapido_match_exacto(a, termino) ? 0 : 1;
+                            var bExacto = vm.phuyu_producto_rapido_match_exacto(b, termino) ? 0 : 1;
+                            return aExacto - bExacto;
+                        });
+
+                        return {
+                            results: lista.map(function(producto) {
+                                return {
+                                    id: producto.codproducto + "-" + producto.codunidad,
+                                    text: producto.descripcion,
+                                    producto: producto
+                                };
+                            }),
+                            pagination: {
+                                more: data.paginacion && params.page < data.paginacion.ultima
+                            }
+                        };
+                    },
+                    cache: false
+                },
+                placeholder: "Escanear codigo de barra o escribir producto...",
+                minimumInputLength: 1,
+                width: "100%",
+                dropdownParent: $("#phuyu_operacion"),
+                language: {
+                    inputTooShort: function() {
+                        return "Escriba al menos 1 caracter";
+                    },
+                    searching: function() {
+                        return "Buscando productos...";
+                    },
+                    noResults: function() {
+                        return "No se encontraron productos";
+                    },
+                    loadingMore: function() {
+                        return "Cargando mas productos...";
+                    }
+                },
+                escapeMarkup: function(markup) {
+                    return markup;
+                },
+                templateResult: function(resultado) {
+                    return vm.phuyu_formato_producto_rapido(resultado);
+                },
+                templateSelection: function(resultado) {
+                    return resultado.text || "Buscar producto";
+                }
+            });
+
+            $select.next(".select2-container").addClass("phuyu-product-select2");
+            $select.off("select2:open.phuyuRapido").on("select2:open.phuyuRapido", function() {
+                window.setTimeout(function() {
+                    var $search = $(".select2-container--open .select2-search__field");
+                    $search.off("keydown.phuyuRapido").on("keydown.phuyuRapido", function(evento) {
+                        var tecla = evento.which || evento.keyCode;
+                        if (tecla != 13) {
+                            return;
+                        }
+
+                        var termino = String($(this).val() || "").trim();
+                        var hayResultados = $(".select2-container--open .select2-results__option[aria-selected]").length > 0;
+                        if (termino != "" && !hayResultados) {
+                            evento.preventDefault();
+                            evento.stopPropagation();
+                            vm.phuyu_buscar_agregar_producto_rapido(termino);
+                        }
+                    });
+                }, 0);
+            });
+            $select.off("select2:select.phuyuRapido").on("select2:select.phuyuRapido", function(evento) {
+                var producto = evento.params.data.producto;
+                if (!producto) {
+                    return;
+                }
+
+                $select.val(null).trigger("change");
+                vm.phuyu_agregar_producto_rapido(producto);
+            });
+        },
+        phuyu_enfocar_producto_rapido: function(texto) {
+            this.$nextTick(function() {
+                var $select = $("#producto_rapido_select");
+                if (!$select.length || !$select.data("select2")) {
+                    return;
+                }
+
+                $select.val(null).trigger("change");
+                $select.select2("open");
+
+                window.setTimeout(function() {
+                    var $search = $(".select2-container--open .select2-search__field");
+                    if (texto) {
+                        $search.val(texto).trigger("input");
+                    }
+                    $search.focus();
+                }, 30);
+            });
+        },
+        phuyu_atajo_producto_rapido: function(evento) {
+            var tecla = String(evento.key || "").toLowerCase();
+            var codigo = evento.which || evento.keyCode;
+            var esControlP = (evento.ctrlKey || evento.metaKey) && (tecla == "p" || codigo == 80);
+
+            if (!esControlP) {
+                return;
+            }
+
+            if ($(".modal.show:visible").length > 0) {
+                return;
+            }
+
+            evento.preventDefault();
+            evento.stopPropagation();
+            this.phuyu_enfocar_producto_rapido("");
+        },
+        phuyu_buscar_agregar_producto_rapido: function(texto) {
+            var termino = String(texto || "").trim();
+            if (termino == "" || this.producto_rapido_procesando) {
+                return false;
+            }
+
+            this.producto_rapido_procesando = true;
+            this.$http.get(url + "almacen/productos/buscar_codigobarra/" + encodeURIComponent(termino)).then(function(data) {
+                if (data.body.cantidad == 1) {
+                    var producto = data.body.info[0];
+                    producto.precio = data.body.precio;
+                    $("#producto_rapido_select").select2("close");
+                    this.phuyu_agregar_producto_rapido(producto);
+                    this.producto_rapido_procesando = false;
+                    return;
+                }
+
+                if (data.body.cantidad > 1) {
+                    phuyu_sistema.phuyu_alerta("EL CODIGO DE BARRA EXISTE EN MAS DE UN PRODUCTO", "Revise el codigo escaneado", "danger");
+                    this.phuyu_enfocar_producto_rapido("");
+                    this.producto_rapido_procesando = false;
+                    return;
+                }
+
+                this.phuyu_buscar_agregar_producto_rapido_lista(termino);
+            }, function() {
+                this.phuyu_buscar_agregar_producto_rapido_lista(termino);
+            });
+        },
+        phuyu_buscar_agregar_producto_rapido_lista: function(termino) {
+            this.$http.post(url + "almacen/productos/buscar_salidas", {
+                buscar: termino,
+                pagina: 1
+            }).then(function(data) {
+                var lista = data.body.lista || [];
+                var exactos = lista.filter(function(producto) {
+                    return this.phuyu_producto_rapido_match_exacto(producto, termino);
+                }, this);
+                var producto = null;
+
+                if (exactos.length == 1) {
+                    producto = exactos[0];
+                } else if (lista.length == 1) {
+                    producto = lista[0];
+                }
+
+                if (producto) {
+                    $("#producto_rapido_select").select2("close");
+                    this.phuyu_agregar_producto_rapido(producto);
+                    this.producto_rapido_procesando = false;
+                    return;
+                }
+
+                if (lista.length == 0) {
+                    phuyu_sistema.phuyu_noti("PRODUCTO NO ENCONTRADO", "Revise el codigo o nombre ingresado", "warning");
+                    this.phuyu_enfocar_producto_rapido("");
+                    this.producto_rapido_procesando = false;
+                    return;
+                }
+
+                phuyu_sistema.phuyu_noti("SE ENCONTRARON VARIOS PRODUCTOS", "Seleccione uno de la lista", "info");
+                this.phuyu_enfocar_producto_rapido(termino);
+                this.producto_rapido_procesando = false;
+            }, function() {
+                phuyu_sistema.phuyu_error();
+                this.phuyu_enfocar_producto_rapido(termino);
+                this.producto_rapido_procesando = false;
+            });
+        },
+        phuyu_agregar_producto_rapido: function(producto) {
+            var validaStock = parseInt(this.stockalmacen) === 1 && parseInt(producto.controlstock) === 1;
+            if (validaStock && parseFloat(producto.stock) <= 0) {
+                phuyu_sistema.phuyu_alerta(
+                    "NO HAY STOCK DISPONIBLE PARA ESTE PRODUCTO",
+                    producto.descripcion + " · STOCK: " + producto.stock + " " + producto.unidad,
+                    "error"
+                );
+                return false;
+            }
+
+            if (parseInt(producto.controlarseries) === 1) {
+                var detalleActual = this.detalle || [];
+                var listaSeries = producto.series || [];
+                var productosMismoTipo = detalleActual.filter(function(detalle) {
+                    return detalle.codproducto == producto.codproducto;
+                });
+
+                this.series_rapidas = listaSeries.filter(function(serie) {
+                    return !productosMismoTipo.some(function(detalle) {
+                        return detalle.serie_seleccionada &&
+                            detalle.serie_seleccionada.id_serie == serie.id_serie;
+                    });
+                });
+
+                if (this.series_rapidas.length == 0) {
+                    phuyu_sistema.phuyu_alerta(
+                        "NO HAY SERIES DISPONIBLES",
+                        producto.descripcion,
+                        "error"
+                    );
+                    return false;
+                }
+
+                this.producto_rapido_seleccionado = producto;
+                this.serie_rapida_buscar = "";
+                $("#modal_series_rapidas").modal("show");
+                return false;
+            }
+
+            this.phuyu_additem(producto, producto.precio);
+            this.phuyu_limpiar_producto_rapido();
+        },
+        phuyu_seleccionar_serie_rapida: function(serie) {
+            if (!this.producto_rapido_seleccionado) {
+                return false;
+            }
+
+            this.producto_rapido_seleccionado.serie_seleccionada = serie;
+            this.phuyu_additem(this.producto_rapido_seleccionado, this.producto_rapido_seleccionado.precio);
+            $("#modal_series_rapidas").modal("hide");
+            this.phuyu_limpiar_producto_rapido();
+        },
+        phuyu_limpiar_producto_rapido: function() {
+            this.producto_rapido_seleccionado = null;
+            this.series_rapidas = [];
+            this.serie_rapida_buscar = "";
+            this.phuyu_enfocar_producto_rapido("");
+        },
         phuyu_item: function() {
-            $(".compose").removeClass("col-md-4").addClass("col-md-6");
+            $(".compose").removeClass("col-md-4 col-md-5 col-md-7").addClass("col-md-6");
             $(".compose").slideToggle();
             $("#phuyu_tituloform").text("BUSCAR PRODUCTO");
             phuyu_sistema.phuyu_loader("phuyu_formulario", 180);
@@ -570,12 +916,13 @@ var phuyu_operacion = new Vue({
                 var logo = [];
                 arreglo = [];
                 unidades = (producto.unidades).split(";");
+                var codunidadSeleccionada = producto.codunidad;
 
                 for (var i = 0; i < unidades.length; i++) {
                     factores = (unidades[i]).split("|");
                     logo = { descripcion: factores[1], codunidad: factores[0], factor: factores[8] };
                     this.putunidades.push(logo)
-                    if (factores[8] == 1) {
+                    if ((codunidadSeleccionada && factores[0] == codunidadSeleccionada) || (!codunidadSeleccionada && factores[8] == 1)) {
                         producto.codunidad = factores[0];
                         producto.unidad = factores[1];
                         producto.afectacionigv = factores[14];
@@ -659,21 +1006,42 @@ var phuyu_operacion = new Vue({
                     precioventa: producto.precioventa,
                     descripcion: producto.controlarseries == 1 ? 'SERIE/CODIGO : ' + producto.serie_seleccionada.serie_codigo : producto.descripcion,
                     serie_seleccionada: producto.controlarseries == 1 ? producto.serie_seleccionada : null,
+                    phuyu_agregado: true,
                 });
 
-                swal({
-                    title: "✓ PRODUCTO AGREGADO",
-                    text: producto.descripcion + " se agregó correctamente a la lista",
-                    icon: "success",
-                    button: false,
-                    timer: 1000
-                });
+                this.phuyu_flash_item(this.detalle.length - 1);
+                this.phuyu_feedback_producto_rapido("Agregado: " + producto.descripcion);
 
                 this.phuyu_totales();
                 this.putunidades = [];
             } else {
+                this.phuyu_flash_item(this.detalle.indexOf(existe_item[0]));
+                this.phuyu_feedback_producto_rapido("Cantidad actualizada: " + existe_item[0].producto);
                 this.phuyu_calcular(existe_item[0]);
             }
+        },
+        phuyu_feedback_producto_rapido: function(mensaje) {
+            window.clearTimeout(this.producto_rapido_feedback_timer);
+            var $feedback = $("#phuyu_producto_feedback");
+            if ($feedback.length) {
+                $feedback.find("span").text(mensaje);
+                $feedback.stop(true, true).fadeIn(120);
+            }
+            this.producto_rapido_feedback_timer = window.setTimeout(() => {
+                $("#phuyu_producto_feedback").fadeOut(180);
+            }, 1400);
+        },
+        phuyu_flash_item: function(index) {
+            if (index < 0 || !this.detalle[index]) {
+                return;
+            }
+
+            this.$set(this.detalle[index], "phuyu_agregado", true);
+            window.setTimeout(() => {
+                if (this.detalle[index]) {
+                    this.$set(this.detalle[index], "phuyu_agregado", false);
+                }
+            }, 1200);
         },
         informacion_unidad: function(index, producto, val) {
             var codunidad = this.detalle[index].codunidad;
@@ -1645,14 +2013,24 @@ var phuyu_operacion = new Vue({
             this.activar_cvarios();
             phuyu_sistema.phuyu_fin();
         }
+        this.$nextTick(function() {
+            this.phuyu_inicializar_producto_rapido_select();
+        });
     }
 });
 
 document.addEventListener("keyup", buscar_f11, false);
+document.addEventListener("keydown", buscar_producto_rapido_ctrl_p, false);
 
 function buscar_f11(e) {
     var keyCode = e.keyCode;
     if (keyCode == 122) {
         phuyu_operacion.phuyu_item();
+    }
+}
+
+function buscar_producto_rapido_ctrl_p(e) {
+    if (typeof phuyu_operacion != "undefined" && phuyu_operacion.phuyu_atajo_producto_rapido) {
+        phuyu_operacion.phuyu_atajo_producto_rapido(e);
     }
 }
