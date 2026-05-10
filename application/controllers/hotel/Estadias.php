@@ -10,6 +10,59 @@ class Estadias extends CI_Controller {
 		$this->load->model("Caja_model");
 	}
 
+	private function validar_persona_comprobante_hotel($info, $campos){
+		$codcomprobante = isset($campos->codcomprobantetipo) ? (int)$campos->codcomprobantetipo : 0;
+		$esFactura = in_array($codcomprobante, [10, 25], true);
+		$esBoleta = in_array($codcomprobante, [12, 26], true);
+
+		$persona = [
+			"codpersona" => (int)$info["estadia"]["codpersona"],
+			"razonsocial" => $info["estadia"]["cliente"],
+			"direccion" => $info["estadia"]["direccion"],
+			"documento" => $info["estadia"]["documento"] ?? "",
+			"coddocumentotipo" => (int)($info["estadia"]["coddocumentotipo"] ?? 0)
+		];
+
+		if ($esFactura) {
+			$codpersona = isset($campos->codpersona_facturacion) ? (int)$campos->codpersona_facturacion : 0;
+			if ($codpersona <= 0) {
+				if ($persona["codpersona"] != 2 && $persona["coddocumentotipo"] == 4 && strlen(trim($persona["documento"])) == 11) {
+					return ["estado" => 1, "persona" => $persona];
+				}
+				return ["estado" => 0, "mensaje" => "PARA FACTURA SELECCIONE UN CLIENTE CON RUC"];
+			}
+			if ($codpersona == 2) {
+				return ["estado" => 0, "mensaje" => "CLIENTES VARIOS NO PUEDE EMITIR FACTURA"];
+			}
+
+			$personaFactura = $this->db->query(
+				"select codpersona, razonsocial, direccion, documento, coddocumentotipo
+				from public.personas
+				where codpersona=? and estado=1
+				limit 1",
+				[$codpersona]
+			)->row_array();
+
+			if (empty($personaFactura) || (int)$personaFactura["coddocumentotipo"] != 4 || strlen(trim($personaFactura["documento"])) != 11) {
+				return ["estado" => 0, "mensaje" => "LA FACTURA SOLO SE EMITE A CLIENTES CON RUC DE 11 DIGITOS"];
+			}
+
+			return ["estado" => 1, "persona" => $personaFactura];
+		}
+
+		if ($esBoleta) {
+			$documento = trim($persona["documento"]);
+			if ($persona["coddocumentotipo"] == 4) {
+				return ["estado" => 0, "mensaje" => "LA BOLETA NO SE PUEDE EMITIR A UN CLIENTE CON RUC"];
+			}
+			if ($documento === "" || strlen($documento) != 8) {
+				return ["estado" => 0, "mensaje" => "LA BOLETA REQUIERE DNI DE 8 DIGITOS"];
+			}
+		}
+
+		return ["estado" => 1, "persona" => $persona];
+	}
+
 	public function checkin(){
 		if ($this->input->is_ajax_request()) {
 			if (!isset($_SESSION["phuyu_usuario"])) { echo json_encode("e"); return; }
@@ -188,6 +241,16 @@ class Estadias extends CI_Controller {
 				echo json_encode(["estado" => 0, "mensaje" => "LA ESTADIA NO PERTENECE A LA SUCURSAL O ALMACEN ACTUAL"]);
 				return;
 			}
+			$validacionPersona = $this->validar_persona_comprobante_hotel($info, $this->request->campos);
+			if ((int)$validacionPersona["estado"] != 1) {
+				echo json_encode(["estado" => 0, "mensaje" => $validacionPersona["mensaje"]]);
+				return;
+			}
+			$personaComprobante = $validacionPersona["persona"];
+			if ((int)$this->request->campos->condicionpago == 2 && (int)$personaComprobante["codpersona"] == 2) {
+				echo json_encode(["estado" => 0, "mensaje" => "NO SE PUEDE REGISTRAR CREDITO A CLIENTES VARIOS"]);
+				return;
+			}
 
 			$alojamiento = $this->Hotel_model->producto_alojamiento();
 			if (empty($alojamiento)) {
@@ -247,9 +310,9 @@ class Estadias extends CI_Controller {
 			$campos->codusuario = (int)$_SESSION["phuyu_codusuario"];
 			$campos->codcaja = (int)$_SESSION["phuyu_codcaja"];
 			$campos->codcontroldiario = (int)$_SESSION["phuyu_codcontroldiario"];
-			$campos->codpersona = (int)$info["estadia"]["codpersona"];
-			$campos->cliente = $info["estadia"]["cliente"];
-			$campos->direccion = $info["estadia"]["direccion"];
+			$campos->codpersona = (int)$personaComprobante["codpersona"];
+			$campos->cliente = $personaComprobante["razonsocial"];
+			$campos->direccion = $personaComprobante["direccion"];
 			$campos->codmovimientotipo = 20;
 			$campos->codconcepto = ((int)$campos->condicionpago == 2) ? 15 : 13;
 			$campos->descripcion = "CHECK-OUT HOTEL ESTADIA ".$info["estadia"]["codestadia"];
@@ -259,7 +322,7 @@ class Estadias extends CI_Controller {
 			$campos->porcdescuento = 0;
 			$campos->codcentrocosto = 0;
 			$campos->nroplaca = "";
-			$campos->codlote = 0;
+			$campos->codlote = isset($campos->codlote) ? (int)$campos->codlote : 0;
 			$campos->conleyendaamazonia = 1;
 			$campos->codmoneda = isset($campos->codmoneda) ? (int)$campos->codmoneda : 1;
 			$campos->tipocambio = isset($campos->tipocambio) ? (double)$campos->tipocambio : 1;
@@ -323,9 +386,48 @@ class Estadias extends CI_Controller {
 			$consumosTotal = (double)$info["estadia"]["consumos"] + $consumosPendientes;
 			$importeTotal = (double)$info["estadia"]["alojamiento"] + $consumosTotal;
 			$estado = $this->phuyu_model->phuyu_editar("hotel.estadias", ["codkardex","fecha_checkout","hora_checkout","consumos","importe","situacion"], [(int)$codkardex, $campos->fechacomprobante, date("H:i:s"), $consumosTotal, $importeTotal, 2], "codestadia", (int)$info["estadia"]["codestadia"]);
+			if ((int)($info["estadia"]["codreserva"] ?? 0) > 0) {
+				$this->phuyu_model->phuyu_editar("hotel.reservas", ["situacion"], [4], "codreserva", (int)$info["estadia"]["codreserva"]);
+			}
 
+			$checklistLimpieza = json_encode([
+				"Cambio de sabanas",
+				"Cambio de toallas",
+				"Limpieza de bano",
+				"Limpieza de ducha",
+				"Barrido/trapeado de piso",
+				"Reposicion de papel higienico",
+				"Reposicion de jabon/shampoo",
+				"Retiro de basura",
+				"Desinfeccion general"
+			]);
 			foreach ($info["habitaciones"] as $habitacion) {
-				$this->phuyu_model->phuyu_editar("hotel.habitaciones", ["situacion"], [(int)$this->request->destino_habitacion], "codhabitacion", (int)$habitacion["codhabitacion"]);
+				$codhabitacion = (int)$habitacion["codhabitacion"];
+				$this->phuyu_model->phuyu_editar("hotel.habitaciones", ["situacion"], [4], "codhabitacion", $codhabitacion);
+
+				$ordenActiva = $this->db->query(
+					"select codlimpieza
+					from hotel.limpieza_habitaciones
+					where codhabitacion=? and estado=1 and coalesce(estado_orden,1) in (1,2)
+					order by codlimpieza desc
+					limit 1",
+					[$codhabitacion]
+				)->row_array();
+				if (empty($ordenActiva)) {
+					$this->phuyu_model->phuyu_guardar(
+						"hotel.limpieza_habitaciones",
+						["codhabitacion","codusuario","codresponsable","observacion","tipo_limpieza","checklist","estado_orden"],
+						[
+							$codhabitacion,
+							(int)$_SESSION["phuyu_codusuario"],
+							0,
+							"Limpieza normal generada por check-out de estadia ".(int)$info["estadia"]["codestadia"],
+							"normal",
+							$checklistLimpieza,
+							1
+						]
+					);
+				}
 			}
 
 			if ($this->db->trans_status() === FALSE || $estado != 1) {
@@ -356,6 +458,16 @@ class Estadias extends CI_Controller {
 			}
 			if ((int)$info["estadia"]["codsucursal"] != (int)$_SESSION["phuyu_codsucursal"] || (int)$info["estadia"]["codalmacen"] != (int)$_SESSION["phuyu_codalmacen"]) {
 				echo json_encode(["estado" => 0, "mensaje" => "LA ESTADIA NO PERTENECE A LA SUCURSAL O ALMACEN ACTUAL"]);
+				return;
+			}
+			$validacionPersona = $this->validar_persona_comprobante_hotel($info, $this->request->campos);
+			if ((int)$validacionPersona["estado"] != 1) {
+				echo json_encode(["estado" => 0, "mensaje" => $validacionPersona["mensaje"]]);
+				return;
+			}
+			$personaComprobante = $validacionPersona["persona"];
+			if ((int)$this->request->campos->condicionpago == 2 && (int)$personaComprobante["codpersona"] == 2) {
+				echo json_encode(["estado" => 0, "mensaje" => "NO SE PUEDE REGISTRAR CREDITO A CLIENTES VARIOS"]);
 				return;
 			}
 			$controlaStockSistema = isset($_SESSION["phuyu_stockalmacen"]) ? (int)$_SESSION["phuyu_stockalmacen"] : 0;
@@ -407,9 +519,9 @@ class Estadias extends CI_Controller {
 			$campos->codusuario = (int)$_SESSION["phuyu_codusuario"];
 			$campos->codcaja = (int)$_SESSION["phuyu_codcaja"];
 			$campos->codcontroldiario = (int)$_SESSION["phuyu_codcontroldiario"];
-			$campos->codpersona = (int)$info["estadia"]["codpersona"];
-			$campos->cliente = $info["estadia"]["cliente"];
-			$campos->direccion = $info["estadia"]["direccion"];
+			$campos->codpersona = (int)$personaComprobante["codpersona"];
+			$campos->cliente = $personaComprobante["razonsocial"];
+			$campos->direccion = $personaComprobante["direccion"];
 			$campos->codmovimientotipo = 20;
 			$campos->codconcepto = ((int)$campos->condicionpago == 2) ? 15 : 13;
 			$campos->descripcion = "COBRO CONSUMOS HOTEL ESTADIA ".$info["estadia"]["codestadia"];
@@ -419,7 +531,7 @@ class Estadias extends CI_Controller {
 			$campos->porcdescuento = 0;
 			$campos->codcentrocosto = 0;
 			$campos->nroplaca = "";
-			$campos->codlote = 0;
+			$campos->codlote = isset($campos->codlote) ? (int)$campos->codlote : 0;
 			$campos->conleyendaamazonia = 1;
 			$campos->codmoneda = isset($campos->codmoneda) ? (int)$campos->codmoneda : 1;
 			$campos->tipocambio = isset($campos->tipocambio) ? (double)$campos->tipocambio : 1;

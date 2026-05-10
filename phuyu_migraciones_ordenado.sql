@@ -1,16 +1,25 @@
 -- ============================================================
 -- PHUYU COMERCIAL - MIGRACIONES GENERALES
 -- ============================================================
--- Orden recomendado de ejecucion:
+-- IMPORTANTE:
+--   Migracion idempotente: puede ejecutarse varias veces.
+--   Usa IF NOT EXISTS, NOT EXISTS y validaciones para evitar duplicados.
+--
+-- ORDEN RECOMENDADO DE EJECUCION:
 --   1. Productos con series
---   2. Actualizacion y unificacion de modulos existentes
---   3. Caja - horas de apertura y cierre
---   4. Hotel - tablas base
---   5. Hotel - indices
---   6. Hotel - configuracion y datos iniciales
---   7. Hotel - producto/servicio ALOJAMIENTO
---   8. Hotel - menu y permisos
---   9. Programacion automatica SUNAT / CPE
+--   2. Actualizacion de iconos de modulos
+--   3. Unificacion de modulos duplicados
+--   4. Reordenamiento de modulos
+--   5. Desactivacion de modulos duplicados
+--   6. Caja - horas de apertura y cierre
+--   7. Hotel - tablas base
+--   8. Hotel - indices
+--   9. Hotel - configuracion y datos iniciales
+--  10. Hotel - producto/servicio ALOJAMIENTO
+--  11. Hotel - menu y permisos
+--  12. Programacion automatica SUNAT / CPE
+--  13. Caja - modulo Arqueos de caja
+--  14. Configuracion global de sesion e inactividad
 -- ============================================================
 
 -- ============================================================
@@ -51,7 +60,9 @@ CREATE TABLE IF NOT EXISTS almacen.series (
 );
 
 -- ============================================================
--- 2. ACTUALIZACION Y UNIFICACION DE MODULOS EXISTENTES
+-- 2. ACTUALIZACION DE ICONOS DE MODULOS
+-- ============================================================
+-- Actualiza iconos principales segun la nueva plantilla visual.
 -- ============================================================
 
 UPDATE seguridad.modulos
@@ -73,6 +84,12 @@ END
 WHERE codmodulo IN (1, 2, 3, 4, 5, 6, 7, 8, 17, 118, 121, 125)
   AND codpadre = 0;
 
+-- ============================================================
+-- 3. UNIFICACION DE MODULOS DUPLICADOS
+-- ============================================================
+-- Normaliza nombres de opciones relacionadas a cuentas por cobrar/pagar.
+-- ============================================================
+
 UPDATE seguridad.modulos
 SET descripcion = CASE codmodulo
     WHEN 51 THEN 'Cuentas por cobrar'
@@ -82,6 +99,12 @@ SET descripcion = CASE codmodulo
     ELSE descripcion
 END
 WHERE codmodulo IN (51, 52, 53, 54);
+
+-- ============================================================
+-- 4. REORDENAMIENTO DE MODULOS
+-- ============================================================
+-- Reubica reportes bajo Reportes y opciones financieras bajo Creditos.
+-- ============================================================
 
 UPDATE seguridad.modulos
 SET codpadre = 7,
@@ -116,13 +139,19 @@ SET codpadre = 5,
     END
 WHERE codmodulo IN (51, 53, 110, 52, 54, 111);
 
+-- ============================================================
+-- 5. DESACTIVACION DE MODULOS DUPLICADOS
+-- ============================================================
+-- Desactiva modulos padre duplicados para evitar menus repetidos.
+-- ============================================================
+
 UPDATE seguridad.modulos
 SET estado = 0
 WHERE codmodulo IN (121, 125)
   AND codpadre = 0;
 
 -- ============================================================
--- 3. CAJA - HORAS DE APERTURA Y CIERRE
+-- 6. CAJA - HORAS DE APERTURA Y CIERRE
 -- ============================================================
 
 ALTER TABLE caja.controldiario
@@ -135,7 +164,7 @@ ALTER TABLE caja.controldiario
 ADD COLUMN IF NOT EXISTS horacierre TIME WITHOUT TIME ZONE;
 
 -- ============================================================
--- 4. MODULO HOTEL - TABLAS BASE
+-- 7. MODULO HOTEL - TABLAS BASE
 -- ============================================================
 
 CREATE SCHEMA IF NOT EXISTS hotel;
@@ -325,9 +354,20 @@ CREATE TABLE IF NOT EXISTS hotel.limpieza_habitaciones (
     codresponsable INTEGER DEFAULT 0,
     fecha DATE DEFAULT NOW(),
     hora TIME DEFAULT NOW(),
+    tipo_limpieza VARCHAR(40) DEFAULT 'normal',
+    checklist TEXT,
     observacion TEXT,
+    estado_orden INTEGER DEFAULT 1,
+    fecha_fin DATE,
+    hora_fin TIME,
     estado INTEGER DEFAULT 1
 );
+
+ALTER TABLE hotel.limpieza_habitaciones ADD COLUMN IF NOT EXISTS tipo_limpieza VARCHAR(40) DEFAULT 'normal';
+ALTER TABLE hotel.limpieza_habitaciones ADD COLUMN IF NOT EXISTS checklist TEXT;
+ALTER TABLE hotel.limpieza_habitaciones ADD COLUMN IF NOT EXISTS estado_orden INTEGER DEFAULT 1;
+ALTER TABLE hotel.limpieza_habitaciones ADD COLUMN IF NOT EXISTS fecha_fin DATE;
+ALTER TABLE hotel.limpieza_habitaciones ADD COLUMN IF NOT EXISTS hora_fin TIME;
 
 CREATE TABLE IF NOT EXISTS hotel.mantenimiento_habitaciones (
     codmantenimiento SERIAL PRIMARY KEY,
@@ -336,10 +376,32 @@ CREATE TABLE IF NOT EXISTS hotel.mantenimiento_habitaciones (
     codresponsable INTEGER DEFAULT 0,
     fecha_inicio DATE DEFAULT NOW(),
     fecha_fin DATE,
+    hora_inicio TIME DEFAULT NOW(),
+    hora_fin TIME,
+    tipo_mantenimiento VARCHAR(40) DEFAULT 'correctivo',
+    prioridad VARCHAR(20) DEFAULT 'media',
+    descripcion_problema TEXT,
+    trabajos_realizados TEXT,
+    materiales TEXT,
     observacion TEXT,
     situacion INTEGER DEFAULT 1,
+    estado_orden INTEGER DEFAULT 1,
     estado INTEGER DEFAULT 1
 );
+
+ALTER TABLE hotel.mantenimiento_habitaciones ADD COLUMN IF NOT EXISTS tipo_mantenimiento VARCHAR(40) DEFAULT 'correctivo';
+ALTER TABLE hotel.mantenimiento_habitaciones ADD COLUMN IF NOT EXISTS prioridad VARCHAR(20) DEFAULT 'media';
+ALTER TABLE hotel.mantenimiento_habitaciones ADD COLUMN IF NOT EXISTS descripcion_problema TEXT;
+ALTER TABLE hotel.mantenimiento_habitaciones ADD COLUMN IF NOT EXISTS trabajos_realizados TEXT;
+ALTER TABLE hotel.mantenimiento_habitaciones ADD COLUMN IF NOT EXISTS materiales TEXT;
+ALTER TABLE hotel.mantenimiento_habitaciones ADD COLUMN IF NOT EXISTS estado_orden INTEGER DEFAULT 1;
+ALTER TABLE hotel.mantenimiento_habitaciones ADD COLUMN IF NOT EXISTS hora_inicio TIME DEFAULT NOW();
+ALTER TABLE hotel.mantenimiento_habitaciones ADD COLUMN IF NOT EXISTS hora_fin TIME;
+
+UPDATE hotel.mantenimiento_habitaciones
+SET estado_orden = 3
+WHERE situacion = 2
+  AND COALESCE(estado_orden, 1) = 1;
 
 CREATE TABLE IF NOT EXISTS hotel.configuraciones (
     codconfiguracion SERIAL PRIMARY KEY,
@@ -350,8 +412,20 @@ CREATE TABLE IF NOT EXISTS hotel.configuraciones (
     UNIQUE (codsucursal)
 );
 
+-- Normaliza reservas antiguas: antes situacion=3 se usaba como cancelada.
+-- En el flujo actual 3 significa EN HOSPEDAJE.
+UPDATE hotel.reservas r
+SET situacion = 0
+WHERE r.situacion = 3
+  AND NOT EXISTS (
+      SELECT 1
+      FROM hotel.estadias e
+      WHERE e.codreserva = r.codreserva
+        AND e.estado = 1
+  );
+
 -- ============================================================
--- 5. MODULO HOTEL - INDICES
+-- 8. MODULO HOTEL - INDICES
 -- ============================================================
 
 CREATE INDEX IF NOT EXISTS idx_hotel_habitaciones_sucursal_situacion
@@ -385,7 +459,7 @@ CREATE INDEX IF NOT EXISTS idx_hotel_estadia_cambios
 ON hotel.estadia_cambios_habitacion (codestadia, estado);
 
 -- ============================================================
--- 6. MODULO HOTEL - CONFIGURACION Y DATOS INICIALES
+-- 9. MODULO HOTEL - CONFIGURACION Y DATOS INICIALES
 -- ============================================================
 
 INSERT INTO hotel.habitacion_tipos (descripcion, capacidad, preciobase, estado)
@@ -501,8 +575,17 @@ WHERE h.codsucursal = a.codsucursal
   );
 
 -- ============================================================
--- 7. MODULO HOTEL - PRODUCTO / SERVICIO ALOJAMIENTO
+-- 10. MODULO HOTEL - PRODUCTO / SERVICIO ALOJAMIENTO
 -- ============================================================
+-- Crea o reutiliza el producto ALOJAMIENTO.
+-- Corrige secuencia de productos y evita duplicados en productounidades.
+-- ============================================================
+
+SELECT setval(
+    pg_get_serial_sequence('almacen.productos', 'codproducto'),
+    COALESCE((SELECT MAX(codproducto) FROM almacen.productos), 0) + 1,
+    false
+);
 
 DO $$
 DECLARE
@@ -530,7 +613,7 @@ BEGIN
           UPPER(codigo) = 'HOTEL-ALOJ'
           OR UPPER(descripcion) = 'ALOJAMIENTO'
       )
-    ORDER BY codproducto
+    ORDER BY codproducto DESC
     LIMIT 1;
 
     IF v_codproducto IS NULL THEN
@@ -578,6 +661,8 @@ BEGIN
         WHERE codproducto = v_codproducto;
     END IF;
 
+    -- Usa ON CONFLICT porque la llave real pk_productosunidades es codproducto + codunidad.
+    -- No se valida por sucursal porque codsucursal no forma parte de esa llave.
     INSERT INTO almacen.productounidades (
         codproducto,
         codunidad,
@@ -595,17 +680,27 @@ BEGIN
         estado
     )
     SELECT
-        v_codproducto, v_codunidad, s.codsucursal, 1, 0,
-        0, 0, 0, 0, 0, 0, 0, 'HOTEL-ALOJ', 1
-    FROM public.sucursales s
-    WHERE s.estado = 1
-      AND NOT EXISTS (
-          SELECT 1
-          FROM almacen.productounidades pu
-          WHERE pu.codproducto = v_codproducto
-            AND pu.codunidad = v_codunidad
-            AND pu.codsucursal = s.codsucursal
-      );
+        v_codproducto,
+        v_codunidad,
+        s.codsucursal,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        'HOTEL-ALOJ',
+        1
+    FROM (
+        SELECT MIN(codsucursal) AS codsucursal
+        FROM public.sucursales
+        WHERE estado = 1
+    ) s
+    WHERE s.codsucursal IS NOT NULL
+    ON CONFLICT ON CONSTRAINT pk_productosunidades DO NOTHING;
 
     INSERT INTO almacen.productoubicacion (
         codalmacen,
@@ -662,7 +757,7 @@ BEGIN
 END $$;
 
 -- ============================================================
--- 8. MODULO HOTEL - MENU Y PERMISOS
+-- 11. MODULO HOTEL - MENU Y PERMISOS
 -- ============================================================
 
 DO $$
@@ -856,8 +951,10 @@ WHERE (m.url = 'hotel' OR m.url LIKE 'hotel/%')
   );
 
 -- ============================================================
--- 9. PROGRAMACION AUTOMATICA SUNAT / CPE
+-- 12. PROGRAMACION AUTOMATICA SUNAT / CPE
 -- ============================================================
+
+CREATE SCHEMA IF NOT EXISTS sunat;
 
 CREATE TABLE IF NOT EXISTS sunat.programacion_cpe (
     codprogramacion SERIAL PRIMARY KEY,
@@ -1021,8 +1118,7 @@ END $$;
 --       se asigna el modulo 126 a todos los perfiles existentes.
 --
 -- Cron sugerido:
---   * * * * * cd /Applications/XAMPP/xamppfiles/htdocs/sistemas/phuyu_comercial && php index.php 
---facturacion/programacionsunat/cron
+--   * * * * * cd /Applications/XAMPP/xamppfiles/htdocs/sistemas/phuyu_comercial && php index.php facturacion/programacionsunat/cron
 -- ============================================================
 
 -- ============================================================
@@ -1038,7 +1134,7 @@ END $$;
 -- ============================================================
 
 -- ============================================================
--- MODULO ARQUEOS DE CAJA
+-- 13. MODULO ARQUEOS DE CAJA
 -- ============================================================
 
 DO $$
@@ -1105,7 +1201,7 @@ END $$;
 -- ============================================================
 
 -- ============================================================
--- CONFIGURACION GLOBAL DE SESION E INACTIVIDAD
+-- 14. CONFIGURACION GLOBAL DE SESION E INACTIVIDAD
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS public.configuracion_sesion (
