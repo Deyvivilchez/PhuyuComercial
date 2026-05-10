@@ -205,7 +205,7 @@ BEGIN
         RAISE EXCEPTION 'No existe unidad activa en almacen.unidades para crear ALOJAMIENTO';
     END IF;
 
-    SELECT setval(
+    PERFORM setval(
         pg_get_serial_sequence('almacen.productos', 'codproducto'),
         COALESCE((SELECT MAX(codproducto) FROM almacen.productos), 0) + 1,
         false
