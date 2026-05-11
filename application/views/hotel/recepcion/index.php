@@ -188,6 +188,14 @@
 									<span class="hotel-summary-value hotel-summary-money">S/. {{Number(estadia.estadia.alojamiento || 0).toFixed(2)}}</span>
 								</div>
 								<div class="hotel-summary-item">
+									<span class="hotel-summary-label">Ocupacion cobrada</span>
+									<span class="hotel-summary-value hotel-summary-money">S/. {{Number(estadia.estadia.total_pagado_ocupacion || 0).toFixed(2)}}</span>
+								</div>
+								<div class="hotel-summary-item">
+									<span class="hotel-summary-label">Alojamiento pendiente</span>
+									<span class="hotel-summary-value text-warning">S/. {{Number(alojamiento_pendiente()).toFixed(2)}}</span>
+								</div>
+								<div class="hotel-summary-item">
 									<span class="hotel-summary-label">Consumos pendientes</span>
 									<span class="hotel-summary-value hotel-summary-money">S/. {{Number(total_consumos_pendientes()).toFixed(2)}}</span>
 								</div>
@@ -303,8 +311,10 @@
 						</div>
 
 						<div class="d-grid gap-2 mt-2">
+							<button class="btn btn-outline-success" v-on:click="abrir_cobro_ocupacion()" v-if="alojamiento_pendiente()>0"><i class="ri-cash-line me-1"></i> Cobrar</button>
 							<button class="btn btn-outline-success" v-on:click="abrir_cobro_consumos()" v-if="total_consumos_pendientes()>0"><i class="ri-bank-card-line me-1"></i> Cobrar solo consumos</button>
 							<button class="btn btn-success" v-on:click="abrir_checkout()"><i class="ri-cash-line me-1"></i> Check-out / cobrar</button>
+							<button class="btn btn-outline-danger" v-on:click="abrir_cancelar_ocupacion()"><i class="ri-close-circle-line me-1"></i> Cancelar ocupacion</button>
 						</div>
 					</div>
 
@@ -386,7 +396,7 @@
 			<div class="modal-content">
 				<div class="modal-header">
 					<div>
-						<h5 class="modal-title mb-1">{{checkout.tipo=='consumos' ? 'Cobro de consumos' : 'Check-out / cobrar'}} estadia 000{{checkout.campos ? checkout.campos.codestadia : ''}}</h5>
+						<h5 class="modal-title mb-1">{{checkout.tipo=='consumos' ? 'Cobro de consumos' : (checkout.tipo=='ocupacion' ? 'Cobrar ocupacion' : 'Check-out / cobrar')}} estadia 000{{checkout.campos ? checkout.campos.codestadia : ''}}</h5>
 						<div class="text-muted small" v-if="estadia.estadia">Hospedado: {{estadia.estadia.cliente}} - {{estadia.estadia.documento || 'Sin documento'}}</div>
 					</div>
 					<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -485,7 +495,31 @@
 				</div>
 				<div class="modal-footer">
 					<button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
-					<button type="button" class="btn btn-success" v-on:click="checkout_estadia()" v-bind:disabled="cobrandoHotel">{{cobrandoHotel ? 'Procesando...' : (checkout.tipo=='consumos' ? 'Cobrar consumos' : 'Cobrar y cerrar estadia')}}</button>
+					<button type="button" class="btn btn-success" v-on:click="checkout_estadia()" v-bind:disabled="cobrandoHotel">{{cobrandoHotel ? 'Procesando...' : (checkout.tipo=='consumos' ? 'Cobrar consumos' : (checkout.tipo=='ocupacion' ? 'Cobrar sin liberar habitacion' : 'Cobrar y cerrar estadia'))}}</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="modal fade" id="modal_cancelar_ocupacion" tabindex="-1">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title"><i class="ri-close-circle-line me-1"></i> Cancelar ocupacion</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+				</div>
+				<div class="modal-body">
+					<div class="alert alert-warning py-2" v-if="estadia.estadia">
+						Se liberara la habitacion {{habitacionActiva ? habitacionActiva.numero : ''}} y la estadia 000{{estadia.estadia.codestadia}} quedara anulada.
+					</div>
+					<label class="form-label">Motivo</label>
+					<textarea class="form-control" rows="4" v-model="cancelacion.motivo" placeholder="Motivo de cancelacion"></textarea>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-light" data-bs-dismiss="modal">Volver</button>
+					<button type="button" class="btn btn-danger" v-on:click="cancelar_ocupacion()" v-bind:disabled="cancelacion.procesando">
+						{{cancelacion.procesando ? 'Cancelando...' : 'Cancelar ocupacion y liberar'}}
+					</button>
 				</div>
 			</div>
 		</div>

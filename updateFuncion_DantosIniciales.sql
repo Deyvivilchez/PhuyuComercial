@@ -5,7 +5,21 @@ AS $$
 DECLARE
     v_codproducto_alojamiento INTEGER;
     v_codunidad_alojamiento INTEGER;
+    v_codcaja INTEGER;
 BEGIN
+
+    IF ai_codsucursal IS NULL THEN
+        RAISE EXCEPTION 'Debe indicar una sucursal valida para cargar datos iniciales';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM public.sucursales s
+        WHERE s.codsucursal = ai_codsucursal
+          AND s.estado = 1
+    ) THEN
+        RAISE EXCEPTION 'La sucursal % no existe o no esta activa', ai_codsucursal;
+    END IF;
 
     TRUNCATE TABLE
         -- NUEVO: HOTEL
@@ -57,7 +71,6 @@ BEGIN
 
         -- CAJA
         caja.controldiario,
-        caja.ctasctes,
         caja.movimientos,
         caja.movimientosdetalle,
         caja.tipocambios,
@@ -111,6 +124,7 @@ BEGIN
 
     RESTART IDENTITY CASCADE;
 
+
     UPDATE caja.comprobantes
     SET nrocorrelativo = 0,
         nroinicial = 1;
@@ -121,7 +135,11 @@ BEGIN
     DELETE FROM seguridad.usuarios
     WHERE codusuario > 1;
 
-    ALTER SEQUENCE seguridad.usuarios_codusuario_seq RESTART WITH 2;
+    PERFORM setval(
+        pg_get_serial_sequence('seguridad.usuarios', 'codusuario'),
+        2,
+        false
+    );
 
     DELETE FROM public.empleados
     WHERE codpersona > 2;
@@ -132,7 +150,95 @@ BEGIN
     DELETE FROM public.personas
     WHERE codpersona > 2;
 
-    ALTER SEQUENCE public.personas_codpersona_seq RESTART WITH 3;
+    PERFORM setval(
+        pg_get_serial_sequence('public.personas', 'codpersona'),
+        3,
+        false
+    );
+
+    -- DATOS BASE CAJA / VENTAS
+    -- Esta funcion deja el sistema limpio para iniciar operacion en la nube.
+    -- Se siembran configuraciones minimas cuando faltan.
+    -- No se crea caja diaria abierta aqui porque eso debe hacerlo el flujo normal de apertura de caja.
+
+    INSERT INTO caja.monedas (codmoneda, descripcion, simbolo, oficial, tipo, estado)
+    VALUES
+        (1, 'SOLES', 'S/', 'PEM', 1, 1),
+        (2, 'DOLAR', '$', 'USD', 2, 1),
+        (3, 'EURO', '€', 'EUR', 2, 1)
+    ON CONFLICT (codmoneda) DO NOTHING;
+
+    INSERT INTO caja.tipopagos (codtipopago, descripcion, ingreso, egreso, abono, cargo, estado)
+    VALUES
+        (0, 'CREDITO', NULL, NULL, NULL, NULL, 1),
+        (1, 'EFECTIVO', 1, 1, 0, 0, 1),
+        (2, 'CHEQUE', 1, 0, 0, 1, 1),
+        (3, 'DEPÓSITO', 0, 1, 1, 1, 1),
+        (4, 'RETIRO', 0, 0, 0, 0, 1),
+        (5, 'TRANSFERENCIA', 1, 1, 1, 1, 1),
+        (6, 'MASTERCARD', 1, 0, 0, 0, 1),
+        (7, 'VISA', 1, 0, 0, 0, 1),
+        (8, 'VALE', 0, 0, 0, 0, 1),
+        (9, 'YAPE', 1, 0, 0, 0, 1),
+        (10, 'PLIN', 1, 0, 0, 0, 1)
+    ON CONFLICT (codtipopago) DO NOTHING;
+
+    SELECT c.codcaja
+    INTO v_codcaja
+    FROM caja.cajas c
+    WHERE c.codsucursal = ai_codsucursal
+      AND c.estado = 1
+    ORDER BY c.codcaja
+    LIMIT 1;
+
+    IF v_codcaja IS NULL THEN
+        INSERT INTO caja.cajas (
+            codsucursal,
+            descripcion,
+            direccion,
+            telefonos,
+            estado,
+            saldarautomaticamente
+        )
+        VALUES (
+            ai_codsucursal,
+            'CAJA PRINCIPAL',
+            '',
+            '',
+            1,
+            0
+        )
+        RETURNING codcaja INTO v_codcaja;
+    END IF;
+
+    PERFORM setval(
+        pg_get_serial_sequence('caja.cajas', 'codcaja'),
+        COALESCE((SELECT MAX(codcaja) FROM caja.cajas), 0) + 1,
+        false
+    );
+
+    PERFORM setval(
+        pg_get_serial_sequence('caja.monedas', 'codmoneda'),
+        COALESCE((SELECT MAX(codmoneda) FROM caja.monedas), 0) + 1,
+        false
+    );
+
+    PERFORM setval(
+        pg_get_serial_sequence('caja.tipopagos', 'codtipopago'),
+        COALESCE((SELECT MAX(codtipopago) FROM caja.tipopagos), 0) + 1,
+        false
+    );
+
+    -- Los comprobantes no se inventan porque dependen de serie/tipo/documento de la empresa.
+    -- Deben existir en la base plantilla o configurarse antes de vender.
+    IF NOT EXISTS (
+        SELECT 1
+        FROM caja.comprobantes c
+        WHERE c.codsucursal = ai_codsucursal
+          AND c.estado = 1
+    ) THEN
+        RAISE EXCEPTION 'No existen comprobantes activos para la sucursal %. Configure caja.comprobantes antes de vender', ai_codsucursal;
+    END IF;
 
     -- DATOS BASE ALMACEN
 
@@ -278,7 +384,7 @@ BEGIN
         'HOTEL-ALOJ',
         1
     )
-    ON CONFLICT ON CONSTRAINT pk_productosunidades DO NOTHING;
+    ON CONFLICT (codproducto, codunidad) DO NOTHING;
 
     INSERT INTO almacen.productoubicacion (
         codalmacen,
@@ -326,7 +432,14 @@ BEGIN
         9
     FROM almacen.almacenes a
     WHERE a.estado = 1
-      AND a.codsucursal = ai_codsucursal;
+      AND a.codsucursal = ai_codsucursal
+      AND NOT EXISTS (
+          SELECT 1
+          FROM almacen.productoubicacion pu
+          WHERE pu.codalmacen = a.codalmacen
+            AND pu.codproducto = v_codproducto_alojamiento
+            AND pu.codunidad = v_codunidad_alojamiento
+      );
 
     INSERT INTO hotel.configuraciones (
         codsucursal,
@@ -344,6 +457,81 @@ BEGIN
     SET codproducto_alojamiento = EXCLUDED.codproducto_alojamiento,
         codunidad_alojamiento = EXCLUDED.codunidad_alojamiento,
         estado = 1;
+
+    -- VALIDACIONES FINALES PARA VENTAS Y HOTEL
+    -- Despues de ejecutar esta funcion, el usuario debe abrir caja desde el sistema.
+    -- Si intenta vender sin apertura de caja, el detalle de pago puede fallar.
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM almacen.almacenes a
+        WHERE a.codsucursal = ai_codsucursal
+          AND a.estado = 1
+    ) THEN
+        RAISE EXCEPTION 'No existe almacen activo para la sucursal %. Configure almacen.almacenes antes de vender', ai_codsucursal;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM almacen.productoubicacion pu
+        WHERE pu.codsucursal = ai_codsucursal
+          AND pu.estado = 1
+    ) THEN
+        RAISE EXCEPTION 'No existen productos ubicados para la sucursal %. Agregue productos/stock antes de vender', ai_codsucursal;
+    END IF;
+
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM hotel.configuraciones hc
+        WHERE hc.codsucursal = ai_codsucursal
+          AND hc.estado = 1
+          AND hc.codproducto_alojamiento > 0
+          AND hc.codunidad_alojamiento > 0
+    ) THEN
+        RAISE EXCEPTION 'No existe configuracion activa de hotel para la sucursal %. Revise hotel.configuraciones', ai_codsucursal;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM hotel.habitacion_tipos ht
+        WHERE ht.estado = 1
+    ) THEN
+        RAISE EXCEPTION 'No existen tipos de habitacion activos. Revise hotel.habitacion_tipos';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM hotel.ambientes ha
+        WHERE ha.codsucursal = ai_codsucursal
+          AND ha.estado = 1
+    ) THEN
+        RAISE EXCEPTION 'No existe ambiente inicial de hotel para la sucursal %. Revise hotel.ambientes', ai_codsucursal;
+    END IF;
+
+    PERFORM setval(
+        pg_get_serial_sequence('hotel.configuraciones', 'codconfiguracion'),
+        COALESCE((SELECT MAX(codconfiguracion) FROM hotel.configuraciones), 0) + 1,
+        false
+    );
+
+    PERFORM setval(
+        pg_get_serial_sequence('hotel.habitacion_tipos', 'codhabitaciontipo'),
+        COALESCE((SELECT MAX(codhabitaciontipo) FROM hotel.habitacion_tipos), 0) + 1,
+        false
+    );
+
+    PERFORM setval(
+        pg_get_serial_sequence('hotel.caracteristicas', 'codcaracteristica'),
+        COALESCE((SELECT MAX(codcaracteristica) FROM hotel.caracteristicas), 0) + 1,
+        false
+    );
+
+    PERFORM setval(
+        pg_get_serial_sequence('hotel.ambientes', 'codambiente'),
+        COALESCE((SELECT MAX(codambiente) FROM hotel.ambientes), 0) + 1,
+        false
+    );
 
     RETURN 'BASE DE DATOS CON DATOS INICIALES';
 
