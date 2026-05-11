@@ -42,11 +42,9 @@
 		.hotel-day.estadia .hotel-day-event{background:var(--green);color:#047857;border-top:6px solid #99f6e4}
 		.hotel-day.mantenimiento .hotel-day-event{background:var(--red);color:#991b1b;border-top:6px solid #fecaca}
 		.hotel-day.limpieza .hotel-day-event{background:var(--orange);color:#9a3412;border-top:6px solid #fed7aa}
-		.hotel-modal{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1050;display:flex;align-items:flex-start;justify-content:center;padding:32px 12px;overflow:auto;backdrop-filter:blur(2px)}
-		.hotel-dialog{width:min(820px,100%);background:#fff;border-radius:16px;box-shadow:0 24px 75px rgba(15,23,42,.28);overflow:hidden}
-		.hotel-dialog-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid #e9ebf0;background:#fbfcfe}
-		.hotel-dialog-body{padding:16px;max-height:calc(100vh - 190px);overflow:auto}
-		.hotel-dialog-actions{display:flex;gap:8px;justify-content:flex-end;padding:14px 18px;border-top:1px solid #e9ebf0;background:#fbfcfe;flex-wrap:wrap}
+		.hotel-reserva-modal .modal-dialog{max-width:820px}
+		.hotel-dialog-body{padding:16px}
+		.hotel-dialog-actions{gap:8px;flex-wrap:wrap}
 		.hotel-reserva-form .form-label{font-size:12px;font-weight:700;color:#495057;margin-bottom:.25rem}
 		.hotel-reserva-form textarea{min-height:82px}
 		.hotel-form-box{border:1px solid #eef1f5;border-radius:12px;padding:.9rem;background:#fbfcfe;margin-bottom:.9rem}
@@ -157,13 +155,14 @@
 		</div>
 	</div>
 
-	<div class="hotel-modal" v-if="modalReserva">
-		<div class="hotel-dialog">
-			<div class="hotel-dialog-head">
-				<h5 class="mb-0">{{form.codreserva ? 'Editar reserva' : 'Nueva reserva'}}</h5>
-				<button class="btn btn-sm btn-light" v-on:click="modalReserva=false"><i class="ri-close-line"></i></button>
+	<div class="modal fade hotel-reserva-modal" tabindex="-1" ref="modalReserva" v-if="modalReserva">
+		<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+			<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">{{form.codreserva ? 'Editar reserva' : 'Nueva reserva'}}</h5>
+				<button type="button" class="btn-close" v-on:click="cerrar_modal('modalReserva')" aria-label="Cerrar"></button>
 			</div>
-			<div class="hotel-dialog-body hotel-reserva-form">
+			<div class="modal-body hotel-dialog-body hotel-reserva-form">
 				<div class="hotel-form-box">
 					<label class="form-label">Cliente</label>
 					<input class="form-control mb-2" v-model="buscarCliente" v-on:keyup="buscar_clientes()" placeholder="Documento o nombre">
@@ -202,17 +201,19 @@
 					</div>
 				</div>
 			</div>
-			<div class="hotel-dialog-actions">
-				<button class="btn btn-light" v-on:click="modalReserva=false">Cancelar</button>
+			<div class="modal-footer hotel-dialog-actions">
+				<button class="btn btn-light" v-on:click="cerrar_modal('modalReserva')">Cancelar</button>
 				<button class="btn btn-primary" v-on:click="guardar_reserva()"><i class="ri-save-line me-1"></i>Guardar reserva</button>
+			</div>
 			</div>
 		</div>
 	</div>
 
-	<div class="hotel-modal" v-if="modalDetalle">
-		<div class="hotel-dialog">
-			<div class="hotel-dialog-head"><h5 class="mb-0">Detalle de reserva</h5><button class="btn btn-sm btn-light" v-on:click="modalDetalle=false"><i class="ri-close-line"></i></button></div>
-			<div class="hotel-dialog-body" v-if="detalle">
+	<div class="modal fade hotel-reserva-modal" tabindex="-1" ref="modalDetalle" v-if="modalDetalle">
+		<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+			<div class="modal-content">
+			<div class="modal-header"><h5 class="modal-title">Detalle de reserva</h5><button type="button" class="btn-close" v-on:click="cerrar_modal('modalDetalle')" aria-label="Cerrar"></button></div>
+			<div class="modal-body hotel-dialog-body" v-if="detalle">
 				<div class="row g-3">
 					<div class="col-md-6"><div class="text-muted">Cliente / responsable</div><strong>{{detalle.cliente || detalle.descripcion || 'Sin cliente registrado'}}</strong></div>
 					<div class="col-md-3"><div class="text-muted">Estado</div><span class="badge" v-bind:class="clase_estado(detalle.situacion)">{{situacion_texto(detalle.situacion)}}</span></div>
@@ -222,21 +223,24 @@
 					<div class="col-12"><div class="text-muted">Observacion</div>{{detalle.observacion}}</div>
 				</div>
 			</div>
-			<div class="hotel-dialog-actions">
-				<button class="btn btn-light" v-on:click="modalDetalle=false">Cerrar</button>
+			<div class="modal-footer hotel-dialog-actions">
+				<button class="btn btn-light" v-on:click="cerrar_modal('modalDetalle')">Cerrar</button>
 				<button class="btn btn-primary" v-if="detalle && (detalle.situacion==1 || detalle.situacion==2)" v-on:click="editar_reserva(detalle)"><i class="ri-edit-line me-1"></i>Editar reserva</button>
 				<button class="btn btn-info" v-if="detalle && detalle.situacion==1" v-on:click="confirmar_reserva(detalle)"><i class="ri-check-line me-1"></i>Confirmar</button>
 				<button class="btn btn-success" v-if="detalle && detalle.situacion==2" v-on:click="abrir_checkin(detalle)"><i class="ri-login-circle-line me-1"></i>Check-in</button>
 				<button class="btn btn-danger" v-if="detalle && (detalle.situacion==1 || detalle.situacion==2)" v-on:click="anular_reserva(detalle)">Anular</button>
 			</div>
+			</div>
 		</div>
 	</div>
 
-	<div class="hotel-modal" v-if="modalCheckin">
-		<div class="hotel-dialog">
-			<div class="hotel-dialog-head"><h5 class="mb-0">Realizar check-in</h5><button class="btn btn-sm btn-light" v-on:click="modalCheckin=false"><i class="ri-close-line"></i></button></div>
-			<div class="hotel-dialog-body hotel-reserva-form"><div class="row g-3"><div class="col-md-4"><label class="form-label">Fecha check-in</label><input type="date" class="form-control" v-model="checkin.fecha_checkin"></div><div class="col-md-8"><label class="form-label">Observacion</label><input class="form-control" v-model="checkin.observacion"></div></div></div>
-			<div class="hotel-dialog-actions"><button class="btn btn-light" v-on:click="modalCheckin=false">Cancelar</button><button class="btn btn-success" v-on:click="realizar_checkin()">Iniciar hospedaje</button></div>
+	<div class="modal fade hotel-reserva-modal" tabindex="-1" ref="modalCheckin" v-if="modalCheckin">
+		<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+			<div class="modal-content">
+			<div class="modal-header"><h5 class="modal-title">Realizar check-in</h5><button type="button" class="btn-close" v-on:click="cerrar_modal('modalCheckin')" aria-label="Cerrar"></button></div>
+			<div class="modal-body hotel-dialog-body hotel-reserva-form"><div class="row g-3"><div class="col-md-4"><label class="form-label">Fecha check-in</label><input type="date" class="form-control" v-model="checkin.fecha_checkin"></div><div class="col-md-8"><label class="form-label">Observacion</label><input class="form-control" v-model="checkin.observacion"></div></div></div>
+			<div class="modal-footer hotel-dialog-actions"><button class="btn btn-light" v-on:click="cerrar_modal('modalCheckin')">Cancelar</button><button class="btn btn-success" v-on:click="realizar_checkin()">Iniciar hospedaje</button></div>
+			</div>
 		</div>
 	</div>
 </div>

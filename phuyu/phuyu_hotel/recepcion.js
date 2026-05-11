@@ -56,7 +56,10 @@ var phuyu_datos = new Vue({
 			direccion: "",
 			fecha_checkin: phuyu_fecha_local(0),
 			fecha_checkout: phuyu_fecha_local(1),
+			precio_base: 0,
 			precio_noche: 0,
+			total_estadia: 0,
+			noches: 1,
 			codempleado: 0,
 			observacion: ""
 		},
@@ -116,9 +119,24 @@ var phuyu_datos = new Vue({
 				nrovoucher: ""
 			},
 			cuotas: []
+		},
+		cancelacion: {
+			motivo: "",
+			procesando: false,
+			confirmar_pagos: 0
 		}
 	},
 	methods: {
+		modal_bootstrap: function(selector, accion){
+			var elemento = document.querySelector(selector);
+			if (window.bootstrap && elemento) {
+				bootstrap.Modal.getOrCreateInstance(elemento)[accion]();
+				return;
+			}
+			if (window.jQuery && $(selector).modal) {
+				$(selector).modal(accion);
+			}
+		},
 		cargar_habitaciones: function(){
 			this.$http.post(url+"hotel/recepcion/habitaciones", {codambiente:this.codambiente, codcaracteristica:this.codcaracteristica}).then(function(data){
 				this.habitaciones = data.body;
@@ -144,7 +162,8 @@ var phuyu_datos = new Vue({
 			}
 			this.habitacionActiva = habitacion;
 			this.checkin.codhabitacion = habitacion.codhabitacion;
-			this.checkin.precio_noche = Number(habitacion.preciobase);
+			this.checkin.precio_base = Number(habitacion.preciobase || 0);
+			this.recalcular_checkin_total();
 			this.limpiar_cliente_checkin();
 			this.estadia = {};
 			this.productos = [];
@@ -157,6 +176,18 @@ var phuyu_datos = new Vue({
 					this.iniciar_select_cliente();
 				});
 			}
+		},
+		noches_checkin: function(){
+			var noches = this.diff_dias(this.checkin.fecha_checkin, this.checkin.fecha_checkout);
+			return noches > 0 ? noches : 1;
+		},
+		recalcular_checkin_total: function(){
+			var noches = this.noches_checkin();
+			var precioBase = this.toNum(this.checkin.precio_base);
+			var total = Number((precioBase * noches).toFixed(2));
+			this.checkin.noches = noches;
+			this.checkin.total_estadia = total;
+			this.checkin.precio_noche = precioBase;
 		},
 		iniciar_cambio_habitacion: function(){
 			if (!this.habitacionActiva || !this.estadia.estadia) {
@@ -311,7 +342,7 @@ var phuyu_datos = new Vue({
 		},
 		abrir_cliente_nuevo: function(){
 			this.limpiar_cliente_nuevo();
-			$("#modal_cliente_hotel").modal("show");
+			this.modal_bootstrap("#modal_cliente_hotel", "show");
 		},
 		cambiar_tipo_documento_cliente: function(){
 			var tipo = parseInt(this.clienteNuevo.coddocumentotipo || 0);
@@ -404,7 +435,7 @@ var phuyu_datos = new Vue({
 				var cliente = socio[0];
 				$("#codpersona_hotel").empty().append(new Option(cliente.razonsocial, cliente.codpersona, true, true)).trigger("change");
 				this.phuyu_infocliente(cliente.codpersona);
-				$("#modal_cliente_hotel").modal("hide");
+				this.modal_bootstrap("#modal_cliente_hotel", "hide");
 				phuyu_sistema.phuyu_noti("CLIENTE REGISTRADO", cliente.razonsocial, "success");
 			}, function(){
 				this.guardandoCliente = false;
@@ -416,7 +447,17 @@ var phuyu_datos = new Vue({
 				phuyu_sistema.phuyu_noti("SELECCIONE UN CLIENTE", "PARA REGISTRAR CHECK-IN", "error");
 				return;
 			}
-			this.$http.post(url+"hotel/estadias/checkin", this.checkin).then(function(data){
+			this.recalcular_checkin_total();
+			if (this.toNum(this.checkin.precio_base) <= 0) {
+				phuyu_sistema.phuyu_noti("INGRESE PRECIO POR NOCHE", "", "error");
+				return;
+			}
+			this.$http.post(url+"hotel/estadias/checkin", Object.assign({}, this.checkin, {
+				precio_noche: this.checkin.precio_base,
+				precio_base: this.checkin.precio_base,
+				total_estadia: this.checkin.total_estadia,
+				noches: this.checkin.noches
+			})).then(function(data){
 				if (data.body.estado == 1) {
 					phuyu_sistema.phuyu_noti("CHECK-IN REGISTRADO", "ESTADIA 000"+data.body.codestadia, "success");
 					this.cargar_habitaciones();
@@ -730,11 +771,18 @@ var phuyu_datos = new Vue({
 		},
 		total_checkout: function(){
 			if (!this.estadia.estadia) { return 0; }
-			var total = Number(this.estadia.estadia.alojamiento || 0);
+			var total = this.alojamiento_pendiente();
 			(this.estadia.consumos || []).forEach(function(c){
 				if (parseInt(c.situacion) == 1) { total += Number(c.subtotal || 0); }
 			});
 			return total;
+		},
+		alojamiento_pendiente: function(){
+			if (!this.estadia.estadia) { return 0; }
+			if (this.estadia.estadia.alojamiento_pendiente !== undefined) {
+				return Math.max(0, Number(this.estadia.estadia.alojamiento_pendiente || 0));
+			}
+			return Math.max(0, Number(this.estadia.estadia.alojamiento || 0) - Number(this.estadia.estadia.total_pagado_ocupacion || 0));
 		},
 		total_consumos_pendientes: function(){
 			var total = 0;
@@ -744,7 +792,9 @@ var phuyu_datos = new Vue({
 			return total;
 		},
 		total_pago_actual: function(){
-			return this.checkout.tipo == "consumos" ? this.total_consumos_pendientes() : this.total_checkout();
+			if (this.checkout.tipo == "consumos") { return this.total_consumos_pendientes(); }
+			if (this.checkout.tipo == "ocupacion") { return this.alojamiento_pendiente(); }
+			return this.total_checkout();
 		},
 		preparar_cobro: function(tipo){
 			if (!this.estadia.estadia || !this.estadia.estadia.codestadia) {
@@ -781,7 +831,7 @@ var phuyu_datos = new Vue({
 				this.checkout.campos.codcomprobantetipo = primerComprobante;
 			}
 			this.series();
-			$("#modal_checkout").modal("show");
+			this.modal_bootstrap("#modal_checkout", "show");
 			this.$nextTick(function(){
 				this.iniciar_select_factura();
 			});
@@ -794,8 +844,24 @@ var phuyu_datos = new Vue({
 			}
 			this.preparar_cobro("consumos");
 		},
+		abrir_cobro_ocupacion: function(){
+			if (this.alojamiento_pendiente() <= 0) {
+				phuyu_sistema.phuyu_noti("OCUPACION YA COBRADA", "", "warning");
+				return;
+			}
+			this.preparar_cobro("ocupacion");
+		},
 		abrir_checkout: function(){
 			this.preparar_cobro("checkout");
+		},
+		abrir_cancelar_ocupacion: function(){
+			if (!this.estadia.estadia || !this.estadia.estadia.codestadia) {
+				phuyu_sistema.phuyu_noti("NO HAY ESTADIA ACTIVA", "VUELVA A SELECCIONAR LA HABITACION", "error");
+				return;
+			}
+			this.cancelacion.motivo = "";
+			this.cancelacion.confirmar_pagos = 0;
+			this.modal_bootstrap("#modal_cancelar_ocupacion", "show");
 		},
 		series: function(){
 			if (!this.checkout.campos.codcomprobantetipo) { return; }
@@ -1051,15 +1117,17 @@ var phuyu_datos = new Vue({
 					return;
 				}
 			}
-			var endpoint = this.checkout.tipo == "consumos" ? "hotel/estadias/cobrar_consumos" : "hotel/estadias/checkout";
+			var endpoint = this.checkout.tipo == "consumos" ? "hotel/estadias/cobrar_consumos" : (this.checkout.tipo == "ocupacion" ? "hotel/estadias/cobrar_ocupacion" : "hotel/estadias/checkout");
 			this.cobrandoHotel = true;
 			this.$http.post(url+endpoint, this.checkout).then(function(data){
 				this.cobrandoHotel = false;
 				if (data.body.estado == 1) {
-					$("#modal_checkout").modal("hide");
-					var mensaje = this.checkout.tipo == "consumos" ? "CONSUMOS COBRADOS" : "CHECK-OUT REGISTRADO";
-					phuyu_sistema.phuyu_noti(mensaje, "VENTA 000"+data.body.codkardex, "success");
-					window.open(url+"facturacion/formato/ticket/"+data.body.codkardex, "_blank");
+					this.modal_bootstrap("#modal_checkout", "hide");
+					var mensaje = this.checkout.tipo == "consumos" ? "CONSUMOS COBRADOS" : (this.checkout.tipo == "ocupacion" ? "OCUPACION COBRADA" : "CHECK-OUT REGISTRADO");
+					phuyu_sistema.phuyu_noti(mensaje, data.body.codkardex > 0 ? "VENTA 000"+data.body.codkardex : (data.body.mensaje || ""), "success");
+					if (data.body.codkardex > 0) {
+						window.open(url+"facturacion/formato/ticket/"+data.body.codkardex, "_blank");
+					}
 					if (this.checkout.tipo == "checkout") {
 						this.habitacionActiva = null;
 						this.estadia = {};
@@ -1073,6 +1141,52 @@ var phuyu_datos = new Vue({
 			}, function(){
 				this.cobrandoHotel = false;
 				phuyu_sistema.phuyu_alerta("ERROR DE RED", "NO SE PUDO COBRAR LA ESTADIA", "error");
+			});
+		},
+		cancelar_ocupacion: function(){
+			if (this.cancelacion.procesando) { return; }
+			if (!this.estadia.estadia || !this.estadia.estadia.codestadia) {
+				phuyu_sistema.phuyu_noti("NO HAY ESTADIA ACTIVA", "", "error");
+				return;
+			}
+			if (!(this.cancelacion.motivo || "").trim()) {
+				phuyu_sistema.phuyu_noti("INGRESE MOTIVO", "REQUERIDO PARA AUDITORIA", "error");
+				return;
+			}
+			this.cancelacion.procesando = true;
+			this.$http.post(url+"hotel/estadias/cancelar_ocupacion", {
+				codestadia: this.estadia.estadia.codestadia,
+				motivo: this.cancelacion.motivo,
+				confirmar_pagos: this.cancelacion.confirmar_pagos
+			}).then(function(data){
+				this.cancelacion.procesando = false;
+				if (data.body.estado == 1) {
+					this.modal_bootstrap("#modal_cancelar_ocupacion", "hide");
+					phuyu_sistema.phuyu_noti(data.body.mensaje || "OCUPACION CANCELADA", "", "success");
+					this.habitacionActiva = null;
+					this.estadia = {};
+					this.cargar_habitaciones();
+					return;
+				}
+				if (data.body.requiere_confirmacion == 1) {
+					var vm = this;
+					swal({
+						title: "La estadia tiene pagos",
+						text: "Pagos registrados: S/. " + Number(data.body.total_pagado || 0).toFixed(2) + ". La cancelacion no elimina esos comprobantes ni pagos.",
+						icon: "warning",
+						buttons: ["Volver", "Confirmar cancelacion"],
+						dangerMode: true
+					}).then(function(confirmado){
+						if (!confirmado) { return; }
+						vm.cancelacion.confirmar_pagos = 1;
+						vm.cancelar_ocupacion();
+					});
+					return;
+				}
+				phuyu_sistema.phuyu_alerta(data.body.mensaje || "NO SE PUDO CANCELAR LA OCUPACION", "", "error");
+			}, function(){
+				this.cancelacion.procesando = false;
+				phuyu_sistema.phuyu_alerta("ERROR DE RED", "NO SE PUDO CANCELAR LA OCUPACION", "error");
 			});
 		}
 	},

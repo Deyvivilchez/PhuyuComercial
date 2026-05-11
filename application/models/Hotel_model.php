@@ -17,6 +17,30 @@ class Hotel_model extends CI_Model {
 		return !empty($info);
 	}
 
+	public function asegurar_auditoria_estadias(){
+		$this->db->query(
+			"create table if not exists hotel.estadia_pagos (
+				codpago serial primary key,
+				codestadia integer not null references hotel.estadias (codestadia),
+				codkardex integer default 0,
+				codusuario integer not null,
+				codcaja integer default 0,
+				codcontroldiario integer default 0,
+				fecha date default current_date,
+				hora time default current_time,
+				tipo integer default 1,
+				importe numeric default 0,
+				metodo_pago varchar(120),
+				observacion text,
+				estado integer default 1
+			)"
+		);
+		$this->db->query("alter table hotel.estadias add column if not exists fecha_cancelacion date");
+		$this->db->query("alter table hotel.estadias add column if not exists hora_cancelacion time");
+		$this->db->query("alter table hotel.estadias add column if not exists codusuario_cancelacion integer default 0");
+		$this->db->query("alter table hotel.estadias add column if not exists motivo_cancelacion text");
+	}
+
 	public function ambientes(){
 		return $this->db->query(
 			"select *
@@ -400,8 +424,19 @@ class Hotel_model extends CI_Model {
 	}
 
 	public function estadia_detalle($codestadia){
+		$this->asegurar_auditoria_estadias();
 		$estadia = $this->db->query(
-			"select e.*, p.documento, p.coddocumentotipo
+			"select e.*, p.documento, p.coddocumentotipo,
+				coalesce((
+					select sum(ep.importe)
+					from hotel.estadia_pagos ep
+					where ep.codestadia=e.codestadia and ep.tipo=1 and ep.estado=1
+				),0) as total_pagado_ocupacion,
+				greatest(e.alojamiento - coalesce((
+					select sum(ep.importe)
+					from hotel.estadia_pagos ep
+					where ep.codestadia=e.codestadia and ep.tipo=1 and ep.estado=1
+				),0),0) as alojamiento_pendiente
 			from hotel.estadias e
 			inner join public.personas p on(p.codpersona=e.codpersona)
 			where e.codestadia=? and e.estado=1",
@@ -440,7 +475,16 @@ class Hotel_model extends CI_Model {
 			[(int)$_SESSION["phuyu_codalmacen"], (int)$codestadia]
 		)->result_array();
 
-		return compact("estadia", "habitaciones", "huespedes", "consumos");
+		$pagos = $this->db->query(
+			"select ep.*, k.seriecomprobante, k.nrocomprobante
+			from hotel.estadia_pagos ep
+			left join kardex.kardex k on(k.codkardex=ep.codkardex)
+			where ep.codestadia=? and ep.estado=1
+			order by ep.codpago desc",
+			[(int)$codestadia]
+		)->result_array();
+
+		return compact("estadia", "habitaciones", "huespedes", "consumos", "pagos");
 	}
 
 	public function producto_alojamiento(){

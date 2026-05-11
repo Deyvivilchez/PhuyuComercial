@@ -1,12 +1,10 @@
 <div id="phuyu_hotel_mantenimiento">
 	<style>
-		.hotel-order-modal{position:fixed!important;top:0!important;right:0!important;bottom:0!important;left:0!important;width:100vw!important;height:100vh!important;background:rgba(15,23,42,.52)!important;z-index:2147483000!important;display:flex!important;align-items:flex-start!important;justify-content:center!important;padding:32px 12px!important;overflow:auto!important}
-		.hotel-order-dialog{position:relative;z-index:2147483001;width:min(900px,100%);max-height:calc(100vh - 64px);margin:0 auto 32px;background:#fff;border-radius:8px;box-shadow:0 18px 60px rgba(15,23,42,.22);display:flex;flex-direction:column}
-		.hotel-order-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid #e9ebf0}
-		.hotel-order-body{padding:18px;overflow:auto}
-		.hotel-order-actions{display:flex;gap:8px;justify-content:flex-end;padding:14px 18px;border-top:1px solid #e9ebf0}
+		.hotel-order-modal .modal-dialog{max-width:900px}
+		.hotel-order-body{padding:18px}
+		.hotel-order-actions{gap:8px;flex-wrap:wrap}
 		.hotel-badge{font-size:11px;letter-spacing:.02em}
-		@media(max-width:576px){.hotel-order-actions{flex-wrap:wrap}.hotel-order-actions .btn{flex:1 1 auto}}
+		@media(max-width:576px){.hotel-order-actions .btn{flex:1 1 auto}}
 	</style>
 	<div class="page-title-box d-flex align-items-center justify-content-between">
 		<h4><i class="ri-tools-line me-1"></i> Ordenes de mantenimiento</h4>
@@ -98,13 +96,14 @@
 		</div>
 	</div>
 
-	<div class="hotel-order-modal" v-if="modal" style="position:fixed!important;top:0!important;right:0!important;bottom:0!important;left:0!important;width:100vw!important;height:100vh!important;z-index:2147483000!important;display:flex!important;align-items:flex-start!important;justify-content:center!important;padding:32px 12px!important;overflow:auto!important;background:rgba(15,23,42,.52)!important;">
-		<div class="hotel-order-dialog" style="position:relative;z-index:2147483001;width:min(900px,100%);max-height:calc(100vh - 64px);margin:0 auto 32px;display:flex;flex-direction:column;">
-			<div class="hotel-order-head">
-				<h5 class="mb-0">{{tituloModal}}</h5>
-				<button class="btn btn-sm btn-light" v-on:click="cerrar()"><i class="ri-close-line"></i></button>
+	<div class="modal fade hotel-order-modal" tabindex="-1" ref="modalMantenimiento" v-if="modal">
+		<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+			<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">{{tituloModal}}</h5>
+				<button type="button" class="btn-close" v-on:click="cerrar()" aria-label="Cerrar"></button>
 			</div>
-			<div class="hotel-order-body">
+			<div class="modal-body hotel-order-body">
 				<div class="row g-3">
 					<div class="col-md-4">
 						<label class="form-label">Habitacion</label>
@@ -167,11 +166,12 @@
 					</div>
 				</div>
 			</div>
-			<div class="hotel-order-actions">
+			<div class="modal-footer hotel-order-actions">
 				<button class="btn btn-light" v-on:click="cerrar()">Cerrar</button>
 				<button class="btn btn-primary" v-if="!soloVer && !modoFinalizar" v-on:click="guardar()">Guardar orden</button>
 				<button class="btn btn-success" v-if="modoFinalizar" v-on:click="finalizar()">Finalizar orden</button>
 				<button class="btn btn-dark" v-if="soloVer" v-on:click="imprimir(form.codmantenimiento)"><i class="ri-printer-line me-1"></i>Imprimir ticket</button>
+			</div>
 			</div>
 		</div>
 	</div>
@@ -214,18 +214,36 @@ new Vue({
 		},
 		textoPrioridad:function(prioridad){return (prioridad || "media").toUpperCase();},
 		formBase:function(){return {codhabitacion:0,codresponsable:0,tipo_mantenimiento:"correctivo",prioridad:"media",fecha_fin:"",descripcion_problema:"",trabajos_realizados:"",materiales:"",observacion:""};},
-		abrirNueva:function(){this.soloVer=false;this.modoFinalizar=false;this.form=this.formBase();this.modal=true;},
+		abrirNueva:function(){this.soloVer=false;this.modoFinalizar=false;this.form=this.formBase();this.abrirModal();},
 		ver:function(o){
 			this.soloVer=true;this.modoFinalizar=false;
 			this.form={codmantenimiento:o.codmantenimiento,codhabitacion:o.codhabitacion,codresponsable:o.codresponsable,tipo_mantenimiento:o.tipo_mantenimiento || "correctivo",prioridad:o.prioridad || "media",fecha_fin:o.fecha_fin || "",descripcion_problema:o.descripcion_problema || "",trabajos_realizados:o.trabajos_realizados || "",materiales:o.materiales || "",observacion:o.observacion || ""};
-			this.modal=true;
+			this.abrirModal();
 		},
 		abrirFinalizar:function(o,destino){
 			this.soloVer=false;this.modoFinalizar=true;this.destinoFinalizar=destino;
 			this.form={codmantenimiento:o.codmantenimiento,codhabitacion:o.codhabitacion,codresponsable:o.codresponsable,tipo_mantenimiento:o.tipo_mantenimiento || "correctivo",prioridad:o.prioridad || "media",fecha_fin:o.fecha_fin || "",descripcion_problema:o.descripcion_problema || "",trabajos_realizados:o.trabajos_realizados || "",materiales:o.materiales || "",observacion:""};
-			this.modal=true;
+			this.abrirModal();
 		},
-		cerrar:function(){this.modal=false;},
+		abrirModal:function(){
+			this.modal=true;
+			this.$nextTick(function(){
+				if(window.bootstrap && this.$refs.modalMantenimiento){
+					var self=this;
+					this.$refs.modalMantenimiento.addEventListener("hidden.bs.modal",function(){
+						self.modal=false;
+					},{once:true});
+					bootstrap.Modal.getOrCreateInstance(this.$refs.modalMantenimiento).show();
+				}
+			});
+		},
+		cerrar:function(){
+			if(window.bootstrap && this.$refs.modalMantenimiento){
+				bootstrap.Modal.getOrCreateInstance(this.$refs.modalMantenimiento).hide();
+			}else{
+				this.modal=false;
+			}
+		},
 		guardar:function(){
 			if(parseInt(this.form.codhabitacion)==0){phuyu_sistema.phuyu_alerta("SELECCIONE UNA HABITACION","","warning");return;}
 			if((this.form.descripcion_problema || "").trim()==""){phuyu_sistema.phuyu_alerta("INGRESE LA DESCRIPCION DEL PROBLEMA","","warning");return;}
