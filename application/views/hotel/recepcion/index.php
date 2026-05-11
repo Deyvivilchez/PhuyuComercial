@@ -19,6 +19,8 @@
 	.hotel-room.reservada .badge{background:#dff0fa;color:#299cdb}
 	.hotel-charge-panel{border:1px solid #e9ebec;border-radius:8px;padding:.85rem;background:#fbfcfd}
 	.hotel-charge-total{font-size:1.35rem;font-weight:700;color:#405189}
+	.hotel-checkin-total{border:1px solid #e9ebec;border-radius:8px;background:#f8faff;padding:.7rem .85rem;color:#405189;font-weight:800;min-height:38px;display:flex;align-items:center;justify-content:space-between;gap:.75rem}
+	.hotel-checkin-total small{font-size:.7rem;text-transform:uppercase;color:#878a99;font-weight:800}
 	.hotel-operation-card{border:1px solid #eef1f5;border-radius:8px;background:#fff;padding:1rem;margin-bottom:.85rem;box-shadow:0 1px 2px rgba(56,65,74,.05)}
 	.hotel-operation-title{display:flex;align-items:center;gap:.45rem;font-size:.82rem;font-weight:800;text-transform:uppercase;color:#405189;margin-bottom:.65rem}
 	.hotel-guest-head{display:flex;align-items:flex-start;justify-content:space-between;gap:.75rem;margin-bottom:.85rem}
@@ -144,9 +146,25 @@
 						</div>
 						<div class="alert alert-info py-2" v-if="checkin.codpersona">{{checkin.documento}} - {{checkin.cliente}}</div>
 						<div class="row g-2">
-							<div class="col-6"><input type="date" class="form-control" v-model="checkin.fecha_checkin"></div>
-							<div class="col-6"><input type="date" class="form-control" v-model="checkin.fecha_checkout"></div>
-							<div class="col-6"><input type="number" step="0.01" class="form-control" v-model.number="checkin.precio_noche" placeholder="Precio noche"></div>
+							<div class="col-6">
+								<label class="form-label">Fecha ingreso</label>
+								<input type="date" class="form-control" v-model="checkin.fecha_checkin" v-on:change="recalcular_checkin_total()">
+							</div>
+							<div class="col-6">
+								<label class="form-label">Fecha salida</label>
+								<input type="date" class="form-control" v-model="checkin.fecha_checkout" v-on:change="recalcular_checkin_total()">
+							</div>
+							<div class="col-6">
+								<label class="form-label">Precio por noche</label>
+								<input type="number" step="0.01" class="form-control" v-model.number="checkin.precio_base" v-on:keyup="recalcular_checkin_total()" v-on:change="recalcular_checkin_total()" placeholder="Precio noche">
+							</div>
+							<div class="col-6">
+								<label class="form-label">Total estadía</label>
+								<div class="hotel-checkin-total">
+									<span>S/. {{Number(checkin.total_estadia || 0).toFixed(2)}}</span>
+									<small>{{noches_checkin()}} noche(s)</small>
+								</div>
+							</div>
 							<div class="col-6">
 								<select class="form-select" v-model="checkin.codempleado">
 									<option value="0">Empleado</option>

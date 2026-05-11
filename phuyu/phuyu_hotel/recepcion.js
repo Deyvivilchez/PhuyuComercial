@@ -56,7 +56,10 @@ var phuyu_datos = new Vue({
 			direccion: "",
 			fecha_checkin: phuyu_fecha_local(0),
 			fecha_checkout: phuyu_fecha_local(1),
+			precio_base: 0,
 			precio_noche: 0,
+			total_estadia: 0,
+			noches: 1,
 			codempleado: 0,
 			observacion: ""
 		},
@@ -159,7 +162,8 @@ var phuyu_datos = new Vue({
 			}
 			this.habitacionActiva = habitacion;
 			this.checkin.codhabitacion = habitacion.codhabitacion;
-			this.checkin.precio_noche = Number(habitacion.preciobase);
+			this.checkin.precio_base = Number(habitacion.preciobase || 0);
+			this.recalcular_checkin_total();
 			this.limpiar_cliente_checkin();
 			this.estadia = {};
 			this.productos = [];
@@ -172,6 +176,18 @@ var phuyu_datos = new Vue({
 					this.iniciar_select_cliente();
 				});
 			}
+		},
+		noches_checkin: function(){
+			var noches = this.diff_dias(this.checkin.fecha_checkin, this.checkin.fecha_checkout);
+			return noches > 0 ? noches : 1;
+		},
+		recalcular_checkin_total: function(){
+			var noches = this.noches_checkin();
+			var precioBase = this.toNum(this.checkin.precio_base);
+			var total = Number((precioBase * noches).toFixed(2));
+			this.checkin.noches = noches;
+			this.checkin.total_estadia = total;
+			this.checkin.precio_noche = precioBase;
 		},
 		iniciar_cambio_habitacion: function(){
 			if (!this.habitacionActiva || !this.estadia.estadia) {
@@ -431,7 +447,17 @@ var phuyu_datos = new Vue({
 				phuyu_sistema.phuyu_noti("SELECCIONE UN CLIENTE", "PARA REGISTRAR CHECK-IN", "error");
 				return;
 			}
-			this.$http.post(url+"hotel/estadias/checkin", this.checkin).then(function(data){
+			this.recalcular_checkin_total();
+			if (this.toNum(this.checkin.precio_base) <= 0) {
+				phuyu_sistema.phuyu_noti("INGRESE PRECIO POR NOCHE", "", "error");
+				return;
+			}
+			this.$http.post(url+"hotel/estadias/checkin", Object.assign({}, this.checkin, {
+				precio_noche: this.checkin.precio_base,
+				precio_base: this.checkin.precio_base,
+				total_estadia: this.checkin.total_estadia,
+				noches: this.checkin.noches
+			})).then(function(data){
 				if (data.body.estado == 1) {
 					phuyu_sistema.phuyu_noti("CHECK-IN REGISTRADO", "ESTADIA 000"+data.body.codestadia, "success");
 					this.cargar_habitaciones();
