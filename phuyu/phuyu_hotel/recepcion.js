@@ -124,6 +124,16 @@ var phuyu_datos = new Vue({
 		}
 	},
 	methods: {
+		modal_bootstrap: function(selector, accion){
+			var elemento = document.querySelector(selector);
+			if (window.bootstrap && elemento) {
+				bootstrap.Modal.getOrCreateInstance(elemento)[accion]();
+				return;
+			}
+			if (window.jQuery && $(selector).modal) {
+				$(selector).modal(accion);
+			}
+		},
 		cargar_habitaciones: function(){
 			this.$http.post(url+"hotel/recepcion/habitaciones", {codambiente:this.codambiente, codcaracteristica:this.codcaracteristica}).then(function(data){
 				this.habitaciones = data.body;
@@ -316,7 +326,7 @@ var phuyu_datos = new Vue({
 		},
 		abrir_cliente_nuevo: function(){
 			this.limpiar_cliente_nuevo();
-			$("#modal_cliente_hotel").modal("show");
+			this.modal_bootstrap("#modal_cliente_hotel", "show");
 		},
 		cambiar_tipo_documento_cliente: function(){
 			var tipo = parseInt(this.clienteNuevo.coddocumentotipo || 0);
@@ -409,7 +419,7 @@ var phuyu_datos = new Vue({
 				var cliente = socio[0];
 				$("#codpersona_hotel").empty().append(new Option(cliente.razonsocial, cliente.codpersona, true, true)).trigger("change");
 				this.phuyu_infocliente(cliente.codpersona);
-				$("#modal_cliente_hotel").modal("hide");
+				this.modal_bootstrap("#modal_cliente_hotel", "hide");
 				phuyu_sistema.phuyu_noti("CLIENTE REGISTRADO", cliente.razonsocial, "success");
 			}, function(){
 				this.guardandoCliente = false;
@@ -795,7 +805,7 @@ var phuyu_datos = new Vue({
 				this.checkout.campos.codcomprobantetipo = primerComprobante;
 			}
 			this.series();
-			$("#modal_checkout").modal("show");
+			this.modal_bootstrap("#modal_checkout", "show");
 			this.$nextTick(function(){
 				this.iniciar_select_factura();
 			});
@@ -825,7 +835,7 @@ var phuyu_datos = new Vue({
 			}
 			this.cancelacion.motivo = "";
 			this.cancelacion.confirmar_pagos = 0;
-			$("#modal_cancelar_ocupacion").modal("show");
+			this.modal_bootstrap("#modal_cancelar_ocupacion", "show");
 		},
 		series: function(){
 			if (!this.checkout.campos.codcomprobantetipo) { return; }
@@ -1086,7 +1096,7 @@ var phuyu_datos = new Vue({
 			this.$http.post(url+endpoint, this.checkout).then(function(data){
 				this.cobrandoHotel = false;
 				if (data.body.estado == 1) {
-					$("#modal_checkout").modal("hide");
+					this.modal_bootstrap("#modal_checkout", "hide");
 					var mensaje = this.checkout.tipo == "consumos" ? "CONSUMOS COBRADOS" : (this.checkout.tipo == "ocupacion" ? "OCUPACION COBRADA" : "CHECK-OUT REGISTRADO");
 					phuyu_sistema.phuyu_noti(mensaje, data.body.codkardex > 0 ? "VENTA 000"+data.body.codkardex : (data.body.mensaje || ""), "success");
 					if (data.body.codkardex > 0) {
@@ -1125,7 +1135,7 @@ var phuyu_datos = new Vue({
 			}).then(function(data){
 				this.cancelacion.procesando = false;
 				if (data.body.estado == 1) {
-					$("#modal_cancelar_ocupacion").modal("hide");
+					this.modal_bootstrap("#modal_cancelar_ocupacion", "hide");
 					phuyu_sistema.phuyu_noti(data.body.mensaje || "OCUPACION CANCELADA", "", "success");
 					this.habitacionActiva = null;
 					this.estadia = {};

@@ -117,7 +117,7 @@ var phuyu_hotel_reservas = new Vue({
 			this.$http.post(url+"hotel/reservas/guardar", this.form).then(function(data){
 				if (data.body.estado == 1) {
 					phuyu_sistema.phuyu_noti("RESERVA REGISTRADA", "000"+data.body.codreserva, "success");
-					this.modalReserva = false;
+					this.cerrar_modal("modalReserva");
 					this.limpiar();
 					this.cargar_reservas();
 					this.cargar_calendario();
@@ -140,7 +140,7 @@ var phuyu_hotel_reservas = new Vue({
 			this.$http.post(url+"hotel/reservas/anular", {codreserva:reserva.codreserva}).then(function(data){
 				if (data.body.estado == 1) {
 					phuyu_sistema.phuyu_noti("RESERVA ANULADA", "", "success");
-					this.modalDetalle = false;
+					this.cerrar_modal("modalDetalle");
 					this.refrescar();
 				}else{
 					phuyu_sistema.phuyu_alerta(data.body.mensaje || "NO SE PUDO ANULAR", "", "error");
@@ -149,14 +149,14 @@ var phuyu_hotel_reservas = new Vue({
 		},
 		abrir_checkin: function(reserva){
 			this.checkin = {codreserva:reserva.codreserva, fecha_checkin:this.hoy(), observacion:""};
-			this.modalCheckin = true;
+			this.cerrar_y_abrir("modalDetalle", "modalCheckin");
 		},
 		realizar_checkin: function(){
 			this.$http.post(url+"hotel/reservas/checkin", this.checkin).then(function(data){
 				if (data.body.estado == 1) {
 					phuyu_sistema.phuyu_noti("CHECK-IN REGISTRADO", "Estadia 000"+data.body.codestadia, "success");
-					this.modalCheckin = false;
-					this.modalDetalle = false;
+					this.cerrar_modal("modalCheckin");
+					this.cerrar_modal("modalDetalle");
 					this.refrescar();
 				}else{
 					phuyu_sistema.phuyu_alerta(data.body.mensaje || "NO SE PUDO REGISTRAR CHECK-IN", "", "error");
@@ -180,8 +180,7 @@ var phuyu_hotel_reservas = new Vue({
 					observacion: r.observacion || ""
 				};
 				this.buscarCliente = r.documento + " - " + r.cliente;
-				this.modalDetalle = false;
-				this.modalReserva = true;
+				this.cerrar_y_abrir("modalDetalle", "modalReserva");
 				this.consultar_disponibilidad();
 			});
 		},
@@ -189,7 +188,7 @@ var phuyu_hotel_reservas = new Vue({
 			this.$http.post(url+"hotel/reservas/detalle", {codreserva:codreserva}).then(function(data){
 				if (data.body.estado == 1) {
 					this.detalle = data.body.reserva;
-					this.modalDetalle = true;
+					this.abrir_modal("modalDetalle");
 				}
 			});
 		},
@@ -243,7 +242,7 @@ var phuyu_hotel_reservas = new Vue({
 						observacion: dia.evento.estado || dia.evento.descripcion,
 						tipo_evento: dia.evento.tipo
 					};
-					this.modalDetalle = true;
+					this.abrir_modal("modalDetalle");
 				}
 				return;
 			}
@@ -256,7 +255,7 @@ var phuyu_hotel_reservas = new Vue({
 			this.form.codhabitacion = habitacion.codhabitacion;
 			this.form.fechallegada = dia.fecha;
 			this.form.fechasalida = this.sumar_dia(dia.fecha);
-			this.modalReserva = true;
+			this.abrir_modal("modalReserva");
 			this.consultar_disponibilidad();
 		},
 		rango_libre: function(codhabitacion, desde, hastaDia){
@@ -274,7 +273,42 @@ var phuyu_hotel_reservas = new Vue({
 		},
 		abrir_nueva: function(){
 			this.limpiar(false);
-			this.modalReserva = true;
+			this.abrir_modal("modalReserva");
+		},
+		abrir_modal: function(nombre){
+			this[nombre] = true;
+			this.$nextTick(function(){
+				var modal = this.$refs[nombre];
+				if (window.bootstrap && modal) {
+					var self = this;
+					modal.addEventListener("hidden.bs.modal", function(){
+						self[nombre] = false;
+					}, {once:true});
+					bootstrap.Modal.getOrCreateInstance(modal).show();
+				}
+			});
+		},
+		cerrar_modal: function(nombre){
+			var modal = this.$refs[nombre];
+			if (window.bootstrap && modal) {
+				bootstrap.Modal.getOrCreateInstance(modal).hide();
+			}else{
+				this[nombre] = false;
+			}
+		},
+		cerrar_y_abrir: function(origen, destino){
+			var modal = this.$refs[origen];
+			if (window.bootstrap && modal) {
+				var self = this;
+				modal.addEventListener("hidden.bs.modal", function(){
+					self[origen] = false;
+					self.abrir_modal(destino);
+				}, {once:true});
+				bootstrap.Modal.getOrCreateInstance(modal).hide();
+			}else{
+				this[origen] = false;
+				this.abrir_modal(destino);
+			}
 		},
 		situacion_texto: function(situacion){
 			var estados = {0:"ANULADA",1:"PENDIENTE",2:"CONFIRMADA",3:"EN HOSPEDAJE",4:"FINALIZADA",9:"BLOQUEO"};

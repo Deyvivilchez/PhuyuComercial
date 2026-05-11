@@ -1,188 +1,16 @@
 <div id="phuyu_hotel_limpieza" class="hotel-cleaning-page">
+
 	<style>
-		/* ========== BACKDROP DEL MODAL ========== */
-		.modal-backdrop {
-			position: fixed !important;
-			top: 0 !important;
-			left: 0 !important;
-			width: 100vw !important;
-			height: 100vh !important;
-			background-color: rgba(0, 0, 0, 0.5) !important;
-			z-index: 1040 !important;
-		}
-
-		/* ========== MODAL ========== */
-		.hotel-modal {
-			z-index: 1050 !important;
-		}
-
-		.hotel-modal .modal-dialog {
-			max-width: 700px !important;
-		}
-
-		.hotel-modal .modal-content {
-			border: none !important;
-			border-radius: 16px !important;
-			box-shadow: 0 20px 60px rgba(0,0,0,0.3) !important;
-			overflow: hidden !important;
-		}
-
-		.hotel-modal .modal-header {
-			background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
-			color: #fff !important;
-			padding: 16px 20px !important;
-			border-bottom: none !important;
-			display: flex !important;
-			align-items: center !important;
-			justify-content: space-between !important;
-		}
-
-		.hotel-modal .modal-title {
-			font-size: 18px !important;
-			font-weight: 700 !important;
-		}
-
-		.hotel-modal-subtitle {
-			font-size: 12px !important;
-			opacity: 0.8 !important;
-			margin-top: 2px !important;
-		}
-
-		.hotel-modal-close {
-			background: rgba(255,255,255,0.2) !important;
-			border: none !important;
-			color: #fff !important;
-			width: 32px !important;
-			height: 32px !important;
-			border-radius: 8px !important;
-			font-size: 18px !important;
-			cursor: pointer !important;
-			display: flex !important;
-			align-items: center !important;
-			justify-content: center !important;
-		}
-
-		.hotel-modal .modal-body {
-			padding: 20px !important;
-		}
-
-		.hotel-modal .modal-footer {
-			border-top: 1px solid #e5e7eb !important;
-			padding: 14px 20px !important;
-			background: #f9fafb !important;
-		}
-
-		/* ========== SECCIONES DEL FORMULARIO ========== */
-		.hotel-form-section {
-			margin-bottom: 20px !important;
-		}
-
-		.hotel-section-title {
-			font-size: 14px !important;
-			font-weight: 700 !important;
-			color: #374151 !important;
-			margin-bottom: 10px !important;
-			display: flex !important;
-			align-items: center !important;
-			gap: 6px !important;
-			padding-bottom: 8px !important;
-			border-bottom: 2px solid #e5e7eb !important;
-		}
-
-		/* ========== CHECKLIST ========== */
 		.hotel-checklist-grid {
-			display: grid !important;
-			grid-template-columns: repeat(2, 1fr) !important;
-			gap: 8px !important;
-			padding: 12px !important;
-			background: #f9fafb !important;
-			border-radius: 10px !important;
-			border: 1px solid #e5e7eb !important;
-		}
-
-		.hotel-check-item {
-			display: flex !important;
-			align-items: center !important;
-			gap: 8px !important;
-			padding: 8px 10px !important;
-			border-radius: 6px !important;
-			cursor: pointer !important;
-			margin: 0 !important;
-			transition: background 0.15s !important;
-		}
-
-		.hotel-check-item:hover {
-			background: #e0e7ff !important;
-		}
-
-		.hotel-check-item.is-disabled {
-			opacity: 0.7 !important;
-			cursor: not-allowed !important;
-		}
-
-		.hotel-check-item input[type="checkbox"] {
-			width: 18px !important;
-			height: 18px !important;
-			accent-color: #4f46e5 !important;
-			cursor: pointer !important;
-		}
-
-		.hotel-check-item span {
-			font-size: 14px !important;
-			color: #374151 !important;
-		}
-
-		/* ========== TABLA ========== */
-		.hotel-table-card {
-			box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
-			border-radius: 12px !important;
-		}
-
-		.hotel-order-code {
-			font-weight: 700 !important;
-			color: #4f46e5 !important;
-		}
-
-		.hotel-room-title {
-			font-weight: 600 !important;
-		}
-
-		.hotel-room-subtitle {
-			font-size: 12px !important;
-			color: #6b7280 !important;
-		}
-
-		.hotel-badge {
-			font-size: 11px !important;
-			padding: 5px 10px !important;
-			border-radius: 6px !important;
-			font-weight: 600 !important;
-			letter-spacing: 0.3px !important;
-		}
-
-		.hotel-actions {
-			display: flex !important;
-			gap: 4px !important;
-			flex-wrap: wrap !important;
-		}
-
-		.hotel-empty {
-			padding: 40px !important;
-			color: #9ca3af !important;
-		}
-
-		/* ========== RESPONSIVE ========== */
-		@media (max-width: 768px) {
-			.hotel-checklist-grid {
-				grid-template-columns: 1fr !important;
-			}
-			
-			.hotel-modal .modal-dialog {
-				margin: 10px !important;
-			}
+			display: flex;
+			flex-direction: column;
+			gap: 5px;
+			padding: 10px;
+			background: #f9fafb;
+			border-radius: 10px;
+			border: 1px solid #e5e7eb;
 		}
 	</style>
-
 	<!-- ========== CONTENIDO PRINCIPAL ========== -->
 	<div class="page-title-box d-flex align-items-center justify-content-between">
 		<h4 class="hotel-page-title"><i class="ri-brush-3-line"></i> Órdenes de limpieza</h4>
@@ -254,7 +82,10 @@
 						<tr v-for="o in ordenes">
 							<td><span class="hotel-order-code">OL-{{o.numero_orden}}</span></td>
 							<td>{{o.fecha}} {{o.hora}}</td>
-							<td><div class="hotel-room-title">{{o.numero}}</div><div class="hotel-room-subtitle">{{o.ambiente}}</div></td>
+							<td>
+								<div class="hotel-room-title">{{o.numero}}</div>
+								<div class="hotel-room-subtitle">{{o.ambiente}}</div>
+							</td>
 							<td>{{o.responsable || 'SIN RESPONSABLE'}}</td>
 							<td>{{o.tipo_limpieza_texto}}</td>
 							<td><span class="badge hotel-badge" v-bind:class="claseEstado(o.estado_orden)">{{o.estado_orden_texto}}</span></td>
@@ -269,31 +100,32 @@
 								</div>
 							</td>
 						</tr>
-						<tr v-if="ordenes.length==0"><td colspan="7" class="text-center hotel-empty"><i class="ri-inbox-line d-block fs-3 mb-1"></i>No hay órdenes registradas</td></tr>
+						<tr v-if="ordenes.length==0">
+							<td colspan="7" class="text-center hotel-empty"><i class="ri-inbox-line d-block fs-3 mb-1"></i>No hay órdenes registradas</td>
+						</tr>
 					</tbody>
 				</table>
 			</div>
 		</div>
 	</div>
 
-	<!-- ========== BACKDROP OSCURO ========== -->
-	<div class="modal-backdrop fade show" v-if="modal" @click="cerrar()"></div>
-
 	<!-- ========== MODAL ========== -->
-	<div class="modal fade show d-block hotel-modal" tabindex="-1" role="dialog" v-if="modal" aria-modal="true">
-		<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" role="document">
-			<div class="modal-content">
-				<div class="modal-header">
-					<div>
-						<h5 class="modal-title">{{tituloModal}}</h5>
-						<div class="hotel-modal-subtitle">Registro y control de limpieza</div>
+	<!-- Modal Limpieza Ordenado -->
+	<div class="modal fade show d-block hotel-modal" tabindex="-1" role="dialog" ref="modalLimpieza" v-if="modal" aria-modal="true">
+		<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg" role="document">
+			<div class="modal-content hotel-modal-content">
+				<div class="modal-header hotel-modal-header">
+					<div class="d-flex align-items-center gap-2">
+						<div class="hotel-modal-icon"><i class="ri-brush-3-line"></i></div>
+						<div>
+							<h5 class="modal-title mb-0">{{tituloModal}}</h5>
+							<div class="hotel-modal-subtitle">Registro y control de limpieza</div>
+						</div>
 					</div>
-					<button type="button" class="hotel-modal-close" @click="cerrar()" aria-label="Cerrar">
-						<i class="ri-close-line"></i>
-					</button>
+					<button type="button" class="btn-close btn-close-white" @click="cerrar()" aria-label="Cerrar"></button>
 				</div>
 
-				<div class="modal-body">
+				<div class="modal-body hotel-modal-body">
 					<div class="hotel-form-section">
 						<div class="hotel-section-title"><i class="ri-hotel-bed-line"></i> Información principal</div>
 						<div class="row g-3">
@@ -324,23 +156,28 @@
 					</div>
 
 					<div class="hotel-form-section">
-						<div class="hotel-section-title"><i class="ri-checkbox-circle-line"></i> Checklist de limpieza</div>
-						<div class="hotel-checklist-grid">
-							<label class="hotel-check-item" v-for="t in tareas" v-bind:class="{'is-disabled': soloVer}">
-								<input type="checkbox" :value="t" v-model="form.checklist" :disabled="soloVer">
-								<span>{{t}}</span>
-							</label>
+						<div class="hotel-section-title">
+							<i class="ri-checkbox-circle-line"></i> Checklist de limpieza
+						</div>
+
+						<div class="row g-2 mt-2">
+							<div class="col-md-6" v-for="t in tareas">
+								<label class="hotel-check-item" v-bind:class="{'is-disabled': soloVer}">
+									<input type="checkbox" :value="t" v-model="form.checklist" :disabled="soloVer">
+									<span>{{t}}</span>
+								</label>
+							</div>
 						</div>
 					</div>
 
-					<div class="hotel-form-section">
+					<div class="hotel-form-section mb-0">
 						<div class="hotel-section-title"><i class="ri-file-text-line"></i> Observación</div>
 						<textarea class="form-control" rows="3" v-model="form.observacion" :disabled="soloVer" placeholder="Escriba observaciones..."></textarea>
 					</div>
 				</div>
 
-				<div class="modal-footer">
-					<button type="button" class="btn btn-light" @click="cerrar()">Cerrar</button>
+				<div class="modal-footer hotel-modal-footer">
+					<button type="button" class="btn btn-light border" @click="cerrar()">Cerrar</button>
 					<button type="button" class="btn btn-primary" v-if="!soloVer" @click="guardar()">
 						<i class="ri-save-line me-1"></i>{{form.codlimpieza ? 'Actualizar orden' : 'Guardar orden'}}
 					</button>
@@ -354,184 +191,194 @@
 </div>
 
 <script>
-new Vue({
-	el: "#phuyu_hotel_limpieza",
-	data: {
-		habitaciones: [],
-		responsables: [],
-		ordenes: [],
-		modal: false,
-		soloVer: false,
-		filtros: {
-			desde: "",
-			hasta: "",
-			codhabitacion: 0,
-			codresponsable: 0,
-			estado_orden: 0
-		},
-		form: {
-			codlimpieza: 0,
-			codhabitacion: 0,
-			codresponsable: 0,
-			tipo_limpieza: "normal",
-			checklist: [],
-			observacion: ""
-		},
-		tareas: [
-			"Cambio de sabanas",
-			"Cambio de toallas",
-			"Limpieza de bano",
-			"Limpieza de ducha",
-			"Limpieza de ventanas",
-			"Barrido/trapeado de piso",
-			"Reposicion de papel higienico",
-			"Reposicion de jabon/shampoo",
-			"Revision de frigobar",
-			"Retiro de basura",
-			"Desinfeccion general"
-		]
-	},
-	computed: {
-		habitacionesDisponibles: function() {
-			return this.habitaciones.filter(function(h) {
-				return h.situacion != 3 && h.situacion != 5 && h.situacion != 6;
-			});
-		},
-		tituloModal: function() {
-			if (this.soloVer) return "Detalle de orden";
-			return this.form.codlimpieza ? "Editar orden de limpieza" : "Nueva orden de limpieza";
-		}
-	},
-	methods: {
-		hoy: function() {
-			var d = new Date();
-			return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-		},
-		cargarHabitaciones: function() {
-			this.$http.post(url + "hotel/limpieza/habitaciones").then(function(data) {
-				this.habitaciones = data.body;
-			});
-		},
-		cargarResponsables: function() {
-			this.$http.post(url + "hotel/limpieza/responsables").then(function(data) {
-				this.responsables = data.body;
-			});
-		},
-		cargarOrdenes: function() {
-			this.$http.post(url + "hotel/limpieza/listar", this.filtros).then(function(data) {
-				this.ordenes = data.body;
-			});
-		},
-		claseEstado: function(estado) {
-			estado = parseInt(estado);
-			if (estado == 1) return "bg-warning-subtle text-warning";
-			if (estado == 2) return "bg-info-subtle text-info";
-			if (estado == 3) return "bg-success-subtle text-success";
-			return "bg-danger-subtle text-danger";
-		},
-		abrirNueva: function() {
-			this.soloVer = false;
-			this.form = {
+	new Vue({
+		el: "#phuyu_hotel_limpieza",
+		data: {
+			habitaciones: [],
+			responsables: [],
+			ordenes: [],
+			modal: false,
+			soloVer: false,
+			filtros: {
+				desde: "",
+				hasta: "",
+				codhabitacion: 0,
+				codresponsable: 0,
+				estado_orden: 0
+			},
+			form: {
 				codlimpieza: 0,
 				codhabitacion: 0,
 				codresponsable: 0,
 				tipo_limpieza: "normal",
-				checklist: this.tareas.slice(),
+				checklist: [],
 				observacion: ""
-			};
-			document.body.classList.add("modal-open");
-			document.body.style.overflow = "hidden";
-			this.modal = true;
+			},
+			tareas: [
+				"Cambio de sabanas",
+				"Cambio de toallas",
+				"Limpieza de bano",
+				"Limpieza de ducha",
+				"Limpieza de ventanas",
+				"Barrido/trapeado de piso",
+				"Reposicion de papel higienico",
+				"Reposicion de jabon/shampoo",
+				"Revision de frigobar",
+				"Retiro de basura",
+				"Desinfeccion general"
+			]
 		},
-		ver: function(o) {
-			this.soloVer = true;
-			this.form = {
-				codlimpieza: o.codlimpieza,
-				codhabitacion: o.codhabitacion,
-				codresponsable: o.codresponsable,
-				tipo_limpieza: o.tipo_limpieza || "normal",
-				checklist: o.checklist_items || [],
-				observacion: o.observacion || ""
-			};
-			document.body.classList.add("modal-open");
-			document.body.style.overflow = "hidden";
-			this.modal = true;
-		},
-		editar: function(o) {
-			this.soloVer = false;
-			this.form = {
-				codlimpieza: o.codlimpieza,
-				codhabitacion: o.codhabitacion,
-				codresponsable: o.codresponsable,
-				tipo_limpieza: o.tipo_limpieza || "normal",
-				checklist: o.checklist_items || [],
-				observacion: o.observacion || ""
-			};
-			document.body.classList.add("modal-open");
-			document.body.style.overflow = "hidden";
-			this.modal = true;
-		},
-		cerrar: function() {
-			this.modal = false;
-			document.body.classList.remove("modal-open");
-			document.body.style.overflow = "";
-		},
-		guardar: function() {
-			if (parseInt(this.form.codhabitacion) == 0) {
-				phuyu_sistema.phuyu_alerta("SELECCIONE UNA HABITACION", "", "warning");
-				return;
+		computed: {
+			habitacionesDisponibles: function() {
+				return this.habitaciones.filter(function(h) {
+					return h.situacion != 3 && h.situacion != 5 && h.situacion != 6;
+				});
+			},
+			tituloModal: function() {
+				if (this.soloVer) return "Detalle de orden";
+				return this.form.codlimpieza ? "Editar orden de limpieza" : "Nueva orden de limpieza";
 			}
-			var esNuevo = parseInt(this.form.codlimpieza || 0) == 0;
-			this.$http.post(url + "hotel/limpieza/guardar", this.form).then(function(data) {
-				if (data.body.estado == 1) {
-					phuyu_sistema.phuyu_noti(esNuevo ? "ORDEN DE LIMPIEZA REGISTRADA" : "ORDEN DE LIMPIEZA ACTUALIZADA", "", "success");
-					this.cerrar();
-					this.cargarHabitaciones();
-					this.cargarOrdenes();
-					if (esNuevo) {
-						this.imprimir(data.body.codlimpieza);
+		},
+		methods: {
+			hoy: function() {
+				var d = new Date();
+				return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+			},
+			cargarHabitaciones: function() {
+				this.$http.post(url + "hotel/limpieza/habitaciones").then(function(data) {
+					this.habitaciones = data.body;
+				});
+			},
+			cargarResponsables: function() {
+				this.$http.post(url + "hotel/limpieza/responsables").then(function(data) {
+					this.responsables = data.body;
+				});
+			},
+			cargarOrdenes: function() {
+				this.$http.post(url + "hotel/limpieza/listar", this.filtros).then(function(data) {
+					this.ordenes = data.body;
+				});
+			},
+			claseEstado: function(estado) {
+				estado = parseInt(estado);
+				if (estado == 1) return "bg-warning-subtle text-warning";
+				if (estado == 2) return "bg-info-subtle text-info";
+				if (estado == 3) return "bg-success-subtle text-success";
+				return "bg-danger-subtle text-danger";
+			},
+			abrirNueva: function() {
+				this.soloVer = false;
+				this.form = {
+					codlimpieza: 0,
+					codhabitacion: 0,
+					codresponsable: 0,
+					tipo_limpieza: "normal",
+					checklist: this.tareas.slice(),
+					observacion: ""
+				};
+				this.abrirModal();
+			},
+			ver: function(o) {
+				this.soloVer = true;
+				this.form = {
+					codlimpieza: o.codlimpieza,
+					codhabitacion: o.codhabitacion,
+					codresponsable: o.codresponsable,
+					tipo_limpieza: o.tipo_limpieza || "normal",
+					checklist: o.checklist_items || [],
+					observacion: o.observacion || ""
+				};
+				this.abrirModal();
+			},
+			editar: function(o) {
+				this.soloVer = false;
+				this.form = {
+					codlimpieza: o.codlimpieza,
+					codhabitacion: o.codhabitacion,
+					codresponsable: o.codresponsable,
+					tipo_limpieza: o.tipo_limpieza || "normal",
+					checklist: o.checklist_items || [],
+					observacion: o.observacion || ""
+				};
+				this.abrirModal();
+			},
+			abrirModal: function() {
+				this.modal = true;
+				this.$nextTick(function() {
+					if (window.bootstrap && this.$refs.modalLimpieza) {
+						var self = this;
+						this.$refs.modalLimpieza.addEventListener("hidden.bs.modal", function() {
+							self.modal = false;
+						}, {
+							once: true
+						});
+						bootstrap.Modal.getOrCreateInstance(this.$refs.modalLimpieza).show();
 					}
+				});
+			},
+			cerrar: function() {
+				if (window.bootstrap && this.$refs.modalLimpieza) {
+					bootstrap.Modal.getOrCreateInstance(this.$refs.modalLimpieza).hide();
 				} else {
-					phuyu_sistema.phuyu_alerta(data.body.mensaje || "NO SE PUDO REGISTRAR", "", "error");
+					this.modal = false;
 				}
-			});
-		},
-		cambiarEstado: function(o, estado) {
-			this.$http.post(url + "hotel/limpieza/cambiar_estado", {
-				codlimpieza: o.codlimpieza,
-				estado_orden: estado
-			}).then(function(data) {
-				if (data.body.estado == 1) {
-					phuyu_sistema.phuyu_noti("ORDEN ACTUALIZADA", "", "success");
-					this.cargarOrdenes();
-				} else {
-					phuyu_sistema.phuyu_alerta(data.body.mensaje || "NO SE PUDO ACTUALIZAR", "", "error");
+			},
+			guardar: function() {
+				if (parseInt(this.form.codhabitacion) == 0) {
+					phuyu_sistema.phuyu_alerta("SELECCIONE UNA HABITACION", "", "warning");
+					return;
 				}
-			});
+				var esNuevo = parseInt(this.form.codlimpieza || 0) == 0;
+				this.$http.post(url + "hotel/limpieza/guardar", this.form).then(function(data) {
+					if (data.body.estado == 1) {
+						phuyu_sistema.phuyu_noti(esNuevo ? "ORDEN DE LIMPIEZA REGISTRADA" : "ORDEN DE LIMPIEZA ACTUALIZADA", "", "success");
+						this.cerrar();
+						this.cargarHabitaciones();
+						this.cargarOrdenes();
+						if (esNuevo) {
+							this.imprimir(data.body.codlimpieza);
+						}
+					} else {
+						phuyu_sistema.phuyu_alerta(data.body.mensaje || "NO SE PUDO REGISTRAR", "", "error");
+					}
+				});
+			},
+			cambiarEstado: function(o, estado) {
+				this.$http.post(url + "hotel/limpieza/cambiar_estado", {
+					codlimpieza: o.codlimpieza,
+					estado_orden: estado
+				}).then(function(data) {
+					if (data.body.estado == 1) {
+						phuyu_sistema.phuyu_noti("ORDEN ACTUALIZADA", "", "success");
+						this.cargarOrdenes();
+					} else {
+						phuyu_sistema.phuyu_alerta(data.body.mensaje || "NO SE PUDO ACTUALIZAR", "", "error");
+					}
+				});
+			},
+			finalizar: function(o) {
+				this.$http.post(url + "hotel/limpieza/finalizar", {
+					codlimpieza: o.codlimpieza
+				}).then(function(data) {
+					if (data.body.estado == 1) {
+						phuyu_sistema.phuyu_noti("LIMPIEZA FINALIZADA", "", "success");
+						this.cargarHabitaciones();
+						this.cargarOrdenes();
+					} else {
+						phuyu_sistema.phuyu_alerta(data.body.mensaje || "NO SE PUDO FINALIZAR", "", "error");
+					}
+				});
+			},
+			imprimir: function(codlimpieza) {
+				window.open(url + "hotel/limpieza/ticket/" + codlimpieza, "_blank");
+			}
 		},
-		finalizar: function(o) {
-			this.$http.post(url + "hotel/limpieza/finalizar", {
-				codlimpieza: o.codlimpieza
-			}).then(function(data) {
-				if (data.body.estado == 1) {
-					phuyu_sistema.phuyu_noti("LIMPIEZA FINALIZADA", "", "success");
-					this.cargarHabitaciones();
-					this.cargarOrdenes();
-				} else {
-					phuyu_sistema.phuyu_alerta(data.body.mensaje || "NO SE PUDO FINALIZAR", "", "error");
-				}
-			});
-		},
-		imprimir: function(codlimpieza) {
-			window.open(url + "hotel/limpieza/ticket/" + codlimpieza, "_blank");
+		created: function() {
+			this.filtros.desde = this.hoy();
+			this.filtros.hasta = this.hoy();
+			this.cargarHabitaciones();
+			this.cargarResponsables();
+			this.cargarOrdenes();
 		}
-	},
-	created: function() {
-		this.filtros.desde = this.hoy();
-		this.filtros.hasta = this.hoy();
-		this.cargarHabitaciones();
-		this.cargarResponsables();
-		this.cargarOrdenes();
-	}
-});
+	});
 </script>
