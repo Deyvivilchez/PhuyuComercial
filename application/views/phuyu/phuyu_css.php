@@ -136,6 +136,13 @@
             overflow-x: hidden;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: thin;
+            scrollbar-color: transparent transparent;
+            transition: scrollbar-color .2s ease;
+        }
+
+        .app-menu:hover #scrollbar,
+        .app-menu #scrollbar:focus-within {
+            scrollbar-color: rgba(255, 255, 255, .34) transparent;
         }
 
         .app-menu #scrollbar .container-fluid {
@@ -143,16 +150,81 @@
         }
 
         .app-menu #scrollbar::-webkit-scrollbar {
-            width: 6px;
+            width: 8px;
         }
 
         .app-menu #scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.28);
+            background: transparent;
+            border: 2px solid transparent;
             border-radius: 999px;
+            background-clip: padding-box;
+            min-height: 42px;
+            transition: background .2s ease;
         }
 
-        .app-menu #scrollbar::-webkit-scrollbar-track {
+        .app-menu:hover #scrollbar::-webkit-scrollbar-thumb,
+        .app-menu #scrollbar:focus-within::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, .34);
+            background-clip: padding-box;
+        }
+
+        .app-menu #scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, .48);
+            background-clip: padding-box;
+        }
+
+        .app-menu #scrollbar::-webkit-scrollbar-corner {
             background: transparent;
+        }
+
+        .app-menu #scrollbar::-webkit-scrollbar-button {
+            width: 0;
+            height: 0;
+            display: none;
+        }
+
+        .app-menu #scrollbar::-webkit-scrollbar-track,
+        .app-menu #scrollbar::-webkit-scrollbar-track-piece {
+            background: transparent;
+            border: 0;
+        }
+
+        html[data-sidebar-size="sm"] .app-menu #scrollbar::-webkit-scrollbar,
+        html[data-sidebar-size="sm-hover"] .app-menu #scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        html[data-sidebar-size="sm"] .app-menu:hover #scrollbar::-webkit-scrollbar-thumb,
+        html[data-sidebar-size="sm-hover"] .app-menu:hover #scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, .28);
+            background-clip: padding-box;
+        }
+
+        html[data-sidebar-size="sm"] .app-menu #scrollbar,
+        html[data-sidebar-size="sm-hover"] .app-menu #scrollbar {
+            scrollbar-width: none;
+        }
+
+        html[data-sidebar-size="sm"] .app-menu:hover #scrollbar,
+        html[data-sidebar-size="sm-hover"] .app-menu:hover #scrollbar {
+            scrollbar-width: thin;
+        }
+
+        html[data-layout-mode="light"] .app-menu:hover #scrollbar,
+        html[data-layout-mode="light"] .app-menu #scrollbar:focus-within {
+            scrollbar-color: rgba(64, 81, 137, .28) transparent;
+        }
+
+        html[data-layout-mode="light"] .app-menu:hover #scrollbar::-webkit-scrollbar-thumb,
+        html[data-layout-mode="light"] .app-menu #scrollbar:focus-within::-webkit-scrollbar-thumb {
+            background: rgba(64, 81, 137, .28);
+            background-clip: padding-box;
+        }
+
+        html[data-layout-mode="light"] .app-menu #scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(64, 81, 137, .42);
+            border-radius: 999px;
+            background-clip: padding-box;
         }
 
         .app-menu .navbar-nav .menu-link.collapsed[aria-expanded="false"]::after {
@@ -558,14 +630,15 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 22px;
-            height: 22px;
-            margin-top: -25px;
-            margin-left: -25px;
-            border-radius: 7px;
+            width: 9px;
+            height: 9px;
+            margin-top: -11px;
+            margin-left: -11px;
+            border: 0;
+            border-radius: 3px;
             background: #4d4de0;
-            box-shadow: 28px 0 0 #6aa5e8, 0 28px 0 #9ec4f5, 28px 28px 0 #05056d;
-            animation: phuyu-mini-loader 1.2s ease-in-out infinite;
+            box-shadow: 13px 0 0 #6aa5e8, 0 13px 0 #9ec4f5, 13px 13px 0 #05056d;
+            animation: phuyu-mini-loader 1s ease-in-out infinite;
             z-index: 11;
         }
 
@@ -615,53 +688,84 @@
             background: rgba(255, 255, 255, 0.82);
         }
 
+        .phuyu_cargando {
+            display: flex;
+            min-height: 180px;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            border: 1px solid rgba(77, 77, 224, 0.08);
+            border-radius: 12px;
+            background: rgba(248, 250, 252, 0.72);
+        }
+
+        .phuyu_cargando .overlay-spinner {
+            width: 22px;
+            height: 22px;
+            display: inline-block;
+        }
+
+        .phuyu_cargando .overlay-spinner::before {
+            display: none;
+        }
+
+        .phuyu_cargando .overlay-spinner::after {
+            top: 0;
+            left: 0;
+            margin: 0;
+        }
+
+        .phuyu_cargando + .table-responsive {
+            display: none;
+        }
+
         .phuyu-system-loading {
             position: relative;
             min-height: 260px;
         }
 
         .phuyu-system-loader {
-            position: absolute;
+            position: fixed;
             inset: 0;
-            z-index: 50;
+            z-index: 2050;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 1.5rem;
-            background: linear-gradient(135deg, rgba(244, 246, 251, 0.96), rgba(255, 255, 255, 0.98));
-            border-radius: inherit;
-            backdrop-filter: blur(4px);
+            background: linear-gradient(135deg, rgba(244, 246, 251, 0.94), rgba(255, 255, 255, 0.98));
+            border-radius: 0;
+            backdrop-filter: blur(3px);
         }
 
         .phuyu-system-loader-inner {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 1.65rem;
-            width: min(340px, 100%);
+            gap: 1.35rem;
+            width: min(320px, calc(100vw - 2rem));
             text-align: center;
         }
 
         .phuyu-system-spinner {
             position: relative;
-            width: 140px;
-            height: 140px;
+            width: 118px;
+            height: 118px;
             animation: phuyu-system-rotate 6s linear infinite;
         }
 
         .phuyu-system-ring {
             position: absolute;
-            inset: -18px;
-            border: 4px dashed rgba(77, 77, 224, 0.3);
+            inset: -16px;
+            border: 3px dashed rgba(77, 77, 224, 0.28);
             border-radius: 50%;
             animation: phuyu-system-rotate-reverse 8s linear infinite;
         }
 
         .phuyu-system-square {
             position: absolute;
-            width: 48px;
-            height: 48px;
-            border-radius: 14px;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
             box-shadow: 0 10px 20px rgba(5, 5, 109, 0.10);
             animation: phuyu-system-pulse 1.8s infinite ease-in-out;
         }
@@ -695,7 +799,7 @@
         }
 
         .phuyu-system-logo {
-            width: 220px;
+            width: 205px;
             max-width: 80%;
             object-fit: contain;
             animation: phuyu-system-float 3s ease-in-out infinite;
@@ -703,8 +807,8 @@
 
         .phuyu-system-bar {
             position: relative;
-            width: min(280px, 82vw);
-            height: 10px;
+            width: min(260px, 78vw);
+            height: 9px;
             overflow: hidden;
             border-radius: 20px;
             background: #dfe5f0;
@@ -723,7 +827,7 @@
 
         .phuyu-system-text {
             color: #1d1d75;
-            font-size: 1rem;
+            font-size: .95rem;
             font-weight: 600;
             line-height: 1.35;
             letter-spacing: 0;

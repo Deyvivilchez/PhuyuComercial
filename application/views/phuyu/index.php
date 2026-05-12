@@ -93,25 +93,7 @@
                     </div>
                 </div>
 
-                <div id="modal_electronicos" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
-                    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-                        <div class="modal-content">
-                            <div class="modal-header bg-primary-subtle">
-                                <h4 class="modal-title mb-0">
-                                    <b style="letter-spacing: 2px;">COMPROBANTES POR ENVIAR A SUNAT</b>
-                                </h4>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body" id="modalver"></div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">SEGUIR EN EL SISTEMA</button>
-                                <a href="<?php echo base_url(); ?>phuyu/phuyu_logout" class="btn btn-danger">CERRAR SESION DE TODAS MANERAS</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
-
             <footer class="footer">
                 <div class="container-fluid">
                     <div class="row">
@@ -126,6 +108,24 @@
                     </div>
                 </div>
             </footer>
+        </div>
+    </div>
+
+    <div id="modal_electronicos" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary-subtle">
+                    <h4 class="modal-title mb-0">
+                        <b style="letter-spacing: 2px;">COMPROBANTES POR ENVIAR A SUNAT</b>
+                    </h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="modalver"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">SEGUIR EN EL SISTEMA</button>
+                    <a href="<?php echo base_url(); ?>phuyu/phuyu_logout" class="btn btn-danger">CERRAR SESION DE TODAS MANERAS</a>
+                </div>
+            </div>
         </div>
     </div>
 

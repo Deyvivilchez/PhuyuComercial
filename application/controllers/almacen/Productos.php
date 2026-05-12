@@ -42,7 +42,20 @@ class Productos extends CI_Controller
             where (UPPER(productos.descripcion)
              like UPPER('%" . $this->request->buscar . "%') or UPPER(productos.codigo) 
              like UPPER('%" . $this->request->buscar . "%') or UPPER(marcas.descripcion) 
-             like UPPER('%" . $this->request->buscar . "%') ) and productos.estado=1 
+             like UPPER('%" . $this->request->buscar . "%')
+             OR EXISTS (
+                SELECT 1 FROM almacen.productounidades pbu
+                WHERE pbu.codproducto = productos.codproducto
+                  AND pbu.estado = 1
+                  AND UPPER(COALESCE(pbu.codigobarra, '')) LIKE UPPER('%" . $this->request->buscar . "%')
+             )
+             OR EXISTS (
+                SELECT 1 FROM almacen.productoubicacion pbo
+                WHERE pbo.codproducto = productos.codproducto
+                  AND pbo.estado = 1
+                  AND UPPER(COALESCE(pbo.codigobarra, '')) LIKE UPPER('%" . $this->request->buscar . "%')
+             )
+             ) and productos.estado=1 
              order by productos.descripcion, productos.codproducto asc offset " . $offset . ' limit ' . $limit)->result_array();
 
             foreach ($lista as $key => $value) {
@@ -68,7 +81,7 @@ class Productos extends CI_Controller
                 }
             }
 
-            $total = $this->db->query("select count(*) as total from almacen.productos as productos inner join almacen.marcas as marcas on(productos.codmarca=marcas.codmarca) where (UPPER(productos.descripcion) like UPPER('%" . $this->request->buscar . "%') or UPPER(productos.codigo) like UPPER('%" . $this->request->buscar . "%') or UPPER(marcas.descripcion) like UPPER('%" . $this->request->buscar . "%') ) and productos.estado=1")->result_array();
+            $total = $this->db->query("select count(*) as total from almacen.productos as productos inner join almacen.marcas as marcas on(productos.codmarca=marcas.codmarca) where (UPPER(productos.descripcion) like UPPER('%" . $this->request->buscar . "%') or UPPER(productos.codigo) like UPPER('%" . $this->request->buscar . "%') or UPPER(marcas.descripcion) like UPPER('%" . $this->request->buscar . "%') OR EXISTS (SELECT 1 FROM almacen.productounidades pbu WHERE pbu.codproducto = productos.codproducto AND pbu.estado = 1 AND UPPER(COALESCE(pbu.codigobarra, '')) LIKE UPPER('%" . $this->request->buscar . "%')) OR EXISTS (SELECT 1 FROM almacen.productoubicacion pbo WHERE pbo.codproducto = productos.codproducto AND pbo.estado = 1 AND UPPER(COALESCE(pbo.codigobarra, '')) LIKE UPPER('%" . $this->request->buscar . "%')) ) and productos.estado=1")->result_array();
 
             $paginas = floor($total[0]['total'] / $limit);
             if ($total[0]['total'] % $limit != 0) {
@@ -736,12 +749,42 @@ class Productos extends CI_Controller
         if ($this->input->is_ajax_request()) {
             $info = $this->db
                 ->query(
-                    "select p.codproducto,p.descripcion,p.caracteristicas, p.afectoicbper,p.controlstock, p.afectoigvcompra, p.afectoigvventa, p.codigo,p.calcular,p.foto,u.codunidad,u.descripcion as unidad,round(pu.stockactual,3) as stock, m.descripcion as marca, puv.factor, puv.factor as factormaximo, round(puv.pventapublico,2) as precio, round(puv.pventamin,2) as preciomin, round(puv.pventacredito,2) as preciocredito, round(puv.pventaxmayor,2) as preciomayor, round(puv.preciocosto,2) as preciocosto, round(puv.pventaadicional,2) as precioadicional from almacen.productos as p inner join almacen.productoubicacion as pu on(p.codproducto=pu.codproducto) inner join almacen.unidades as u on(u.codunidad=pu.codunidad) inner join almacen.marcas as m on(p.codmarca=m.codmarca) inner join almacen.productounidades as puv on(pu.codproducto=puv.codproducto and pu.codunidad=puv.codunidad) where puv.codigobarra='" .
+                    "select p.codproducto,p.descripcion,p.caracteristicas, p.afectoicbper,p.controlstock, p.afectoigvcompra, p.afectoigvventa, p.codigo,p.calcular,p.foto,p.controlarseries,u.codunidad,u.descripcion as unidad,round(pu.stockactual,3) as stock, m.descripcion as marca, puv.factor, puv.factor as factormaximo, round(puv.pventapublico,2) as precio, round(puv.pventamin,2) as preciomin, round(puv.pventacredito,2) as preciocredito, round(puv.pventaxmayor,2) as preciomayor, round(puv.preciocosto,2) as preciocosto, round(puv.pventaadicional,2) as precioadicional,
+                    COALESCE(
+                        (SELECT vpun.unidades
+                        FROM almacen.v_productounidades vpun
+                        WHERE vpun.codproducto = p.codproducto
+                        AND vpun.codalmacen = pu.codalmacen
+                        LIMIT 1),
+                        ''
+                    ) AS unidades,
+                    COALESCE(
+                        (SELECT jsonb_agg(jsonb_build_object(
+                            'serie_codigo', s.serie_codigo,
+                            'estado', s.estado,
+                            'fecha_ingreso', s.fecha_ingreso,
+                            'id_serie', s.id_serie,
+                            'codproducto', p.codproducto
+                        ))
+                        FROM almacen.series s
+                        WHERE s.codproducto = p.codproducto
+                        AND s.estado = 'EN_ALMACEN'
+                        AND s.codalmacen = " . $_SESSION['phuyu_codalmacen'] . "),
+                        '[]'::jsonb
+                    ) AS series
+                    from almacen.productos as p inner join almacen.productoubicacion as pu on(p.codproducto=pu.codproducto) inner join almacen.unidades as u on(u.codunidad=pu.codunidad) inner join almacen.marcas as m on(p.codmarca=m.codmarca) inner join almacen.productounidades as puv on(pu.codproducto=puv.codproducto and pu.codunidad=puv.codunidad) where puv.codigobarra='" .
                         $codigobarra .
                         "' and p.estado=1 and pu.estado=1 and pu.codalmacen=" .
                         $_SESSION['phuyu_codalmacen'],
                 )
                 ->result_array();
+            foreach ($info as &$producto) {
+                if (!empty($producto['series']) && is_string($producto['series'])) {
+                    $producto['series'] = json_decode($producto['series'], true);
+                } else {
+                    $producto['series'] = [];
+                }
+            }
             $data = [];
             $precio = 0;
             if (count($info) > 0) {
@@ -1771,6 +1814,20 @@ class Productos extends CI_Controller
             $producto = $this->db->get_where('almacen.productos', ['codigo' => $codigo])->row_array();
         }
 
+        if (empty($producto) && $codigoBarra !== '') {
+            $producto = $this->db->query(
+                "select p.* from almacen.productos p inner join almacen.productounidades u on (p.codproducto = u.codproducto) where p.estado = 1 and u.codigobarra = ? limit 1",
+                [$codigoBarra]
+            )->row_array();
+        }
+
+        if (empty($producto) && $descripcion !== '') {
+            $producto = $this->db->query(
+                "select * from almacen.productos where estado = 1 and upper(trim(descripcion)) = upper(trim(?)) limit 1",
+                [$descripcion]
+            )->row_array();
+        }
+
         $dataProducto = [
             'codfamilia' => (int) $codfamilia,
             'codlinea' => (int) $codlinea,
@@ -1856,17 +1913,48 @@ class Productos extends CI_Controller
             ];
 
             if ($stockInicial !== null && $esAlmacenActual) {
-                $dataUbicacion['stockactual'] = (float) $stockInicial;
-                $dataUbicacion['stockactualreal'] = (float) $stockInicial;
-                $dataUbicacion['stockactualconvertido'] = (float) $stockInicial;
-                $dataUbicacion['preciostockvalorizado'] = (float) $stockInicial * (float) $precioCompra;
+                $existenciaUbicacion = $this->db->get_where('almacen.productoubicacion', [
+                    'codalmacen' => (int) $almacen['codalmacen'],
+                    'codproducto' => (int) $codproducto,
+                    'codunidad' => (int) $codunidad,
+                    'estado' => 1
+                ])->row_array();
+
+                if (!empty($existenciaUbicacion)) {
+                    $dataUbicacion['stockactual'] = (float) $existenciaUbicacion['stockactual'] + (float) $stockInicial;
+                    $dataUbicacion['stockactualreal'] = (float) $existenciaUbicacion['stockactualreal'] + (float) $stockInicial;
+                    $dataUbicacion['stockactualconvertido'] = (float) $existenciaUbicacion['stockactualconvertido'] + (float) $stockInicial;
+                    $dataUbicacion['preciostockvalorizado'] = (float) $existenciaUbicacion['preciostockvalorizado'] + ((float) $stockInicial * (float) $precioCompra);
+                } else {
+                    $dataUbicacion['stockactual'] = (float) $stockInicial;
+                    $dataUbicacion['stockactualreal'] = (float) $stockInicial;
+                    $dataUbicacion['stockactualconvertido'] = (float) $stockInicial;
+                    $dataUbicacion['preciostockvalorizado'] = (float) $stockInicial * (float) $precioCompra;
+                }
             }
 
-            $this->upsert_por_filtro('almacen.productoubicacion', $dataUbicacion, [
-                'codalmacen' => (int) $almacen['codalmacen'],
-                'codproducto' => (int) $codproducto,
-                'codunidad' => (int) $codunidad
-            ]);
+            $shouldUpsertUbicacion = true;
+            if ($stockInicial === null) {
+                $existenciaUbicacion = $this->db->get_where('almacen.productoubicacion', [
+                    'codalmacen' => (int) $almacen['codalmacen'],
+                    'codproducto' => (int) $codproducto,
+                    'codunidad' => (int) $codunidad,
+                    'estado' => 1
+                ])->row_array();
+
+                if (empty($existenciaUbicacion)) {
+                    // No vamos a crear una ubicación de stock en 0 si el Excel no trae valor de stock.
+                    $shouldUpsertUbicacion = false;
+                }
+            }
+
+            if ($shouldUpsertUbicacion) {
+                $this->upsert_por_filtro('almacen.productoubicacion', $dataUbicacion, [
+                    'codalmacen' => (int) $almacen['codalmacen'],
+                    'codproducto' => (int) $codproducto,
+                    'codunidad' => (int) $codunidad
+                ]);
+            }
         }
 
         return ['estado' => 1, 'mensaje' => ''];

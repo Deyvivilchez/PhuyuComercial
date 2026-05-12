@@ -284,4 +284,20 @@ class Phuyu extends CI_Controller
 	public function phuyu_logout2(){
 		session_destroy();
 	}
+
+	public function phuyu_ping_sesion(){
+		if ($this->input->is_ajax_request() && isset($_SESSION["phuyu_usuario"])) {
+			$this->output->set_content_type("application/json", "utf-8");
+			echo json_encode([
+				"estado" => 1,
+				"cerrar_inactividad" => isset($_SESSION["phuyu_sesion_cerrar_inactividad"]) ? (int)$_SESSION["phuyu_sesion_cerrar_inactividad"] : 0,
+				"tiempo_inactividad_minutos" => isset($_SESSION["phuyu_sesion_tiempo_minutos"]) ? (int)$_SESSION["phuyu_sesion_tiempo_minutos"] : 120,
+				"mostrar_aviso" => isset($_SESSION["phuyu_sesion_mostrar_aviso"]) ? (int)$_SESSION["phuyu_sesion_mostrar_aviso"] : 1,
+				"minutos_aviso" => isset($_SESSION["phuyu_sesion_minutos_aviso"]) ? (int)$_SESSION["phuyu_sesion_minutos_aviso"] : 5
+			]);
+		}else{
+			$this->output->set_status_header(401);
+			echo 0;
+		}
+	}
 }
