@@ -1934,17 +1934,23 @@ class Productos extends CI_Controller
             }
 
             $shouldUpsertUbicacion = true;
-            if ($stockInicial === null) {
-                $existenciaUbicacion = $this->db->get_where('almacen.productoubicacion', [
-                    'codalmacen' => (int) $almacen['codalmacen'],
-                    'codproducto' => (int) $codproducto,
-                    'codunidad' => (int) $codunidad,
-                    'estado' => 1
-                ])->row_array();
+            $existenciaUbicacion = $this->db->get_where('almacen.productoubicacion', [
+                'codalmacen' => (int) $almacen['codalmacen'],
+                'codproducto' => (int) $codproducto,
+                'codunidad' => (int) $codunidad,
+                'estado' => 1
+            ])->row_array();
 
+            if ($stockInicial === null) {
                 if (empty($existenciaUbicacion)) {
                     // No vamos a crear una ubicación de stock en 0 si el Excel no trae valor de stock.
                     $shouldUpsertUbicacion = false;
+                } else {
+                    // Si hay stock_inicial null pero el registro existe, solo actualizar precios sin tocar el stock
+                    $dataUbicacion['stockactual'] = (float) $existenciaUbicacion['stockactual'];
+                    $dataUbicacion['stockactualreal'] = (float) $existenciaUbicacion['stockactualreal'];
+                    $dataUbicacion['stockactualconvertido'] = (float) $existenciaUbicacion['stockactualconvertido'];
+                    $dataUbicacion['preciostockvalorizado'] = (float) $existenciaUbicacion['preciostockvalorizado'];
                 }
             }
 
