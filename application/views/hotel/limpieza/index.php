@@ -1,6 +1,31 @@
 <div id="phuyu_hotel_limpieza" class="hotel-cleaning-page">
 
 	<style>
+		.hotel-cleaning-page{--hc-border:var(--vz-border-color,#e9ebec);--hc-muted:var(--vz-secondary-color,#878a99);--hc-text:var(--vz-body-color,#212529)}
+		.hotel-cleaning-page .hotel-page-title{margin:0;font-size:1.1rem;font-weight:800;color:#343a40;display:flex;align-items:center;gap:.45rem}
+		.hotel-cleaning-page .page-title-box{padding:1.05rem 1.2rem;border:1px solid var(--hc-border);border-radius:12px;background:linear-gradient(135deg,#fff 0%,#f7f9ff 100%);box-shadow:0 8px 24px rgba(56,65,74,.07);margin-bottom:1rem}
+		.hotel-cleaning-page .hotel-filter-card,.hotel-cleaning-page .hotel-table-card{border:1px solid var(--hc-border);border-radius:12px;box-shadow:0 8px 24px rgba(56,65,74,.055);overflow:hidden}
+		.hotel-cleaning-page .hotel-filter-card .card-body{padding:1rem}
+		.hotel-cleaning-page .form-label{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:#687385}
+		.hotel-cleaning-page .form-control-sm,.hotel-cleaning-page .form-select-sm{height:38px;border-radius:7px;border-color:#d8dee9;box-shadow:none;font-size:.78rem}
+		.hotel-cleaning-page .hotel-table-card .card-body{padding:0}
+		.hotel-cleaning-page .hotel-table thead th{background:#f8f9fa;color:#687385;font-size:.7rem;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--hc-border);padding:.85rem .9rem}
+		.hotel-cleaning-page .hotel-table tbody td{padding:.85rem .9rem;border-color:#eef1f5;vertical-align:middle}
+		.hotel-cleaning-page .hotel-table tbody tr:hover{background:#fbfcff}
+		.hotel-cleaning-page .hotel-order-code{display:inline-flex;align-items:center;border-radius:999px;background:#eef4ff;color:#405189;font-weight:800;padding:.35rem .55rem;font-size:.76rem}
+		.hotel-cleaning-page .hotel-room-title{font-weight:800;color:#343a40;line-height:1.1}
+		.hotel-cleaning-page .hotel-room-subtitle{font-size:.72rem;color:var(--hc-muted);margin-top:.15rem}
+		.hotel-cleaning-page .hotel-actions{display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;justify-content:flex-end}
+		.hotel-cleaning-page .hotel-actions .btn{min-height:31px;border-radius:7px;font-weight:700}
+		.hotel-cleaning-page .hotel-actions .btn-icon-clean{width:31px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+		.hotel-cleaning-page .hotel-empty{padding:2.8rem 1rem!important;color:var(--hc-muted)}
+		.hotel-cleaning-page .hotel-pagination-wrap{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding:1rem;border-top:1px solid var(--hc-border);background:#fff}
+		.hotel-cleaning-page .hotel-pagination-info{margin:0;font-size:.82rem;color:var(--hc-muted);font-weight:600}
+		.hotel-cleaning-page .hotel-pagination-info b{color:#343a40;font-weight:800}
+		.hotel-cleaning-page .hotel-pagination{display:flex;align-items:center;gap:.35rem;margin:0;flex-wrap:wrap}
+		.hotel-cleaning-page .hotel-pagination .page-link{min-width:34px;height:34px;padding:0 .65rem;border-radius:8px;border:1px solid #e2e8f0;color:#495057;font-weight:800;display:inline-flex;align-items:center;justify-content:center}
+		.hotel-cleaning-page .hotel-pagination .page-item.active .page-link{background:#405189;border-color:#405189;color:#fff}
+		.hotel-cleaning-page .hotel-pagination .page-item.disabled .page-link{background:#f8fafc;color:#adb5bd;cursor:not-allowed}
 		.hotel-checklist-grid {
 			display: flex;
 			flex-direction: column;
@@ -10,6 +35,7 @@
 			border-radius: 10px;
 			border: 1px solid #e5e7eb;
 		}
+		@media(max-width:767px){.hotel-cleaning-page .page-title-box{align-items:flex-start!important;flex-direction:column}.hotel-cleaning-page .hotel-pagination-wrap{align-items:stretch;flex-direction:column}.hotel-cleaning-page .hotel-pagination{justify-content:center}.hotel-cleaning-page .hotel-actions{justify-content:flex-start}}
 	</style>
 	<!-- ========== CONTENIDO PRINCIPAL ========== -->
 	<div class="page-title-box d-flex align-items-center justify-content-between">
@@ -55,7 +81,7 @@
 					</select>
 				</div>
 				<div class="col-12 text-end">
-					<button class="btn btn-sm btn-secondary" v-on:click="cargarOrdenes()">
+					<button class="btn btn-sm btn-secondary" v-on:click="aplicarFiltros()">
 						<i class="ri-search-line me-1"></i>Filtrar
 					</button>
 				</div>
@@ -75,7 +101,7 @@
 							<th>Responsable</th>
 							<th>Tipo</th>
 							<th>Estado</th>
-							<th width="330">Acciones</th>
+							<th class="text-end" width="280">Acciones</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -91,9 +117,9 @@
 							<td><span class="badge hotel-badge" v-bind:class="claseEstado(o.estado_orden)">{{o.estado_orden_texto}}</span></td>
 							<td>
 								<div class="hotel-actions">
-									<button class="btn btn-outline-primary btn-sm" v-on:click="ver(o)"><i class="ri-eye-line"></i></button>
-									<button class="btn btn-outline-secondary btn-sm" v-if="o.estado_orden==1 || o.estado_orden==2" v-on:click="editar(o)"><i class="ri-edit-line"></i></button>
-									<button class="btn btn-outline-dark btn-sm" v-on:click="imprimir(o.codlimpieza)"><i class="ri-printer-line"></i></button>
+									<button class="btn btn-outline-primary btn-sm btn-icon-clean" title="Ver" v-on:click="ver(o)"><i class="ri-eye-line"></i></button>
+									<button class="btn btn-outline-secondary btn-sm btn-icon-clean" title="Editar" v-if="o.estado_orden==1 || o.estado_orden==2" v-on:click="editar(o)"><i class="ri-edit-line"></i></button>
+									<button class="btn btn-outline-dark btn-sm btn-icon-clean" title="Imprimir" v-on:click="imprimir(o.codlimpieza)"><i class="ri-printer-line"></i></button>
 									<button class="btn btn-outline-info btn-sm" v-if="o.estado_orden==1" v-on:click="cambiarEstado(o,2)">En proceso</button>
 									<button class="btn btn-outline-success btn-sm" v-if="o.estado_orden==1 || o.estado_orden==2" v-on:click="finalizar(o)">Finalizar</button>
 									<button class="btn btn-outline-danger btn-sm" v-if="o.estado_orden==1 || o.estado_orden==2" v-on:click="cambiarEstado(o,4)">Anular</button>
@@ -105,6 +131,22 @@
 						</tr>
 					</tbody>
 				</table>
+			</div>
+			<div class="hotel-pagination-wrap">
+				<p class="hotel-pagination-info">
+					Mostrando <b>{{paginacion.total ? paginacion.desde + 1 : 0}}</b> - <b>{{paginacion.hasta}}</b> de <b>{{paginacion.total}}</b> ordenes
+				</p>
+				<ul class="pagination hotel-pagination">
+					<li class="page-item" v-bind:class="{disabled:paginacion.actual<=1}">
+						<a class="page-link" href="#" v-on:click.prevent="cambiarPagina(paginacion.actual-1)"><i class="ri-arrow-left-s-line"></i></a>
+					</li>
+					<li class="page-item" v-for="pag in paginasVisibles" v-bind:class="{active:pag==paginacion.actual}">
+						<a class="page-link" href="#" v-on:click.prevent="cambiarPagina(pag)">{{pag}}</a>
+					</li>
+					<li class="page-item" v-bind:class="{disabled:paginacion.actual>=paginacion.ultima}">
+						<a class="page-link" href="#" v-on:click.prevent="cambiarPagina(paginacion.actual+1)"><i class="ri-arrow-right-s-line"></i></a>
+					</li>
+				</ul>
 			</div>
 		</div>
 	</div>
@@ -204,8 +246,10 @@
 				hasta: "",
 				codhabitacion: 0,
 				codresponsable: 0,
-				estado_orden: 0
+				estado_orden: 0,
+				pagina: 1
 			},
+			paginacion: {total: 0, actual: 1, ultima: 1, desde: 0, hasta: 0},
 			form: {
 				codlimpieza: 0,
 				codhabitacion: 0,
@@ -237,6 +281,16 @@
 			tituloModal: function() {
 				if (this.soloVer) return "Detalle de orden";
 				return this.form.codlimpieza ? "Editar orden de limpieza" : "Nueva orden de limpieza";
+			},
+			paginasVisibles: function() {
+				var paginas = [];
+				var actual = parseInt(this.paginacion.actual || 1);
+				var ultima = parseInt(this.paginacion.ultima || 1);
+				var inicio = Math.max(1, actual - 2);
+				var fin = Math.min(ultima, inicio + 4);
+				inicio = Math.max(1, fin - 4);
+				for (var i = inicio; i <= fin; i++) { paginas.push(i); }
+				return paginas;
 			}
 		},
 		methods: {
@@ -256,8 +310,19 @@
 			},
 			cargarOrdenes: function() {
 				this.$http.post(url + "hotel/limpieza/listar", this.filtros).then(function(data) {
-					this.ordenes = data.body;
+					this.ordenes = data.body.lista || [];
+					this.paginacion = data.body.paginacion || {total: 0, actual: 1, ultima: 1, desde: 0, hasta: 0};
 				});
+			},
+			aplicarFiltros: function() {
+				this.filtros.pagina = 1;
+				this.cargarOrdenes();
+			},
+			cambiarPagina: function(pagina) {
+				pagina = parseInt(pagina || 1);
+				if (pagina < 1 || pagina > parseInt(this.paginacion.ultima || 1) || pagina == parseInt(this.paginacion.actual || 1)) { return; }
+				this.filtros.pagina = pagina;
+				this.cargarOrdenes();
 			},
 			claseEstado: function(estado) {
 				estado = parseInt(estado);

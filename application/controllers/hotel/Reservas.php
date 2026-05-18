@@ -403,7 +403,9 @@ class Reservas extends CI_Controller {
 				inner join hotel.habitacion_tipos ht on(ht.codhabitaciontipo=h.codhabitaciontipo)
 				left join hotel.ambientes a on(a.codambiente=h.codambiente)
 				where h.codsucursal=? and h.estado=1".$where."
-				order by coalesce(a.descripcion, h.piso), h.numero",
+				order by coalesce(a.descripcion, h.piso),
+					nullif(regexp_replace(h.numero::text, '\\D', '', 'g'), '')::int nulls last,
+					h.numero",
 				$params
 			)->result_array();
 
