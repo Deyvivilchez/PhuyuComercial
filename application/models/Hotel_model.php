@@ -164,7 +164,9 @@ class Hotel_model extends CI_Model {
 			inner join hotel.habitacion_tipos ht on(ht.codhabitaciontipo=h.codhabitaciontipo)
 			left join hotel.ambientes a on(a.codambiente=h.codambiente)
 			where h.codsucursal=? and h.estado=1".$whereAmbiente.$whereCaracteristica."
-			order by coalesce(a.descripcion, h.piso), h.numero",
+			order by coalesce(a.descripcion, h.piso),
+				nullif(regexp_replace(h.numero::text, '\\D', '', 'g'), '')::int nulls last,
+				h.numero",
 			$params
 		)->result_array();
 
@@ -408,7 +410,9 @@ class Hotel_model extends CI_Model {
 			inner join hotel.habitacion_tipos ht on(ht.codhabitaciontipo=h.codhabitaciontipo)
 			left join hotel.ambientes a on(a.codambiente=h.codambiente)
 			where h.codsucursal=? and h.estado=1 and h.situacion not in (5,6)".$whereAmbiente."
-			order by coalesce(a.descripcion, h.piso), h.numero",
+			order by coalesce(a.descripcion, h.piso),
+				nullif(regexp_replace(h.numero::text, '\\D', '', 'g'), '')::int nulls last,
+				h.numero",
 			$params
 		)->result_array();
 
