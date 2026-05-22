@@ -1416,6 +1416,8 @@ class Facturacion_model extends CI_Model
             $cbc->setAttribute("currencyID", "PEN");
             $cac_cat = $xml->createElement("cac:TaxCategory");
             $cac_cat = $cac_sub->appendChild($cac_cat);
+            $cbc = $xml->createElement("cbc:Percent", "18.00");
+            $cbc = $cac_cat->appendChild($cbc);
             $cac_esq = $xml->createElement("cac:TaxScheme");
             $cac_esq = $cac_cat->appendChild($cac_esq);
             $cbc = $xml->createElement("cbc:ID", "1000");

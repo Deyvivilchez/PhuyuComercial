@@ -1,20 +1,107 @@
 	<style>
-		.modal-header {
-			background: linear-gradient(90deg, #007bff, #00bcd4);
-			border-bottom: 3px solid #00acc1;
-			color: white;
-			padding: 0.6rem 1rem;
-		}
-
-		.modal-header .modal-title {
-			display: flex;
-			align-items: center;
-			font-weight: 600;
+		#phuyu_operacion label,
+		#phuyu_operacion .form-label {
+			font-size: 11px;
+			font-weight: 800;
+			color: #343a40;
+			margin-bottom: 6px;
 			text-transform: uppercase;
 		}
 
-		.modal-header .mdi {
-			font-size: 1.4rem;
+		#phuyu_operacion .form-control,
+		#phuyu_operacion .form-select {
+			border-radius: 9px;
+			min-height: 38px;
+		}
+
+		#phuyu_operacion .card {
+			border: 0;
+			border-radius: 1rem;
+			box-shadow: 0 10px 35px rgba(15, 23, 42, .06);
+		}
+
+		#phuyu_operacion .phuyu-title {
+			display: flex;
+			align-items: center;
+			gap: .65rem;
+			color: #405189;
+			font-weight: 800;
+			margin-bottom: 1rem;
+		}
+
+		#phuyu_operacion .phuyu-title i {
+			width: 40px;
+			height: 40px;
+			border-radius: 12px;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			background: rgba(64, 81, 137, .1);
+		}
+
+		#phuyu_operacion .row.form-group {
+			margin-bottom: .85rem;
+		}
+
+		#phuyu_operacion .phuyu-btn-text-icon {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			gap: .45rem;
+			border-radius: 10px;
+			font-weight: 700;
+		}
+
+		#phuyu_operacion .phuyu-btn-icon-only {
+			width: 38px;
+			height: 34px;
+			padding: 0;
+			border-radius: 9px;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+		}
+
+		#phuyu_operacion .table-responsive {
+			border: 1px solid #eef1f4;
+			border-radius: 14px;
+		}
+
+		#phuyu_operacion .table {
+			margin-bottom: 0;
+		}
+
+		#phuyu_operacion .table thead th {
+			background: #f3f6f9;
+			color: #343a40;
+			font-weight: 800;
+			text-transform: uppercase;
+			white-space: nowrap;
+		}
+
+		#phuyu_operacion .modal-content {
+			border: 0;
+			border-radius: 1rem;
+			overflow: hidden;
+		}
+
+		#phuyu_operacion .modal-header {
+			background: #405189;
+			color: #fff;
+			padding: .85rem 1rem;
+			border-bottom: 0;
+		}
+
+		#phuyu_operacion .modal-header .modal-title {
+			display: flex;
+			align-items: center;
+			gap: .5rem;
+			font-weight: 800;
+			text-transform: uppercase;
+		}
+
+		#phuyu_operacion .select2-container {
+			width: 100% !important;
 		}
 	</style>
 	<div id="phuyu_operacion">
@@ -28,9 +115,11 @@
 			<div class="phuyu_body">
 				<div class="card">
 					<div class="card-body">
-						<div class="row form-group">
-							<div class="col-md-4 col-xs-12 text-danger">
-								<h5><strong>{{titulo}}</strong></h5>
+						<div class="phuyu-title">
+							<i class="bi bi-bag-plus fs-5"></i>
+							<div>
+								<h4 class="mb-0">{{titulo}}</h4>
+								<div class="text-muted small mt-1">Registro de compra y detalle de productos</div>
 							</div>
 						</div>
 						<div class="row form-group">
@@ -44,8 +133,8 @@
 							</div>
 							<div class="col-md-1" style="margin-top: 1.3rem">
 								<label>&nbsp;</label>
-								<button type="button" class="btn btn-primary btn-icon" v-on:click="phuyu_addproveedor()" title="AGREGAR PROVEEDOR">
-									<i data-acorn-icon="user"></i>
+								<button type="button" class="btn btn-primary phuyu-btn-icon-only" v-on:click="phuyu_addproveedor()" title="Agregar proveedor">
+									<i class="bi bi-person-plus"></i>
 								</button>
 							</div>
 							<div class="col-md-2 col-xs-6">
@@ -121,7 +210,10 @@
 								<input type="text" class="form-control" v-model="campos.descripcion" autocomplete="off" maxlength="250" placeholder="Referencia de la compra . . .">
 							</div>
 							<div class="col-md-3" align="right">
-								<button type="button" class="btn-items-mas btn btn-success btn-icon" style="margin-top: 1.3rem;" v-on:click="phuyu_item()"><i data-acorn-icon="plus"></i> Buscar Productos </button>
+								<button type="button" class="btn-items-mas btn btn-success phuyu-btn-text-icon" style="margin-top: 1.3rem;" v-on:click="phuyu_item()">
+									<i class="bi bi-search"></i>
+									<span>Buscar productos</span>
+								</button>
 							</div>
 						</div>
 						<div class="table-responsive ">
@@ -148,16 +240,18 @@
 											<div class="d-flex flex-column align-items-center gap-1">
 												<button
 													type="button"
-													class="btn btn-outline-primary btn-sm px-2 py-0"
+													class="btn btn-outline-primary btn-sm px-2 py-0 phuyu-btn-text-icon"
 													style="font-size: 11px; line-height: 1;"
 													v-on:click="phuyu_itemdetalle(index, dato)">
-													+ Más
+													<i class="bi bi-sliders"></i>
+													<span>Más</span>
 												</button>
 												<button v-if="dato.controlarseries == 1" type="button"
-													class="btn btn-outline-secondary btn-sm px-2 py-0"
+													class="btn btn-outline-secondary btn-sm px-2 py-0 phuyu-btn-text-icon"
 													style="font-size: 11px; line-height: 1;"
 													v-on:click="phuyu_ModalSeries(dato,index)">
-													+ Series
+													<i class="bi bi-upc-scan"></i>
+													<span>Series</span>
 												</button>
 											</div>
 										</td>
@@ -197,13 +291,14 @@
 											<input type="number" step="0.01" class="form-control number" v-if="dato.calcular!=0" v-model.number="dato.subtotal" v-on:keyup="phuyu_subtotal(dato)" required v-bind:disabled="dato.porcdescuento==100">
 										</td>
 										<td>
-											<button type="button" class="btn btn-danger btn-block btn-xs" style="margin-bottom:-1px;" v-on:click="phuyu_deleteitem(index,dato)">
-												<b>X</b>
+											<button type="button" class="btn btn-danger btn-sm phuyu-btn-icon-only" v-on:click="phuyu_deleteitem(index,dato)" title="Quitar producto">
+												<i class="bi bi-x-lg"></i>
 											</button>
 										</td>
 										<td>
-											<button type="button" class="btn btn-info btn-xs" style="margin-bottom: -1px" v-on:click="phuyu_masprecios(dato)">
-												<i data-acorn-icon="eye"></i> VER
+											<button type="button" class="btn btn-info btn-sm phuyu-btn-text-icon" v-on:click="phuyu_masprecios(dato)">
+												<i class="bi bi-eye"></i>
+												<span>Ver</span>
 											</button>
 										</td>
 									</tr>
@@ -229,14 +324,17 @@
 							<div class="col-md-5 col-xs-6">
 							</div>
 							<div class="col-md-7 col-xs-12" align="right">
-								<button type="button" class="btn btn-warning btn-icon" v-on:click="phuyu_compra()">
-									<b> <i data-acorn-icon="plus"></i> NUEVA COMPRA</b>
+								<button type="button" class="btn btn-warning phuyu-btn-text-icon" v-on:click="phuyu_compra()">
+									<i class="bi bi-plus-circle"></i>
+									<span>Nueva compra</span>
 								</button>
-								<button type="submit" class="btn btn-primary btn-icon" v-bind:disabled="estado==1">
-									<b><i data-acorn-icon="save"></i> GUARDAR COMPRA</b>
+								<button type="submit" class="btn btn-primary phuyu-btn-text-icon" v-bind:disabled="estado==1">
+									<i class="bi bi-save"></i>
+									<span>Guardar compra</span>
 								</button>
-								<button type="button" class="btn btn-danger btn-icon" v-on:click="phuyu_atras()">
-									<b> <i data-acorn-icon="arrow-left"></i> ATRAS</b>
+								<button type="button" class="btn btn-danger phuyu-btn-text-icon" v-on:click="phuyu_atras()">
+									<i class="bi bi-arrow-left-circle"></i>
+									<span>Atrás</span>
 								</button>
 							</div>
 						</div>
@@ -250,7 +348,8 @@
 				<div class="modal-content">
 					<div class="modal-header modal-phuyu-titulo">
 						<h5 class="modal-title">
-							<b>TOTAL COMPRA S/. {{totales.importe}}</b>
+							<i class="bi bi-cash-stack"></i>
+							Total compra S/. {{totales.importe}}
 						</h5>
 					</div>
 					<div class="modal-body" id="cuerpotermino">
@@ -288,7 +387,10 @@
 								</div>
 								<div class="col-xs-5">
 									<label></label>
-									<button type="button" class="btn btn-success btn-icon" v-on:click="phuyu_lineascreditodirecto()"><i data-acorn-icon="plus"></i> NUEVA LINEA DE CREDITO</button>
+									<button type="button" class="btn btn-success phuyu-btn-text-icon" v-on:click="phuyu_lineascreditodirecto()">
+										<i class="bi bi-plus-circle"></i>
+										<span>Nueva línea de crédito</span>
+									</button>
 								</div>
 							</div>
 							<div class="row form-group">
@@ -376,10 +478,14 @@
 							<div class="phuyu-linea"></div>
 							<div class="row form-group" align="center">
 								<div class="col-md-12">
-									<button type="submit" class="btn btn-success btn-lg" v-bind:disabled="estado==1">
-										<b>GUARDAR COMPRA</b>
+									<button type="submit" class="btn btn-success btn-lg phuyu-btn-text-icon" v-bind:disabled="estado==1">
+										<i class="bi bi-save"></i>
+										<span>Guardar compra</span>
 									</button>
-									<button type="button" class="btn btn-danger btn-lg" data-bs-dismiss="modal"> <b>CANCELAR</b> </button>
+									<button type="button" class="btn btn-danger btn-lg phuyu-btn-text-icon" data-bs-dismiss="modal">
+										<i class="bi bi-x-circle"></i>
+										<span>Cancelar</span>
+									</button>
 								</div>
 							</div>
 						</form>
@@ -392,11 +498,14 @@
 			<div class="modal-dialog modal-lg">
 				<div class="modal-content">
 					<div class="modal-header modal-phuyu-titulo">
-						<h4 class="modal-title"> <b style="letter-spacing:0.5px;">DETALLE DEL ITEM DE LA COMPRA</b> </h4>
+						<h4 class="modal-title">
+							<i class="bi bi-sliders"></i>
+							Detalle del item de la compra
+						</h4>
 					</div>
 					<div class="modal-body">
 						<h5> <b>
-								PRODUCTO: {{item.producto}} &nbsp; <span class="label label-warning">CANTIDAD: {{item.cantidad}} {{item.unidad}}</span>
+								Producto: {{item.producto}} &nbsp; <span class="badge bg-warning text-dark">Cantidad: {{item.cantidad}} {{item.unidad}}</span>
 							</b> </h5>
 						<hr>
 
@@ -464,8 +573,9 @@
 						</div>
 
 						<div class="text-center">
-							<button type="button" class="btn btn-success" v-on:click="phuyu_itemcalcular_cerrar(item)">
-								<i class="fa fa-save"></i> GUARDAR CAMBIOS DEL ITEM Y <i class="fa fa-times-circle"></i> CERRAR
+							<button type="button" class="btn btn-success phuyu-btn-text-icon" v-on:click="phuyu_itemcalcular_cerrar(item)">
+								<i class="bi bi-save"></i>
+								<span>Guardar cambios y cerrar</span>
 							</button>
 						</div>
 					</div>
@@ -476,8 +586,11 @@
 		<div id="modal_masprecios" data-bs-backdrop="static" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
 			<div class="modal-dialog modal-xl">
 				<div class="modal-content">
-					<div class="modal-header" style="padding:.4rem;">
-						<h4 class="modal-title"> <b style="letter-spacing:0.5px;">ACTUALIZACION DE PRECIOS | <span id="descripcionproducto"></span> </b> </h4>
+					<div class="modal-header">
+						<h4 class="modal-title">
+							<i class="bi bi-tags"></i>
+							Actualización de precios | <span id="descripcionproducto"></span>
+						</h4>
 					</div>
 					<div class="modal-body" style="padding: .4rem">
 						<div class="phuyu_cargando" v-if="cargando">
@@ -496,10 +609,10 @@
 		<div class="modal fade" id="modalSeries" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
 			<div class="modal-dialog modal-lg">
 				<div class="modal-content">
-					<div class="modal-header bg-gradient text-white py-2 px-3" style="background: linear-gradient(90deg, #007bff, #00bcd4); border-bottom: 3px solid #00acc1;">
+					<div class="modal-header">
 						<h5 class="modal-title d-flex align-items-center mb-0">
-							<i class="mdi mdi-barcode-scan me-2 fs-4 text-white"></i>
-							<span class="fw-bold text-uppercase">Gestión de Series</span>
+							<i class="bi bi-upc-scan me-2 fs-4 text-white"></i>
+							<span class="fw-bold text-uppercase">Gestión de series</span>
 						</h5>
 						<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
 					</div>
@@ -527,7 +640,8 @@
 							<div class="col-md-4">
 								<label class="form-label">&nbsp;</label>
 								<button type="button" class="btn btn-primary w-100" @click="agregarSerie">
-									<i class="mdi mdi-plus"></i> Agregar Serie
+									<i class="bi bi-plus-circle me-1"></i>
+									Agregar serie
 								</button>
 							</div>
 						</div>
@@ -553,7 +667,8 @@
 										<button type="button"
 												class="btn btn-sm btn-outline-danger btnEliminarSerie"
 												@click.prevent="eliminarSerie(indexSerie)">
-											<i class="mdi mdi-trash-can-outline"></i> Eliminar
+											<i class="bi bi-trash me-1"></i>
+											Eliminar
 										</button>
 										</td>
 									</tr>
@@ -565,10 +680,11 @@
 
 					<div class="modal-footer">
 						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-							<i class="mdi mdi-close"></i> Cerrar
+							<i class="bi bi-x-circle me-1"></i>
+							Cerrar
 						</button>
 						<!-- <button type="button" class="btn btn-success" id="btnGuardarSeries">
-                    <i class="mdi mdi-content-save"></i> Guardar Series
+                    <i class="bi bi-save"></i> Guardar Series
                 </button> -->
 					</div>
 				</div>
@@ -585,11 +701,3 @@
 
 	<script src="<?php echo base_url(); ?>phuyu/phuyu_compras/nuevo.js"> </script>
 	<script src="<?php echo base_url(); ?>phuyu/phuyu_personas_2.js"> </script>
-	<script>
-		if (typeof AcornIcons !== 'undefined') {
-			new AcornIcons().replace();
-		}
-		if (typeof Icons !== 'undefined') {
-			const icons = new Icons();
-		}
-	</script>

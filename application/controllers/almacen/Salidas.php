@@ -33,13 +33,44 @@ class Salidas extends CI_Controller
     {
         if ($this->input->is_ajax_request()) {
             if (isset($_SESSION['phuyu_usuario'])) {
+                $codregistro = (int) $codregistro;
                 $comprobantes = $this->db->query('select distinct(ct.codcomprobantetipo) as codigo, ct.* from caja.comprobantetipos as ct inner join caja.comprobantes as c on(ct.codcomprobantetipo=c.codcomprobantetipo) where c.codsucursal=' . $_SESSION['phuyu_codsucursal'] . ' and c.codcomprobantetipo=16 and c.estado=1')->result_array();
                 $unidades = $this->db->query('select *from almacen.unidades where estado=1 order by codunidad')->result_array();
                 $modalidades = $this->db->query('select *from almacen.modalidadtraslado where estado = 1')->result_array();
                 $motivos = $this->db->query('select *from almacen.motivotraslado where estado=1 order by codmotivotraslado')->result_array();
                 $salida = $this->db->query('SELECT *from kardex.kardex WHERE codkardex = ' . $codregistro)->result_array();
-                $almacen_partida = $this->db->query('SELECT *FROM almacen.almacenes WHERE codalmacen=' . $salida[0]['codalmacen'])->result_array();
-                $almacen_destino = $this->db->query('SELECT *FROM almacen.almacenes WHERE codalmacen=' . $salida[0]['codalmacen_ref'])->result_array();
+
+                if (count($salida) == 0) {
+                    echo '<div class="alert alert-warning mb-0">No se encontro la salida seleccionada.</div>';
+                    return;
+                }
+
+                $almacen_partida = $this->db->query('SELECT *FROM almacen.almacenes WHERE codalmacen=' . (int) $salida[0]['codalmacen'])->result_array();
+                $almacen_destino = [];
+
+                if ((int) $salida[0]['codalmacen_ref'] > 0) {
+                    $almacen_destino = $this->db->query('SELECT *FROM almacen.almacenes WHERE codalmacen=' . (int) $salida[0]['codalmacen_ref'])->result_array();
+                }
+
+                if (count($almacen_destino) == 0) {
+                    $persona_destino = $this->db->query('SELECT direccion, codubigeo FROM public.personas WHERE codpersona=' . (int) $salida[0]['codpersona'])->result_array();
+                    $direccion_destino = $salida[0]['direccion'];
+                    $codubigeo_destino = 0;
+
+                    if (count($persona_destino) > 0) {
+                        if ($direccion_destino == '') {
+                            $direccion_destino = $persona_destino[0]['direccion'];
+                        }
+
+                        $codubigeo_destino = (int) $persona_destino[0]['codubigeo'];
+                    }
+
+                    $almacen_destino[] = [
+                        'direccion' => $direccion_destino,
+                        'codubigeo' => $codubigeo_destino,
+                    ];
+                }
+
                 $this->load->view('almacen/salidas/nueva_guia', compact('comprobantes', 'unidades', 'modalidades', 'motivos', 'almacen_partida', 'almacen_destino', 'salida'));
             } else {
                 $this->load->view('phuyu/505');

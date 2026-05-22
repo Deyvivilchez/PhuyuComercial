@@ -1,11 +1,45 @@
+function phuyuPedidoShowModal(id, options) {
+	var modalElement = document.getElementById(id);
+
+	if (!modalElement) {
+		return;
+	}
+
+	if (typeof bootstrap !== "undefined" && bootstrap.Modal) {
+		bootstrap.Modal.getOrCreateInstance(modalElement, options || {}).show();
+		return;
+	}
+
+	if (typeof jQuery !== "undefined" && typeof jQuery.fn.modal === "function") {
+		jQuery(modalElement).modal(options || "show");
+	}
+}
+
+function phuyuPedidoHideModal(id) {
+	var modalElement = document.getElementById(id);
+
+	if (!modalElement) {
+		return;
+	}
+
+	if (typeof bootstrap !== "undefined" && bootstrap.Modal) {
+		bootstrap.Modal.getOrCreateInstance(modalElement).hide();
+		return;
+	}
+
+	if (typeof jQuery !== "undefined" && typeof jQuery.fn.modal === "function") {
+		jQuery(modalElement).modal("hide");
+	}
+}
+
 var phuyu_operacion = new Vue({
 	el: "#phuyu_operacion",
 	data: {
 		estado:0, importetotalcredito:0,importecredito:0,interescredito:0, codigobarra: "",codtipodocumento:0,
 		stockalmacen: $("#stockalmacen").val(), igvsunat:$("#igvsunat").val(), icbpersunat:$("#icbpersunat").val(), rubro:0, series:[], seriesreferencia:[], detalle:[], cuotas:[], putunidades:[],
 		campos:{
-			codpedido:0, codpersona:2, codmovimientotipo:20, codcomprobantetiporeferencia:'',seriecomprobantereferencia:$("#seriereferencia").val(), nroreferencia:"", codcomprobantetipo:$("#comprobante").val(),seriecomprobante:$("#serie").val(), nro:"",
-			fechacomprobante:"", fechakardex:"", codconcepto:13, descripcion:"", cliente:"CLIENTES VARIOS", direccion:"-",
+			codpedido:0, codpersona:2, codmovimientotipo:20, codcomprobantetiporeferencia:$("#comprobantereferencia").val(),seriecomprobantereferencia:$("#seriereferencia").val(), nroreferencia:"", codcomprobantetipo:$("#comprobante").val(),seriecomprobante:$("#serie").val(), nro:"",
+			fechacomprobante:"", fechakardex:"", codconcepto:13, descripcion:"", cliente:(phuyu_controller.indexOf("compras/")===0 ? "PROVEEDORES VARIOS" : "CLIENTES VARIOS"), direccion:"-",
 			codempleado:$("#empleado").val(), codmoneda:1, tipocambio:0.00, codcentrocosto:0, nroplaca:"", retirar:true, afectacaja:true,
 			condicionpago:1, nrodias:30, nrocuotas:1, codcreditoconcepto:3, tasainteres:0, interes:0, totalcredito:0, porcdescuento:0.00
 		},
@@ -54,7 +88,8 @@ var phuyu_operacion = new Vue({
 		phuyu_addcliente: function(){
 			$(".compose").removeClass("col-md-6").addClass("col-md-4");
 			$(".compose").slideToggle(); phuyu_sistema.phuyu_loader("phuyu_formulario",180); 
-			this.$http.post(url+"ventas/clientes/nuevo_1").then(function(data){
+			var ruta = phuyu_controller.indexOf("compras/")===0 ? "compras/proveedores/nuevo_1" : "ventas/clientes/nuevo_1";
+			this.$http.post(url+ruta).then(function(data){
 				$("#phuyu_formulario").empty().html(data.body);
 				phuyu_sistema.phuyu_finloader("phuyu_formulario");
 			},function(){ 
@@ -65,7 +100,6 @@ var phuyu_operacion = new Vue({
 		phuyu_infocliente: function(){
 			this.campos.codpersona = $("#codpersona").val();
 				this.$http.get(url+"ventas/clientes/infocliente/"+this.campos.codpersona).then(function(data){
-					console.log(this.campos.codpersona)
 					if (this.campos.codpersona==2) {
 						$("#cliente").removeAttr("readonly"); $("#direccion").removeAttr("readonly");
 					}else{
@@ -79,7 +113,7 @@ var phuyu_operacion = new Vue({
 
         phuyu_cuotaspedidos: function(){
         	this.phuyu_condicionpago();
-        	$("#modal_cuotas").modal('show');
+        	phuyuPedidoShowModal("modal_cuotas");
         },
 
 		/* DETALLE DE LA VENTA Y TOTALES */
@@ -205,7 +239,7 @@ var phuyu_operacion = new Vue({
 			this.putunidades = [];
 		},
 		phuyu_itemdetalle: function(index,producto){
-			this.item = producto; $("#modal_itemdetalle").modal('show');
+			this.item = producto; phuyuPedidoShowModal("modal_itemdetalle");
 		},
 		phuyu_itemcalcular: function (item,tipoprecio) {
 			var porcentaje = 1;
@@ -258,7 +292,7 @@ var phuyu_operacion = new Vue({
 			if (parseFloat(item.subtotal) < 0) {
 				phuyu_sistema.phuyu_noti("EL SUBTOTAL DEBE SER MAYOR A CERO","REVISAR LOS CAMPOS DEL ITEM","danger"); return false;
 			}
-			$("#modal_itemdetalle").modal("hide");
+			phuyuPedidoHideModal("modal_itemdetalle");
 		},
 		phuyu_calcular: function(producto){
 			producto.preciooriginal = producto.precio;
@@ -367,7 +401,7 @@ var phuyu_operacion = new Vue({
 			this.pagos.monto_efectivo = this.totales.importe;
 			if (this.campos.condicionpago==2) {
 				this.phuyu_condicionpago();
-				$("#modal_cuotas").modal('show');
+				phuyuPedidoShowModal("modal_cuotas");
 			}else{
 				this.phuyu_pagar();
 			}
@@ -509,12 +543,13 @@ var phuyu_operacion = new Vue({
 				}
 			}else{
 				if (this.campos.codpersona==2) {
-					phuyu_sistema.phuyu_noti("ATENCION USUARIO: EL SISTEMA NO PERMITE REGISTRAR UN CREDITO A CLIENTES VARIOS","","danger");
+					var personaVarios = phuyu_controller.indexOf("compras/")===0 ? "PROVEEDORES VARIOS" : "CLIENTES VARIOS";
+					phuyu_sistema.phuyu_noti("ATENCION USUARIO: EL SISTEMA NO PERMITE REGISTRAR UN CREDITO A "+personaVarios,"","danger");
 					return false;
 				}
 			}
 			
-			this.estado = 1; $("#modal_cuotas").modal("hide"); phuyu_sistema.phuyu_inicio_guardar("GUARDANDO PEDIDO. . .");
+			this.estado = 1; phuyuPedidoHideModal("modal_cuotas"); phuyu_sistema.phuyu_inicio_guardar("GUARDANDO PEDIDO. . .");
 			this.$http.post(url+phuyu_controller+"/guardar", {"campos":this.campos,"detalle":this.detalle,"cuotas":this.cuotas,"pagos":this.pagos,"totales":this.totales}).then(function(data){
 				if (data.body=="e") {
 					phuyu_sistema.phuyu_alerta("SESION DEL USUARIO TERMINADA","DEBE INICIAR SESION NUEVAMENTE","error");
@@ -596,7 +631,7 @@ var phuyu_operacion = new Vue({
 				$("#codpersona").attr('disabled',true);
 				$("#codpersona").removeAttr('required');
 				this.campos.codpersona = 2;
-				this.campos.cliente = 'CLIENTES VARIOS';
+				this.campos.cliente = phuyu_controller.indexOf("compras/")===0 ? "PROVEEDORES VARIOS" : "CLIENTES VARIOS";
 				this.campos.direccion = '-';
 				this.codtipodocumento = 0;
 				this.campos.nrodocumento = "";

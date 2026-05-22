@@ -3,6 +3,10 @@
 # Archivos de configuración sensibles
 /application/config/config.php
 /application/config/database.php
+/sunat/certificados/
+/sunat/comprobantes/
+/sunat/resumenes/
+/sunat/webphuyu/
 
 # O si quieres ser más específico:
 /sunat/*

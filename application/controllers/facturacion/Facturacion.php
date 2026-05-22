@@ -49,13 +49,13 @@ class Facturacion extends Sunat {
 
 				$estado = $this->Facturacion_model->phuyu_crearXML($codoficial,$codkardex);
 				if ($estado["estado"]!=0) {
-					$firma = Sunat::phuyu_firmarXML($estado["carpeta_phuyu"]."/".$estado["archivo_phuyu"], 0);
-					if ($firma==1) {
+					$firma = $this->phuyu_firmarXML($estado["carpeta_phuyu"]."/".$estado["archivo_phuyu"], 0, true);
+					if ($firma["estado"]==1) {
 						$credenciales = [$_SESSION["phuyu_ruc"],$empresa[0]["usuariosol"],$empresa[0]["clavesol"],$codkardex];
                         $estado = Sunat::phuyu_enviarSUNAT("sendBill",$estado["carpeta_phuyu"],$estado["archivo_phuyu"],$credenciales);
-						$mensaje = $estado["mensaje"]; $estado = $estado["estado"]; $alerta = "success";
+						$mensaje = $estado["mensaje"]; $estado = $estado["estado"]; $alerta = ($estado==1 || $estado==2) ? "success" : "error";
 					}else{
-						$estado = 0; $mensaje = "NO SE PUEDE FIRMAR EL DOCUMENTO XML"; $alerta = "error";
+						$estado = 0; $mensaje = "NO SE PUEDE FIRMAR EL DOCUMENTO XML: ".$firma["mensaje"]; $alerta = "error";
 					}
 				}else{
 					$estado = 0; $mensaje = "NO SE PUEDE GENERAR EL DOCUMENTO XML"; $alerta = "error";
@@ -76,13 +76,13 @@ class Facturacion extends Sunat {
 
 				$estado = $this->Facturacion_model->phuyu_crearXMLGUIAS($codoficial,$codguiar);
 				if ($estado["estado"]!=0) {
-					$firma = Sunat::phuyu_firmarXML($estado["carpeta_phuyu"]."/".$estado["archivo_phuyu"], 0);
-					if ($firma==1) {
+					$firma = $this->phuyu_firmarXML($estado["carpeta_phuyu"]."/".$estado["archivo_phuyu"], 0, true);
+					if ($firma["estado"]==1) {
 						$credenciales = [$_SESSION["phuyu_ruc"],$empresa[0]["usuariosol"],$empresa[0]["clavesol"],$codguiar];
                         $estado = Sunat::phuyu_enviarSUNATGUIA("sendBill",$estado["carpeta_phuyu"],$estado["archivo_phuyu"],$credenciales);
-						$mensaje = $estado["mensaje"]; $estado = $estado["estado"]; $alerta = "success";
+						$mensaje = $estado["mensaje"]; $estado = $estado["estado"]; $alerta = ($estado==1 || $estado==2) ? "success" : "error";
 					}else{
-						$estado = 0; $mensaje = "NO SE PUEDE FIRMAR EL DOCUMENTO XML"; $alerta = "error";
+						$estado = 0; $mensaje = "NO SE PUEDE FIRMAR EL DOCUMENTO XML: ".$firma["mensaje"]; $alerta = "error";
 					}
 				}else{
 					$estado = 0; $mensaje = "NO SE PUEDE GENERAR EL DOCUMENTO XML"; $alerta = "error";
@@ -100,7 +100,11 @@ class Facturacion extends Sunat {
 		if (isset($_SESSION["phuyu_codusuario"])) {
 			$estado = $this->Facturacion_model->phuyu_crearXML($codoficial,$codkardex);
 			if ($estado["estado"]!=0) {
-				$firma = Sunat::phuyu_firmarXML($estado["carpeta_phuyu"]."/".$estado["archivo_phuyu"], 0);
+				$firma = $this->phuyu_firmarXML($estado["carpeta_phuyu"]."/".$estado["archivo_phuyu"], 0, true);
+				if ($firma["estado"]!=1) {
+					echo "NO SE PUEDE FIRMAR EL DOCUMENTO XML: ".$firma["mensaje"];
+					return;
+				}
 
 				$this->load->helper("download"); 
 				$descargar_ruta = file_get_contents($estado["carpeta_phuyu"]."/".$estado["archivo_phuyu"].".xml");
@@ -113,7 +117,11 @@ class Facturacion extends Sunat {
 		if (isset($_SESSION["phuyu_codusuario"])) {
 			$estado = $this->Facturacion_model->phuyu_crearXMLGUIAS($codoficial,$codguiar);
 			if ($estado["estado"]!=0) {
-				$firma = Sunat::phuyu_firmarXML($estado["carpeta_phuyu"]."/".$estado["archivo_phuyu"], 0);
+				$firma = $this->phuyu_firmarXML($estado["carpeta_phuyu"]."/".$estado["archivo_phuyu"], 0, true);
+				if ($firma["estado"]!=1) {
+					echo "NO SE PUEDE FIRMAR EL DOCUMENTO XML: ".$firma["mensaje"];
+					return;
+				}
 
 				$this->load->helper("download"); 
 				$descargar_ruta = file_get_contents($estado["carpeta_phuyu"]."/".$estado["archivo_phuyu"].".xml");
@@ -130,6 +138,24 @@ class Facturacion extends Sunat {
 				$this->load->helper("download"); 
 				$descargar_ruta = file_get_contents($ruta[0]["ruta_cdr"].".zip");
 				force_download("R-".$archivo[1].".zip", $descargar_ruta);
+			}
+		}
+	}
+
+	function guias_cdr($codguiar){
+		if (isset($_SESSION["phuyu_codusuario"])) {
+			$codguiar = (int) $codguiar;
+			$ruta = $this->db->query("select ruta_cdr from sunat.guiasunat where codguiar=".$codguiar)->result_array();
+
+			if (count($ruta) && $ruta[0]["ruta_cdr"]!="") {
+				$archivo_cdr = $ruta[0]["ruta_cdr"].".zip";
+				$archivo = explode("R-",$ruta[0]["ruta_cdr"]);
+				$this->load->helper("download");
+
+				if (file_exists($archivo_cdr)) {
+					$descargar_ruta = file_get_contents($archivo_cdr);
+					force_download("R-".$archivo[1].".zip", $descargar_ruta);
+				}
 			}
 		}
 	}
@@ -264,13 +290,13 @@ class Facturacion extends Sunat {
 					}
 					
 					if ($estado["estado"]!=0) {
-						$firma = Sunat::phuyu_firmarXML($estado["carpeta_phuyu"]."/".$estado["archivo_phuyu"], 0);
-						if ($firma==1) {
+						$firma = $this->phuyu_firmarXML($estado["carpeta_phuyu"]."/".$estado["archivo_phuyu"], 0, true);
+						if ($firma["estado"]==1) {
 							$credenciales = [$_SESSION["phuyu_ruc"],$empresa[0]["usuariosol"],$empresa[0]["clavesol"],$codresumentipo,$periodo,$nrocorrelativo,$_SESSION["phuyu_codempresa"]];
 	                        $estado = Sunat::phuyu_enviarSUNAT("sendSummary",$estado["carpeta_phuyu"],$estado["archivo_phuyu"],$credenciales);
 							$mensaje = $estado["mensaje"]; $estado = $estado["estado"];
 						}else{
-							$estado = 0; $mensaje = "NO SE PUEDE FIRMAR EL DOCUMENTO XML";
+							$estado = 0; $mensaje = "NO SE PUEDE FIRMAR EL DOCUMENTO XML: ".$firma["mensaje"];
 						}
 					}else{
 						$estado = 0; $mensaje = "NO SE PUEDE GENERAR EL DOCUMENTO XML";
@@ -296,7 +322,11 @@ class Facturacion extends Sunat {
 		}
 		
 		if ($estado["estado"]!=0) {
-			$firma = Sunat::phuyu_firmarXML($estado["carpeta_phuyu"]."/".$estado["archivo_phuyu"], 0);
+			$firma = $this->phuyu_firmarXML($estado["carpeta_phuyu"]."/".$estado["archivo_phuyu"], 0, true);
+			if ($firma["estado"]!=1) {
+				echo "NO SE PUEDE FIRMAR EL DOCUMENTO XML: ".$firma["mensaje"];
+				return;
+			}
 			
 			$this->load->helper("download"); 
 			$cpe_ruta = file_get_contents($estado["carpeta_phuyu"]."/".$estado["archivo_phuyu"].".xml");

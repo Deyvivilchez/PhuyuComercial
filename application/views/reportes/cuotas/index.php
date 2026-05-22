@@ -1,9 +1,11 @@
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
 <style type="text/css">
 	.table > tbody>tr>td{
 		font-size: 9px !important;
 	}
 </style>
-<div id="phuyu_datos">
+<div id="phuyu_datos" class="phuyu-reportes-velzon phuyu-velzon-list">
 	<div class="phuyu_body">
 		<div class="card">
 			<div class="card-body">
@@ -69,9 +71,9 @@
 		            	</select>
 					</div>
 					<div class="col-md-4" style="margin-top: 1.2rem">
-						<button type="button" class="btn btn-primary btn-icon" v-on:click="ver_cuotas()"><i data-acorn-icon="search"></i> Consultar</button>
-						<button type="button" class="btn btn-danger btn-icon" v-on:click="pdf_cuotas"><i data-acorn-icon="print"></i> Pdf</button>
-						<button type="button" class="btn btn-success btn-icon" v-on:click="excel_cuotas"><i data-acorn-icon="file-text"></i> Excel</button>
+						<button type="button" class="btn btn-primary btn-icon" v-on:click="ver_cuotas()"><i class="bi bi-search"></i> Consultar</button>
+						<button type="button" class="btn btn-danger btn-icon" v-on:click="pdf_cuotas"><i class="bi bi-printer"></i> Pdf</button>
+						<button type="button" class="btn btn-success btn-icon" v-on:click="excel_cuotas"><i class="bi bi-file-earmark-excel"></i> Excel</button>
 					</div>	
 				</div>
 				<div class="row" >

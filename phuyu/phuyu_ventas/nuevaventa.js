@@ -106,8 +106,7 @@ var phuyu_operacion = new Vue({
 				var cliente = $("#codpersona option:selected").text();
 				this.campos.cliente = cliente
 				this.$http.get(url+"ventas/clientes/infocliente/"+this.campos.codpersona).then(function(data){
-					console.log(this.campos.codpersona)
-					if (this.campos.codpersona==2) {
+						if (this.campos.codpersona==2) {
 						$("#cliente").removeAttr("readonly"); $("#direccion").removeAttr("readonly");
 					}else{
 						$("#cliente").attr("readonly","true"); $("#direccion").removeAttr("readonly");
@@ -295,7 +294,6 @@ var phuyu_operacion = new Vue({
 		},
 		phuyu_additem: function(producto,precio){
 
-			console.log("Producto test:", producto);
 			var existe_item = [];
 			if ($("#itemrepetir").val()==0) {
 				var existe_item = this.detalle.filter(function(p){

@@ -1,17 +1,110 @@
-<style type="text/css">
-	.table thead>tr>th, tbody>tr>td{
-		padding: 4px;
+<style>
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-mov-card {
+		border: 1px solid rgba(64, 81, 137, .10);
+		border-radius: .9rem;
+		box-shadow: 0 10px 28px rgba(15, 23, 42, .06);
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-form-header {
+		display: flex;
+		align-items: center;
+		gap: .75rem;
+		padding-bottom: 1rem;
+		margin-bottom: 1rem;
+		border-bottom: 1px solid rgba(64, 81, 137, .10);
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-form-icon {
+		width: 44px;
+		height: 44px;
+		border-radius: 12px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(10, 179, 156, .12);
+		color: #0ab39c;
+		font-size: 1.35rem;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento label,
+	#phuyu_operacion.phuyu-almacen-movimiento .form-label {
+		font-size: .74rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		letter-spacing: .03em;
+		color: #495057;
+		margin-bottom: .4rem;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .form-control,
+	#phuyu_operacion.phuyu-almacen-movimiento .form-select,
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-input,
+	#phuyu_operacion.phuyu-almacen-movimiento .select2-container .select2-selection {
+		min-height: 40px;
+		border-color: rgba(64, 81, 137, .16);
+		border-radius: .375rem;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .table-responsive {
+		border: 1px solid rgba(64, 81, 137, .10);
+		border-radius: .75rem;
+		overflow: auto;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento table {
+		margin-bottom: 0;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .table thead th {
+		background: #f8fafc;
+		color: #495057;
+		font-size: .74rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		white-space: nowrap;
+		border-bottom: 1px solid rgba(64, 81, 137, .12);
+		padding: .65rem;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .table tbody td,
+	#phuyu_operacion.phuyu-almacen-movimiento .table tfoot td {
+		font-size: .86rem;
+		vertical-align: middle;
+		padding: .55rem;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .btn-block {
+		width: 100%;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .btn-xs {
+		--vz-btn-padding-y: .2rem;
+		--vz-btn-padding-x: .45rem;
+		--vz-btn-font-size: .75rem;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-form-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: .65rem;
+		padding-top: 1rem;
+		margin-top: 1rem;
+		border-top: 1px solid rgba(64, 81, 137, .10);
 	}
 </style>
-<div id="phuyu_operacion">
-	<form id="formulario" class="form-horizontal" v-on:submit.prevent="phuyu_guardar()">
+<div id="phuyu_operacion" class="phuyu-almacen-movimiento">
+	<form id="formulario" v-on:submit.prevent="phuyu_guardar()">
 		<input type="hidden" id="igvsunat" value="<?php echo $_SESSION["phuyu_igv"];?>">
 		<input type="hidden" id="empresa" value="<?php echo $_SESSION["phuyu_empresa"];?>" name="">
 		<div class="phuyu_body">
-            <div class="card">
+            <div class="card phuyu-mov-card">
 				<div class="card-body">
-					<div class="row form-group">
-						<div class="col-md-12 col-xs-12"> <h5><b>REGISTRO NUEVA INGRESO ALMACEN</b></h5> </div>
+					<div class="phuyu-form-header">
+						<div class="phuyu-form-icon"><i class="bi bi-box-arrow-in-down"></i></div>
+						<div>
+							<div class="text-muted small text-uppercase fw-semibold">Almacen</div>
+							<h5 class="mb-0 fw-bold">Registro nuevo ingreso almacen</h5>
+						</div>
 					</div>
 		        	<div class="row mb-2">
 		        		<div class="col-md-3">
@@ -133,8 +226,10 @@
 					    	<label>DESCRIPCION DEL INGRESO</label>
 					    	<input class="form-control" name="descripcion" v-model="campos.descripcion" required autocomplete="off">
 					    </div>
-					    <div class="col-md-2" align="right">
-					    	<button type="button" style="margin-top: 1.3rem" class="btn btn-success btn-icon btn-block" v-on:click="phuyu_item()"> <b><i data-acorn-icon="search"></i> Productos</b> </button>
+						    <div class="col-md-2 d-flex align-items-end">
+								<button type="button" class="btn btn-success w-100" v-on:click="phuyu_item()">
+								<i class="bi bi-search me-1"></i> Productos
+							</button>
 					    </div>
 				    </div>
 				    <div class="row form-group table-responsive">
@@ -201,14 +296,14 @@
 								</tr>
 							</tfoot>
 						</table>
-					</div><br>
-					<div class="row form-group">
-						<div class="col-md-5">
-						</div>
-						<div class="col-md-7" align="right">
-							<button type="submit" class="btn btn-primary btn-icon btn-block" v-bind:disabled="estado==1"> <b>GUARDAR INGRESO</b> </button>
-							<button type="button" class="btn btn-danger btn-icon btn-block" v-on:click="phuyu_cerrar()"> <b>CANCELAR</b> </button>
-						</div>
+					</div>
+					<div class="phuyu-form-actions">
+						<button type="submit" class="btn btn-primary" v-bind:disabled="estado==1">
+							<i class="bi bi-save me-1"></i> Guardar ingreso
+						</button>
+						<button type="button" class="btn btn-light" v-on:click="phuyu_cerrar()">
+							<i class="bi bi-x-circle me-1"></i> Cancelar
+						</button>
 					</div>
 				</div>
 			</div>

@@ -77,7 +77,7 @@
         <div class="admin-left">
           <div class="brand">
             <img src="<?php echo base_url();?>/public/img/logo_completo.png" alt="Logo" />
-            <div class="brand-title">phuyu Soft</div>
+            <div class="brand-title">Phuyu System</div>
           </div>
           <div class="hello">Hola <b><?php echo $_SESSION["phuyu_usuario"];?></b> 👋</div>
           <div class="empresa">Bienvenido a <b><?php echo $_SESSION["phuyu_empresa"];?></b></div>

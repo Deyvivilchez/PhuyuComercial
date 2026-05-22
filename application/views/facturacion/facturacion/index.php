@@ -1,26 +1,41 @@
-<div id="phuyu_datos">
-	<div class="phuyu_header">
-		<div class="row phuyu_header_title">
-			<div class="col-md-5 col-xs-12"> <h5>FACTURACION ELECTRONICA</h5> </div>
-			<div class="col-md-2 col-xs-12">
-				<a href="https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm" class="btn btn-warning btn-block" target="_blank">
-					<i class="fa fa-flag-o"></i> PORTAL DE SUNAT
-				</a>
-			</div>
-			<div class="col-md-3 col-xs-12">
-				<button type="button" class="btn btn-success btn-block" v-on:click="phuyu_consultas()">
-					<i class="fa fa-print"></i> CONSULTA COMPROBANTES
-				</button>
-			</div>
-			<div class="col-md-2 col-xs-12">
-				<div class="input-group">
-					<input type="text" class="form-control datepicker" readonly id="fecha" value="<?php echo date('Y-m-d');?>">
-					<span class="input-group-btn">
-						<button type="button" class="btn btn-default"><i class="fa fa-calendar"></i></button> 
-					</span>
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<div id="phuyu_datos" class="phuyu-velzon-list phuyu-cpe-velzon">
+	<div class="phuyu-page-title">
+		<div class="phuyu-page-icon"><i class="bi bi-file-earmark-arrow-up"></i></div>
+		<div>
+			<div class="text-muted small text-uppercase fw-semibold">CPE</div>
+			<h4 class="mb-0 fw-bold">Envios SUNAT</h4>
+			<nav aria-label="breadcrumb">
+				<ol class="breadcrumb mb-0 mt-1">
+					<li class="breadcrumb-item"><a href="javascript:;">Inicio</a></li>
+					<li class="breadcrumb-item active" aria-current="page">Facturacion electronica</li>
+				</ol>
+			</nav>
+		</div>
+	</div>
+
+	<div class="phuyu_body">
+		<div class="card phuyu-card mb-3">
+			<div class="card-body">
+				<div class="row g-3 align-items-end">
+					<div class="col-12 col-md-3 col-xl-2">
+						<label class="form-label"><i class="bi bi-calendar-date me-1"></i> Fecha resumen</label>
+						<input type="date" class="form-control" id="fecha" value="<?php echo date('Y-m-d');?>">
+					</div>
+					<div class="col-12 col-md-4 col-xl-3">
+						<a href="https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm" class="btn btn-warning btn-block" target="_blank">
+							<i class="bi bi-box-arrow-up-right"></i> Portal de SUNAT
+						</a>
+					</div>
+					<div class="col-12 col-md-5 col-xl-3">
+						<button type="button" class="btn btn-success btn-block" v-on:click="phuyu_consultas()">
+							<i class="bi bi-search"></i> Consulta comprobantes
+						</button>
+					</div>
 				</div>
 			</div>
-		</div><br>
+		</div>
 		<section class="scroll-section" id="responsiveTabs">
             <div class="card mb-3">
                 <div class="card-header border-0 pb-0">
@@ -398,9 +413,8 @@
 		<div class="modal-dialog modal-lg">
 			<div class="modal-content">
 				<div class="modal-header modal-phuyu-titulo">
-					<h4 class="modal-title" align="center"> <b style="letter-spacing:1px;">INFORMACION DEL RESUMEN</b> </h4>
-
-					<button type="button" class="btn-close" data-bs-dismiss="modal"> </button>
+					<h4 class="modal-title">Informacion del resumen</h4>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
 				</div>
 
 				<div class="modal-body" style="height:350px;overflow-y:auto;">
@@ -443,15 +457,13 @@
 	</div>
 
 	<div id="modal_consultas" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
-		<div class="modal-dialog" style="width:100%;margin:0px;">
+		<div class="modal-dialog modal-xl modal-fullscreen-lg-down">
 			<div class="modal-content">
-				<div class="modal-header" style="background:#13a89e;color:#fff;">
-					<button type="button" class="close" data-dismiss="modal" style="font-size:27px;margin-bottom:0px;">
-						<i class="fa fa-times-circle"></i> 
-					</button>
-					<h4 class="modal-title" align="center"> 
-						<b style="letter-spacing:1px;"><?php echo $_SESSION["phuyu_empresa"];?> - CONSULTA COMPROBANTES</b> 
+				<div class="modal-header">
+					<h4 class="modal-title">
+						<?php echo $_SESSION["phuyu_empresa"];?> - Consulta comprobantes
 					</h4>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
 				</div>
 
 				<div class="modal-body" id="consultas_modal">
@@ -642,8 +654,8 @@
         <div class="modal-dialog modal-lg">
 			<div class="modal-content">
 				<div class="modal-header">
-					<button type="button" class="close" data-dismiss="modal"> <i class="fa fa-times-circle"></i> </button>
-					<h4 class="modal-title" align="center"> <b style="letter-spacing:1px;">INFORMACION COMPROBANTES DE SUNAT</b> </h4>
+					<h4 class="modal-title">Informacion comprobantes de SUNAT</h4>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
 				</div>
 
 				<div class="modal-body" style="height:350px;overflow-y:auto;">

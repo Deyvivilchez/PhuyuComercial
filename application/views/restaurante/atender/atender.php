@@ -1,5 +1,3 @@
-<!-- <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" /> -->
-<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
 <style>
     .total-bar {
         position: fixed;
@@ -15,10 +13,6 @@
     .chip.active {
         background-color: #007bff;
         color: white !important;
-    }
-
-    body {
-        background: #f8fafc;
     }
 
     /* chips */
@@ -88,6 +82,11 @@
         border: 2px solid #0d6efd !important;
         box-shadow: 0 0 10px rgba(13, 110, 253, 0.45);
         transform: scale(1.03);
+    }
+
+    .mesa-cambio-activo {
+        border-color: #f7b84b !important;
+        box-shadow: 0 0 0 3px rgba(247, 184, 75, .22);
     }
 
     /* productos */
@@ -280,7 +279,7 @@
                     <!-- Botón "Todo" -->
                     <button class="chip btn btn-sm text-dark" :class="{ 'active': lineaActiva === 0 }"
                         v-on:click="phuyu_producto(0)">
-                        <span class="me-1">🍮</span> Todo
+                        <i class="bi bi-grid me-1"></i> Todo
                     </button>
 
                     <!-- Botones de líneas -->
@@ -289,7 +288,7 @@
                             :class="{ 'active': lineaActiva === <?php echo $value['codlinea']; ?> }"
                             cod-linea="<?php echo $value['codlinea']; ?>"
                             v-on:click="phuyu_producto(<?php echo $value['codlinea']; ?>)">
-                            <span class="me-1">🍮</span> <?php echo $value['descripcion']; ?>
+                            <i class="bi bi-cup-hot me-1"></i> <?php echo $value['descripcion']; ?>
                         </button>
                     <?php } ?>
                 </div>
@@ -306,7 +305,7 @@
                 <div class="row g-2">
                     <div v-for="mesa in mesas" :key="mesa.codmesa" class="col-6 col-sm-4">
                         <div class="mesa-card"
-                            :class="[mesa.texto === 'LIBRE' ? 'mesa-libre' : 'mesa-ocupada', mesaSeleccionada === mesa.codmesa ? 'mesa-activa' : ''  ]"
+                            :class="[mesa.texto === 'LIBRE' ? 'mesa-libre' : 'mesa-ocupada', mesaSeleccionada == mesa.codmesa ? 'mesa-activa' : '', modoCambioMesa ? 'mesa-cambio-activo' : ''  ]"
                             @click="selectMesa(mesa)">
                             {{ mesa . nromesa }}<br /><small>{{ mesa . texto }}</small>
                         </div>
@@ -432,6 +431,7 @@
                                     <li class="dropdown-header">Pedido</li>
                                     <li><a class="dropdown-item" @click.prevent="guardar">💾 Guardar pedido</a></li>
                                     <li><a class="dropdown-item" @click.prevent="phuyu_atender_pedido">👨‍🍳 Atender pedido</a></li>
+                                    <li><a class="dropdown-item" @click.prevent="cambiar_mesa"><i class="bi bi-arrow-left-right me-1"></i> Cambiar mesa</a></li>
                                     <li><a class="dropdown-item" v-on:click="phuyu_avance_pedido()">🧾 Imprimir pre-cuenta</a></li>
                                     <li><a class="dropdown-item" v-on:click="phuyu_comanda()">🖨️ Imprimir comanda</a></li>
                                     <li><a class="dropdown-item text-danger" v-on:click="phuyu_anular_pedido()">❌ Anular pedido</a></li>
@@ -483,7 +483,7 @@
                                 <button type="button" class="btn btn-xs py-0"
                                     :class="producto.atendido == 1 ? ' btn-success' : 'btn-danger'">
                                     <small>
-                                        <i class="fa fa-flag-o"></i>
+                                        <i class="bi bi-flag"></i>
                                         {{ producto . atendido == 1 ? 'ATENDIDO' : 'PENDIENTE' }}
                                     </small>
                                 </button>
@@ -708,7 +708,7 @@
                                 </div>
                                 <div class="col-md-2">
                                     <button type="button" class="btn btn-primary w-100" v-on:click="phuyu_addcliente()" title="Agregar Cliente">
-                                        <i data-acorn-icon="user"></i> Añadir
+                                        <i class="bi bi-person-plus me-1"></i> Añadir
                                     </button>
                                 </div>
                             </div>
@@ -777,11 +777,11 @@
 
                             <!-- Pago Contado -->
                             <div v-if="campos.condicionpago==1">
-                                <h5 class="text-center mb-3"><b><i class="fa fa-money"></i> Registrar Pago de la Venta</b></h5>
+                                <h5 class="text-center mb-3"><b><i class="bi bi-cash-coin me-1"></i> Registrar Pago de la Venta</b></h5>
                                 <hr>
                                 <div class="row mb-3">
                                     <div class="col-md-4 text-center">
-                                        <label><i class="fa fa-money fa-2x"></i><br>Pago en Efectivo</label>
+                                        <label><i class="bi bi-cash-stack fs-3"></i><br>Pago en Efectivo</label>
                                     </div>
                                     <div class="col-md-4">
                                         <label>Monto Recibido</label>
@@ -1019,7 +1019,7 @@
                                         class="btn btn-success w-100 btn-consultar"
                                         @click="phuyu_consultar()"
                                         title="Consultar">
-                                        <i data-acorn-icon="search"></i>
+                                        <i class="bi bi-search"></i>
                                     </button>
                                 </div>
                             </div>
@@ -1107,7 +1107,7 @@
                             <!-- Botones -->
                             <div class="d-flex justify-content-center gap-3 mt-3">
                                 <button type="submit" class="btn btn-success btn-lg" :disabled="estado==1">
-                                    <i class="fa fa-save"></i> GUARDAR
+                                    <i class="bi bi-save me-1"></i> GUARDAR
                                 </button>
                                 <button type="button" class="btn btn-danger btn-lg" data-bs-dismiss="modal" v-on:click="phuyu_cerrar()">
                                     CERRAR
@@ -1161,7 +1161,6 @@
     let tipopagos = <?php echo json_encode($tipopagos ?? []); ?>;
     let vendedores = <?php echo json_encode($vendedores ?? []); ?>;
 
-    console.log('Vendedores:', vendedores);
     let sucursal = <?php echo json_encode($sucursal[0] ?? []); ?>;
 </script>
 <script>
@@ -1178,6 +1177,7 @@
                 series: [],
                 cuotas: [],
                 mesas: [],
+                modoCambioMesa: false,
                 detalle: [],
                 atender: [],
                 atendidos: [],
@@ -1502,6 +1502,14 @@
                             width: '100%',
                             dropdownParent: $('#modal_pago')
                         });
+                        if (typeof phuyu_select2_velzon === 'function') {
+                            phuyu_select2_velzon('#codpersona');
+                        } else {
+                            if (!document.getElementById('phuyu-select2-velzon-style')) {
+                                $('head').append('<style id="phuyu-select2-velzon-style">.phuyu-select2-velzon.select2-container{width:100%!important;}.phuyu-select2-velzon .select2-selection--single{display:flex!important;align-items:center!important;height:40px!important;min-height:40px!important;border:1px solid rgba(64,81,137,.16)!important;border-radius:.375rem!important;background:#fff!important;box-shadow:none!important;}.phuyu-select2-velzon .select2-selection__rendered{line-height:40px!important;padding-left:.75rem!important;padding-right:2rem!important;font-size:.86rem!important;font-weight:600!important;color:#343a40!important;}.phuyu-select2-velzon .select2-selection__arrow{height:40px!important;right:.25rem!important;}</style>');
+                            }
+                            $('#codpersona').next('.select2-container').addClass('phuyu-select2-velzon');
+                        }
 
                         // Sincronizar con v-model
                         $('#codpersona').on('select2:select', (e) => {
@@ -1828,8 +1836,68 @@
                     phuyu_sistema.phuyu_noti("MOZO SELECIONADO", "", "success");
                     $("#modalVendedor").modal("hide");
                 },
+                cambiar_mesa() {
+                    if (this.campos.pedidonuevo == 1) {
+                        phuyu_sistema.phuyu_noti("DEBE SELECCIONAR UNA MESA CON PEDIDO", "PARA CAMBIAR DE MESA", "error");
+                        return false;
+                    }
+
+                    this.modoCambioMesa = true;
+                    phuyu_sistema.phuyu_noti("SELECCIONE UNA MESA LIBRE", "PARA MOVER EL PEDIDO 000" + this.campos.codpedido, "info");
+                },
+                confirmarCambioMesa(mesa) {
+                    if (mesa.codmesa == this.campos.codmesa) {
+                        this.modoCambioMesa = false;
+                        phuyu_sistema.phuyu_noti("CAMBIO DE MESA CANCELADO", "", "info");
+                        return false;
+                    }
+
+                    swal({
+                        title: "CAMBIAR MESA ?",
+                        text: "Mover pedido 000" + this.campos.codpedido + " a la mesa " + mesa.nromesa,
+                        icon: "warning",
+                        dangerMode: true,
+                        buttons: ["CANCELAR", "SI, CAMBIAR"],
+                    }).then((confirmado) => {
+                        if (!confirmado) {
+                            this.modoCambioMesa = false;
+                            return false;
+                        }
+
+                        this.estado = 1;
+                        this.$http.post(url + "ventas/pedidos/cambiar_mesa", {
+                            codpedido: this.campos.codpedido,
+                            codmesa_origen: this.campos.codmesa,
+                            codmesa_destino: mesa.codmesa
+                        }).then(function(data) {
+                            this.estado = 0;
+                            this.modoCambioMesa = false;
+
+                            if (data.body.estado == 1) {
+                                phuyu_sistema.phuyu_noti(data.body.mensaje, "MESA " + mesa.nromesa, "success");
+                                this.campos.codmesa = mesa.codmesa;
+                                this.campos.mesa = mesa.nromesa;
+                                this.campos.pedidonuevo = 0;
+                                this.mesaSeleccionada = mesa.codmesa;
+                                this.DatosMesaSelect = mesa;
+                                this.DatosMesaSelect.pedidonuevo = 0;
+                                this.phuyu_mesas();
+                            } else {
+                                phuyu_sistema.phuyu_noti(data.body.mensaje || "NO SE PUDO CAMBIAR LA MESA", "", "error");
+                            }
+                        }, function() {
+                            this.estado = 0;
+                            this.modoCambioMesa = false;
+                            phuyu_sistema.phuyu_alerta("ERROR AL CAMBIAR DE MESA", "ERROR DE RED", "error");
+                        });
+                    });
+                },
                 // Seleccionar mesa
                 async selectMesa(mesa) {
+                    if (this.modoCambioMesa) {
+                        this.confirmarCambioMesa(mesa);
+                        return false;
+                    }
 
                     //ABIR MODAL PARA SELECIONAR MOZO QUE ATENDERA//
 

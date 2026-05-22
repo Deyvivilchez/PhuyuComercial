@@ -1,48 +1,122 @@
-<div id="phuyu_salidas">
-	<div class="row">
-		<div class="col-12 col-md-6">
-			<input type="hidden" id="formato" value="<?php echo $_SESSION['phuyu_formato'];?>">
-            <h1 class="mb-0 pb-0 display-4" id="title">Administración Salidas de Almacén</h1>
-            <nav class="breadcrumb-container d-inline-block" aria-label="breadcrumb">
-              <ul class="breadcrumb pt-0">
-                <li class="breadcrumb-item"><a href="javascript:;">Inicio</a></li>
-                <li class="breadcrumb-item"><a href="javascript:;">Salidas</a></li>
-              </ul>
+<style>
+    #phuyu_salidas.phuyu-almacen-list .page-title-box {
+        margin-bottom: 18px;
+    }
+    #phuyu_salidas.phuyu-almacen-list .page-title-box h4 {
+        color: #212529;
+        font-weight: 700;
+        margin-bottom: 4px;
+    }
+    #phuyu_salidas.phuyu-almacen-list .breadcrumb {
+        margin-bottom: 0;
+    }
+    #phuyu_salidas.phuyu-almacen-list .phuyu-filter-panel {
+        background: #fff;
+        border: 1px solid #e9ebec;
+        border-radius: 8px;
+        box-shadow: 0 1px 2px rgba(56, 65, 74, 0.08);
+        padding: 12px;
+    }
+    #phuyu_salidas.phuyu-almacen-list label {
+        color: #495057;
+        font-size: 12px;
+        font-weight: 700;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+    }
+    #phuyu_salidas.phuyu-almacen-list .form-control,
+    #phuyu_salidas.phuyu-almacen-list .form-select {
+        border: 1px solid #d9e2ef;
+        border-radius: 6px;
+        box-shadow: none;
+        min-height: 38px;
+    }
+    #phuyu_salidas.phuyu-almacen-list .phuyu-list-card {
+        border: 1px solid #e9ebec;
+        border-radius: 8px;
+        box-shadow: 0 1px 2px rgba(56, 65, 74, 0.08);
+    }
+    #phuyu_salidas.phuyu-almacen-list .phuyu-toolbar {
+        align-items: center;
+        gap: 8px;
+    }
+    #phuyu_salidas.phuyu-almacen-list .phuyu-toolbar .btn-icon {
+        align-items: center;
+        display: inline-flex;
+        height: 38px;
+        justify-content: center;
+        width: 38px;
+    }
+    #phuyu_salidas.phuyu-almacen-list .phuyu-data-table {
+        font-size: 12px;
+    }
+    #phuyu_salidas.phuyu-almacen-list .phuyu-data-table thead th {
+        background: #f3f6f9;
+        color: #495057;
+        font-size: 11px;
+        letter-spacing: .2px;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+    #phuyu_salidas.phuyu-almacen-list .modal-content {
+        border: 0;
+        border-radius: 8px;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
+    }
+    #phuyu_salidas.phuyu-almacen-list .modal-header {
+        align-items: center;
+        background: #f3f6f9;
+        border-bottom: 1px solid #e9ebec;
+    }
+    @media (max-width: 767.98px) {
+        #phuyu_salidas.phuyu-almacen-list .phuyu-toolbar {
+            justify-content: flex-start !important;
+        }
+    }
+</style>
+
+<div id="phuyu_salidas" class="phuyu-almacen-list">
+    <div class="row g-3 align-items-end page-title-box">
+        <div class="col-12 col-lg-5">
+            <input type="hidden" id="formato" value="<?php echo $_SESSION['phuyu_formato'];?>">
+            <h4 id="title">Administración Salidas de Almacén</h4>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="javascript:;">Inicio</a></li>
+                    <li class="breadcrumb-item active">Salidas</li>
+                </ol>
             </nav>
         </div>
-        <div class="col-12 col-md-6 d-flex align-items-start justify-content-end" style="font-size: 11px">
-			<div class="col-md-4 col-xs-12">
-				<label><i class="fa fa-calendar"></i> DESDE:</label>
-				<input type="date" class="form-control" id="fecha_desde" value="" v-on:blur="phuyu_buscar()" autocomplete="off">
-			</div>
-			<div class="col-md-4 col-xs-12">
-				<label><i class="fa fa-calendar"></i> HASTA:</label>
-				<input type="date" class="form-control" id="fecha_hasta" value="<?php echo date('Y-m-d');?>" v-on:blur="phuyu_buscar()" autocomplete="off">
-			</div>
-			<div class="col-md-4 col-xs-12 hidden-xs">
-				<label>FORMATO IMPRESION:</label>
-				<select class="form-select input-sm" v-model="formato_impresion" v-on:change="phuyu_formato()">
-					<option value="a4">A4 IMPRESION</option>
-	        		<option value="a5">A5 IMPRESION</option>
-	        		<option value="ticket">TICKET IMPRESION</option>
-				</select>
-			</div>
+        <div class="col-12 col-lg-7">
+            <div class="row g-2 phuyu-filter-panel">
+                <div class="col-md-4 col-12">
+                    <label><i class="bi bi-calendar3 me-1"></i>Desde</label>
+                    <input type="date" class="form-control" id="fecha_desde" value="" v-on:blur="phuyu_buscar()" autocomplete="off">
+                </div>
+                <div class="col-md-4 col-12">
+                    <label><i class="bi bi-calendar3 me-1"></i>Hasta</label>
+                    <input type="date" class="form-control" id="fecha_hasta" value="<?php echo date('Y-m-d');?>" v-on:blur="phuyu_buscar()" autocomplete="off">
+                </div>
+                <div class="col-md-4 col-12 hidden-xs">
+                    <label>Formato impresión</label>
+                    <select class="form-select input-sm" v-model="formato_impresion" v-on:change="phuyu_formato()">
+                        <option value="a4">A4 IMPRESION</option>
+                        <option value="a5">A5 IMPRESION</option>
+                        <option value="ticket">TICKET IMPRESION</option>
+                    </select>
+                </div>
+            </div>
         </div>
     </div>
 	<div class="phuyu_body">
-		<div class="card">
+		<div class="card phuyu-list-card">
 			<div class="card-body">
-				<div class="row">
+				<div class="row g-2 phuyu-toolbar mb-3">
 					<div class="col-sm-12 col-md-4 col-lg-3 col-xxl-2 mb-1">
-	                    <div class="d-inline-block float-md-start me-1 mb-1 search-input-container w-100 shadow bg-foreground">
-	                      <input class="form-control datatable-search" v-model="buscar" v-on:keyup="phuyu_buscar()" placeholder="BUSCAR REGISTRO . . ." />
-	                      <span class="search-magnifier-icon">
-	                        <i data-acorn-icon="search"></i>
-	                      </span>
-	                      <span class="search-delete-icon d-none">
-	                        <i data-acorn-icon="close"></i>
-	                      </span>
-	                    </div>
+	                    <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
+                            <input class="form-control datatable-search border-start-0" v-model="buscar" v-on:keyup="phuyu_buscar()" placeholder="BUSCAR REGISTRO . . ." />
+                        </div>
 	                </div>
 	                <div class="col-md-3">
 				    	<select class="form-select" name="codmovimientotipo" v-model="movimiento" v-on:change="phuyu_buscar()">
@@ -57,14 +131,14 @@
 					    </select>
 	                </div>
 					<div class="col-sm-12 col-md-6 col-lg-6 col-xxl-10 text-end mb-1">
-				    	<div class="d-inline-block me-0 me-sm-3 float-start float-md-none">
-					    	<button type="button" class="btn btn-success btn-icon" title="Nuevo Ingreso" v-on:click="phuyu_nuevo()"> <i data-acorn-icon="plus"></i></button>
-					    	<button type="button" class="btn btn-info btn-icon" title="VER INGRESO" v-on:click="phuyu_ver()"> <i data-acorn-icon="eye"></i> </button>
-						    <button type="button" class="btn btn-warning editar btn-icon" title="EDITAR INGRESO" v-on:click="phuyu_editar()"> <i data-acorn-icon="edit"></i> </button>
-						    <button type="button" class="btn btn-danger btn-icon btn-outline-icon eliminar" title="ELIMINAR INGRESO" v-on:click="phuyu_eliminar()"> <i data-acorn-icon="bin"></i> </button>
-						    <button type="button" class="btn btn-primary btn-icon" title="IMPRIMIR INGRESO" v-on:click="phuyu_imprimir()"> <i data-acorn-icon="print"></i></button>
-						    <button type="button" class="btn btn-info btn-icon" title="CLONAR INGRESO" v-on:click="phuyu_clonar()"> <i data-acorn-icon="duplicate"></i> </button>
-						    <button type="button" class="btn btn-success btn-icon guia" v-on:click="phuyu_asignarguia()"> <i data-acorn-icon="plus"></i> Asignar Guía </button>
+						<div class="d-flex flex-wrap justify-content-end phuyu-toolbar">
+							<button type="button" class="btn btn-success btn-icon" title="Nueva Salida" v-on:click="phuyu_nuevo()"> <i class="bi bi-plus-lg"></i></button>
+							<button type="button" class="btn btn-info btn-icon" title="VER SALIDA" v-on:click="phuyu_ver()"> <i class="bi bi-eye"></i> </button>
+						    <button type="button" class="btn btn-warning editar btn-icon" title="EDITAR SALIDA" v-on:click="phuyu_editar()"> <i class="bi bi-pencil-square"></i> </button>
+						    <button type="button" class="btn btn-danger btn-icon btn-outline-icon eliminar" title="ELIMINAR SALIDA" v-on:click="phuyu_eliminar()"> <i class="bi bi-trash"></i> </button>
+						    <button type="button" class="btn btn-primary btn-icon" title="IMPRIMIR SALIDA" v-on:click="phuyu_imprimir()"> <i class="bi bi-printer"></i></button>
+						    <button type="button" class="btn btn-info btn-icon" title="CLONAR SALIDA" v-on:click="phuyu_clonar()"> <i class="bi bi-files"></i> </button>
+						    <button type="button" class="btn btn-success guia" v-on:click="phuyu_asignarguia()"> <i class="bi bi-truck me-1"></i> Asignar Guía </button>
 					    </div>
 					</div>
 				</div>
@@ -72,7 +146,7 @@
 					<div class="overlay-spinner"></div>
 				</div>
 				<div class="table-responsive">
-					<table class="table table-striped" style="font-size: 11px">
+					<table class="table table-hover align-middle mb-0 phuyu-data-table">
 						<thead>
 							<tr>
 								<th width="12px">ID</th>
@@ -83,7 +157,7 @@
 								<th>COMPROBANTE REF.</th>
 								<th>IMPORTE</th>
 								<th>ESTADO</th>
-								<th width="5px;"> <center> <i class="fa fa-circle-o"></i> </center> </th>
+								<th width="5px;"> <center> <i class="bi bi-record-circle"></i> </center> </th>
 							</tr>
 						</thead>
 						<tbody>
@@ -99,8 +173,8 @@
 								<td>{{dato.tipo}} ({{dato.seriecomprobante_ref}} - {{dato.nrocomprobante_ref}})</td>
 								<td>S/. {{dato.importe}}</td>
 								<td>
-									<span class="label label-danger" v-if="dato.estado==0">ANULADO</span>
-									<span class="label label-warning" v-if="dato.estado==1">ACTIVO</span>
+									<span class="badge bg-danger" v-if="dato.estado==0">ANULADO</span>
+									<span class="badge bg-warning text-dark" v-if="dato.estado==1">ACTIVO</span>
 								</td>
 								<td> <input type="radio" class="form-check-input" name="phuyu_seleccionar" v-on:click="phuyu_seleccionar(dato.codkardex,dato.estado)"> </td>
 							</tr>
