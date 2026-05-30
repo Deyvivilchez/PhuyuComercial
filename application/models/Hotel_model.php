@@ -17,6 +17,30 @@ class Hotel_model extends CI_Model {
 		return !empty($info);
 	}
 
+	public function asegurar_auditoria_estadias(){
+		$this->db->query(
+			"create table if not exists hotel.estadia_pagos (
+				codpago serial primary key,
+				codestadia integer not null references hotel.estadias (codestadia),
+				codkardex integer default 0,
+				codusuario integer not null,
+				codcaja integer default 0,
+				codcontroldiario integer default 0,
+				fecha date default current_date,
+				hora time default current_time,
+				tipo integer default 1,
+				importe numeric default 0,
+				metodo_pago varchar(120),
+				observacion text,
+				estado integer default 1
+			)"
+		);
+		$this->db->query("alter table hotel.estadias add column if not exists fecha_cancelacion date");
+		$this->db->query("alter table hotel.estadias add column if not exists hora_cancelacion time");
+		$this->db->query("alter table hotel.estadias add column if not exists codusuario_cancelacion integer default 0");
+		$this->db->query("alter table hotel.estadias add column if not exists motivo_cancelacion text");
+	}
+
 	public function ambientes(){
 		return $this->db->query(
 			"select *
@@ -140,7 +164,9 @@ class Hotel_model extends CI_Model {
 			inner join hotel.habitacion_tipos ht on(ht.codhabitaciontipo=h.codhabitaciontipo)
 			left join hotel.ambientes a on(a.codambiente=h.codambiente)
 			where h.codsucursal=? and h.estado=1".$whereAmbiente.$whereCaracteristica."
-			order by coalesce(a.descripcion, h.piso), h.numero",
+			order by coalesce(a.descripcion, h.piso),
+				nullif(regexp_replace(h.numero::text, '\\D', '', 'g'), '')::int nulls last,
+				h.numero",
 			$params
 		)->result_array();
 
@@ -231,7 +257,7 @@ class Hotel_model extends CI_Model {
 			where rh.codhabitacion=?
 			  and rh.estado=1
 			  and r.estado=1
-			  and r.situacion in (1,2)
+			  and r.situacion in (1,2,3)
 			  and r.codreserva<>?
 			  and r.fechallegada < ?
 			  and r.fechasalida > ?
@@ -261,6 +287,38 @@ class Hotel_model extends CI_Model {
 			return ["estado" => 0, "mensaje" => "LA HABITACION TIENE UNA ESTADIA ACTIVA EN ESE RANGO"];
 		}
 
+		$mantenimiento = $this->db->query(
+			"select codmantenimiento
+			from hotel.mantenimiento_habitaciones
+			where codhabitacion=?
+			  and estado=1
+			  and coalesce(estado_orden, situacion, 1) in (1,2)
+			  and fecha_inicio < ?
+			  and coalesce(fecha_fin, ?) > ?
+			limit 1",
+			[$codhabitacion, $hasta, $hasta, $desde]
+		)->row_array();
+
+		if (!empty($mantenimiento)) {
+			return ["estado" => 0, "mensaje" => "LA HABITACION TIENE MANTENIMIENTO ACTIVO EN ESE RANGO"];
+		}
+
+		$limpieza = $this->db->query(
+			"select codlimpieza
+			from hotel.limpieza_habitaciones
+			where codhabitacion=?
+			  and estado=1
+			  and coalesce(estado_orden, 1) in (1,2)
+			  and fecha < ?
+			  and coalesce(fecha_fin, fecha + interval '1 day')::date > ?
+			limit 1",
+			[$codhabitacion, $hasta, $desde]
+		)->row_array();
+
+		if (!empty($limpieza)) {
+			return ["estado" => 0, "mensaje" => "LA HABITACION TIENE LIMPIEZA ACTIVA EN ESE RANGO"];
+		}
+
 		return ["estado" => 1, "mensaje" => "DISPONIBLE"];
 	}
 
@@ -273,13 +331,18 @@ class Hotel_model extends CI_Model {
 		$reservas = $this->db->query(
 			"select 'reserva' as tipo, r.codreserva as codigo, r.fechallegada as desde, r.fechasalida as hasta,
 				r.cliente, r.situacion,
-				case when r.situacion=1 then 'RESERVA PENDIENTE' else 'RESERVA CONFIRMADA' end as descripcion
+				case
+					when r.situacion=1 then 'RESERVA PENDIENTE'
+					when r.situacion=2 then 'RESERVA CONFIRMADA'
+					when r.situacion=3 then 'EN HOSPEDAJE'
+					else 'RESERVA'
+				end as descripcion
 			from hotel.reserva_habitaciones rh
 			inner join hotel.reservas r on(r.codreserva=rh.codreserva)
 			where rh.codhabitacion=?
 			  and rh.estado=1
 			  and r.estado=1
-			  and r.situacion in (1,2)
+			  and r.situacion in (1,2,3)
 			  and r.codreserva<>?
 			  and r.fechallegada < ?
 			  and r.fechasalida > ?",
@@ -301,7 +364,33 @@ class Hotel_model extends CI_Model {
 			[$hasta, $codhabitacion, $hasta, $hasta, $desde]
 		)->result_array();
 
-		return array_merge($reservas, $estadias);
+		$mantenimiento = $this->db->query(
+			"select 'mantenimiento' as tipo, mh.codmantenimiento as codigo, mh.fecha_inicio as desde,
+				coalesce(mh.fecha_fin, ?) as hasta, '' as cliente, coalesce(mh.estado_orden, mh.situacion, 1) as situacion,
+				'MANTENIMIENTO' as descripcion
+			from hotel.mantenimiento_habitaciones mh
+			where mh.codhabitacion=?
+			  and mh.estado=1
+			  and coalesce(mh.estado_orden, mh.situacion, 1) in (1,2)
+			  and mh.fecha_inicio < ?
+			  and coalesce(mh.fecha_fin, ?) > ?",
+			[$hasta, $codhabitacion, $hasta, $hasta, $desde]
+		)->result_array();
+
+		$limpieza = $this->db->query(
+			"select 'limpieza' as tipo, lh.codlimpieza as codigo, lh.fecha as desde,
+				coalesce(lh.fecha_fin, lh.fecha + interval '1 day')::date as hasta, '' as cliente,
+				coalesce(lh.estado_orden, 1) as situacion, 'LIMPIEZA' as descripcion
+			from hotel.limpieza_habitaciones lh
+			where lh.codhabitacion=?
+			  and lh.estado=1
+			  and coalesce(lh.estado_orden, 1) in (1,2)
+			  and lh.fecha < ?
+			  and coalesce(lh.fecha_fin, lh.fecha + interval '1 day')::date > ?",
+			[$codhabitacion, $hasta, $desde]
+		)->result_array();
+
+		return array_merge($reservas, $estadias, $mantenimiento, $limpieza);
 	}
 
 	public function disponibilidad_habitaciones_rango($desde, $hasta, $codambiente = 0, $codreserva = 0){
@@ -321,7 +410,9 @@ class Hotel_model extends CI_Model {
 			inner join hotel.habitacion_tipos ht on(ht.codhabitaciontipo=h.codhabitaciontipo)
 			left join hotel.ambientes a on(a.codambiente=h.codambiente)
 			where h.codsucursal=? and h.estado=1 and h.situacion not in (5,6)".$whereAmbiente."
-			order by coalesce(a.descripcion, h.piso), h.numero",
+			order by coalesce(a.descripcion, h.piso),
+				nullif(regexp_replace(h.numero::text, '\\D', '', 'g'), '')::int nulls last,
+				h.numero",
 			$params
 		)->result_array();
 
@@ -337,8 +428,19 @@ class Hotel_model extends CI_Model {
 	}
 
 	public function estadia_detalle($codestadia){
+		$this->asegurar_auditoria_estadias();
 		$estadia = $this->db->query(
-			"select e.*, p.documento
+			"select e.*, p.documento, p.coddocumentotipo,
+				coalesce((
+					select sum(ep.importe)
+					from hotel.estadia_pagos ep
+					where ep.codestadia=e.codestadia and ep.tipo=1 and ep.estado=1
+				),0) as total_pagado_ocupacion,
+				greatest(e.alojamiento - coalesce((
+					select sum(ep.importe)
+					from hotel.estadia_pagos ep
+					where ep.codestadia=e.codestadia and ep.tipo=1 and ep.estado=1
+				),0),0) as alojamiento_pendiente
 			from hotel.estadias e
 			inner join public.personas p on(p.codpersona=e.codpersona)
 			where e.codestadia=? and e.estado=1",
@@ -377,7 +479,16 @@ class Hotel_model extends CI_Model {
 			[(int)$_SESSION["phuyu_codalmacen"], (int)$codestadia]
 		)->result_array();
 
-		return compact("estadia", "habitaciones", "huespedes", "consumos");
+		$pagos = $this->db->query(
+			"select ep.*, k.seriecomprobante, k.nrocomprobante
+			from hotel.estadia_pagos ep
+			left join kardex.kardex k on(k.codkardex=ep.codkardex)
+			where ep.codestadia=? and ep.estado=1
+			order by ep.codpago desc",
+			[(int)$codestadia]
+		)->result_array();
+
+		return compact("estadia", "habitaciones", "huespedes", "consumos", "pagos");
 	}
 
 	public function producto_alojamiento(){

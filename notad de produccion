@@ -189,3 +189,161 @@ GROUP BY codcomprobantetipo, seriecomprobante;
 SELECT *
 FROM caja.comprobantes
 WHERE codcomprobantetipo = 12;
+
+
+
+
+
+crear habitaciones
+DO $$
+DECLARE
+    v_codsucursal INTEGER := 1;
+
+    v_amb_2 INTEGER;
+    v_amb_3 INTEGER;
+
+    v_tipo_simple INTEGER;
+    v_tipo_doble INTEGER;
+
+    v_wifi INTEGER;
+    v_bano INTEGER;
+BEGIN
+    INSERT INTO hotel.habitacion_tipos (descripcion, capacidad, preciobase, estado)
+    SELECT 'SIMPLE', 1, 0, 1
+    WHERE NOT EXISTS (
+        SELECT 1 FROM hotel.habitacion_tipos WHERE UPPER(descripcion) = 'SIMPLE'
+    );
+
+    INSERT INTO hotel.habitacion_tipos (descripcion, capacidad, preciobase, estado)
+    SELECT 'DOBLE', 2, 0, 1
+    WHERE NOT EXISTS (
+        SELECT 1 FROM hotel.habitacion_tipos WHERE UPPER(descripcion) = 'DOBLE'
+    );
+
+    SELECT codhabitaciontipo INTO v_tipo_simple
+    FROM hotel.habitacion_tipos
+    WHERE UPPER(descripcion) = 'SIMPLE'
+    LIMIT 1;
+
+    SELECT codhabitaciontipo INTO v_tipo_doble
+    FROM hotel.habitacion_tipos
+    WHERE UPPER(descripcion) = 'DOBLE'
+    LIMIT 1;
+
+    INSERT INTO hotel.ambientes (codsucursal, descripcion, aforo, estado)
+    SELECT v_codsucursal, '2DO PISO', 0, 1
+    WHERE NOT EXISTS (
+        SELECT 1 FROM hotel.ambientes
+        WHERE codsucursal = v_codsucursal
+          AND UPPER(descripcion) = '2DO PISO'
+          AND estado = 1
+    );
+
+    INSERT INTO hotel.ambientes (codsucursal, descripcion, aforo, estado)
+    SELECT v_codsucursal, '3ER PISO', 0, 1
+    WHERE NOT EXISTS (
+        SELECT 1 FROM hotel.ambientes
+        WHERE codsucursal = v_codsucursal
+          AND UPPER(descripcion) = '3ER PISO'
+          AND estado = 1
+    );
+
+    SELECT codambiente INTO v_amb_2
+    FROM hotel.ambientes
+    WHERE codsucursal = v_codsucursal
+      AND UPPER(descripcion) = '2DO PISO'
+      AND estado = 1
+    LIMIT 1;
+
+    SELECT codambiente INTO v_amb_3
+    FROM hotel.ambientes
+    WHERE codsucursal = v_codsucursal
+      AND UPPER(descripcion) = '3ER PISO'
+      AND estado = 1
+    LIMIT 1;
+
+    INSERT INTO hotel.caracteristicas (descripcion, icono, orden, estado)
+    VALUES
+        ('WIFI', 'ri-wifi-line', 3, 1),
+        ('BANO PRIVADO', 'ri-hotel-bed-line', 7, 1)
+    ON CONFLICT (descripcion) DO NOTHING;
+
+    SELECT codcaracteristica INTO v_wifi
+    FROM hotel.caracteristicas
+    WHERE UPPER(descripcion) = 'WIFI'
+    LIMIT 1;
+
+    SELECT codcaracteristica INTO v_bano
+    FROM hotel.caracteristicas
+    WHERE UPPER(descripcion) = 'BANO PRIVADO'
+    LIMIT 1;
+
+    INSERT INTO hotel.habitaciones (
+        codsucursal, codambiente, codhabitaciontipo,
+        numero, piso, capacidad, preciobase, situacion, estado
+    )
+    SELECT
+        v_codsucursal,
+        v_amb_2,
+        CASE WHEN x.numero = '204' THEN v_tipo_doble ELSE v_tipo_simple END,
+        x.numero,
+        '2DO PISO',
+        CASE WHEN x.numero = '204' THEN 2 ELSE 1 END,
+        x.precio,
+        1,
+        1
+    FROM (
+        VALUES
+            ('201', 40),
+            ('203', 40),
+            ('204', 60),
+            ('205', 40),
+            ('206', 40),
+            ('207', 40),
+            ('208', 40),
+            ('209', 30),
+            ('210', 30)
+    ) AS x(numero, precio)
+    ON CONFLICT (codsucursal, numero) DO NOTHING;
+
+    INSERT INTO hotel.habitaciones (
+        codsucursal, codambiente, codhabitaciontipo,
+        numero, piso, capacidad, preciobase, situacion, estado
+    )
+    SELECT
+        v_codsucursal,
+        v_amb_3,
+        v_tipo_simple,
+        x.numero,
+        '3ER PISO',
+        1,
+        300,
+        1,
+        1
+    FROM (
+        VALUES
+            ('11'), ('12'), ('13'), ('14'), ('15'), ('16'),
+            ('17'), ('18'), ('19'), ('20'), ('21')
+    ) AS x(numero)
+    ON CONFLICT (codsucursal, numero) DO NOTHING;
+
+    INSERT INTO hotel.habitacion_caracteristicas (
+        codhabitacion,
+        codcaracteristica,
+        estado
+    )
+    SELECT h.codhabitacion, c.codcaracteristica, 1
+    FROM hotel.habitaciones h
+    CROSS JOIN (
+        SELECT v_wifi AS codcaracteristica
+        UNION ALL
+        SELECT v_bano
+    ) c
+    WHERE h.codsucursal = v_codsucursal
+      AND h.numero IN (
+          '201','203','204','205','206','207','208','209','210',
+          '11','12','13','14','15','16','17','18','19','20','21'
+      )
+    ON CONFLICT (codhabitacion, codcaracteristica) DO NOTHING;
+
+END $$;

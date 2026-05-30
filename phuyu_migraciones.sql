@@ -367,9 +367,20 @@ CREATE TABLE IF NOT EXISTS hotel.limpieza_habitaciones (
     codresponsable integer DEFAULT 0,
     fecha date DEFAULT now(),
     hora time DEFAULT now(),
+    tipo_limpieza varchar(40) DEFAULT 'normal',
+    checklist text,
     observacion text,
+    estado_orden integer DEFAULT 1,
+    fecha_fin date,
+    hora_fin time,
     estado integer DEFAULT 1
 );
+
+ALTER TABLE hotel.limpieza_habitaciones ADD COLUMN IF NOT EXISTS tipo_limpieza varchar(40) DEFAULT 'normal';
+ALTER TABLE hotel.limpieza_habitaciones ADD COLUMN IF NOT EXISTS checklist text;
+ALTER TABLE hotel.limpieza_habitaciones ADD COLUMN IF NOT EXISTS estado_orden integer DEFAULT 1;
+ALTER TABLE hotel.limpieza_habitaciones ADD COLUMN IF NOT EXISTS fecha_fin date;
+ALTER TABLE hotel.limpieza_habitaciones ADD COLUMN IF NOT EXISTS hora_fin time;
 
 CREATE TABLE IF NOT EXISTS hotel.mantenimiento_habitaciones (
     codmantenimiento serial PRIMARY KEY,
@@ -378,10 +389,44 @@ CREATE TABLE IF NOT EXISTS hotel.mantenimiento_habitaciones (
     codresponsable integer DEFAULT 0,
     fecha_inicio date DEFAULT now(),
     fecha_fin date,
+    hora_inicio time DEFAULT now(),
+    hora_fin time,
+    tipo_mantenimiento varchar(40) DEFAULT 'correctivo',
+    prioridad varchar(20) DEFAULT 'media',
+    descripcion_problema text,
+    trabajos_realizados text,
+    materiales text,
     observacion text,
     situacion integer DEFAULT 1,
+    estado_orden integer DEFAULT 1,
     estado integer DEFAULT 1
 );
+
+ALTER TABLE hotel.mantenimiento_habitaciones ADD COLUMN IF NOT EXISTS tipo_mantenimiento varchar(40) DEFAULT 'correctivo';
+ALTER TABLE hotel.mantenimiento_habitaciones ADD COLUMN IF NOT EXISTS prioridad varchar(20) DEFAULT 'media';
+ALTER TABLE hotel.mantenimiento_habitaciones ADD COLUMN IF NOT EXISTS descripcion_problema text;
+ALTER TABLE hotel.mantenimiento_habitaciones ADD COLUMN IF NOT EXISTS trabajos_realizados text;
+ALTER TABLE hotel.mantenimiento_habitaciones ADD COLUMN IF NOT EXISTS materiales text;
+ALTER TABLE hotel.mantenimiento_habitaciones ADD COLUMN IF NOT EXISTS estado_orden integer DEFAULT 1;
+ALTER TABLE hotel.mantenimiento_habitaciones ADD COLUMN IF NOT EXISTS hora_inicio time DEFAULT now();
+ALTER TABLE hotel.mantenimiento_habitaciones ADD COLUMN IF NOT EXISTS hora_fin time;
+
+UPDATE hotel.mantenimiento_habitaciones
+SET estado_orden = 3
+WHERE situacion = 2
+  AND COALESCE(estado_orden, 1) = 1;
+
+-- Normaliza reservas antiguas: antes situacion=3 se usaba como cancelada.
+-- En el flujo actual 3 significa EN HOSPEDAJE.
+UPDATE hotel.reservas r
+SET situacion = 0
+WHERE r.situacion = 3
+  AND NOT EXISTS (
+      SELECT 1
+      FROM hotel.estadias e
+      WHERE e.codreserva = r.codreserva
+        AND e.estado = 1
+  );
 
 CREATE INDEX IF NOT EXISTS idx_hotel_habitaciones_sucursal_situacion ON hotel.habitaciones (
     codsucursal,
