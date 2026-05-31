@@ -1,0 +1,2 @@
+# Permite al panel web instalar unicamente el cron maestro SUNAT de Phuyu.
+www-data ALL=(root) NOPASSWD: /usr/local/sbin/phuyu-cron-sunat-installer *
