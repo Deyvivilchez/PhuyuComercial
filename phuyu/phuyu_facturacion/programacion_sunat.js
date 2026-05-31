@@ -6,6 +6,7 @@ var phuyu_datos = new Vue({
 		configuraciones: [],
 		historial: [],
 		cola: [],
+		cron: {},
 		form: {}
 	},
 	computed: {
@@ -48,6 +49,7 @@ var phuyu_datos = new Vue({
 				this.configuraciones = res.body.configuraciones || [];
 				this.historial = res.body.historial || [];
 				this.cola = res.body.cola || [];
+				this.cron = res.body.cron || {};
 				if (!this.form.descripcion) {
 					this.nuevo();
 				}
@@ -117,6 +119,34 @@ var phuyu_datos = new Vue({
 			}, function(){
 				phuyu_sistema.phuyu_alerta("No se puede ejecutar", "Error de red", "error");
 				phuyu_sistema.phuyu_fin();
+			});
+		},
+		verificarCron: function(){
+			this.$http.get(url + phuyu_controller + "/cron_base").then(function(res){
+				this.cron = res.body || {};
+			}, function(){
+				phuyu_sistema.phuyu_alerta("No se puede verificar el cron base", "Error de red", "error");
+			});
+		},
+		crearCron: function(){
+			var accion = parseInt(this.cron.existe || 0) === 1 ? "recrear" : "crear";
+			swal({
+				title: accion === "crear" ? "Crear cron base" : "Recrear cron base",
+				text: "Se intentara escribir el archivo cron en /etc/cron.d/ para este proyecto.",
+				icon: "warning",
+				buttons: ["Cancelar", accion === "crear" ? "Crear" : "Recrear"],
+				dangerMode: false
+			}).then((ok) => {
+				if (!ok) return;
+				phuyu_sistema.phuyu_inicio_guardar("Actualizando cron base...");
+				this.$http.post(url + phuyu_controller + "/crear_cron_base", {}).then(function(res){
+					this.cron = res.body || {};
+					phuyu_sistema.phuyu_noti("Cron SUNAT", res.body.mensaje, res.body.estado == 1 ? "success" : "error");
+					phuyu_sistema.phuyu_fin();
+				}, function(){
+					phuyu_sistema.phuyu_alerta("No se puede crear el cron base", "Error de red", "error");
+					phuyu_sistema.phuyu_fin();
+				});
 			});
 		}
 	},

@@ -10,6 +10,8 @@
 
 # O si quieres ser más específico:
 /sunat/*
+!/sunat/billService.wsdl
+!/sunat/billServicesunat.wsdl
 /sunat/certificados/
 /sunat/comprobantes/
 /sunat/log/
