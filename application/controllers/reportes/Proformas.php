@@ -8,7 +8,9 @@ class Proformas extends CI_Controller {
 
 	public function index(){
 		if ($this->input->is_ajax_request()) {
-			$sucursales = $this->db->query("select *from public.sucursales where estado=1")->result_array();
+			$sucursales = $this->db->query("
+			 select *from public.sucursales
+			 where estado=1")->result_array();
 			$this->load->view("reportes/proformas/index",compact("sucursales"));
 		}else{
 			$this->load->view("phuyu/404");

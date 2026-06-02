@@ -263,6 +263,15 @@
             e.preventDefault();
             e.stopImmediatePropagation();
 
+            if (window.innerWidth >= 992) {
+                var sidebarSize = document.documentElement.getAttribute('data-sidebar-size') || 'lg';
+                if (['sm', 'sm-hover', 'sm-hover-active'].indexOf(sidebarSize) !== -1) {
+                    document.documentElement.setAttribute('data-sidebar-size', 'lg');
+                    sessionStorage.setItem('data-sidebar-size', 'lg');
+                    syncHamburgerState();
+                }
+            }
+
             var $trigger = $(this);
             var targetSelector = $trigger.attr('href');
             var $target = $(targetSelector);

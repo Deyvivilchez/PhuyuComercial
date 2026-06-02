@@ -47,9 +47,190 @@
     padding-left: .75rem;
     padding-right: .75rem;
   }
+
+  #phuyu_operacion.phuyu-venta-form .phuyu-quick-product {
+    position: relative;
+  }
+
+  #phuyu_operacion.phuyu-venta-form .phuyu-product-select2.select2-container {
+    width: 100% !important;
+  }
+
+  #phuyu_operacion.phuyu-venta-form .phuyu-product-select2 .select2-selection--single {
+    display: flex !important;
+    align-items: center !important;
+    min-height: 46px !important;
+    border: 1px solid rgba(64, 81, 137, .18) !important;
+    border-radius: .75rem !important;
+    background: #fff !important;
+  }
+
+  #phuyu_operacion.phuyu-venta-form .phuyu-product-select2 .select2-selection__rendered {
+    line-height: 46px !important;
+    padding-left: .9rem !important;
+    font-weight: 700 !important;
+    color: #343a40 !important;
+  }
+
+  #phuyu_operacion.phuyu-venta-form .phuyu-product-select2 .select2-selection__arrow {
+    height: 46px !important;
+    right: .4rem !important;
+  }
+
+  #phuyu_operacion .select2-dropdown {
+    border-color: rgba(64, 81, 137, .16);
+    border-radius: .75rem;
+    overflow: hidden;
+    box-shadow: 0 16px 34px rgba(15, 23, 42, .14);
+  }
+
+  #phuyu_operacion .select2-results__option {
+    padding: .45rem .6rem;
+    border-left: 4px solid transparent;
+    transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
+  }
+
+  #phuyu_operacion .select2-results__option--highlighted[aria-selected] {
+    background: linear-gradient(90deg, rgba(94, 76, 180, .18), rgba(64, 81, 137, .08));
+    border-left-color: #5e4cb4;
+    box-shadow: inset 0 0 0 1px rgba(94, 76, 180, .22), 0 5px 14px rgba(64, 81, 137, .08);
+  }
+
+  #phuyu_operacion .select2-results__option--highlighted[aria-selected] .phuyu-product-result-name,
+  #phuyu_operacion .select2-results__option--highlighted[aria-selected] .phuyu-product-result-meta {
+    color: #2f285f;
+  }
+
+  #phuyu_operacion .select2-results__option--highlighted[aria-selected] .phuyu-product-result-name {
+    color: #21184f;
+  }
+
+  #phuyu_operacion .select2-results__option--highlighted[aria-selected] .badge {
+    background: rgba(94, 76, 180, .12) !important;
+    border-color: rgba(94, 76, 180, .22) !important;
+    color: #3b2f86 !important;
+  }
+
+  #phuyu_operacion .select2-results__option--highlighted[aria-selected] .phuyu-product-result-stock.stock-ok {
+    color: #087f6f;
+  }
+
+  #phuyu_operacion .select2-results__option--highlighted[aria-selected] .phuyu-product-result-stock.stock-low {
+    color: #9a5b12;
+  }
+
+  #phuyu_operacion .select2-results__option--highlighted[aria-selected] .phuyu-product-result-stock.stock-empty {
+    color: #d94d35;
+  }
+
+  .phuyu-product-result {
+    display: flex;
+    gap: .75rem;
+    align-items: center;
+    justify-content: space-between;
+    padding: .35rem .15rem;
+  }
+
+  .phuyu-product-result-name {
+    font-size: .86rem;
+    font-weight: 800;
+    color: #212529;
+  }
+
+  .phuyu-product-result-meta {
+    font-size: .72rem;
+    color: #74788d;
+  }
+
+  .phuyu-product-result-stock {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    font-weight: 800;
+  }
+
+  .phuyu-product-result-stock.stock-ok {
+    color: #0ab39c;
+  }
+
+  .phuyu-product-result-stock.stock-low {
+    color: #b7791f;
+  }
+
+  .phuyu-product-result-stock.stock-empty {
+    color: #f06548;
+  }
+
+  #phuyu_operacion .phuyu-quick-feedback {
+    position: fixed;
+    top: 88px;
+    right: 22px;
+    z-index: 2050;
+    min-width: 260px;
+    max-width: min(420px, calc(100vw - 32px));
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .7rem .85rem;
+    border: 1px solid rgba(10, 179, 156, .18);
+    border-radius: .7rem;
+    background: #effcf8;
+    color: #087f6f;
+    font-size: .82rem;
+    font-weight: 800;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, .16);
+  }
+
+  #phuyu_operacion .phuyu-quick-feedback i {
+    font-size: 1.05rem;
+    flex: 0 0 auto;
+  }
+
+  #phuyu_operacion .table tbody tr.phuyu-row-added > td {
+    animation: phuyu-row-added 1.2s ease-out;
+  }
+
+  @keyframes phuyu-row-added {
+    0% {
+      box-shadow: inset 4px 0 0 #0ab39c, inset 0 0 0 9999px rgba(10, 179, 156, .22);
+    }
+    55% {
+      box-shadow: inset 4px 0 0 rgba(10, 179, 156, .7), inset 0 0 0 9999px rgba(10, 179, 156, .1);
+    }
+    100% {
+      box-shadow: inset 4px 0 0 transparent, inset 0 0 0 9999px transparent;
+    }
+  }
+
+  @media (max-width: 575.98px) {
+    #phuyu_operacion .phuyu-quick-feedback {
+      top: 76px;
+      left: 12px;
+      right: 12px;
+      min-width: 0;
+      max-width: none;
+    }
+
+    .phuyu-product-result {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: .35rem;
+    }
+
+    .phuyu-product-result-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .35rem;
+    }
+  }
 </style>
 
 <div id="phuyu_operacion" class="phuyu-venta-form phuyu-velzon-form phuyu-ventas-velzon">
+  <div id="phuyu_producto_feedback" class="phuyu-quick-feedback" style="display: none;">
+    <i class="bi bi-check2-circle"></i>
+    <span></span>
+  </div>
+
   <div class="phuyu-page-title">
     <span class="phuyu-page-icon"><i class="bi bi-receipt"></i></span>
     <div>
@@ -166,6 +347,13 @@
                 <label class="form-label">Direccion cliente</label>
                 <input type="text" class="form-control" id="direccion" v-model.trim="campos.direccion" autocomplete="off" maxlength="250" placeholder="Direccion del cliente" required>
               </div>
+
+              <div class="col-12">
+                <label class="form-label">Buscar producto directo</label>
+                <div class="phuyu-quick-product">
+                  <select id="producto_rapido_select" class="form-select" style="width: 100%;"></select>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -210,7 +398,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(dato,index) in detalle" :key="index">
+                    <tr v-for="(dato,index) in detalle" :key="index" v-bind:class="{'phuyu-row-added': dato.phuyu_agregado}">
                       <td>
                         <button type="button" class="btn btn-primary btn-xs w-100" v-on:click="phuyu_itemdetalle(index,dato)">
                           <b>+ MAS</b>
@@ -417,6 +605,34 @@
           <h4 class="modal-title"></h4>
         </div>
         <div class="modal-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modal_series_rapidas" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content rounded-4">
+        <div class="modal-header bg-info text-white">
+          <h5 class="modal-title"><i class="bi bi-upc-scan me-2"></i><strong>Seleccionar serie</strong></h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <input type="text" class="form-control form-control-sm mb-3" v-model.trim="serie_rapida_buscar" placeholder="Buscar serie...">
+          <div class="row g-3" v-if="series_rapidas_filtradas.length > 0">
+            <div class="col-md-4 col-sm-6" v-for="serieRapida in series_rapidas_filtradas" :key="serieRapida.id_serie">
+              <button type="button" class="card text-center border-0 shadow-sm rounded-3 w-100 h-100" v-on:click="phuyu_seleccionar_serie_rapida(serieRapida)">
+                <span class="card-body p-3">
+                  <span class="d-block fw-bold mb-1">{{ serieRapida.serie_codigo }}</span>
+                  <small class="text-success">DISPONIBLE</small>
+                  <i class="bi bi-check-circle-fill text-success fs-4 d-block mt-2"></i>
+                </span>
+              </button>
+            </div>
+          </div>
+          <div class="text-center text-muted py-4" v-else>
+            No hay series disponibles para este producto.
+          </div>
+        </div>
       </div>
     </div>
   </div>

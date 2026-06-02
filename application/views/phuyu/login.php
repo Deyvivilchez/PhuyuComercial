@@ -838,24 +838,8 @@
             if (btnLogin) {
                 const originalOnSubmit = window.phuyu_login;
                 window.phuyu_login = function () {
-                    const spinner = document.getElementById('spinner-login');
-                    const label = document.getElementById('btn-label');
-                    
-                    spinner.style.display = 'inline-flex';
-                    label.textContent = 'Autenticando...';
-                    btnLogin.disabled = true;
-
                     if (typeof originalOnSubmit === 'function') {
-                        const result = originalOnSubmit();
-                        if (result === false) {
-                            // Esperar un poco antes de resetear en caso de error
-                            setTimeout(() => {
-                                spinner.style.display = 'none';
-                                label.textContent = 'Iniciar sesión';
-                                btnLogin.disabled = false;
-                            }, 500);
-                        }
-                        return result;
+                        return originalOnSubmit();
                     }
 
                     return false;
