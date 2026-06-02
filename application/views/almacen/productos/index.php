@@ -84,6 +84,7 @@
 	                      </button>
 
 							<button type="button" class="btn btn-info" v-on:click="phuyu_operacion()"> <i class="bi bi-upload me-1"></i> Extra</button>
+							<button type="button" class="btn btn-primary" v-on:click="phuyu_migrar_stock()"> <i class="bi bi-file-earmark-spreadsheet me-1"></i> Migrar/Actualizar Stock</button>
 	                      <button
 	                        class="btn eliminar btn-danger"
 	                        data-bs-toggle="tooltip"
