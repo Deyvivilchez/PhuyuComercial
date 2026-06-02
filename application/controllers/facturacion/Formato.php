@@ -56,6 +56,43 @@ class Formato extends CI_Controller
         return file_exists($cachePath) ? $cachePath : $path;
     }
 
+    private function phuyu_qr_data_uri($textoqr, $size = 5, $level = 'H')
+    {
+        if ((string)$textoqr === '') {
+            return '';
+        }
+
+        // Genera el PNG en memoria para no crear archivos temporales en sunat/webphuyu.
+        $this->load->library('ciqrcode');
+
+        ob_start();
+        $this->ciqrcode->generate([
+            'data' => (string)$textoqr,
+            'level' => $level,
+            'size' => $size,
+        ]);
+        $png = ob_get_clean();
+
+        $archivo_error = APPPATH . 'logs/qrcode.png-errors.txt';
+        if (file_exists($archivo_error)) {
+            @unlink($archivo_error);
+        }
+
+        return $png !== '' ? 'data:image/png;base64,' . base64_encode($png) : '';
+    }
+
+    private function phuyu_qr_texto_comprobante($empresa, $venta)
+    {
+        // Texto QR usado por los comprobantes impresos: empresa, serie, total, fecha y cliente.
+        return ($empresa['razonsocial'] ?? '') . '|' .
+            ($venta['seriecomprobante'] ?? '') . '|' .
+            ($venta['nrocomprobante'] ?? '') . '|' .
+            number_format((float)($venta['igv'] ?? 0), 2, '.', '') . '|' .
+            number_format((float)($venta['importe'] ?? 0), 2, '.', '') . '|' .
+            ($venta['fechacomprobante'] ?? $venta['fechapedido'] ?? date('Y-m-d')) . '|' .
+            ($venta['documento'] ?? '');
+    }
+
     private function phuyu_whatsapp_secret()
     {
         $secret = getenv('WHATSAPP_SHARE_SECRET');
@@ -436,12 +473,13 @@ class Formato extends CI_Controller
         $this->load->library('Number');
         $number = new Number();
         $total_texto = $number->convertirNumeroEnLetras(round($venta[0]['importe'], 2));
+        $qrSrc = $this->phuyu_qr_data_uri($this->phuyu_qr_texto_comprobante($empresa[0], $venta[0]));
 
         $html .= '<table cellpadding="2" width="100%" style="border:1px solid #000;">';
         $html .= '<tr>';
         $html .= '<td style="' . $estilo . ' width:65%" rowspan="10" align="center"> <br> ';
         $html .= '<h3> SON: ' . strtoupper($total_texto) . ' Y 00/100 SOLES</h3> <br> ';
-        $html .= '<img src="' . base_url() . 'sunat/webphuyu/qrcode.png" style="height:100px">';
+        $html .= '<img src="' . $qrSrc . '" style="height:100px">';
         $html .= '<p>Para ver el documento visita: http://ceramicasm.erpperu.com/consultacomprobantes</p>';
         $html .= '</td>';
         $html .= '<td style="' . $estilo . ' width:20%;text-align:right"> <b>OP.GRAVADAS S/</b> </td>';
@@ -458,18 +496,6 @@ class Formato extends CI_Controller
         $html .= '<tr> <td style="' . $estilo1 . '"> <b>ICBPER S/</b> </td> <td style="' . $estilo1 . '">' . number_format($venta[0]['icbper'], 2) . ' </td> </tr>';
         $html .= '<tr> <td style="' . $estilo1 . '"> <b>TOTAL S/</b> </td> <td style="' . $estilo1 . '">' . number_format($venta[0]['importe'], 2) . ' </td> </tr>';
         $html .= '</table><br><br>';
-
-        $textoqr = $empresa[0]['razonsocial'] . '|' . $venta[0]['seriecomprobante'] . '|' . $venta[0]['nrocomprobante'] . '|' . number_format($venta[0]['igv'], 2) . '|' . number_format($venta[0]['importe'], 2) . '|' . $venta[0]['fechacomprobante'] . '|' . $venta[0]['documento'];
-
-        $this->load->library('ciqrcode');
-        $params['data'] = $textoqr;
-        $params['level'] = 'H';
-        $params['size'] = 5;
-        $params['savename'] = './sunat/webphuyu/qrcode.png';
-        $this->ciqrcode->generate($params);
-
-        $archivo_error = APPPATH . '/logs/qrcode.png-errors.txt';
-        unlink($archivo_error);
 
         $html .= '<table><tr><td>BIENES TRANSFERIDOS EN LA AMAZONIA REGION SELVA PARA SER CONSUMIDOS EN LA MISMA</td></tr><tr><td>SERVICIOS PRESTADOS EN LA AMAZONIA REGION SELVA PARA SER CONSUMIDOS EN LA MISMA</td></tr> </table>';
 
@@ -1096,38 +1122,7 @@ class Formato extends CI_Controller
     $number = new Number();
     $total_texto = $number->convertirNumeroEnLetras(round((float)$venta['importe'], 2));
 
-    // QR
-    $this->load->library('ciqrcode');
-
-    $qrDir = FCPATH . 'sunat/webphuyu/';
-    if (!is_dir($qrDir)) {
-        mkdir($qrDir, 0777, true);
-    }
-
-    $textoqr = $empresa['razonsocial'] . '|' .
-        $venta['seriecomprobante'] . '|' .
-        $venta['nrocomprobante'] . '|' .
-        number_format((float)$venta['igv'], 2, '.', '') . '|' .
-        number_format((float)$venta['importe'], 2, '.', '') . '|' .
-        $venta['fechacomprobante'] . '|' .
-        $venta['documento'];
-
-    $qrFileName = 'qr_' . $venta['seriecomprobante'] . '_' . $venta['nrocomprobante'] . '.png';
-    $qrFilePath = $qrDir . $qrFileName;
-
-    $paramsQr = [];
-    $paramsQr['data'] = $textoqr;
-    $paramsQr['level'] = 'H';
-    $paramsQr['size'] = 5;
-    $paramsQr['savename'] = $qrFilePath;
-    $this->ciqrcode->generate($paramsQr);
-
-    $qr_src = file_exists($qrFilePath) ? base_url('sunat/webphuyu/' . $qrFileName) : '';
-
-    $archivo_error = APPPATH . 'logs/qrcode.png-errors.txt';
-    if (file_exists($archivo_error)) {
-        @unlink($archivo_error);
-    }
+    $qr_src = $this->phuyu_qr_data_uri($this->phuyu_qr_texto_comprobante($empresa, $venta));
 
     $data = [
         'modo_pdf'         => true,
@@ -1888,36 +1883,7 @@ class Formato extends CI_Controller
     $slogan = $formato['slogan'] !== '' ? $formato['slogan'] : ($parametros['slogan'] ?? '');
     $publicidad = $formato['publicidad'] !== '' ? $formato['publicidad'] : ($parametros['publicidad'] ?? '');
 
-    // QR
-    $this->load->library('ciqrcode');
-
-    $qrDir = FCPATH . 'sunat/webphuyu/';
-    if (!is_dir($qrDir)) {
-        mkdir($qrDir, 0777, true);
-    }
-
-    $textoqr = $empresa['razonsocial'] . '|' .
-               $venta['seriecomprobante'] . '|' .
-               $venta['nrocomprobante'] . '|' .
-               number_format((float)$venta['igv'], 2, '.', '') . '|' .
-               number_format((float)$venta['importe'], 2, '.', '') . '|' .
-               $venta['fechacomprobante'] . '|' .
-               $venta['documento'];
-
-    $qrFileName = 'qrcode_a5_' . $venta['seriecomprobante'] . '_' . $venta['nrocomprobante'] . '.png';
-    $qrFilePath = $qrDir . $qrFileName;
-
-    $params = [];
-    $params['data'] = $textoqr;
-    $params['level'] = 'H';
-    $params['size'] = 5;
-    $params['savename'] = $qrFilePath;
-    $this->ciqrcode->generate($params);
-
-    $qrSrc = '';
-    if (file_exists($qrFilePath)) {
-        $qrSrc = 'data:image/png;base64,' . base64_encode(file_get_contents($qrFilePath));
-    }
+    $qrSrc = $this->phuyu_qr_data_uri($this->phuyu_qr_texto_comprobante($empresa, $venta));
 
     $this->load->library('Number');
     $number = new Number();
@@ -2164,35 +2130,7 @@ class Formato extends CI_Controller
         $slogan = !empty($formato['slogan']) ? $formato['slogan'] : ($parametros['slogan'] ?? '');
         $publicidad = !empty($formato['publicidad']) ? $formato['publicidad'] : ($parametros['publicidad'] ?? '');
 
-        // QR único por ticket
-        $textoqr = $empresa['razonsocial'] . '|' .
-            $venta['seriecomprobante'] . '|' .
-            $venta['nrocomprobante'] . '|' .
-            number_format((float)$venta['igv'], 2, '.', '') . '|' .
-            number_format((float)$venta['importe'], 2, '.', '') . '|' .
-            $venta['fechacomprobante'] . '|' .
-            $venta['documento'];
-
-        $this->load->library('ciqrcode');
-
-        $qrDir = FCPATH . 'sunat/webphuyu/';
-        if (!is_dir($qrDir)) {
-            mkdir($qrDir, 0777, true);
-        }
-
-        $qrFile = $qrDir . 'ticket_qr_' . $venta['seriecomprobante'] . '_' . $venta['nrocomprobante'] . '.png';
-
-        $params = [];
-        $params['data'] = $textoqr;
-        $params['level'] = 'H';
-        $params['size'] = 5;
-        $params['savename'] = $qrFile;
-        $this->ciqrcode->generate($params);
-
-        $qrSrc = '';
-        if (file_exists($qrFile)) {
-            $qrSrc = 'data:image/png;base64,' . base64_encode(file_get_contents($qrFile));
-        }
+        $qrSrc = $this->phuyu_qr_data_uri($this->phuyu_qr_texto_comprobante($empresa, $venta));
 
         $this->load->library('Number');
         $number = new Number();
@@ -2289,17 +2227,7 @@ class Formato extends CI_Controller
                 $publicidad = $parametros[0]['publicidad'];
             }
 
-            $textoqr = $empresa[0]['razonsocial'] . '|' . $venta[0]['seriecomprobante'] . '|' . $venta[0]['nrocomprobante'] . '|' . number_format($venta[0]['igv'], 2) . '|' . number_format($venta[0]['importe'], 2) . '|' . $venta[0]['fechacomprobante'] . '|' . $venta[0]['documento'];
-
-            $this->load->library('ciqrcode');
-            $params['data'] = $textoqr;
-            $params['level'] = 'H';
-            $params['size'] = 5;
-            $params['savename'] = './sunat/webphuyu/qrcode.png';
-            $this->ciqrcode->generate($params);
-
-            $archivo_error = APPPATH . '/logs/qrcode.png-errors.txt';
-            unlink($archivo_error);
+            $qrSrc = $this->phuyu_qr_data_uri($this->phuyu_qr_texto_comprobante($empresa[0], $venta[0]));
 
             $this->load->library('Number');
             $number = new Number();
@@ -2321,7 +2249,7 @@ class Formato extends CI_Controller
             }
             $logoEmpresa = $_SESSION['phuyu_logo'];
 
-            $this->load->view('facturacion/formato/' . $ticket, compact('empresa', 'sucursal', 'venta', 'totales', 'detalle', 'vendedor', 'credito', 'texto_importe', 'direccionlogo', 'formato', 'nombre', 'slogan', 'publicidad', 'fechavencimiento', 'detallemovimiento', 'efectivo', 'logoEmpresa'));
+            $this->load->view('facturacion/formato/' . $ticket, compact('empresa', 'sucursal', 'venta', 'totales', 'detalle', 'vendedor', 'credito', 'texto_importe', 'direccionlogo', 'formato', 'nombre', 'slogan', 'publicidad', 'fechavencimiento', 'detallemovimiento', 'efectivo', 'logoEmpresa', 'qrSrc'));
         } else {
             $this->load->view('phuyu/404');
         }
@@ -2852,14 +2780,6 @@ class Formato extends CI_Controller
 
         require_once FCPATH . 'vendor/autoload.php';
 
-        // -------- GENERAR QR ----------
-        $this->load->library('ciqrcode');
-
-        $qrDir = FCPATH . 'sunat/webphuyu/';
-        if (!is_dir($qrDir)) {
-            mkdir($qrDir, 0777, true);
-        }
-
         $venta = $data['venta'];
         $empresaDoc = $data['empresa']['documento'] ?? '';
         $serie = $venta['seriecomprobante'] ?? '';
@@ -2870,19 +2790,7 @@ class Formato extends CI_Controller
         $documentoCliente = $venta['documento'] ?? '';
 
         $textoqr = $empresaDoc . '|' . $serie . '|' . $numero . '|' . $igv . '|' . $total . '|' . $fecha . '|' . $documentoCliente;
-
-        $qrFileName = 'qr_' . $serie . '_' . $numero . '.png';
-        $qrFilePath = $qrDir . $qrFileName;
-
-        $params = [];
-        $params['data'] = $textoqr;
-        $params['level'] = 'H';
-        $params['size'] = 5;
-        $params['savename'] = $qrFilePath;
-
-        $this->ciqrcode->generate($params);
-
-        $data['qr_src'] = base_url('sunat/webphuyu/' . $qrFileName);
+        $data['qr_src'] = $this->phuyu_qr_data_uri($textoqr);
 
         // Si no quieres barcode por ahora
         $data['barcode_src'] = '';
@@ -3430,12 +3338,13 @@ class Formato extends CI_Controller
         $this->load->library('Number');
         $number = new Number();
         $total_texto = $number->convertirNumeroEnLetras(round($venta[0]['importe'], 2));
+        $qrSrc = $this->phuyu_qr_data_uri($this->phuyu_qr_texto_comprobante($empresa[0], $venta[0]));
 
         $html .= '<table cellpadding="2" width="100%" style="border:1px solid #000;">';
         $html .= '<tr>';
         $html .= '<td style="' . $estilo . ' width:65%" rowspan="8" align="center"> ';
         $html .= '<h4> SON: ' . strtoupper($total_texto) . ' Y 00/100 SOLES</h4> <br> ';
-        $html .= '<img src="' . base_url() . 'sunat/webphuyu/qrcode.png" style="height:100px">';
+        $html .= '<img src="' . $qrSrc . '" style="height:100px">';
         $html .= '</td>';
         $html .= '<td style="' . $estilo . ' width:20%;text-align:right"> <b>OP.GRAVADAS S/</b> </td>';
         $html .= '<td style="' . $estilo . ' width:15%;text-align:right">' . number_format($totales[0]['gravado'] - $venta[0]['igv'], 2) . ' </td>';
@@ -3451,18 +3360,6 @@ class Formato extends CI_Controller
 
         $html .= '<p>CONSULTE SU COMPROBANTE EN: ' . $parametros[0]['urlconsultacomprobantes'] . '</p>';
         $html .= '<p>' . $parametros[0]['agradecimiento'] . '</p>';
-
-        $textoqr = $empresa[0]['razonsocial'] . '|' . $venta[0]['seriecomprobante'] . '|' . $venta[0]['nrocomprobante'] . '|' . number_format($venta[0]['igv'], 2) . '|' . number_format($venta[0]['importe'], 2) . '|' . $venta[0]['fechacomprobante'] . '|' . $venta[0]['documento'];
-
-        $this->load->library('ciqrcode');
-        $params['data'] = $textoqr;
-        $params['level'] = 'H';
-        $params['size'] = 5;
-        $params['savename'] = './sunat/webphuyu/qrcode.png';
-        $this->ciqrcode->generate($params);
-
-        $archivo_error = APPPATH . '/logs/qrcode.png-errors.txt';
-        unlink($archivo_error);
 
         $this->load->library('Pdf');
 
@@ -3572,6 +3469,7 @@ class Formato extends CI_Controller
         $this->load->library('Number');
         $number = new Number();
         $total_texto = $number->convertirNumeroEnLetras(round($venta[0]['importe'], 2));
+        $qrSrc = $this->phuyu_qr_data_uri($this->phuyu_qr_texto_comprobante($empresa[0], $venta[0]));
 
         $html .= '<table cellpadding="4" width="100%" style="border:1px solid #000;font-size:8px;margin-top:-5px">';
         $html .= '<tr>';
@@ -3594,23 +3492,11 @@ class Formato extends CI_Controller
         }
         $html .= '</table>';
 
-        $textoqr = $empresa[0]['razonsocial'] . '|' . $venta[0]['seriecomprobante'] . '|' . $venta[0]['nrocomprobante'] . '|' . number_format($venta[0]['igv'], 2) . '|' . number_format($venta[0]['importe'], 2) . '|' . $venta[0]['fechacomprobante'] . '|' . $venta[0]['documento'];
-
-        $this->load->library('ciqrcode');
-        $params['data'] = $textoqr;
-        $params['level'] = 'H';
-        $params['size'] = 5;
-        $params['savename'] = './sunat/webphuyu/qrcode.png';
-        $this->ciqrcode->generate($params);
-
-        $archivo_error = APPPATH . '/logs/qrcode.png-errors.txt';
-        unlink($archivo_error);
-
         $html .= '<table cellpadding="4" width="100%" style="border:1px solid #000;font-size:8px">';
         $html .= '<tr>';
         $html .= '<td style="' . $estilo . ' width:62%" rowspan="7" align="center">';
         $html .= '<h4> SON: ' . strtoupper($total_texto) . ' Y 00/100 SOLES</h4>';
-        $html .= '<img src="' . base_url() . 'sunat/webphuyu/qrcode.png" style="height:80px">';
+        $html .= '<img src="' . $qrSrc . '" style="height:80px">';
         $html .= '</td>';
         $html .= '<td style="' . $estilo . ' width:25%;text-align:right"> <b>OP.GRAVADAS S/</b> </td>';
         $html .= '<td style="' . $estilo . ' width:13%;text-align:right">' . number_format($totales[0]['gravado'], 2) . ' </td>';
@@ -3667,17 +3553,7 @@ class Formato extends CI_Controller
                 $credito = [];
             }
 
-            $textoqr = $empresa[0]['razonsocial'] . '|' . $venta[0]['seriecomprobante'] . '|' . $venta[0]['nrocomprobante'] . '|' . number_format($venta[0]['igv'], 2) . '|' . number_format($venta[0]['importe'], 2) . '|' . $venta[0]['fechacomprobante'] . '|' . $venta[0]['documento'];
-
-            $this->load->library('ciqrcode');
-            $params['data'] = $textoqr;
-            $params['level'] = 'H';
-            $params['size'] = 5;
-            $params['savename'] = './sunat/webphuyu/qrcode.png';
-            $this->ciqrcode->generate($params);
-
-            $archivo_error = APPPATH . '/logs/qrcode.png-errors.txt';
-            unlink($archivo_error);
+            $qrSrc = $this->phuyu_qr_data_uri($this->phuyu_qr_texto_comprobante($empresa[0], $venta[0]));
 
             $this->load->library('Number');
             $number = new Number();
@@ -3698,7 +3574,7 @@ class Formato extends CI_Controller
                 $ticket = 'ticket_20570793986';
             }
 
-            $this->load->view('facturacion/formato/' . $ticket, compact('empresa', 'sucursal', 'venta', 'totales', 'detalle', 'vendedor', 'credito', 'texto_importe'));
+            $this->load->view('facturacion/formato/' . $ticket, compact('empresa', 'sucursal', 'venta', 'totales', 'detalle', 'vendedor', 'credito', 'texto_importe', 'qrSrc'));
         } else {
             $this->load->view('phuyu/404');
         }

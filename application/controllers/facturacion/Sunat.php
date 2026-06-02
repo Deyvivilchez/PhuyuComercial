@@ -363,18 +363,24 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
                                 }
                             }
 
-                            if ($responsecode_texto == "0") {
+                            $responsecode_texto = trim((string) $responsecode_texto);
+                            $responsecode_numero = is_numeric($responsecode_texto) ? (int) $responsecode_texto : null;
+
+                            if ($responsecode_texto === "0") {
                                 $estado = 1;
                                 $mensaje = (string) $description_texto;
-                            } elseif ($responsecode_texto >= 100 && $responsecode_texto <= 1999) {
+                            } elseif ($responsecode_numero !== null && $responsecode_numero >= 100 && $responsecode_numero <= 1999) {
                                 $estado = 2;
                                 $mensaje = $this->phuyu_descripcion_cdr($description_texto);
-                            } elseif ($responsecode_texto >= 2000 && $responsecode_texto <= 3999) {
+                            } elseif ($responsecode_numero !== null && $responsecode_numero >= 2000 && $responsecode_numero <= 3999) {
                                 $estado = 3;
                                 $mensaje = $this->phuyu_descripcion_cdr($description_texto);
-                            } else {
+                            } elseif ($responsecode_numero !== null) {
                                 $estado = 4;
                                 $mensaje = $this->phuyu_descripcion_cdr($description_texto);
+                            } else {
+                                $estado = 0;
+                                $mensaje = "NO SE PUDO LEER EL CODIGO DE RESPUESTA DEL CDR";
                             }
 
                             $update = array(
@@ -465,18 +471,24 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
                     }
                 }
 
-                if ($responsecode_texto == "0") {
+                $responsecode_texto = trim((string) $responsecode_texto);
+                $responsecode_numero = is_numeric($responsecode_texto) ? (int) $responsecode_texto : null;
+
+                if ($responsecode_texto === "0") {
                     $estado = 1;
                     $mensaje = (string) $description_texto;
-                } elseif ($responsecode_texto >= 100 && $responsecode_texto <= 1999) {
+                } elseif ($responsecode_numero !== null && $responsecode_numero >= 100 && $responsecode_numero <= 1999) {
                     $estado = 2;
                     $mensaje = $this->phuyu_descripcion_cdr($description_texto);
-                } elseif ($responsecode_texto >= 2000 && $responsecode_texto <= 3999) {
+                } elseif ($responsecode_numero !== null && $responsecode_numero >= 2000 && $responsecode_numero <= 3999) {
                     $estado = 3;
                     $mensaje = $this->phuyu_descripcion_cdr($description_texto);
-                } else {
+                } elseif ($responsecode_numero !== null) {
                     $estado = 4;
                     $mensaje = $this->phuyu_descripcion_cdr($description_texto);
+                } else {
+                    $estado = 0;
+                    $mensaje = "NO SE PUDO LEER EL CODIGO DE RESPUESTA DEL CDR";
                 }
 
                 $update = array(
@@ -672,14 +684,19 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
                         }
                     }
 
-                    if($responsecode_texto == 0){    
+                    $responsecode_texto = trim((string) $responsecode_texto);
+                    $responsecode_numero = is_numeric($responsecode_texto) ? (int) $responsecode_texto : null;
+
+                    if($responsecode_texto === "0"){    
                         $estado = 1; $mensaje =  (string)($description_texto);
-                    }elseif($responsecode_texto >= 100 and $responsecode_texto<=1999){
+                    }elseif($responsecode_numero !== null and $responsecode_numero >= 100 and $responsecode_numero<=1999){
                         $estado = 2; $mensaje = $this->phuyu_descripcion_cdr($description_texto);
-                    }elseif($responsecode_texto >= 2000 and $responsecode_texto<=3999){
+                    }elseif($responsecode_numero !== null and $responsecode_numero >= 2000 and $responsecode_numero<=3999){
                         $estado = 3; $mensaje = $this->phuyu_descripcion_cdr($description_texto);
-                    }else{
+                    }elseif($responsecode_numero !== null){
                         $estado = 4; $mensaje = $this->phuyu_descripcion_cdr($description_texto);
+                    }else{
+                        $estado = 0; $mensaje = "NO SE PUDO LEER EL CODIGO DE RESPUESTA DEL CDR";
                     }
 
                     $update = array(
@@ -808,14 +825,19 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
                     }
                 }
 
-                if($responsecode_texto == 0){    
+                $responsecode_texto = trim((string) $responsecode_texto);
+                $responsecode_numero = is_numeric($responsecode_texto) ? (int) $responsecode_texto : null;
+
+                if($responsecode_texto === "0"){    
                     $estado = 1; $mensaje =  (string)($description_texto);
-                }elseif($responsecode_texto >= 100 and $responsecode_texto<=1999){
+                }elseif($responsecode_numero !== null and $responsecode_numero >= 100 and $responsecode_numero<=1999){
                     $estado = 2; $mensaje = $this->phuyu_descripcion_cdr($description_texto);
-                }elseif($responsecode_texto >= 2000 and $responsecode_texto<=3999){
+                }elseif($responsecode_numero !== null and $responsecode_numero >= 2000 and $responsecode_numero<=3999){
                     $estado = 3; $mensaje = $this->phuyu_descripcion_cdr($description_texto);
-                }else{
+                }elseif($responsecode_numero !== null){
                     $estado = 4; $mensaje = $this->phuyu_descripcion_cdr($description_texto);
+                }else{
+                    $estado = 0; $mensaje = "NO SE PUDO LEER EL CODIGO DE RESPUESTA DEL CDR";
                 }
 
                 $update = array(

@@ -1,0 +1,21 @@
+www-data www-data
+664 archivos
+775 carpetas
+
+sunat/                      www-data:www-data 775
+sunat/certificados/          www-data:www-data 775
+sunat/webphuyu/              www-data:www-data 775
+sunat/resumenes/             www-data:www-data 775
+sunat/resumenes/2026/06/     www-data:www-data 775
+public/img/empresa/          www-data:www-data 775
+application/logs/            www-data:www-data 775
+
+
+XML / ZIP / CDR              www-data:www-data 664
+logos empresa                www-data:www-data 664
+certificados .pfx/.pem       www-data:www-data 664
+logs                         www-data:www-data 664
+
+chown -R www-data:www-data sunat public/img/empresa application/logs
+find sunat public/img/empresa application/logs -type d -exec chmod 775 {} +
+find sunat public/img/empresa application/logs -type f -exec chmod 664 {} +
