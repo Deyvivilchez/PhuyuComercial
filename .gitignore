@@ -1,6 +1,9 @@
 # Ignorar la carpeta de facturación electrónica SUNAT por completo
 /sunat/
 
+# Logos e imágenes propias de cada cliente/empresa
+/public/img/empresa/
+
 # Archivos de configuración sensibles
 /application/config/config.php
 /application/config/database.php
