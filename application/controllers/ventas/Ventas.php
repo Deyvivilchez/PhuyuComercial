@@ -250,11 +250,21 @@ class Ventas extends CI_Controller {
 
 				$this->request->campos->codpersona = ($this->request->codpersonapedido == 0) ? $this->request->campos->codpersona : $this->request->codpersonapedido;
                 
-                //VERIFICAMOS SI ES BOLETA Y EL IMPORTE SEA MENOR A 700
+				//VERIFICAMOS SI ES BOLETA Y EL IMPORTE SEA MENOR A 700
 				if($this->request->campos->codpersona == 2 && $this->request->campos->codcomprobantetipo == 12){
 					if($this->request->totales->importe >= 700){
 						echo json_encode("e");exit;
 					}
+				}
+
+				$serie_comprobante = strtoupper(trim($this->request->campos->seriecomprobante));
+				if (
+					($this->request->campos->codcomprobantetipo == 10 && substr($serie_comprobante, 0, 1) != "F") ||
+					($this->request->campos->codcomprobantetipo == 12 && substr($serie_comprobante, 0, 1) != "B")
+				) {
+					$data["estado"] = 0;
+					$data["informacion"] = "LA SERIE NO CORRESPONDE AL TIPO DE COMPROBANTE";
+					echo json_encode($data);exit;
 				}
 
 				$this->request->campos->codlote = (!isset($this->request->campos->codlote) || empty($this->request->campos->codlote)) ? 0 : $this->request->campos->codlote;

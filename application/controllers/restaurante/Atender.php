@@ -89,8 +89,8 @@ class Atender extends CI_Controller
 					'vendedores' => $vendedores,
 					'sucursal' => $sucursal
 				];
-    
-				$this->load->view('restaurante/atender/atender', $data );
+   				 //$this->load->view('restaurante/atender/atender', $data );
+				$this->load->view('restaurante/atender/index', $data );
 			}
 			else {
 				$this->load->view('phuyu/505');

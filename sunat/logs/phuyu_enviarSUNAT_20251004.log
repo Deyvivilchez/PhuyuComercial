@@ -1,6 +1,0 @@
-[2025-10-04 12:50:49] ZIP creado: ./sunat/webphuyu/10460588982-RC-20251003-1/10460588982-RC-20251003-1.zip
-[2025-10-04 12:50:49] Usando endpoint WSDL: ./sunat/billService.wsdl
-[2025-10-04 12:50:49] Enviando sendSummary a SUNAT. archivo=10460588982-RC-20251003-1.zip
-[2025-10-04 12:50:51] Respuesta recibida y guardada en: ./sunat/webphuyu/10460588982-RC-20251003-1/R-10460588982-RC-20251003-1.xml
-[2025-10-04 12:50:51] Ticket guardado en DB: 202518304288241
-[2025-10-04 12:50:51] Detalle boletas actualizado con fechaenvio

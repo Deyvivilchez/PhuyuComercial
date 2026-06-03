@@ -5,7 +5,7 @@ var phuyu_operacion = new Vue({
 			"codmotivonota":1,"codpersona":2,"codmovimientotipo":8,"codkardex_ref":0,"seriecomprobante":"","codcomprobantetipo_ref":0,"seriecomprobante_ref":"",
 			"nrocomprobante_ref":"","descripcion":"","cliente":"","direccion":""
 		},
-		estado:0, cambio:0, kardex_id:0, series_ref:[], series:[], comprobantes:[], detalle: [], totales: {"valorventa":0.00,"igv":0.00,"importe":0.00},
+		estado:0, cambio:0, kardex_id:0, detalle_original_count:0, series_ref:[], series:[], comprobantes:[], detalle: [], totales: {"valorventa":0.00,"igv":0.00,"importe":0.00},
 	},
 	methods: {
 		phuyu_motivos: function(){
@@ -65,19 +65,17 @@ var phuyu_operacion = new Vue({
 				$.each( productos, function( k, v ) {
 			    	v.subtotal = (parseFloat(v.cantidad)*parseFloat(v.precio)).toFixed(4);
 			    	v.valorventa = parseFloat(v.cantidad)*parseFloat(v.preciosinigv);
-			    	if(v.cantidad!=v.cantidadoriginal){
-			    		this.cambio = 1;
-			    	}
 					filas.push({
 						"itemorigen":v.item,"codproducto":v.codproducto,"producto":v.producto,"codunidad":v.codunidad,"unidades": this.putunidades,
 						"unidad":v.unidad,"cantidad":v.cantidad,"stock":v.stock,"control":v.controlstock,"precio":parseFloat(v.precio).toFixed(2),
-						"preciorefunitario":v.precio,"subtotal":v.subtotal,"valorventa":v.valorventa,"codafectacionigv":v.codafectacionigv,"igv":v.igv,
+						"preciooriginal":parseFloat(v.precio).toFixed(2),"preciorefunitario":v.precio,"subtotal":v.subtotal,"valorventa":v.valorventa,"codafectacionigv":v.codafectacionigv,"igv":v.igv,
 						"preciosinigv" : v.preciosinigv,"stock":v.stock,"cantidadoriginal":v.cantidadoriginal
 					});
 					this.putunidades = [];
 				});
 
-				this.detalle = filas
+				this.detalle = filas;
+				this.detalle_original_count = filas.length;
 				var datos = eval(data.body.totales);
 				//this.totales.valorventa = datos[0]["valorventa"]; this.totales.igv = datos[0]["igv"]; this.totales.importe = datos[0]["importe"];
 				this.phuyu_totales();
@@ -106,7 +104,17 @@ var phuyu_operacion = new Vue({
 			});
 
 			this.totales.importe = Number((this.totales.valorventa + this.totales.igv).toFixed(2));
-			this.cambio = 1;
+			this.cambio = 0;
+			if (this.detalle.length != this.detalle_original_count) {
+				this.cambio = 1;
+			}
+			for (var i = 0; i < this.detalle.length; i++) {
+				var p = this.detalle[i];
+				if (Number(parseFloat(p.cantidad).toFixed(4)) != Number(parseFloat(p.stock).toFixed(4)) || Number(parseFloat(p.precio).toFixed(2)) != Number(parseFloat(p.preciooriginal).toFixed(2))) {
+					this.cambio = 1;
+					break;
+				}
+			}
 		},
 		phuyu_guardar: function(){
 			if (this.detalle.length==0) {
@@ -136,7 +144,8 @@ var phuyu_operacion = new Vue({
 						});
 						phuyu_sistema.phuyu_noti("NOTA REGISTRADA CORRECTAMENTE","NOTA REGISTRADA EN EL SISTEMA","success");
 					}else{
-						phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR NOTA ELECTRONICA","ERROR DE RED","danger");
+						var mensaje = data.body.mensaje || "ERROR DE RED";
+						phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR NOTA ELECTRONICA", mensaje, "danger");
 					}
 				}
 				phuyu_sistema.phuyu_fin(); phuyu_sistema.phuyu_modulo();
