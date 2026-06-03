@@ -1,4 +1,8 @@
 
+git rm -r --cached -f sunat
+git add .gitignore
+git commit -m "Ignorar carpeta sunat"
+
 
 # Carpetas necesarias
 
