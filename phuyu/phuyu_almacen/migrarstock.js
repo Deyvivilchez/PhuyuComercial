@@ -7,12 +7,26 @@ var phuyu_migrarstock = new Vue({
 		camposSistema: [
 			{ key: "codigo", label: "Codigo / SKU", required: true },
 			{ key: "cantidad", label: "Cantidad a sumar", required: true },
-			{ key: "unidad", label: "Unidad / codunidad", required: false }
+			{ key: "descripcion", label: "Descripcion / nombre", required: false },
+			{ key: "unidad", label: "Unidad / codunidad", required: false },
+			{ key: "codigo_barra", label: "Codigo de barra", required: false },
+			{ key: "precio_compra", label: "Precio compra", required: false },
+			{ key: "precio_venta", label: "Precio venta", required: false },
+			{ key: "marca", label: "Marca", required: false },
+			{ key: "linea", label: "Linea", required: false },
+			{ key: "familia", label: "Familia", required: false }
 		],
 		alias: {
 			codigo: ["codigo", "código", "cod", "sku", "cod_producto", "codigo producto", "codigo_producto", "codproducto", "codigo item", "codigo_barra", "codigo barra", "código barra", "barra", "barcode"],
 			cantidad: ["cantidad", "cantidad sumar", "cantidad_sumar", "cantidad a sumar", "stock", "stock inicial", "stock_inicial", "stock sumar", "stock_sumar", "stock a sumar", "existencia", "inventario", "unidades", "qty"],
-			unidad: ["unidad", "codunidad", "cod_unidad", "unidad medida", "unidad_medida"]
+			descripcion: ["descripcion", "descripción", "producto", "nombre", "detalle", "articulo", "artículo"],
+			unidad: ["unidad", "codunidad", "cod_unidad", "unidad medida", "unidad_medida"],
+			codigo_barra: ["codigo barra", "código barra", "codigo_barra", "codigobarra", "barra", "barcode"],
+			precio_compra: ["precio compra", "precio_compra", "preciocompra", "compra", "costo compra"],
+			precio_venta: ["precio venta", "precio_venta", "precioventa", "venta", "pventa", "precio publico", "precio público"],
+			marca: ["marca"],
+			linea: ["linea", "línea", "rubro"],
+			familia: ["familia", "categoria", "categoría"]
 		}
 	},
 	methods: {
@@ -157,6 +171,10 @@ var phuyu_migrarstock = new Vue({
 				phuyu_sistema.phuyu_alerta("Mapeo incompleto", "Seleccione en el mapeo las columnas Codigo / SKU y Cantidad a sumar", "error");
 				return;
 			}
+			if (this.campos.crear_productos && !this.campos.mapeo.descripcion) {
+				phuyu_sistema.phuyu_alerta("Mapeo incompleto", "Para crear productos faltantes debe asignar Descripcion / nombre", "error");
+				return;
+			}
 			if (!this.campos.filas.length) {
 				phuyu_sistema.phuyu_alerta("Seleccione un Excel", "No hay filas cargadas para previsualizar", "error");
 				return;
@@ -170,7 +188,8 @@ var phuyu_migrarstock = new Vue({
 				filas: this.campos.filas,
 				mapeo: this.campos.mapeo,
 				codalmacen: this.campos.codalmacen,
-				ignorar_stock_cero: this.campos.ignorar_stock_cero
+				ignorar_stock_cero: this.campos.ignorar_stock_cero,
+				crear_productos: this.campos.crear_productos
 			}).then(function(response){
 				if (response.body.estado == 1) {
 					self.campos.preview = response.body.preview || [];
@@ -203,13 +222,25 @@ var phuyu_migrarstock = new Vue({
 			this.campos.mapeo = {
 				codigo: "",
 				cantidad: "",
-				unidad: ""
+				descripcion: "",
+				unidad: "",
+				codigo_barra: "",
+				precio_compra: "",
+				precio_venta: "",
+				marca: "",
+				linea: "",
+				familia: ""
 			};
 			if (limpiarInput) {
 				$("#phuyu_form input[type=file]").val("");
 			}
 		},
 		np_cambio_almacen_migrarstock: function(){
+			this.campos.preview = [];
+			this.campos.resumen = null;
+			this.campos.seleccionar_todo = true;
+		},
+		np_cambio_crear_productos_migrarstock: function(){
 			this.campos.preview = [];
 			this.campos.resumen = null;
 			this.campos.seleccionar_todo = true;
@@ -241,6 +272,9 @@ var phuyu_migrarstock = new Vue({
 			}
 			if (!this.campos.mapeo.cantidad) {
 				return "Falta asignar Cantidad a sumar";
+			}
+			if (this.campos.crear_productos && !this.campos.mapeo.descripcion) {
+				return "Para crear faltantes falta asignar Descripcion / nombre";
 			}
 			return "Mapeo listo para validar";
 		},
@@ -293,7 +327,8 @@ var phuyu_migrarstock = new Vue({
 			this.$http.post(url+"almacen/migrarstock/procesar_previsualizacion", {
 				filas: filas,
 				codalmacen: this.campos.codalmacen,
-				ignorar_stock_cero: this.campos.ignorar_stock_cero
+				ignorar_stock_cero: this.campos.ignorar_stock_cero,
+				crear_productos: this.campos.crear_productos
 			}).then(function(response){
 				if (response.body.estado == 1) {
 					phuyu_sistema.phuyu_alerta("Stock actualizado correctamente !!!", response.body.mensaje || "Actualizacion realizada correctamente", "success");

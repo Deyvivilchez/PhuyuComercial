@@ -260,6 +260,10 @@
 								<input class="form-check-input" type="checkbox" id="ignorar_stock_cero" v-model="campos.ignorar_stock_cero">
 								<label class="form-check-label" for="ignorar_stock_cero">Omitir productos con stock actual 0</label>
 							</div>
+							<div class="form-check form-switch">
+								<input class="form-check-input" type="checkbox" id="crear_productos" v-model="campos.crear_productos" v-on:change="np_cambio_crear_productos_migrarstock()">
+								<label class="form-check-label" for="crear_productos">Crear productos no encontrados</label>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -308,7 +312,7 @@
 					</div>
 					<div>
 						<strong>Opcionales</strong>
-						<p class="muted mb-0">Unidad o codunidad si el Excel maneja presentaciones.</p>
+						<p class="muted mb-0">Descripcion, unidad, codigo de barra, precios, marca, linea y familia si quieres crear faltantes.</p>
 					</div>
 				</div>
 
@@ -420,6 +424,7 @@
 							<th>Fila</th>
 							<th>Codigo</th>
 							<th>Producto</th>
+							<th>Operacion</th>
 							<th>Unidad</th>
 							<th class="text-end">Stock actual</th>
 							<th class="text-end">Cantidad a sumar</th>
@@ -435,6 +440,10 @@
 							<td>{{ fila.fila }}</td>
 							<td>{{ fila.codigo }}</td>
 							<td>{{ fila.producto }}</td>
+							<td>
+								<span class="badge bg-info" v-if="fila.nuevo">Nuevo</span>
+								<span class="badge bg-secondary" v-else>Actualizar</span>
+							</td>
 							<td>{{ fila.unidad }}</td>
 							<td class="text-end">{{ fila.stock_actual }}</td>
 							<td class="text-end">{{ fila.cantidad }}</td>
@@ -462,11 +471,19 @@
 		seleccionar_todo: true,
 		limite_excel: 80,
 		ignorar_stock_cero: false,
+		crear_productos: false,
 		codalmacen: "<?php echo (int) $codalmacenActual; ?>",
 		mapeo: {
 			codigo: '',
 			cantidad: '',
-			unidad: ''
+			descripcion: '',
+			unidad: '',
+			codigo_barra: '',
+			precio_compra: '',
+			precio_venta: '',
+			marca: '',
+			linea: '',
+			familia: ''
 		}
 	};
 </script>

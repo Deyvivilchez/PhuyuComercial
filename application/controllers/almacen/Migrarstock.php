@@ -148,11 +148,19 @@ class Migrarstock extends CI_Controller
         $mapeo = isset($request->mapeo) && is_object($request->mapeo) ? $request->mapeo : new stdClass();
         $codalmacen = $this->codalmacen_migrar(isset($request->codalmacen) ? (int) $request->codalmacen : 0);
         $ignorarStockCero = isset($request->ignorar_stock_cero) ? (bool) $request->ignorar_stock_cero : false;
+        $crearProductos = isset($request->crear_productos) ? (bool) $request->crear_productos : false;
         $soloAplicar = isset($request->solo_aplicar) ? (bool) $request->solo_aplicar : false;
 
         $colCodigo = isset($mapeo->codigo) ? (string) $mapeo->codigo : '';
         $colCantidad = isset($mapeo->cantidad) ? (string) $mapeo->cantidad : '';
+        $colDescripcion = isset($mapeo->descripcion) ? (string) $mapeo->descripcion : '';
         $colUnidad = isset($mapeo->unidad) ? (string) $mapeo->unidad : '';
+        $colCodigoBarra = isset($mapeo->codigo_barra) ? (string) $mapeo->codigo_barra : '';
+        $colPrecioCompra = isset($mapeo->precio_compra) ? (string) $mapeo->precio_compra : '';
+        $colPrecioVenta = isset($mapeo->precio_venta) ? (string) $mapeo->precio_venta : '';
+        $colMarca = isset($mapeo->marca) ? (string) $mapeo->marca : '';
+        $colLinea = isset($mapeo->linea) ? (string) $mapeo->linea : '';
+        $colFamilia = isset($mapeo->familia) ? (string) $mapeo->familia : '';
         $colAplicar = isset($mapeo->aplicar) ? (string) $mapeo->aplicar : '';
 
         if ($codalmacen <= 0) {
@@ -162,6 +170,11 @@ class Migrarstock extends CI_Controller
 
         if ($colCodigo === '' || $colCantidad === '') {
             echo json_encode(['estado' => 0, 'mensaje' => 'Debe mapear las columnas obligatorias: codigo y cantidad a sumar.']);
+            return;
+        }
+
+        if ($crearProductos && $colDescripcion === '') {
+            echo json_encode(['estado' => 0, 'mensaje' => 'Para crear productos faltantes debe mapear la columna descripcion/nombre.']);
             return;
         }
 
@@ -182,14 +195,25 @@ class Migrarstock extends CI_Controller
 
             $codigo = $this->normalizar_texto($this->valor_fila_objeto($fila, $colCodigo));
             $cantidad = $this->numero_excel($this->valor_fila_objeto($fila, $colCantidad), null);
-            $codunidad = $colUnidad !== '' ? $this->entero_excel($this->valor_fila_objeto($fila, $colUnidad), 0) : 0;
+            $unidadExcel = $colUnidad !== '' ? $this->normalizar_texto($this->valor_fila_objeto($fila, $colUnidad)) : '';
+            $codunidad = $colUnidad !== '' ? $this->entero_excel($unidadExcel, 0) : 0;
+            $datosNuevo = [
+                'descripcion' => $colDescripcion !== '' ? $this->normalizar_texto($this->valor_fila_objeto($fila, $colDescripcion)) : '',
+                'unidad_texto' => $unidadExcel,
+                'codigo_barra' => $colCodigoBarra !== '' ? $this->normalizar_texto($this->valor_fila_objeto($fila, $colCodigoBarra)) : '',
+                'precio_compra' => $colPrecioCompra !== '' ? $this->numero_excel($this->valor_fila_objeto($fila, $colPrecioCompra), 0) : 0,
+                'precio_venta' => $colPrecioVenta !== '' ? $this->numero_excel($this->valor_fila_objeto($fila, $colPrecioVenta), 0) : 0,
+                'marca' => $colMarca !== '' ? $this->normalizar_texto($this->valor_fila_objeto($fila, $colMarca)) : '',
+                'linea' => $colLinea !== '' ? $this->normalizar_texto($this->valor_fila_objeto($fila, $colLinea)) : '',
+                'familia' => $colFamilia !== '' ? $this->normalizar_texto($this->valor_fila_objeto($fila, $colFamilia)) : ''
+            ];
             $aplicar = $colAplicar !== '' ? $this->normalizar_texto($this->valor_fila_objeto($fila, $colAplicar)) : '';
 
-            if ($codigo === '' && $cantidad === null && $codunidad == 0 && $aplicar === '') {
+            if ($codigo === '' && $datosNuevo['descripcion'] === '' && $cantidad === null && $codunidad == 0 && $aplicar === '') {
                 continue;
             }
 
-            $resultado = $this->preparar_fila_preview($idx + 2, $codigo, $cantidad, $codunidad, $aplicar, $soloAplicar, $ignorarStockCero, $codalmacen);
+            $resultado = $this->preparar_fila_preview($idx + 2, $codigo, $cantidad, $codunidad, $aplicar, $soloAplicar, $ignorarStockCero, $codalmacen, $crearProductos, $datosNuevo);
             $preview[] = $resultado;
 
             if ($resultado['valido']) {
@@ -231,6 +255,7 @@ class Migrarstock extends CI_Controller
         $filas = isset($request->filas) && is_array($request->filas) ? $request->filas : [];
         $codalmacen = $this->codalmacen_migrar(isset($request->codalmacen) ? (int) $request->codalmacen : 0);
         $ignorarStockCero = isset($request->ignorar_stock_cero) ? (bool) $request->ignorar_stock_cero : false;
+        $crearProductos = isset($request->crear_productos) ? (bool) $request->crear_productos : false;
         $procesados = 0;
         $errores = [];
         $transaccion = false;
@@ -258,8 +283,18 @@ class Migrarstock extends CI_Controller
                 $cantidad = $this->numero_excel(isset($fila->cantidad) ? $fila->cantidad : null, null);
                 $codunidad = isset($fila->codunidad) ? (int) $fila->codunidad : 0;
                 $row = isset($fila->fila) ? (int) $fila->fila : 0;
+                $datosNuevo = [
+                    'descripcion' => isset($fila->producto) ? $this->normalizar_texto($fila->producto) : '',
+                    'unidad_texto' => isset($fila->unidad_texto) ? $this->normalizar_texto($fila->unidad_texto) : '',
+                    'codigo_barra' => isset($fila->codigo_barra) ? $this->normalizar_texto($fila->codigo_barra) : '',
+                    'precio_compra' => isset($fila->precio_compra) ? $this->numero_excel($fila->precio_compra, 0) : 0,
+                    'precio_venta' => isset($fila->precio_venta) ? $this->numero_excel($fila->precio_venta, 0) : 0,
+                    'marca' => isset($fila->marca) ? $this->normalizar_texto($fila->marca) : '',
+                    'linea' => isset($fila->linea) ? $this->normalizar_texto($fila->linea) : '',
+                    'familia' => isset($fila->familia) ? $this->normalizar_texto($fila->familia) : ''
+                ];
 
-                $resultado = $this->sumar_stock_producto_excel($codigo, $cantidad, $codunidad, $ignorarStockCero, $row, $codalmacen);
+                $resultado = $this->sumar_stock_producto_excel($codigo, $cantidad, $codunidad, $ignorarStockCero, $row, $codalmacen, $crearProductos, $datosNuevo);
                 if ($resultado['estado'] == 1) {
                     $procesados++;
                 } else {
@@ -437,7 +472,7 @@ class Migrarstock extends CI_Controller
         return empty($existe) ? 0 : $codalmacen;
     }
 
-    private function preparar_fila_preview($row, $codigo, $cantidad, $codunidad, $aplicar, $soloAplicar, $ignorarStockCero, $codalmacen)
+    private function preparar_fila_preview($row, $codigo, $cantidad, $codunidad, $aplicar, $soloAplicar, $ignorarStockCero, $codalmacen, $crearProductos = false, $datosNuevo = [])
     {
         $base = [
             'fila' => (int) $row,
@@ -446,11 +481,19 @@ class Migrarstock extends CI_Controller
             'codproducto' => 0,
             'codunidad' => (int) $codunidad,
             'unidad' => '',
+            'unidad_texto' => isset($datosNuevo['unidad_texto']) ? $datosNuevo['unidad_texto'] : '',
+            'codigo_barra' => isset($datosNuevo['codigo_barra']) ? $datosNuevo['codigo_barra'] : '',
+            'precio_compra' => isset($datosNuevo['precio_compra']) ? (float) $datosNuevo['precio_compra'] : 0,
+            'precio_venta' => isset($datosNuevo['precio_venta']) ? (float) $datosNuevo['precio_venta'] : 0,
+            'marca' => isset($datosNuevo['marca']) ? $datosNuevo['marca'] : '',
+            'linea' => isset($datosNuevo['linea']) ? $datosNuevo['linea'] : '',
+            'familia' => isset($datosNuevo['familia']) ? $datosNuevo['familia'] : '',
             'stock_actual' => '',
             'cantidad' => $cantidad,
             'stock_final' => '',
             'valido' => false,
             'omitido' => false,
+            'nuevo' => false,
             'seleccionado' => false,
             'mensaje' => ''
         ];
@@ -461,26 +504,46 @@ class Migrarstock extends CI_Controller
             return $base;
         }
 
-        if ($codigo === '') {
-            $base['mensaje'] = 'Falta codigo.';
+        $descripcionNueva = isset($datosNuevo['descripcion']) ? $this->normalizar_texto($datosNuevo['descripcion']) : '';
+
+        if ($codigo === '' && $descripcionNueva === '') {
+            $base['mensaje'] = 'Falta codigo o descripcion.';
             return $base;
         }
 
-        $producto = $this->db->get_where('almacen.productos', ['codigo' => $codigo, 'estado' => 1])->row_array();
-        if (empty($producto)) {
+        $producto = $this->buscar_producto_migrar($codigo, $descripcionNueva, $base['codigo_barra']);
+        if (empty($producto) && !$crearProductos) {
             $base['mensaje'] = 'Producto no existe.';
             return $base;
         }
 
-        $codproducto = (int) $producto['codproducto'];
-        $base['producto'] = $producto['descripcion'];
-        $base['codproducto'] = $codproducto;
+        if (empty($producto)) {
+            $base['producto'] = $descripcionNueva;
+            $base['nuevo'] = true;
+        } else {
+            $codproducto = (int) $producto['codproducto'];
+            $base['producto'] = $producto['descripcion'];
+            $base['codproducto'] = $codproducto;
+        }
 
         if ($cantidad === null || $cantidad <= 0) {
             $base['mensaje'] = 'Cantidad debe ser mayor a 0.';
             return $base;
         }
 
+        if ($base['nuevo']) {
+            $unidadPreview = $this->buscar_unidad_migrar($base['unidad_texto']);
+            $base['codunidad'] = $unidadPreview > 0 ? $unidadPreview : 0;
+            $base['unidad'] = $base['unidad_texto'] !== '' ? $base['unidad_texto'] : 'UNIDAD';
+            $base['stock_actual'] = 0;
+            $base['stock_final'] = round((float) $cantidad, 3);
+            $base['valido'] = true;
+            $base['seleccionado'] = true;
+            $base['mensaje'] = 'Producto nuevo.';
+            return $base;
+        }
+
+        $codproducto = (int) $producto['codproducto'];
         if ($codunidad <= 0) {
             $unidadBase = $this->db->query(
                 'select codunidad from almacen.productoubicacion where codalmacen=? and codproducto=? and estado=1 order by factor asc limit 1',
@@ -533,11 +596,21 @@ class Migrarstock extends CI_Controller
         return $base;
     }
 
-    private function sumar_stock_producto_excel($codigo, $cantidad, $codunidad, $ignorarStockCero, $row, $codalmacen)
+    private function sumar_stock_producto_excel($codigo, $cantidad, $codunidad, $ignorarStockCero, $row, $codalmacen, $crearProductos = false, $datosNuevo = [])
     {
-        $producto = $this->db->get_where('almacen.productos', ['codigo' => $codigo, 'estado' => 1])->row_array();
+        $descripcion = isset($datosNuevo['descripcion']) ? $this->normalizar_texto($datosNuevo['descripcion']) : '';
+        $codigoBarra = isset($datosNuevo['codigo_barra']) ? $this->normalizar_texto($datosNuevo['codigo_barra']) : '';
+        $producto = $this->buscar_producto_migrar($codigo, $descripcion, $codigoBarra);
         if (empty($producto)) {
-            return ['estado' => 0, 'omitido' => 0, 'mensaje' => 'Fila ' . $row . ': no existe producto con codigo ' . $codigo . '.'];
+            if (!$crearProductos) {
+                return ['estado' => 0, 'omitido' => 0, 'mensaje' => 'Fila ' . $row . ': no existe producto con codigo ' . $codigo . '.'];
+            }
+
+            $creado = $this->crear_producto_migrar($codigo, $cantidad, $codalmacen, $datosNuevo);
+            if ($creado['estado'] == 1) {
+                return ['estado' => 1, 'omitido' => 0, 'mensaje' => ''];
+            }
+            return ['estado' => 0, 'omitido' => 0, 'mensaje' => 'Fila ' . $row . ': ' . $creado['mensaje']];
         }
 
         $codproducto = (int) $producto['codproducto'];
@@ -625,6 +698,229 @@ class Migrarstock extends CI_Controller
         }
 
         return ['estado' => 1, 'omitido' => 0, 'mensaje' => ''];
+    }
+
+    private function buscar_producto_migrar($codigo, $descripcion = '', $codigoBarra = '')
+    {
+        $codigo = $this->normalizar_texto($codigo);
+        $descripcion = $this->normalizar_texto($descripcion);
+        $codigoBarra = $this->normalizar_texto($codigoBarra);
+
+        if ($codigo !== '') {
+            $producto = $this->db->get_where('almacen.productos', ['codigo' => $codigo, 'estado' => 1])->row_array();
+            if (!empty($producto)) {
+                return $producto;
+            }
+        }
+
+        if ($codigoBarra !== '') {
+            $producto = $this->db->query(
+                'select p.* from almacen.productos p inner join almacen.productounidades u on (p.codproducto=u.codproducto) where p.estado=1 and u.estado=1 and u.codigobarra=? limit 1',
+                [$codigoBarra]
+            )->row_array();
+            if (!empty($producto)) {
+                return $producto;
+            }
+        }
+
+        if ($descripcion !== '') {
+            $producto = $this->db->query(
+                'select * from almacen.productos where estado=1 and upper(trim(descripcion))=upper(trim(?)) limit 1',
+                [$descripcion]
+            )->row_array();
+            if (!empty($producto)) {
+                return $producto;
+            }
+        }
+
+        return [];
+    }
+
+    private function crear_producto_migrar($codigo, $cantidad, $codalmacen, $datos)
+    {
+        $descripcion = isset($datos['descripcion']) ? $this->normalizar_texto($datos['descripcion']) : '';
+        if ($descripcion === '') {
+            return ['estado' => 0, 'mensaje' => 'falta descripcion para crear producto.'];
+        }
+
+        $almacen = $this->db->get_where('almacen.almacenes', ['codalmacen' => $codalmacen, 'estado' => 1])->row_array();
+        if (empty($almacen)) {
+            return ['estado' => 0, 'mensaje' => 'almacen destino invalido.'];
+        }
+
+        $codfamilia = $this->resolver_catalogo_migrar('familias', 'codfamilia', isset($datos['familia']) ? $datos['familia'] : '', 'GENERAL');
+        $codlinea = $this->resolver_catalogo_migrar('lineas', 'codlinea', isset($datos['linea']) ? $datos['linea'] : '', 'GENERAL');
+        $codmarca = $this->resolver_catalogo_migrar('marcas', 'codmarca', isset($datos['marca']) ? $datos['marca'] : '', 'GENERICO');
+        $codunidad = $this->resolver_unidad_migrar(isset($datos['unidad_texto']) ? $datos['unidad_texto'] : '');
+
+        if ($codfamilia <= 0 || $codlinea <= 0 || $codmarca <= 0 || $codunidad <= 0) {
+            return ['estado' => 0, 'mensaje' => 'no se pudo resolver familia, linea, marca o unidad.'];
+        }
+
+        $precioCompra = isset($datos['precio_compra']) ? (float) $datos['precio_compra'] : 0;
+        $precioVenta = isset($datos['precio_venta']) ? (float) $datos['precio_venta'] : 0;
+        $codigoBarra = isset($datos['codigo_barra']) ? $this->normalizar_texto($datos['codigo_barra']) : '';
+
+        $this->db->insert('almacen.productos', [
+            'codfamilia' => $codfamilia,
+            'codlinea' => $codlinea,
+            'codmarca' => $codmarca,
+            'codempresa' => isset($_SESSION['phuyu_codempresa']) ? (int) $_SESSION['phuyu_codempresa'] : 1,
+            'codigo' => $codigo !== '' ? $codigo : '',
+            'descripcion' => $descripcion,
+            'afectoicbper' => 0,
+            'controlstock' => 1,
+            'afectoigvcompra' => 0,
+            'afectoigvventa' => 0,
+            'calcular' => 0,
+            'paraventa' => 1,
+            'codatencion' => 0,
+            'caracteristicas' => '',
+            'tipo' => 1,
+            'controlarseries' => 0,
+            'estado' => 1
+        ]);
+
+        $codproducto = $this->ultimo_id_insertado_migrar('almacen.productos', 'codproducto');
+        if ($codproducto <= 0) {
+            return ['estado' => 0, 'mensaje' => 'no se pudo obtener codigo del producto creado.'];
+        }
+
+        if ($codigo === '') {
+            $codigo = '000' . $codproducto;
+            $this->db->where('codproducto', $codproducto);
+            $this->db->update('almacen.productos', ['codigo' => $codigo]);
+        }
+
+        $dataUnidad = [
+            'codproducto' => $codproducto,
+            'codunidad' => $codunidad,
+            'codsucursal' => isset($_SESSION['phuyu_codsucursal']) ? (int) $_SESSION['phuyu_codsucursal'] : null,
+            'factor' => 1,
+            'preciocompra' => $precioCompra,
+            'preciocosto' => $precioCompra,
+            'pventapublico' => $precioVenta,
+            'pventamin' => $precioVenta,
+            'pventacredito' => $precioVenta,
+            'pventaxmayor' => $precioVenta,
+            'pventaadicional' => $precioVenta,
+            'codigobarra' => $codigoBarra,
+            'estado' => 1
+        ];
+        $this->upsert_por_filtro_migrar('almacen.productounidades', $dataUnidad, ['codproducto' => $codproducto, 'codunidad' => $codunidad]);
+
+        $dataUbicacion = $dataUnidad;
+        unset($dataUbicacion['codsucursal']);
+        $dataUbicacion['codalmacen'] = $codalmacen;
+        $dataUbicacion['codsucursal'] = isset($almacen['codsucursal']) ? (int) $almacen['codsucursal'] : (isset($_SESSION['phuyu_codsucursal']) ? (int) $_SESSION['phuyu_codsucursal'] : null);
+        $dataUbicacion['stockactual'] = (float) $cantidad;
+        $dataUbicacion['stockactualreal'] = (float) $cantidad;
+        $dataUbicacion['stockactualconvertido'] = (float) $cantidad;
+        $dataUbicacion['preciostockvalorizado'] = (float) $cantidad * $precioCompra;
+        $dataUbicacion['codafectacionigvcompra'] = isset($almacen['codafectacionigv']) && (int) $almacen['codafectacionigv'] > 0 ? (int) $almacen['codafectacionigv'] : (isset($_SESSION['phuyu_afectacionigv']) ? (int) $_SESSION['phuyu_afectacionigv'] : 1);
+        $dataUbicacion['codafectacionigvventa'] = $dataUbicacion['codafectacionigvcompra'];
+        $dataUbicacion['comisionvendedor'] = 0;
+
+        $this->upsert_por_filtro_migrar('almacen.productoubicacion', $dataUbicacion, [
+            'codalmacen' => $codalmacen,
+            'codproducto' => $codproducto,
+            'codunidad' => $codunidad
+        ]);
+
+        return ['estado' => 1, 'mensaje' => ''];
+    }
+
+    private function resolver_catalogo_migrar($tabla, $pk, $valor, $defecto)
+    {
+        $texto = $this->normalizar_texto($valor);
+        if ($texto === '') {
+            $texto = $defecto;
+        }
+
+        if (is_numeric($texto)) {
+            $registro = $this->db->get_where('almacen.' . $tabla, [$pk => (int) $texto, 'estado' => 1])->row_array();
+            if (!empty($registro)) {
+                return (int) $registro[$pk];
+            }
+        }
+
+        $registro = $this->db->query('select ' . $pk . ' from almacen.' . $tabla . ' where estado=1 and upper(trim(descripcion))=? limit 1', [strtoupper($texto)])->row_array();
+        if (!empty($registro)) {
+            return (int) $registro[$pk];
+        }
+
+        $this->db->insert('almacen.' . $tabla, ['descripcion' => $texto, 'estado' => 1]);
+        return $this->ultimo_id_insertado_migrar('almacen.' . $tabla, $pk);
+    }
+
+    private function resolver_unidad_migrar($valor)
+    {
+        $texto = $this->normalizar_texto($valor);
+        if ($texto === '') {
+            $texto = 'UNIDAD';
+        }
+
+        if (is_numeric($texto)) {
+            $registro = $this->db->get_where('almacen.unidades', ['codunidad' => (int) $texto, 'estado' => 1])->row_array();
+            if (!empty($registro)) {
+                return (int) $registro['codunidad'];
+            }
+        }
+
+        $registro = $this->db->query('select codunidad from almacen.unidades where estado=1 and (upper(trim(descripcion))=? or upper(trim(oficial))=?) limit 1', [strtoupper($texto), strtoupper($texto)])->row_array();
+        if (!empty($registro)) {
+            return (int) $registro['codunidad'];
+        }
+
+        $oficial = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $texto), 0, 3));
+        if ($oficial === '') {
+            $oficial = 'NIU';
+        }
+        $this->db->insert('almacen.unidades', ['descripcion' => $texto, 'oficial' => $oficial, 'estado' => 1]);
+        return $this->ultimo_id_insertado_migrar('almacen.unidades', 'codunidad');
+    }
+
+    private function buscar_unidad_migrar($valor)
+    {
+        $texto = $this->normalizar_texto($valor);
+        if ($texto === '') {
+            $texto = 'UNIDAD';
+        }
+
+        if (is_numeric($texto)) {
+            $registro = $this->db->get_where('almacen.unidades', ['codunidad' => (int) $texto, 'estado' => 1])->row_array();
+            if (!empty($registro)) {
+                return (int) $registro['codunidad'];
+            }
+        }
+
+        $registro = $this->db->query('select codunidad from almacen.unidades where estado=1 and (upper(trim(descripcion))=? or upper(trim(oficial))=?) limit 1', [strtoupper($texto), strtoupper($texto)])->row_array();
+        return !empty($registro) ? (int) $registro['codunidad'] : 0;
+    }
+
+    private function upsert_por_filtro_migrar($tabla, $data, $filtro)
+    {
+        $existe = $this->db->get_where($tabla, $filtro)->row_array();
+        if (empty($existe)) {
+            $this->db->insert($tabla, $data);
+            return;
+        }
+
+        foreach ($filtro as $campo => $valor) {
+            $this->db->where($campo, $valor);
+        }
+        $this->db->update($tabla, $data);
+    }
+
+    private function ultimo_id_insertado_migrar($tabla, $columna)
+    {
+        $id = (int) $this->db->insert_id();
+        if ($id > 0) {
+            return $id;
+        }
+
+        $registro = $this->db->query('select currval(pg_get_serial_sequence(?, ?)) as id', [$tabla, $columna])->row_array();
+        return isset($registro['id']) ? (int) $registro['id'] : 0;
     }
 
     private function mapear_cabeceras_migrar_stock($cabeceras)
