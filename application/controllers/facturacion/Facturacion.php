@@ -87,23 +87,11 @@ class Facturacion extends Sunat {
 
 				$estado = $this->Facturacion_model->phuyu_crearXML($codoficial,$codkardex);
 				if ($estado["estado"]!=0) {
-<<<<<<< HEAD
-					$firma = Sunat::phuyu_firmarXML($estado["carpeta_phuyu"]."/".$estado["archivo_phuyu"], 0);
-					if ($firma==1) {
-						if (!is_dir("./sunat/logs")) {
-							@mkdir("./sunat/logs", 0777, true);
-						}
-						@copy($estado["carpeta_phuyu"]."/".$estado["archivo_phuyu"].".xml", "./sunat/logs/xml_sent_".$estado["archivo_phuyu"].".xml");
-						$credenciales = [$_SESSION["phuyu_ruc"],$empresa[0]["usuariosol"],$empresa[0]["clavesol"],$codkardex];
-                        $estado = Sunat::phuyu_enviarSUNAT("sendBill",$estado["carpeta_phuyu"],$estado["archivo_phuyu"],$credenciales);
-						$mensaje = $estado["mensaje"]; $estado = $estado["estado"]; $alerta = ($estado==1) ? "success" : "error";
-=======
 					$firma = $this->phuyu_firmarXML($estado["carpeta_phuyu"]."/".$estado["archivo_phuyu"], 0, true);
 					if ($firma["estado"]==1) {
 						$credenciales = [$_SESSION["phuyu_ruc"],$empresa[0]["usuariosol"],$empresa[0]["clavesol"],$codkardex];
                         $estado = Sunat::phuyu_enviarSUNAT("sendBill",$estado["carpeta_phuyu"],$estado["archivo_phuyu"],$credenciales);
 						$mensaje = $estado["mensaje"]; $estado = $estado["estado"]; $alerta = ($estado==1 || $estado==2) ? "success" : "error";
->>>>>>> b22e6521701c1f7c607ac36d3aea91442f690431
 					}else{
 						$estado = 0; $mensaje = "NO SE PUEDE FIRMAR EL DOCUMENTO XML: ".$firma["mensaje"]; $alerta = "error";
 					}

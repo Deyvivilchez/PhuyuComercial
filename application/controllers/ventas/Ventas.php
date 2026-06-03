@@ -770,229 +770,10 @@ class Ventas extends CI_Controller
 
                 $kardexsunat = $this->db->query('select estado from sunat.kardexsunat where codkardex = ' . $value['codkardex'])->result_array();
 
-<<<<<<< HEAD
-				if($this->request->codproforma != 0){
-					$info = $this->db->query("select *from kardex.proformas where codproforma=".$this->request->codproforma)->result_array();
-					if($info[0]["estado"] == 0){
-						echo json_encode("e");exit;
-					}
-				}
-
-				$this->request->campos->codpersona = ($this->request->codpersonapedido == 0) ? $this->request->campos->codpersona : $this->request->codpersonapedido;
-                
-				//VERIFICAMOS SI ES BOLETA Y EL IMPORTE SEA MENOR A 700
-				if($this->request->campos->codpersona == 2 && $this->request->campos->codcomprobantetipo == 12){
-					if($this->request->totales->importe >= 700){
-						echo json_encode("e");exit;
-					}
-				}
-
-				$serie_comprobante = strtoupper(trim($this->request->campos->seriecomprobante));
-				if (
-					($this->request->campos->codcomprobantetipo == 10 && substr($serie_comprobante, 0, 1) != "F") ||
-					($this->request->campos->codcomprobantetipo == 12 && substr($serie_comprobante, 0, 1) != "B")
-				) {
-					$data["estado"] = 0;
-					$data["informacion"] = "LA SERIE NO CORRESPONDE AL TIPO DE COMPROBANTE";
-					echo json_encode($data);exit;
-				}
-
-				$this->request->campos->codlote = (!isset($this->request->campos->codlote) || empty($this->request->campos->codlote)) ? 0 : $this->request->campos->codlote;
-
-				$this->db->trans_begin();
-
-				/* REGISTRO KARDEX Y KARDEXDETALLE */
-
-				$codkardex = $this->Kardex_model->phuyu_kardex($this->request->campos, $this->request->totales, 0); 
-				$codkardexalmacen = 0; $retirar = $this->request->campos->retirar; $estado = 1;
-				if ($retirar == 1) {
-					$codkardexalmacen = $this->Kardex_model->phuyu_kardexalmacen($codkardex, 4, $this->request->campos);
-				}
-
-				$detalle = $this->Kardex_model->phuyu_kardexdetalle($codkardex, $codkardexalmacen, $this->request->detalle, $retirar, 0,$this->request->codpedido,$this->request->codproforma);
-
-				//echo json_encode($detalle['success']);exit;
-				if(!$detalle['success']){
-					$data["estado"] = 0; $data["informacion"] = $detalle;
-				    echo json_encode($data);exit;
-				}
-
-
-				if($this->request->codpedido != 0){
-                    $detallepedido = $this->phuyu_model->phuyu_pedidodetalle($this->request->codpedido, $this->request->detalle);
-                    if($this->request->campos->terminarpedido == true){
-						$campos = ["estadoproceso"];
-						$valores = [1];
-
-						$estado_u = $this->phuyu_model->phuyu_editar("kardex.pedidos", $campos, $valores, "codpedido",$this->request->codpedido);
-					}
-				}
-
-				if($this->request->codproforma != 0){
-                    $detalleproforma = $this->phuyu_model->phuyu_proformadetalle($this->request->codproforma, $this->request->detalle);
-                    if($this->request->campos->terminarpedido == true){
-						$campos = ["estadoproceso"];
-						$valores = [1];
-
-						$estado_u = $this->phuyu_model->phuyu_editar("kardex.proformas", $campos, $valores, "codproforma",$this->request->codproforma);
-					}
-				}
-
-				/* REGISTRO MOVIMIENTO DE CAJA */
-
-				if ($this->request->campos->codmoneda!=1) {
-					$importe = round($this->request->totales->importe * $this->request->campos->tipocambio,2);
-					$importemoneda = $this->request->totales->importe;
-				}else{
-					$importe = $this->request->totales->importe;
-					$importemoneda = $this->request->totales->importe;
-				}
-
-				$codmovimiento = $this->Caja_model->phuyu_movimientos($codkardex, 1, 1, $importe, $this->request->campos,$importemoneda);
-
-				if($codmovimiento==0){
-					$data["estado"] = 3; $data["informacion"] = 'La venta se interrumpió porque la caja que usted está utilizando está cerrada, vuelve a iniciar sesión';
-				    echo json_encode($data);exit;
-				}
-
-				if ($this->request->campos->condicionpago==1) {
-					$estado = $this->Caja_model->phuyu_movimientosdetalle($codmovimiento, $this->request->pagos);
-				}
-
-				/* REGISTRO CREDITO POR COBRAR */
-
-				if ($this->request->campos->condicionpago==2) {
-					$persona = $this->db->query("select documento,d.abreviatura as tipo from public.personas p inner join public.documentotipos d on(p.coddocumentotipo=d.coddocumentotipo) where p.codpersona=".$this->request->campos->codpersona)->result_array();
-
-					$estado = $this->Caja_model->phuyu_credito($codkardex, $codmovimiento, 1, $this->request->campos, $this->request->totales, $this->request->cuotas,$persona[0]["tipo"].'-'.$persona[0]["documento"]);
-				}
-
-				/* COMPROBANTE ELECTRONICO PARA SUNAT: REGISTRO EN KARDEX SUNAT */
-
-				if ($this->request->campos->codcomprobantetipo==10 || $this->request->campos->codcomprobantetipo==12) {
-					$kardex = $this->db->query("select nrocomprobante from kardex.kardex where codkardex=".$codkardex)->result_array();
-					if ($this->request->campos->codcomprobantetipo==10) {
-						$xml = $_SESSION["phuyu_ruc"]."-01-".$this->request->campos->seriecomprobante."-".$kardex[0]["nrocomprobante"];
-					}else{
-						$xml = $_SESSION["phuyu_ruc"]."-03-".$this->request->campos->seriecomprobante."-".$kardex[0]["nrocomprobante"];
-					}
-					$campos = ["codkardex","codsucursal","codusuario","fechacreado","nombre_xml"];
-					$valores = [
-						(int)$codkardex,(int)$_SESSION["phuyu_codsucursal"],(int)$_SESSION["phuyu_codusuario"],
-						$this->request->campos->fechacomprobante, $xml
-					];
-					$estado = $this->phuyu_model->phuyu_guardar("sunat.kardexsunat", $campos, $valores);
-				}
-
-				if ($this->db->trans_status() === FALSE){
-				    $this->db->trans_rollback(); $estado = 0;
-				}else{
-					if ($estado!=1) { 
-						$this->db->trans_rollback(); $estado = 0; 
-					}
-					$this->db->trans_commit();
-				}
-				$data["estado"] = $estado; $data["codkardex"] = $codkardex;
-				echo json_encode($data);
-			}else{
-				echo json_encode("e");
-			}
-		}else{
-			$this->load->view("phuyu/404");
-		}
-	}
-
-	function editar(){
-		if ($this->input->is_ajax_request()) {
-			if (isset( $_SESSION["phuyu_codusuario"]) ) {
-				$this->request = json_decode(file_get_contents('php://input'));
-				$info = $this->db->query("select kardex.codkardex,kardex.fechacomprobante,kardex.fechakardex, kardex.seriecomprobante, kardex.nrocomprobante,kardex.nroplaca,kardex.cliente,kardex.direccion,kardex.descripcion,personas.codpersona, personas.razonsocial,comprobantes.descripcion as tipo from kardex.kardex as kardex inner join public.personas as personas on (kardex.codpersona=personas.codpersona) inner join caja.comprobantetipos as comprobantes on(kardex.codcomprobantetipo=comprobantes.codcomprobantetipo) where kardex.codkardex=".$this->request->codregistro)->result_array();
-				$sunat_existe = $this->db->query("select estado from sunat.kardexsunat where codkardex=".$this->request->codregistro)->result_array();
-				if (count($sunat_existe)==0) {
-					$sunat = 0;
-				}else{
-					if ($sunat_existe[0]["estado"]==0) {
-						$sunat = 0;
-					}else{
-						$sunat = 1;
-					}
-				}
-				$this->load->view("ventas/ventas/editar",compact("info","sunat"));
-			}else{
-				$this->load->view("phuyu/505");
-			}
-		}else{
-			$this->load->view("phuyu/404");
-		}
-	}
-
-	function editar_guardar(){
-		if ($this->input->is_ajax_request()) {
-			$this->request = json_decode(file_get_contents('php://input'));
-
-			$campos = ["codpersona","fechacomprobante","fechakardex","cliente","direccion","descripcion","nroplaca"];
-			$valores = [
-				$this->request->codpersona,
-				$this->request->fechacomprobante,
-				$this->request->fechakardex,
-				$this->request->cliente,
-				$this->request->direccion,
-				$this->request->descripcion,
-				$this->request->nroplaca
-			];
-			$estado = $this->phuyu_model->phuyu_editar("kardex.kardex", $campos, $valores, "codkardex",$this->request->codregistro);
-
-			$campos = ["fechakardex"]; $valores = [$this->request->fechakardex];
-			$estado_u = $this->phuyu_model->phuyu_editar("kardex.kardexalmacen", $campos, $valores, "codkardex",$this->request->codregistro);
-
-			$campos = ["codpersona","fechacredito"]; $valores = [$this->request->codpersona,$this->request->fechacomprobante];
-			$estado_u = $this->phuyu_model->phuyu_editar("kardex.creditos", $campos, $valores, "codkardex",$this->request->codregistro);
-			$campos = ["codpersona","fechamovimiento"]; $valores = [$this->request->codpersona,$this->request->fechacomprobante];
-			$estado_u = $this->phuyu_model->phuyu_editar("caja.movimientos", $campos, $valores, "codkardex",$this->request->codregistro);
-
-			echo $estado;
-		}
-	}
-
-	function eliminar(){
-		if ($this->input->is_ajax_request()) {
-			$this->request = json_decode(file_get_contents('php://input'));
-			$this->db->trans_begin();
-
-			//REVISAMOS SI LA VENTA YA ESTA ELIMINADO	
-
-			// REVISAMOS SI ESTA SUJETO A UNA NOTA DE CREDITO
-
-			$comprobante = $this->db->query("select *from kardex.kardex where codkardex_ref=".$this->request->codregistro." and estado<>0 and codmovimientotipo=8")->result_array();
-
-			if(count($comprobante) > 0){
-				$this->db->trans_rollback(); 
-				$data["estado"] = 5;
-				$data["mensaje"] = "La venta no puede ser anulada porque está sujeta a la nota de credito ".$comprobante[0]["seriecomprobante"]."-".$comprobante[0]["nrocomprobante"]; 
-				echo json_encode($data); exit();
-			}		
-
-			$comprobante = $this->db->query("select *from kardex.kardex where codkardex=".$this->request->codregistro." and estado<>0")->result_array();
-
-			// REVISAMOS LA FECHA DE EMISION SI ES FACTURA O BOLETA
-
-			$dteStart = new DateTime($comprobante[0]["fechacomprobante"]); 
-            $dteEnd   = new DateTime(date('Y-m-d'));
-            $dteDiff  = $dteStart->diff($dteEnd);
-            $diferencia = $dteDiff->days;
-
-            if($comprobante[0]["codcomprobantetipo"] == 10 || $comprobante[0]["codcomprobantetipo"] == 12){
-            	if((int)$diferencia > 7){
-                   $this->db->trans_rollback(); 
-                    $data["estado"] = 2;
-					$data["mensaje"] = "Los dias máximos de anulación de ventas sobrepasó el límite, desea de todas maneras eliminar este comprobante para control interno?";
-                    echo json_encode($data); exit();
-=======
                 if (count($kardexsunat)) {
                     $lista[$key]['estadosunat'] = $kardexsunat[0]['estado'];
                 } else {
                     $lista[$key]['estadosunat'] = 2;
->>>>>>> b22e6521701c1f7c607ac36d3aea91442f690431
                 }
             }
 
@@ -1390,29 +1171,6 @@ class Ventas extends CI_Controller
                     ? $this->request->campos->codpersona
                     : $this->request->codpersonapedido;
 
-                $personaComprobante = $this->db->query(
-                    'select codpersona, documento, coddocumentotipo from public.personas where codpersona=' . (int)$this->request->campos->codpersona . ' and estado=1 limit 1'
-                )->row_array();
-                $codComprobante = (int)$this->request->campos->codcomprobantetipo;
-                $esFactura = in_array($codComprobante, [10, 25], true);
-                $esBoleta = in_array($codComprobante, [12, 26], true);
-
-                if ($esFactura && (empty($personaComprobante) || (int)$personaComprobante['coddocumentotipo'] != 4 || strlen(trim($personaComprobante['documento'])) != 11)) {
-                    echo json_encode([
-                        'estado' => 0,
-                        'informacion' => 'Para emitir factura debe seleccionar un cliente con RUC de 11 digitos.'
-                    ]);
-                    return;
-                }
-
-                if ($esBoleta && !empty($personaComprobante) && (int)$personaComprobante['coddocumentotipo'] == 4) {
-                    echo json_encode([
-                        'estado' => 0,
-                        'informacion' => 'No puede emitir boleta a un cliente con RUC. Use factura o nota de venta.'
-                    ]);
-                    return;
-                }
-
                 // VALIDAMOS SI ES BOLETA Y EL IMPORTE SEA MENOR A 700
                 if ($this->request->campos->codpersona == 2 && $this->request->campos->codcomprobantetipo == 12) {
                     if ($this->request->totales->importe >= 700) {
@@ -1656,29 +1414,6 @@ class Ventas extends CI_Controller
                 $this->request->campos->codpersona = $this->request->codpersonapedido == 0
                     ? $this->request->campos->codpersona
                     : $this->request->codpersonapedido;
-
-                $personaComprobante = $this->db->query(
-                    'select codpersona, documento, coddocumentotipo from public.personas where codpersona=' . (int)$this->request->campos->codpersona . ' and estado=1 limit 1'
-                )->row_array();
-                $codComprobante = (int)$this->request->campos->codcomprobantetipo;
-                $esFactura = in_array($codComprobante, [10, 25], true);
-                $esBoleta = in_array($codComprobante, [12, 26], true);
-
-                if ($esFactura && (empty($personaComprobante) || (int)$personaComprobante['coddocumentotipo'] != 4 || strlen(trim($personaComprobante['documento'])) != 11)) {
-                    echo json_encode([
-                        'estado' => 0,
-                        'informacion' => 'Para emitir factura debe seleccionar un cliente con RUC de 11 digitos.'
-                    ]);
-                    return;
-                }
-
-                if ($esBoleta && !empty($personaComprobante) && (int)$personaComprobante['coddocumentotipo'] == 4) {
-                    echo json_encode([
-                        'estado' => 0,
-                        'informacion' => 'No puede emitir boleta a un cliente con RUC. Use factura o nota de venta.'
-                    ]);
-                    return;
-                }
 
                 // VALIDAMOS SI ES BOLETA Y EL IMPORTE SEA MENOR A 700
                 if ($this->request->campos->codpersona == 2 && $this->request->campos->codcomprobantetipo == 12) {
@@ -2306,11 +2041,6 @@ class Ventas extends CI_Controller
                     $stockc = 0;
                     $productounidad = $this->db->query('select *from almacen.productounidades where codproducto=' . $value['codproducto'] . ' and codunidad=' . $val['codunidad'])->result_array();
 
-<<<<<<< HEAD
-			echo $formato;
-		}
-	}
-=======
                     $stockc = ((float) $value['cantidad'] * (float) $factor[0]['factor']) / (float) $productounidad[0]['factor'];
                     $stockc = $val['stockactualconvertido'] - $stockc;
                     $campos = ['stockactualconvertido'];
@@ -2547,5 +2277,4 @@ class Ventas extends CI_Controller
             echo $formato;
         }
     }
->>>>>>> b22e6521701c1f7c607ac36d3aea91442f690431
 }

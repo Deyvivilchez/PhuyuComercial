@@ -331,8 +331,8 @@ RESPALDOS RECOMENDADOS
 
 
 -- /usr/bin/php7.4 $(which composer) install
+--/usr/bin/php7.4 $(which composer) dump-autoload 
 
---/usr/bin/php7.4 $(which composer) dump-autoload -o.
 ---  los comoando s de arriba son para acutlizar el composer y generar el
 -- autoload optimizado para que reconozca las nuevas clases de migraciones y se puedan ejecutar sin problemas.
 

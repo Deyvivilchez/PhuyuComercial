@@ -97,64 +97,6 @@ class Atender extends CI_Controller
 	{
 		if ($this->input->is_ajax_request()) {
 			if (isset($_SESSION['phuyu_usuario'])) {
-<<<<<<< HEAD
-				// Ambientes
-				$ambientes = $this->db->select('*')
-				->from('restaurante.ambientes')->where('codsucursal', $_SESSION['phuyu_codsucursal'])
-				->where('estado', 1)->order_by('codambiente', 'ASC')->get()->result_array();
-
-				// Lineas
-				$lineas = $this->db->select('*')->from('almacen.lineas')->where('estado', 1)
-				->order_by('descripcion', 'ASC')->get()->result_array();
-
-				// Comprobantes
-				// $comprobantes = $this->db->select('DISTINCT(ct.codcomprobantetipo) as codigo, ct.*')
-				// ->from('caja.comprobantetipos ct')
-				// ->join('caja.comprobantes c', 'ct.codcomprobantetipo = c.codcomprobantetipo')
-				// ->where('c.codsucursal', $_SESSION['phuyu_codsucursal'])->where('c.codcomprobantetipo >=', 5)
-				// ->where('c.estado', 1)->get()->result_array();
-
-				$comprobantes = $this->db->query("select distinct(ct.codcomprobantetipo) as codigo, ct.* from caja.comprobantetipos as ct 
-				inner join caja.comprobantes as c on(ct.codcomprobantetipo=c.codcomprobantetipo) 
-				where c.codsucursal=".$_SESSION["phuyu_codsucursal"]." and ct.venta = 1 and c.estado=1")->result_array();
-				
-				// Conceptos
-				$conceptos = $this->db
-					->select('*')
-					->from('caja.conceptos')
-					->where_in('codconcepto', [13, 15])
-					->get()
-					->result_array();
-
-				// Tipo Pagos
-				$tipopagos = $this->db->select('*')->from('caja.tipopagos')->where('ingreso', 1)->where('estado', 1)->order_by('codtipopago', 'ASC')->get()->result_array();
-
-				// Vendedores
-				$perfil = '';
-				if($_SESSION["phuyu_codperfil"] > 3){
-					$perfil .= ' AND empleado.codpersona = '.$_SESSION["phuyu_codempleado"];
-				}
-				$vendedores = $this->db->query("select persona.codpersona,persona.razonsocial from public.personas as persona inner join public.empleados as 
-				empleado on(persona.codpersona=empleado.codpersona) where empleado.estado=1 ".$perfil."")->result_array();
-				// $vendedores = $this->db->select('persona.codpersona, persona.razonsocial')
-				// ->from('public.personas persona')->join('public.empleados empleado', 'persona.codpersona = empleado.codpersona')
-				// ->where('empleado.estado', 1)
-				// ->where('empleado.codcargo', 4)->get()->result_array();
-
-				// Sucursal
-				$sucursal = $this->db->select('codcomprobantetipo, seriecomprobante')->from('public.sucursales')->where('codsucursal', $_SESSION['phuyu_codsucursal'])->get()->result_array();
-				 $data = [
-					'ambientes' => $ambientes,
-					'lineas' => $lineas,
-					'comprobantes' => $comprobantes,
-					'conceptos' => $conceptos,
-					'tipopagos' => $tipopagos,
-					'vendedores' => $vendedores,
-					'sucursal' => $sucursal
-				];
-   				 //$this->load->view('restaurante/atender/atender', $data );
-				$this->load->view('restaurante/atender/index', $data );
-=======
 				$this->load->view('restaurante/atender/index', $this->phuyu_datos_atender());
 			} else {
 				$this->load->view('phuyu/505');
@@ -168,7 +110,6 @@ class Atender extends CI_Controller
 		if ($this->input->is_ajax_request()) {
 			if (isset($_SESSION['phuyu_usuario'])) {
 				$this->load->view('restaurante/atender/atender', $this->phuyu_datos_atender());
->>>>>>> b22e6521701c1f7c607ac36d3aea91442f690431
 			}
 			else {
 				$this->load->view('phuyu/505');
