@@ -4,11 +4,16 @@ ErrorDocument 404 /index.php
 #Set the default handler
 DirectoryIndex index.php
 
-#varios rewrite rules
+#WhatsApp Cloud API credentials
+SetEnv WHATSAPP_PROVIDER cloud
+SetEnv WHATSAPP_CLOUD_TOKEN EAAXrOVPEeowBRbtZA6XLP27w2kII4FA6ZCpAvB21NkXUKcoD0KYoqcaOZBBWRsmuG1MZCT6lhUkZBqZCCLuDTcuAawe12b3m1hjRpq72F2MDV00O8dmarHYMAZCkWr0TmV87XSG7Xh5zY2iLvifdXWkWzXZA1OhTwXZBVmk1J9XAd4wn4IwUR4iCXQmZAN2sv2KnviZBYUaRx3XVPzPcYzOlnJ1feREDS7kFTeLjz8yMT1xPLx833oBaLFfk6Juthh8KfZAi838a64eLuhGU1ZCBBn6kpKjVB
+SetEnv WHATSAPP_CLOUD_PHONE_NUMBER_ID 1058254814044239
+SetEnv WHATSAPP_CLOUD_API_VERSION v25.0
+SetEnv WHATSAPP_SHARE_SECRET clave_super_secreta_123
 
 <IfModule mod_rewrite.c>
     RewriteEngine on
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^(.*)$ index.php?/$l [L,QSA]
+    RewriteRule ^(.*)$ index.php?/$1 [L,QSA]
 </IfModule>

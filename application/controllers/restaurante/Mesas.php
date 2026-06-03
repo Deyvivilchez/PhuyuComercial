@@ -50,16 +50,20 @@ class Mesas extends CI_Controller {
 
 	public function mesas_ambiente($codambiente){
 		if ($this->input->is_ajax_request()) {
-			$mesas = $this->db->query("select *from restaurante.mesas where codambiente=".$codambiente." and estado=1 order by codmesa")->result_array();
+			$mesas = $this->db->query("select m.*,
+				(select count(*) from restaurante.mesaspedido mp where mp.codmesa=m.codmesa and mp.estado=1) as pedidos_activos
+				from restaurante.mesas as m
+				where m.codambiente=".$codambiente." and m.estado=1
+				order by m.codmesa")->result_array();
 			foreach ($mesas as $key => $value) {
-				if($value["situacion"]==1){
-					$color = "phuyu-libre"; $texto = "LIBRE";
-				}elseif ($value["situacion"]==2) {
+				if((int)$value["pedidos_activos"] > 0){
 					$color = "phuyu-ocupada"; $texto = "OCUPADA";
 				}elseif ($value["situacion"]==3) {
 					$color = "phuyu-reservada"; $texto = "RESERVADA";
-				}else{
+				}elseif ($value["situacion"]==4) {
 					$color = "phuyu-avancecta"; $texto = "AVANCE CTA";
+				}else{
+					$color = "phuyu-libre"; $texto = "LIBRE";
 				}
 				$mesas[$key]["color"] = $color;
 				$mesas[$key]["texto"] = $texto;

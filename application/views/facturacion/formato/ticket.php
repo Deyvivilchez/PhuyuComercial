@@ -7,6 +7,31 @@
 	        window.print(); return false;
 	    }
 	</script>
+    <style>
+   
+         .logo-empresa {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto;
+        }
+           
+        .logo-placeholder {
+            width: 45px;
+            height: 45px;
+            background: #f8f8f8;
+            border: 1px dashed #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            font-size: 7px;
+            text-align: center;
+            line-height: 1.1;
+        }
+        
+    </style>
 
 	<body onLoad="printThis();">
 		<?php $linea = '--------------------------------------------------------------------'; ?>
@@ -14,6 +39,17 @@
 			<tr>
 	            <td colspan="3" align="center" class="Cabecera0"> <img src="<?php echo $direccionlogo;?>" style="height:80px;"> </td>
 	        </tr>
+               
+            <!-- LOGO EMPRESA -->
+            <div class="center my-0">
+                <?php if ($logoEmpresa != ''): ?>
+                    <img src="<?php echo base_url() . 'public/img/' . $logoEmpresa; ?>" class="logo-empresa">
+                <?php else: ?>
+                    <div class="logo-placeholder">
+                        LOGO<br>EMPRESA
+                    </div>
+                <?php endif; ?>
+            </div>
 	        <tr>
 	            <td colspan="3" align="center" class="Cabecera0"> <?php echo $nombre;?> </td>
 	        </tr>

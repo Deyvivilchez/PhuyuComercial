@@ -78,6 +78,9 @@ class Movimientos extends CI_Controller {
 	public function nuevo_1($tipomovimiento,$codkardex){
 		if ($this->input->is_ajax_request()) {
 			if (isset($_SESSION["phuyu_usuario"])) {
+				$tipomovimiento = (int)$tipomovimiento;
+				$codkardex = (int)$codkardex;
+				$configuracion_error = "";
 				$tipocomprobantes = $this->db->query("select *from caja.comprobantetipos where codcomprobantetipo>=10 and estado=1 order by codcomprobantetipo")->result_array();
 				if ($tipomovimiento==1) {
 					$comprobante_caja = $this->db->query("select caja.comprobantetipos.* from caja.comprobantetipos inner join caja.comprobantes on(caja.comprobantetipos.codcomprobantetipo=caja.comprobantes.codcomprobantetipo) where caja.comprobantetipos.codcomprobantetipo=1 and caja.comprobantes.codsucursal=".$_SESSION["phuyu_codsucursal"]." and caja.comprobantes.codcaja=".$_SESSION["phuyu_codcaja"]." and caja.comprobantes.estado=1 order by caja.comprobantetipos.codcomprobantetipo")->result_array();
@@ -86,7 +89,16 @@ class Movimientos extends CI_Controller {
 				}
 				$conceptos = $this->db->query("select *from caja.conceptos where tipo=".$tipomovimiento." and estado=1 order by codconcepto")->result_array();
 
+				if (count($comprobante_caja)==0) {
+					$configuracion_error = "No hay comprobante de caja configurado para este movimiento en la caja actual.";
+					$comprobante_caja = [["codcomprobantetipo" => ($tipomovimiento==1 ? 1 : 2)]];
+				}
+
 				$series = $this->db->query("select seriecomprobante from caja.comprobantes where codcomprobantetipo=".$comprobante_caja[0]["codcomprobantetipo"]." and codsucursal=".$_SESSION["phuyu_codsucursal"]." and codcaja=".$_SESSION["phuyu_codcaja"]." and estado=1")->result_array();
+				if (count($series)==0) {
+					$configuracion_error = "No hay serie activa para el comprobante de caja en la caja actual.";
+					$series = [["seriecomprobante" => ""]];
+				}
 
 				if ($comprobante_caja[0]["codcomprobantetipo"]==1) {
 					$tipopagos = $this->db->query("select *from caja.tipopagos where (ingreso=1 or abono=1) and estado=1 order by codtipopago")->result_array();
@@ -97,10 +109,20 @@ class Movimientos extends CI_Controller {
 				if ($codkardex==0) {
 					$productos = [];
 				}else{
-					$productos = $this->db->query("select codproducto,descripcion from almacen.productos where controlstock=0 and estado=1")->result_array();
+					$productos = $this->db->query("
+						select distinct p.codproducto, p.descripcion
+						from almacen.productos as p
+						left join almacen.productounidades as pu on(p.codproducto=pu.codproducto and pu.estado=1)
+						where p.estado=1
+						and (
+							coalesce(p.tipo, 0)=2
+							or coalesce(p.controlstock, 0)=0
+						)
+						order by p.descripcion
+					")->result_array();
 				}
 
-				$this->load->view("caja/movimientos/nuevo_1",compact("tipocomprobantes","tipomovimiento","codkardex","comprobante_caja","conceptos","series","tipopagos","productos"));
+				$this->load->view("caja/movimientos/nuevo_1",compact("tipocomprobantes","tipomovimiento","codkardex","comprobante_caja","conceptos","series","tipopagos","productos","configuracion_error"));
 			}else{
 				$this->load->view("phuyu/505");
 			}
@@ -288,5 +310,198 @@ class Movimientos extends CI_Controller {
 			$this->load->view("phuyu/404");
 		}
 	}
+
+
+
+
+
+public function exportar_excel_detallado()
+{
+    $desde           = $this->input->get('desde');
+    $hasta           = $this->input->get('hasta');
+    $codcontroldiario = $_SESSION["phuyu_codcontroldiario"];
+    $codcaja          = $_SESSION['phuyu_codcaja'];
+
+    if (empty($desde) || empty($hasta)) {
+        show_error('Debe seleccionar un rango de fechas válido.');
+        return;
+    }
+
+    $sql = "
+        SELECT 
+            m.codmovimiento,
+            m.fechamovimiento,
+            m.seriecomprobante,
+            m.nrocomprobante,
+            m.codkardex,
+            p.razonsocial,
+            c.descripcion         AS concepto_caja,
+            tp.descripcion        AS tipopago,
+            md.importe            AS importe_pago,
+            md.importeentregado   AS importe_entregado,
+            md.vuelto             AS vuelto,
+            ROUND(m.importe, 2)   AS total_movimiento,
+			CONCAT(k.seriecomprobante,'-',k.nrocomprobante) AS comprobante_referencia
+        FROM caja.movimientosdetalle AS md
+        JOIN caja.movimientos AS m       ON m.codmovimiento = md.codmovimiento
+        JOIN public.personas AS p        ON p.codpersona = m.codpersona
+        JOIN caja.conceptos AS c         ON c.codconcepto = m.codconcepto
+        JOIN caja.tipopagos AS tp        ON tp.codtipopago = md.codtipopago
+		JOIN kardex.kardex AS k        ON k.codkardex = m.codkardex
+        WHERE m.fechamovimiento BETWEEN {$this->db->escape($desde)} AND {$this->db->escape($hasta)}
+        AND m.codcaja = {$this->db->escape($codcaja)}
+        AND m.codcontroldiario = {$this->db->escape($codcontroldiario)}
+        AND m.estado = 1
+        AND m.condicionpago = 1
+        AND tp.estado = 1
+        ORDER BY m.fechamovimiento, m.codmovimiento
+    ";
+
+    $data['movimientos'] = $this->db->query($sql)->result_array();
+    $data['desde'] = $this->input->get('desde');
+    $data['hasta'] = $this->input->get('hasta');
+
+    $this->load->view('reportes/excel_movimientos_detallado', $data ,$desde, $hasta);
+}
+
+
+public function exportar_pdf_detallado()
+{
+    $desde = $this->input->get('desde');
+    $hasta = $this->input->get('hasta');
+    $codcontroldiario = $_SESSION["phuyu_codcontroldiario"];
+    $codcaja = $_SESSION['phuyu_codcaja'];
+	$nombreEmpresa =  $_SESSION["phuyu_empresa"] ;
+	$logoEmpresa = $_SESSION["phuyu_logo"] ;
+
+    if (empty($desde) || empty($hasta)) {
+        show_error('Debe seleccionar un rango de fechas válido.');
+        return;
+    }
+
+    $sql = "
+        SELECT 
+            m.codmovimiento,
+            m.fechamovimiento,
+            m.seriecomprobante,
+            m.nrocomprobante,
+            m.codkardex,
+            p.razonsocial,
+            c.descripcion         AS concepto_caja,
+            tp.descripcion        AS tipopago,
+            md.importe            AS importe_pago,
+            md.importeentregado   AS importe_entregado,
+            md.vuelto             AS vuelto,
+            ROUND(m.importe, 2)   AS total_movimiento,
+            CONCAT(k.seriecomprobante,'-',k.nrocomprobante) AS comprobante_referencia
+        FROM caja.movimientosdetalle AS md
+        JOIN caja.movimientos AS m       ON m.codmovimiento = md.codmovimiento
+        JOIN public.personas AS p        ON p.codpersona = m.codpersona
+        JOIN caja.conceptos AS c         ON c.codconcepto = m.codconcepto
+        JOIN caja.tipopagos AS tp        ON tp.codtipopago = md.codtipopago
+        JOIN kardex.kardex AS k          ON k.codkardex = m.codkardex
+        WHERE m.fechamovimiento BETWEEN {$this->db->escape($desde)} AND {$this->db->escape($hasta)}
+        AND m.codcaja = {$this->db->escape($codcaja)}
+        AND m.codcontroldiario = {$this->db->escape($codcontroldiario)}
+        AND m.estado = 1
+        AND m.condicionpago = 1
+        AND tp.estado = 1
+        ORDER BY m.fechamovimiento, m.codmovimiento
+    ";
+
+    $data['movimientos'] = $this->db->query($sql)->result_array();
+    $data['desde'] = $desde;
+    $data['hasta'] = $hasta;
+	$data['nombreEmpresa'] = $nombreEmpresa;
+	$data['logoEmpresa'] = $logoEmpresa;
+
+    // Simplemente devuelve la vista renderizada en navegador
+    $this->load->view('reportes/pdf_movimientos_detallado', $data);
+}
+
+
+
+public function exportar_pdf_detallado_02()
+{
+   $desde = $this->input->get('desde');
+    $hasta = $this->input->get('hasta');
+    $codcontroldiario = $_SESSION["phuyu_codcontroldiario"];
+    $codcaja = $_SESSION['phuyu_codcaja'];
+	$nombreEmpresa =  $_SESSION["phuyu_empresa"] ;
+	$logoEmpresa = $_SESSION["phuyu_logo"] ;
+
+    if (empty($desde) || empty($hasta)) {
+        show_error('Debe seleccionar un rango de fechas válido.');
+        return;
+    }
+
+    $sql = "
+        SELECT 
+            m.codmovimiento,
+            m.fechamovimiento,
+            m.seriecomprobante,
+            m.nrocomprobante,
+            m.codkardex,
+            p.razonsocial,
+            c.descripcion         AS concepto_caja,
+            tp.descripcion        AS tipopago,
+            md.importe            AS importe_pago,
+            md.importeentregado   AS importe_entregado,
+            md.vuelto             AS vuelto,
+            ROUND(m.importe, 2)   AS total_movimiento,
+            CONCAT(k.seriecomprobante,'-',k.nrocomprobante) AS comprobante_referencia
+        FROM caja.movimientosdetalle AS md
+        JOIN caja.movimientos AS m       ON m.codmovimiento = md.codmovimiento
+        JOIN public.personas AS p        ON p.codpersona = m.codpersona
+        JOIN caja.conceptos AS c         ON c.codconcepto = m.codconcepto
+        JOIN caja.tipopagos AS tp        ON tp.codtipopago = md.codtipopago
+        JOIN kardex.kardex AS k          ON k.codkardex = m.codkardex
+        WHERE m.fechamovimiento BETWEEN {$this->db->escape($desde)} AND {$this->db->escape($hasta)}
+        AND m.codcaja = {$this->db->escape($codcaja)}
+        AND m.codcontroldiario = {$this->db->escape($codcontroldiario)}
+        AND m.estado = 1
+        AND m.condicionpago = 1
+        AND tp.estado = 1
+        ORDER BY m.fechamovimiento, m.codmovimiento
+    ";
+
+    $data['movimientos'] = $this->db->query($sql)->result_array();
+    $data['desde'] = $desde;
+    $data['hasta'] = $hasta;
+	$data['nombreEmpresa'] = $nombreEmpresa;
+	$data['logoEmpresa'] = $logoEmpresa;
+
+    // Simplemente devuelve la vista renderizada en navegador
+     $html = $this->load->view('reportes/pdf_movimientos_detallado', $data,true);
+    //$html = $this->load->view('reportes/pdf_movimientos_detallado', $data, true);
+
+    // 2) Cargar TCPDF
+    require_once(APPPATH . 'third_party/phuyu_tcpdf/tcpdf.php'); // ajusta la ruta si la tienes en otro lado
+
+    // 3) Configurar TCPDF (horizontal, A4)
+    $pdf = new TCPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+    $pdf->SetCreator('Phuyu System');
+    $pdf->SetAuthor('Phuyu System');
+    $pdf->SetTitle('Reporte de Movimientos Detallado');
+
+    // Márgenes pequeños para aprovechar el ancho
+    $pdf->SetMargins(5, 5, 5);
+    $pdf->SetAutoPageBreak(TRUE, 5);
+    $pdf->setPrintHeader(false);
+    $pdf->setPrintFooter(false);
+
+    // 4) Nueva página
+    $pdf->AddPage();
+
+    // 5) Escribir el HTML (TU DISEÑO TAL CUAL)
+    $pdf->writeHTML($html, true, false, true, false, '');
+
+    // 6) Salida del PDF al navegador
+    $nombreArchivo = 'reporte_movimientos_detallado_' . date('Ymd_His') . '.pdf';
+    $pdf->Output($nombreArchivo, 'I'); // 'I' = inline, 'D' = descarga directa
+}
+
+
+
 	
 }

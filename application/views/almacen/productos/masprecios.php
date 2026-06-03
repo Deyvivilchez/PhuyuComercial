@@ -16,9 +16,26 @@
 		font-size: 0.63rem !important;
 		padding-left: 0.3rem !important;
 	}
+	#phuyu_precios.phuyu-precios-form {
+		color: #212529;
+	}
+	#phuyu_precios.phuyu-precios-form .card {
+		border: 1px solid #e9ebec;
+		border-radius: 8px;
+		box-shadow: 0 1px 2px rgba(56, 65, 74, 0.08);
+	}
+	#phuyu_precios.phuyu-precios-form .form-control,
+	#phuyu_precios.phuyu-precios-form .form-select {
+		border: 1px solid #d9e2ef;
+		border-radius: 6px;
+		box-shadow: none;
+	}
+	#phuyu_precios.phuyu-precios-form h6 {
+		border-radius: 6px;
+	}
 </style>
-<div id="phuyu_precios">
-	<form id="formularioprecios" class="form-horizontal" v-on:submit.prevent="phuyu_guardarprecios()">
+<div id="phuyu_precios" class="phuyu-precios-form">
+	<form id="formularioprecios" v-on:submit.prevent="phuyu_guardarprecios()">
 		<div class="row form-group" style="margin-bottom: .1rem !important;">
 			<div class="col-xs-12">
 				<div class="row form-group">
@@ -43,8 +60,8 @@
 						<input type="text" class="form-control texto" value="<?php echo $tipocambio;?>" disabled name="">
 					</div>
 					<div class="col-sm-5">
-						<button type="submit" v-bind:disabled="estado==1" class="btn btn-primary btn-sm">GUARDAR</button>
-						<button type="button" class="btn btn-danger btn-sm" data-bs-dismiss="modal"> <b>CANCELAR</b> </button>
+						<button type="submit" v-bind:disabled="estado==1" class="btn btn-primary btn-sm"><i class="bi bi-save me-1"></i> GUARDAR</button>
+						<button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal"> <b>CANCELAR</b> </button>
 					</div>
 				</div>
 			</div>

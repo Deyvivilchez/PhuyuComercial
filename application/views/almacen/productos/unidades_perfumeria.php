@@ -1,28 +1,70 @@
-<div id="phuyu_unidades">
-	<div class="phuyu_header">
-		<div class="row phuyu_header_title">
-			<div class="col-md-8 col-xs-12"> <h5>PRODUCTOS X UNIDADES</h5> </div>
-		</div>
-	    <div class="row">
+<style>
+	#phuyu_unidades.phuyu-productos-grid .phuyu-header-card {
+		background: #fff;
+		border: 1px solid #e9ebec;
+		border-radius: 8px;
+		box-shadow: 0 1px 2px rgba(56, 65, 74, 0.08);
+		margin-bottom: 14px;
+		padding: 12px;
+	}
+	#phuyu_unidades.phuyu-productos-grid .phuyu-toolbar {
+		align-items: center;
+		gap: 8px;
+	}
+	#phuyu_unidades.phuyu-productos-grid .form-control,
+	#phuyu_unidades.phuyu-productos-grid .form-select {
+		border: 1px solid #d9e2ef;
+		border-radius: 6px;
+		box-shadow: none;
+		min-height: 36px;
+	}
+	#phuyu_unidades.phuyu-productos-grid .table {
+		font-size: 12px;
+	}
+	#phuyu_unidades.phuyu-productos-grid .table thead th {
+		background: #f3f6f9;
+		color: #495057;
+		font-size: 11px;
+		text-transform: uppercase;
+		white-space: nowrap;
+	}
+	#phuyu_unidades.phuyu-productos-grid .modal-content {
+		border: 0;
+		border-radius: 8px;
+		box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
+	}
+	#phuyu_unidades.phuyu-productos-grid .modal-header {
+		background: #f3f6f9;
+		border-bottom: 1px solid #e9ebec;
+	}
+</style>
+
+<div id="phuyu_unidades" class="phuyu-productos-grid">
+	<div class="phuyu_header phuyu-header-card">
+		<div class="row g-2 align-items-center phuyu_header_title">
+			<div class="col-md-3 col-xs-12"> <h5 class="mb-0">PRODUCTOS X UNIDADES</h5> </div>
 			<div class="col-md-2"> 
-				<button type="button" class="btn btn-warning btn-block" v-on:click="productos_almacen()">ASIGNAR ALMACENES</button>
+				<button type="button" class="btn btn-warning w-100" v-on:click="productos_almacen()"><i class="bi bi-building me-1"></i> Asignar almacenes</button>
 			</div>
 			<div class="col-md-2"> 
-				<button type="button" class="btn btn-success btn-block" v-on:click="actualizar_stock()">ACTUALIZAR STOCK</button>
+				<button type="button" class="btn btn-success w-100" v-on:click="actualizar_stock()"><i class="bi bi-arrow-repeat me-1"></i> Actualizar stock</button>
 			</div>
-		    <div class="col-md-6 col-xs-12">
-		    	<input type="text" class="form-control" v-model="buscar" placeholder="BUSCAR PRODUCTO . . .">
+		    <div class="col-md-5 col-xs-12">
+				<div class="input-group">
+					<span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
+					<input type="text" class="form-control border-start-0" v-model="buscar" placeholder="BUSCAR PRODUCTO . . .">
+				</div>
 		    </div>
 	    </div>
-	</div> <br>
+	</div>
 	
 	<div class="phuyu_body lista scroll-phuyu-view" style="height:300px;overflow:auto;overflow-x:hidden;">
 		<div class="table-responsive">
-			<table class="table table-condensed table-bordered">
+			<table class="table table-hover align-middle mb-0">
 				<thead>
 					<tr>
 						<th width="3%"> # </th>
-						<th width="3%"> <i class="fa fa-circle-o-notch"></i> </th>
+						<th width="3%"> <i class="bi bi-record-circle"></i> </th>
 						<th width="33%">PRODUCTO</th>
 						<th width="7%">UNIDAD</th>
 						<th width="3%">F.</th>
@@ -66,16 +108,14 @@
 		<div class="modal-dialog">
 			<div class="modal-content">
 				<div class="modal-header">
-					<button type="button" class="close" data-dismiss="modal" style="font-size:30px;margin-bottom:0px;">
-						<i class="fa fa-times-circle"></i> 
-					</button>
-					<h4 class="modal-title"> <b>{{campos.descripcion}} | UNIDAD MEDIDA: {{campos.unidad}}</b> </h4>
+					<h5 class="modal-title">{{campos.descripcion}} | UNIDAD MEDIDA: {{campos.unidad}}</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
 				</div>
 				<div class="modal-body" style="height:330px">
 					<div class="row">
 						<div class="col-md-6 col-xs-12 text-center">
 							<h5><b>UNIDAD ACTUAL</b></h5> <hr>
-							<h4><span class="label label-danger">UNIDAD MEDIDA: {{campos.unidad}}</span></h4> <br>
+							<h4><span class="badge bg-danger">UNIDAD MEDIDA: {{campos.unidad}}</span></h4> <br>
 
 							<ul class="list-inline widget_tally">
 								<li>
@@ -109,7 +149,7 @@
 							<div class="alert alert-danger text-center">
 								ATENCION USUARIO: AL CAMBIAR LA UNIDAD DE MEDIDA, SE REEMPLAZARA EN LAS VENTAS, COMPRAS, KARDEX E INVENTARIO
 							</div>
-							<button type="button" class="btn btn-success btn-block" v-on:click="guardar_cambiar_unidad" v-bind:disabled="estado==1">CAMBIAR UNIDAD DE MEDIDA</button>
+							<button type="button" class="btn btn-success w-100" v-on:click="guardar_cambiar_unidad" v-bind:disabled="estado==1">CAMBIAR UNIDAD DE MEDIDA</button>
 						</div>
 					</div>
 				</div>

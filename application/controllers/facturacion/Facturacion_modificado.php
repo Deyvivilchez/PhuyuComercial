@@ -409,13 +409,9 @@ class Facturacion extends Sunat
 				];
 
 				// Forzar que la función Sunat::phuyu_consultarTICKET reciba datos y loguee (implementación en Sunat)
-				$estado = Sunat::phuyu_consultarTICKET($resumen[0]['nombre_xml'], $resumen[0]['ticket'], $credenciales);
-				print_r($estado); return exit;
-				$mensaje = isset($resp['mensaje']) ? $resp['mensaje'] : '';
-				$estado = isset($resp['estado']) ? $resp['estado'] : 0;
-				// $mensaje = $estado['mensaje'];
-				// $estado = $estado['estado'];
-
+                $resp = Sunat::phuyu_consultarTICKET($resumen[0]['nombre_xml'], $resumen[0]['ticket'], $credenciales);
+                $mensaje = isset($resp['mensaje']) ? $resp['mensaje'] : '';
+                $estado = isset($resp['estado']) ? $resp['estado'] : 0;
 				$log("Consulta TICKET resultado estado={$estado} mensaje=" . $mensaje);
 
 			} 
@@ -426,7 +422,11 @@ class Facturacion extends Sunat
 				else {	$generar = $this->Facturacion_model->phuyu_rb_crearXML($periodo, $nrocorrelativo, $codresumentipo);}
 
 				if (!is_array($generar) || !isset($generar['estado']) || $generar['estado'] == 0) {
-					$log('Fallo generar XML: ' . json_encode($generar)); echo json_encode(['estado' => 0, 'mensaje' => 'NO SE PUEDE GENERAR EL DOCUMENTO XML']); return;}
+					$log('Fallo generar XML: ' . json_encode($generar));
+					$mensajeError = isset($generar['mensaje']) ? $generar['mensaje'] : 'NO SE PUEDE GENERAR EL DOCUMENTO XML';
+					echo json_encode(['estado' => 0, 'mensaje' => $mensajeError]);
+					return;
+				}
 
 				// Firmar XML
 				$archivoCompleto = rtrim($generar['carpeta_phuyu'], '/') . '/' . $generar['archivo_phuyu'];
@@ -494,7 +494,7 @@ class Facturacion extends Sunat
 			$cpe_ruta = file_get_contents($estado['carpeta_phuyu'] . '/' . $estado['archivo_phuyu'] . '.xml');
 			force_download($estado['archivo_phuyu'] . '.xml', $cpe_ruta);
 		} else {
-			echo 'NO SE PUEDE GENERAR EL DOCUMENTO XML';
+			echo isset($estado['mensaje']) ? $estado['mensaje'] : 'NO SE PUEDE GENERAR EL DOCUMENTO XML';
 		}
 	}
 

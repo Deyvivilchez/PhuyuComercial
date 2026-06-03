@@ -1,4 +1,6 @@
-<div id="phuyu_cobranza">
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<div id="phuyu_cobranza" class="phuyu-velzon-form phuyu-creditos-velzon">
 	<div class="row phuyu_header_title">
 		<div class="col-md-8"> 
 			<h5 style="letter-spacing:1px;"> <b>PAGOS DEL CREDITO</b> </h5> 
@@ -7,7 +9,7 @@
 
 	<form id="formulario" class="form-horizontal" v-on:submit.prevent="phuyu_guardar()">
 		<div class="phuyu_body">
-			<div class="card">
+			<div class="card phuyu-card">
 				<div class="card-body">
 					<div class="row form-group">
 						<div class="col-md-3">
@@ -74,7 +76,7 @@
 		    			</div>
 		    			<div class="col-md-1" style="margin-top: 1.3rem;">
 		    				<label>&nbsp;</label>
-		    				<button type="button" class="btn btn-primary btn-icon" v-on:click="buscar_ccte"><i data-acorn-icon="search"></i></button>
+							<button type="button" class="btn btn-primary" v-on:click="buscar_ccte"><i class="bi bi-search"></i></button>
 		    			</div>
 		    		</div>
 
@@ -176,7 +178,7 @@
 												<input type="number" step="0.01" class="form-control number" v-model.number="dato.cobrar" v-on:keyup="phuyu_calcular(dato)" v-bind:max="dato.importe" required style="border:2px solid #13a89e;">
 											</td>
 											<td>
-												<button type="button"  style="margin-top:2px;" class="btn btn-danger btn-xs" v-on:click="phuyu_anularcuota(index,dato)">
+												<button type="button"  style="margin-top:2px;" class="btn btn-danger btn-sm" v-on:click="phuyu_anularcuota(index,dato)">
 													<b>X</b>
 												</button>
 											</td>
@@ -203,7 +205,7 @@
 					<div id="modal_ccte" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
 						<div class="modal-dialog">
 							<div class="modal-content">
-								<div class="modal-header modal-phuyu-titulo">
+								<div class="modal-header">
 									<h5 class="modal-title"> <b style="letter-spacing:1px;" id="phuyu_tituloform">BUSCAR CUENTAS CORRIENTES DEL SOCIO</b> </h5>
 
 									<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> 

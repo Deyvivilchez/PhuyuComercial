@@ -133,19 +133,16 @@ class Compras extends CI_Controller {
 			//echo "1";exit;
 			if (isset( $_SESSION["phuyu_codusuario"]) ) {
 				$this->request = json_decode(file_get_contents('php://input'));
-
 				if($this->request->campos->codcomprobantetipo == 13){
                      $this->request->campos->nro = $this->phuyu_correlativo($this->request->campos->codcomprobantetipo,$this->request->campos->seriecomprobanteliq);
-
                      $this->request->campos->seriecomprobante = $this->request->campos->seriecomprobanteliq;
 				}
 
 				$this->db->trans_begin();
-
 				/* REGISTRO KARDEX Y KARDEXDETALLE */
-
-				$proveedor = $this->db->query("select razonsocial,direccion,documento,d.abreviatura as tipo from public.personas p inner join public.documentotipos d on(p.coddocumentotipo=d.coddocumentotipo) where p.codpersona=".$this->request->campos->codpersona)->result_array();
-
+				$proveedor = $this->db->query("select razonsocial,direccion,documento,d.abreviatura as tipo 
+				from public.personas p inner join public.documentotipos d on(p.coddocumentotipo=d.coddocumentotipo)
+				 where p.codpersona=".$this->request->campos->codpersona)->result_array();
 				$this->request->campos->cliente = $proveedor[0]["razonsocial"];
 				$this->request->campos->direccion = $proveedor[0]["direccion"];
 				$this->request->campos->documento = $proveedor[0]["tipo"].'-'.$proveedor[0]["documento"];
@@ -156,7 +153,11 @@ class Compras extends CI_Controller {
 				if ($retirar == true) {
 					$codkardexalmacen = $this->Kardex_model->phuyu_kardexalmacen($codkardex, 3, $this->request->campos);
 				}
-				$detalle = $this->Kardex_model->phuyu_kardexdetalle($codkardex, $codkardexalmacen, $this->request->detalle, $retirar, 1, 0, 0, $this->request->campos->tipocambio);
+				$detalle = $this->Kardex_model->phuyu_kardexdetalle(
+				$codkardex, $codkardexalmacen,
+				$this->request->detalle, 
+				$retirar, 1, 0, 0, 
+				$this->request->campos->tipocambio);
                 
                 /* COMPROBANTE ELECTRONICO PARA SUNAT: REGISTRO EN KARDEX SUNAT */
 
@@ -237,6 +238,31 @@ class Compras extends CI_Controller {
 		if ($this->input->is_ajax_request()) {
 			if (isset( $_SESSION["phuyu_codusuario"]) ) {
 				$this->request = json_decode(file_get_contents('php://input'));
+				$codproductoServicio = isset($this->request->codproducto) ? (int)$this->request->codproducto : 0;
+				$codpersona = isset($this->request->codpersona) ? (int)$this->request->codpersona : 0;
+				$importe = isset($this->request->importe) ? (double)$this->request->importe : 0;
+
+				if ($codproductoServicio<=0) {
+					echo 3; return;
+				}
+
+				if ($codpersona<=0 || $importe<=0) {
+					echo 0; return;
+				}
+
+				$productounidad = $this->db->query("
+					select codunidad
+					from almacen.productounidades
+					where codproducto=? and estado=1
+					order by factor asc, codunidad asc
+					limit 1
+				", array($codproductoServicio))->result_array();
+
+				if (count($productounidad)==0) {
+					echo 4; return;
+				}
+
+				$codunidadServicio = (int)$productounidad[0]["codunidad"];
 
 				$this->db->trans_begin();
 
@@ -262,6 +288,10 @@ class Compras extends CI_Controller {
 				// REGISTRO KARDEX ALMACEN //
 				$comprobante_almacen = 3;
 				$series = $this->db->query("select seriecomprobante from caja.comprobantes where codcomprobantetipo=".$comprobante_almacen." and codsucursal=".$_SESSION["phuyu_codsucursal"]." and codalmacen=".$_SESSION["phuyu_codalmacen"]." and estado=1")->result_array();
+				if (count($series)==0) {
+					$this->db->trans_rollback();
+					echo 5; return;
+				}
 
 				$campos = ["codsucursal","codalmacen","codusuario","codkardex","codmovimientotipo","fechakardex","codcomprobantetipo","seriecomprobante"];
 				$valores = [
@@ -280,7 +310,7 @@ class Compras extends CI_Controller {
 				// REGISTRO KARDEX DETALLE Y KARDEX ALMACEN DETALLE //
 				$campos = ["codkardex","codproducto","codunidad","item","cantidad","preciobruto","preciosinigv","preciounitario","preciorefunitario","codafectacionigv","valorventa","subtotal"];
 				$valores =[
-					(int)$codkardex,(int)$this->request->codproducto,18,1,1,
+					(int)$codkardex,$codproductoServicio,$codunidadServicio,1,1,
 					(double)$this->request->importe,
 					(double)$this->request->importe,
 					(double)$this->request->importe,
@@ -293,8 +323,8 @@ class Compras extends CI_Controller {
 				$campos = ["codkardexalmacen","codproducto","codunidad","item","codalmacen","codsucursal","cantidad"];
 				$valores =[
 					(int)$codkardexalmacen,
-					(int)$this->request->codproducto,
-					(int)18, 1,
+					$codproductoServicio,
+					$codunidadServicio, 1,
 					(int)$_SESSION["phuyu_codalmacen"],
 					(int)$_SESSION["phuyu_codsucursal"],1
 				];
@@ -336,6 +366,80 @@ class Compras extends CI_Controller {
 					$this->db->trans_commit();
 				}
 				echo $estado;
+			}else{
+				echo "e";
+			}
+		}else{
+			$this->load->view("phuyu/404");
+		}
+	}
+
+	function guardar_servicio_gasto(){
+		if ($this->input->is_ajax_request()) {
+			if (isset( $_SESSION["phuyu_codusuario"]) ) {
+				$this->output->set_content_type("application/json");
+				$this->request = json_decode(file_get_contents('php://input'));
+				$descripcion = isset($this->request->descripcion) ? trim($this->request->descripcion) : "";
+				$descripcion = function_exists("mb_strtoupper") ? mb_strtoupper($descripcion, "UTF-8") : strtoupper($descripcion);
+
+				if ($descripcion=="") {
+					echo json_encode(["estado" => 0, "mensaje" => "Ingrese la descripción del servicio."]); return;
+				}
+
+				$existe = $this->db->query("
+					select codproducto, descripcion
+					from almacen.productos
+					where estado=1
+					and (coalesce(tipo, 0)=2 or coalesce(controlstock, 0)=0)
+					and upper(trim(descripcion))=upper(trim(?))
+					limit 1
+				", array($descripcion))->result_array();
+
+				if (count($existe)>0) {
+					echo json_encode(["estado" => 1, "codproducto" => $existe[0]["codproducto"], "descripcion" => $existe[0]["descripcion"]]); return;
+				}
+
+				$familia = $this->db->query("select codfamilia from almacen.familias where estado=1 order by case when codfamilia=0 then 0 else 1 end, codfamilia limit 1")->result_array();
+				$linea = $this->db->query("select codlinea from almacen.lineas where estado=1 order by case when codlinea=0 then 0 else 1 end, codlinea limit 1")->result_array();
+				$marca = $this->db->query("select codmarca from almacen.marcas where estado=1 order by case when codmarca=0 then 0 else 1 end, codmarca limit 1")->result_array();
+				$unidad = $this->db->query("select codunidad from almacen.unidades where estado=1 order by case when oficial='NIU' then 0 when codunidad=1 then 1 else 2 end, codunidad limit 1")->result_array();
+
+				if (count($familia)==0 || count($linea)==0 || count($marca)==0 || count($unidad)==0) {
+					echo json_encode(["estado" => 0, "mensaje" => "Falta configurar familia, línea, marca o unidad para registrar el servicio."]); return;
+				}
+
+				$codfamilia = (int)$familia[0]["codfamilia"];
+				$codlinea = (int)$linea[0]["codlinea"];
+				$codmarca = (int)$marca[0]["codmarca"];
+				$codunidad = (int)$unidad[0]["codunidad"];
+				$codempresa = isset($_SESSION["phuyu_codempresa"]) ? (int)$_SESSION["phuyu_codempresa"] : 1;
+				$codsucursal = isset($_SESSION["phuyu_codsucursal"]) ? (int)$_SESSION["phuyu_codsucursal"] : 0;
+				$codalmacen = isset($_SESSION["phuyu_codalmacen"]) ? (int)$_SESSION["phuyu_codalmacen"] : 0;
+				$codafectacion = isset($_SESSION["phuyu_afectacionigv"]) ? (int)$_SESSION["phuyu_afectacionigv"] : 1;
+
+				$this->db->trans_begin();
+
+				$campos = ["codfamilia","codlinea","codmarca","codempresa","codigo","descripcion","afectoicbper","paraventa","calcular","controlstock","caracteristicas","tipo","controlarseries"];
+				$valores = [$codfamilia,$codlinea,$codmarca,$codempresa,"",$descripcion,0,1,0,0,"",2,0];
+				$codproducto = $this->phuyu_model->phuyu_guardar("almacen.productos", $campos, $valores, "true");
+
+				$campos = ["codproducto","codunidad","codsucursal","factor","preciocompra","preciocosto","pventapublico","pventamin","pventacredito","pventaxmayor","pventaadicional","codigobarra","estado"];
+				$valores = [(int)$codproducto,$codunidad,$codsucursal,1,0,0,0,0,0,0,0,"",1];
+				$estado = $this->phuyu_model->phuyu_guardar("almacen.productounidades", $campos, $valores);
+
+				if ($codalmacen>0) {
+					$campos = ["codalmacen","codproducto","codunidad","codsucursal","factor","estado","codafectacionigvcompra","codafectacionigvventa"];
+					$valores = [$codalmacen,(int)$codproducto,$codunidad,$codsucursal,1,1,$codafectacion,$codafectacion];
+					$estado = $this->phuyu_model->phuyu_guardar("almacen.productoubicacion", $campos, $valores);
+				}
+
+				if ($this->db->trans_status() === FALSE || $estado!=1) {
+					$this->db->trans_rollback();
+					echo json_encode(["estado" => 0, "mensaje" => "No se pudo registrar el servicio."]); return;
+				}
+
+				$this->db->trans_commit();
+				echo json_encode(["estado" => 1, "codproducto" => $codproducto, "descripcion" => $descripcion]); return;
 			}else{
 				echo "e";
 			}

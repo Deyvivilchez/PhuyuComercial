@@ -1,10 +1,15 @@
+<?php
+	$salida_info = isset($salida[0]) ? $salida[0] : ['codkardex' => '', 'codpersona' => '', 'cliente' => '', 'codalmacen' => ''];
+	$almacen_partida_info = isset($almacen_partida[0]) ? $almacen_partida[0] : ['direccion' => '', 'codubigeo' => 0];
+	$almacen_destino_info = isset($almacen_destino[0]) ? $almacen_destino[0] : ['direccion' => '', 'codubigeo' => 0];
+?>
 <div id="phuyu_operacion">
 	<form id="formulario" class="form-horizontal" v-on:submit.prevent="phuyu_guardar()">
 		<input type="hidden" id="comprobante" value="<?php echo $comprobantes[0]['codcomprobantetipo'];?>">
-		<input type="hidden" id="codkardex" value="<?php echo $salida[0]['codkardex'];?>" name="">
-		<input type="hidden" id="codpersonas" value="<?php echo $salida[0]['codpersona']?>" name="">
-		<input type="hidden" id="destinatarios" value="<?php echo $salida[0]['cliente'];?>" name="">
-		<input type="hidden" id="almacen_principal" value="<?php echo $salida[0]['codalmacen'];?>" name="">
+		<input type="hidden" id="codkardex" value="<?php echo htmlspecialchars($salida_info['codkardex'], ENT_QUOTES, 'UTF-8');?>" name="">
+		<input type="hidden" id="codpersona" value="<?php echo htmlspecialchars($salida_info['codpersona'], ENT_QUOTES, 'UTF-8');?>" name="">
+		<input type="hidden" id="destinatarios" value="<?php echo htmlspecialchars($salida_info['cliente'], ENT_QUOTES, 'UTF-8');?>" name="">
+		<input type="hidden" id="almacen_principal" value="<?php echo htmlspecialchars($salida_info['codalmacen'], ENT_QUOTES, 'UTF-8');?>" name="">
 		<div class="row form-group">
 			<div class="col-md-3 col-xs-12">
 		    	<label>SERIE <b>(NRO: {{campos.nro}})</b></label>
@@ -49,13 +54,13 @@
 		<div class="row form-group">
 			<div class="col-md-6">
 				<label>DIRECCION DE PARTIDA<span class="text-danger">*</span></label>
-				<input type="text" class="form-control" id="direccionpartida" required value="<?php echo $almacen_partida[0]['direccion'];?>" name="">
-				<input type="hidden" id="ubigeopartida" value="<?php echo $almacen_partida[0]['codubigeo'];?>" name="">
+				<input type="text" class="form-control" id="direccionpartida" required value="<?php echo htmlspecialchars($almacen_partida_info['direccion'], ENT_QUOTES, 'UTF-8');?>" name="">
+				<input type="hidden" id="ubigeopartida" value="<?php echo htmlspecialchars($almacen_partida_info['codubigeo'], ENT_QUOTES, 'UTF-8');?>" name="">
 			</div>
 			<div class="col-md-6">
 				<label>DIRECCION DE DESTINO<span class="text-danger">*</span></label>
-				<input type="text" class="form-control" id="direccionllegada" required value="<?php echo $almacen_destino[0]['direccion'];?>" name="">
-				<input type="hidden" id="ubigeollegada" value="<?php echo $almacen_destino[0]['codubigeo'];?>" name="">
+				<input type="text" class="form-control" id="direccionllegada" required value="<?php echo htmlspecialchars($almacen_destino_info['direccion'], ENT_QUOTES, 'UTF-8');?>" name="">
+				<input type="hidden" id="ubigeollegada" value="<?php echo htmlspecialchars($almacen_destino_info['codubigeo'], ENT_QUOTES, 'UTF-8');?>" name="">
 			</div>
 		</div>
 		<h4>DATOS DEL TRANSPORTISTA</h4>

@@ -1,38 +1,105 @@
-<div id="phuyu_form">
-	<form id="formulario" class="form-horizontal" v-on:submit.prevent="phuyu_guardar()">
-		<br> <input type="hidden" name="codregistro" v-model="campos.codregistro">
+<style>
+	#phuyu_form.phuyu-almacen-form .phuyu-card {
+		border: 1px solid rgba(64, 81, 137, .10);
+		border-radius: .9rem;
+		box-shadow: 0 10px 28px rgba(15, 23, 42, .06);
+	}
 
-		<div class="row form-group">
-			<div class="col-xs-12">
-				<label>DESCRIPCION UNIDAD</label>
-	        	<input type="text" name="descripcion" v-model.trim="campos.descripcion" class="form-control" required autocomplete="off" placeholder="Descripcion . . ." />
-			</div>
-		</div>
-		<div class="row form-group">
-			<div class="col-xs-12">
-				<label>UNIDAD OFICIAL SUNAT</label>
-				<select class="form-select" name="oficial" v-model="campos.oficial" required>
-					<option value="">SELECCIONE</option>
-					<option value="NIU">UNIDAD (NIU)</option>
-					<option value="ZZ">SERVICIO (ZZ)</option>
-					<option value="BG">BOLSA (BG)</option>
-					<option value="BJ">BALDE (BJ)</option>
-					<option value="CY">CILINDRO (CY)</option>
-					<option value="GLI">GALON (GLI)</option>
-					<option value="CT">CARTONES (CT)</option>
-					<option value="BX">CAJA (BX)</option>
-					<option value="BO">BOTELLAS (BO)</option>
-					<option value="CA">LATAS (CA)</option>
-					<option value="KGM">KILOGRAMO (KGM)</option>
-					<option value="GRM">GRAMO (GRM)</option>
-				</select>
-			</div>
-		</div>
+	#phuyu_form.phuyu-almacen-form .phuyu-form-header {
+		display: flex;
+		align-items: center;
+		gap: .75rem;
+		padding-bottom: 1rem;
+		margin-bottom: 1rem;
+		border-bottom: 1px solid rgba(64, 81, 137, .10);
+	}
 
-		<div class="ln_solid"></div>
-		<div class="form-group" align="center">
-			<button type="submit" class="btn btn-success" v-bind:disabled="estado==1"> <i class="fa fa-save"></i> GUARDAR </button>
-			<button type="button" class="btn btn-danger" v-on:click="phuyu_cerrar()"> CERRAR</button>
+	#phuyu_form.phuyu-almacen-form .phuyu-form-icon {
+		width: 40px;
+		height: 40px;
+		border-radius: 12px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(64, 81, 137, .10);
+		color: #405189;
+		font-size: 1.15rem;
+	}
+
+	#phuyu_form.phuyu-almacen-form .form-label {
+		font-size: .74rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		letter-spacing: .03em;
+		color: #495057;
+		margin-bottom: .4rem;
+	}
+
+	#phuyu_form.phuyu-almacen-form .form-control,
+	#phuyu_form.phuyu-almacen-form .form-select {
+		min-height: 40px;
+		border-color: rgba(64, 81, 137, .16);
+	}
+
+	#phuyu_form.phuyu-almacen-form .phuyu-form-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: .65rem;
+		padding-top: 1rem;
+		margin-top: 1rem;
+		border-top: 1px solid rgba(64, 81, 137, .10);
+	}
+</style>
+
+<div id="phuyu_form" class="phuyu-almacen-form">
+	<form id="formulario" v-on:submit.prevent="phuyu_guardar()">
+		<input type="hidden" name="codregistro" v-model="campos.codregistro">
+
+		<div class="card phuyu-card">
+			<div class="card-body">
+				<div class="phuyu-form-header">
+					<div class="phuyu-form-icon"><i class="bi bi-rulers"></i></div>
+					<div>
+						<div class="text-muted small text-uppercase fw-semibold">Almacen</div>
+						<h5 class="mb-0 fw-bold">Unidad</h5>
+					</div>
+				</div>
+
+				<div class="row g-3">
+					<div class="col-12">
+						<label class="form-label">Descripcion unidad</label>
+						<input type="text" name="descripcion" v-model.trim="campos.descripcion" class="form-control" required autocomplete="off" placeholder="Descripcion">
+					</div>
+
+					<div class="col-12">
+						<label class="form-label">Unidad oficial Sunat</label>
+						<select class="form-select" name="oficial" v-model="campos.oficial" required>
+							<option value="">SELECCIONE</option>
+							<option value="NIU">UNIDAD (NIU)</option>
+							<option value="ZZ">SERVICIO (ZZ)</option>
+							<option value="BG">BOLSA (BG)</option>
+							<option value="BJ">BALDE (BJ)</option>
+							<option value="CY">CILINDRO (CY)</option>
+							<option value="GLI">GALON (GLI)</option>
+							<option value="CT">CARTONES (CT)</option>
+							<option value="BX">CAJA (BX)</option>
+							<option value="BO">BOTELLAS (BO)</option>
+							<option value="CA">LATAS (CA)</option>
+							<option value="KGM">KILOGRAMO (KGM)</option>
+							<option value="GRM">GRAMO (GRM)</option>
+						</select>
+					</div>
+				</div>
+
+				<div class="phuyu-form-actions">
+					<button type="submit" class="btn btn-primary" v-bind:disabled="estado==1">
+						<i class="bi bi-save me-1"></i> Guardar
+					</button>
+					<button type="button" class="btn btn-light" v-on:click="phuyu_cerrar()">
+						<i class="bi bi-x-circle me-1"></i> Cerrar
+					</button>
+				</div>
+			</div>
 		</div>
 	</form>
 </div>

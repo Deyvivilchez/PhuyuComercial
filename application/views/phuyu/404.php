@@ -1,134 +1,484 @@
-<!-- 404 EMBEBIDO / COMPONENTE -->
-<div class="ph-404-embed" role="region" aria-label="Página no encontrada">
-  <style>
-    /* ===== Scope solo aquí ===== */
-    .ph-404-embed { 
-      /* ocupa el alto disponible del contenedor donde lo insertes */
-      min-height: min(72vh, 680px);
-      display: grid; place-items: center; padding: 16px;
-      isolation: isolate; /* evita mezclarse con overlays externos */
-    }
-    .ph-404-embed *{ box-sizing:border-box; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial; }
+<style>
+	:root {
+		--ph-404-primary: #405189;
+		--ph-404-primary-dark: #33416e;
+		--ph-404-accent: #0ab39c;
+		--ph-404-danger: #f06548;
+		--ph-404-text: #1f2937;
+		--ph-404-muted: #6b7280;
+		--ph-404-border: #e5e7eb;
+		--ph-404-soft: #f3f6f9;
+	}
 
-    .ph-404-card{
-      width: min(960px, 100%);
-      background:#fff; border:1px solid #e7eef6; border-radius:16px;
-      box-shadow: 0 10px 24px rgba(12,74,110,.10); overflow:hidden; position:relative; z-index:1;
-    }
-    .ph-404-card::before{ content:""; position:absolute; inset:0 0 auto 0; height:4px;
-      background: linear-gradient(90deg,#0ea5e9,#22d3ee,#7c3aed);
-    }
+	html,
+	body {
+		min-height: 100%;
+	}
 
-    .ph-404-head{ display:flex; align-items:center; gap:12px; padding:14px 18px;
-      background: linear-gradient(180deg, rgba(14,165,233,.08), rgba(34,211,238,.06));
-      border-bottom:1px solid #e9eef3;
-    }
-    .ph-404-head img{ height:28px; width:auto; }
-    .ph-404-tag{ margin-left:auto; font-size:12px; font-weight:700; color:#0b1b2b;
-      background:#e6f7fd; border:1px solid #cbeefb; border-radius:999px; padding:4px 10px; }
+	body {
+		background: #f3f6f9;
+		color: var(--ph-404-text);
+		font-family: "Inter", "Public Sans", "Segoe UI", Arial, sans-serif;
+		margin: 0;
+	}
 
-    .ph-404-body{ padding:22px 18px; display:grid; gap:20px; grid-template-columns: 1.15fr .85fr; }
-    @media (max-width: 900px){ .ph-404-body{ grid-template-columns: 1fr; } }
+	.ph-404-page,
+	.ph-404-page * {
+		box-sizing: border-box;
+	}
 
-    .ph-404-title{ margin:0 0 8px; font-size:42px; font-weight:900; color:#0b1b2b; letter-spacing:.2px; }
-    .ph-404-sub{ margin:0; color:#475569; font-weight:600; }
-    .ph-404-desc{ margin:10px 0 18px; color:#5b6470; }
+	.ph-404-page {
+		align-items: center;
+		display: flex;
+		justify-content: center;
+		min-height: 100vh;
+		overflow: hidden;
+		padding: 34px 18px;
+		position: relative;
+	}
 
-    .ph-404-actions{ display:flex; flex-wrap:wrap; gap:10px; }
-    .ph-btn{
-      display:inline-flex; align-items:center; gap:8px; text-decoration:none; font-weight:700;
-      padding:11px 16px; border-radius:10px; border:1px solid transparent; cursor:pointer;
-      transition: background .2s, box-shadow .2s, transform .05s;
-    }
-    .ph-btn:active{ transform: translateY(1px) scale(.99); }
-    .ph-btn-primary{ color:#fff; background:linear-gradient(90deg,#0ea5e9,#22d3ee); box-shadow:0 8px 18px rgba(14,165,233,.35); }
-    .ph-btn-primary:hover{ box-shadow:0 10px 22px rgba(14,165,233,.45); }
-    .ph-btn-ghost{ color:#0b1b2b; background:#f8fafc; border-color:#e7eef6; }
-    .ph-btn-ghost:hover{ background:#eef6fb; }
+	.ph-404-page::before {
+		background: #5b342f;
+		content: "";
+		height: 12px;
+		left: 0;
+		position: fixed;
+		right: 0;
+		top: 0;
+		z-index: 0;
+	}
 
-    .ph-404-quick{ display:grid; gap:10px; grid-template-columns: repeat(3, 1fr); margin-top:12px; }
-    @media (max-width:720px){ .ph-404-quick{ grid-template-columns: 1fr; } }
-    .ph-q{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px;
-      border:1px solid #e7eef6; background:#fff; text-decoration:none; color:#0b1b2b; font-weight:700;
-      transition: background .2s, box-shadow .2s;
-    }
-    .ph-q:hover{ background: linear-gradient(90deg, rgba(14,165,233,.09), rgba(34,211,238,.06)); box-shadow: 0 6px 14px rgba(12,74,110,.12); }
+	.ph-404-card {
+		background: #fff;
+		border: 1px solid rgba(148, 163, 184, .22);
+		border-radius: 18px;
+		box-shadow: 0 24px 70px rgba(15, 23, 42, .12);
+		display: grid;
+		grid-template-columns: minmax(0, 1.05fr) minmax(320px, .95fr);
+		max-width: 1080px;
+		min-height: 520px;
+		overflow: hidden;
+		position: relative;
+		width: 100%;
+		z-index: 1;
+	}
 
-    .ph-404-illu{ display:flex; align-items:center; justify-content:center; }
-    .ph-404-illuBox{
-      border:1px solid #e7eef6; border-radius:12px; padding:10px;
-      background: radial-gradient(120% 100% at 0% 0%, rgba(14,165,233,.12), transparent 70%),
-                  radial-gradient(120% 100% at 100% 100%, rgba(124,58,237,.12), transparent 70%),
-                  #0f172a;
-    }
-    .ph-404-illuBox img{ display:block; height:190px; width:auto; object-fit:contain; filter: drop-shadow(0 10px 22px rgba(14,165,233,.35)); }
+	.ph-404-content {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		padding: 52px;
+	}
 
-    .ph-404-foot{ padding:12px 18px; border-top:1px solid #e9eef3; color:#64748b; font-size:12px;
-      display:flex; justify-content:space-between; align-items:center; gap:10px; }
-    .ph-i{ width:18px; height:18px; }
+	.ph-404-brand {
+		align-items: center;
+		display: flex;
+		gap: 14px;
+		margin-bottom: 36px;
+	}
 
-    /* Centrado vertical extra si el contenedor padre es muy alto */
-    .ph-404-embed.ph-full-height{
-      min-height: calc(100vh - 140px); /* ajusta si tu header ocupa más/menos */
-    }
-  </style>
+	.ph-404-brand img {
+		display: block;
+		height: 38px;
+		max-width: 180px;
+		object-fit: contain;
+		width: auto;
+	}
 
-  <div class="ph-404-card">
-    <div class="ph-404-head">
-      <img src="<?php echo base_url(); ?>public/img/phuyu2024-bk.png"
-           alt="Phuyu System"
-           onerror="this.onerror=null;this.src='<?php echo base_url(); ?>public/img/phuyu_logo.png';">
-      <span class="ph-404-tag">Phuyu · Sistema</span>
-    </div>
+	.ph-404-badge {
+		background: rgba(64, 81, 137, .09);
+		border: 1px solid rgba(64, 81, 137, .13);
+		border-radius: 999px;
+		color: var(--ph-404-primary);
+		font-size: 12px;
+		font-weight: 800;
+		letter-spacing: .02em;
+		padding: 8px 12px;
+		text-transform: uppercase;
+		white-space: nowrap;
+	}
 
-    <div class="ph-404-body">
-      <section>
-        <h1 class="ph-404-title">404</h1>
-        <p class="ph-404-sub">La página solicitada no existe o fue movida.</p>
-        <p class="ph-404-desc">Puedes regresar al inicio, volver atrás o ir directo a un módulo.</p>
+	.ph-404-kicker {
+		align-items: center;
+		color: var(--ph-404-danger);
+		display: inline-flex;
+		font-size: 13px;
+		font-weight: 900;
+		gap: 9px;
+		letter-spacing: .08em;
+		margin-bottom: 14px;
+		text-transform: uppercase;
+	}
 
-        <div class="ph-404-actions" role="group" aria-label="Acciones">
-          <!-- Forzamos navegación aunque tu SPA intercepte <a> -->
-          <a href="<?php echo base_url(); ?>" class="ph-btn ph-btn-primary"
-             data-force-nav="<?php echo base_url(); ?>">Ir al inicio</a>
+	.ph-404-kicker::before {
+		background: var(--ph-404-danger);
+		border-radius: 999px;
+		content: "";
+		height: 8px;
+		width: 8px;
+	}
 
-          <a href="javascript:void(0)" class="ph-btn ph-btn-ghost"
-             onclick="if (history.length>1){history.back()}else{window.location.href='<?php echo base_url(); ?>'}">Volver atrás</a>
-        </div>
+	.ph-404-title {
+		color: #111827;
+		font-size: clamp(42px, 7vw, 84px);
+		font-weight: 900;
+		letter-spacing: 0;
+		line-height: .94;
+		margin: 0 0 18px;
+	}
 
-        <!-- Atajos (ajusta rutas reales) -->
-        <div class="ph-404-quick" aria-label="Módulos">
-          <a class="ph-q" href="<?php echo base_url('administracion'); ?>" data-force-nav="<?php echo base_url('administracion'); ?>">Administración</a>
-          <a class="ph-q" href="<?php echo base_url('ventas'); ?>" data-force-nav="<?php echo base_url('ventas'); ?>">Ventas</a>
-          <a class="ph-q" href="<?php echo base_url('cpe'); ?>" data-force-nav="<?php echo base_url('cpe'); ?>">CPE</a>
-        </div>
-      </section>
+	.ph-404-subtitle {
+		color: #111827;
+		font-size: clamp(22px, 3vw, 32px);
+		font-weight: 850;
+		letter-spacing: 0;
+		line-height: 1.15;
+		margin: 0;
+		max-width: 620px;
+	}
 
-      <aside class="ph-404-illu" aria-hidden="true">
-        <div class="ph-404-illuBox">
-          <img src="<?php echo base_url(); ?>public/img/404.png" alt="404">
-        </div>
-      </aside>
-    </div>
+	.ph-404-text {
+		color: var(--ph-404-muted);
+		font-size: 15px;
+		font-weight: 500;
+		line-height: 1.65;
+		margin: 18px 0 0;
+		max-width: 560px;
+	}
 
-    <div class="ph-404-foot">
-      <span>© <?php echo date('Y'); ?> Phuyu System</span>
-      <a href="<?php echo base_url('contacto'); ?>" data-force-nav="<?php echo base_url('contacto'); ?>" style="text-decoration:none; font-weight:700;">Soporte</a>
-    </div>
-  </div>
+	.ph-404-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
+		margin-top: 30px;
+	}
 
-  <script>
-    // Forzar navegación "hard" aunque tu SPA haga preventDefault
-    (function(){
-      var root = document.currentScript && document.currentScript.parentElement || document;
-      root.querySelectorAll('[data-force-nav]').forEach(function(a){
-        a.addEventListener('click', function(ev){
-          var url = a.getAttribute('data-force-nav');
-          if (!url) return;
-          ev.preventDefault();
-          window.location.href = url;
-        });
-      });
-    })();
-  </script>
+	.ph-404-btn {
+		align-items: center;
+		border: 1px solid transparent;
+		border-radius: 10px;
+		cursor: pointer;
+		display: inline-flex;
+		font-size: 14px;
+		font-weight: 800;
+		gap: 8px;
+		justify-content: center;
+		min-height: 42px;
+		padding: 0 18px;
+		text-decoration: none;
+		transition: transform .15s ease, box-shadow .15s ease, background .15s ease, color .15s ease;
+	}
+
+	.ph-404-btn:hover {
+		transform: translateY(-1px);
+	}
+
+	.ph-404-btn-primary {
+		background: var(--ph-404-primary);
+		box-shadow: 0 12px 22px rgba(64, 81, 137, .22);
+		color: #fff;
+	}
+
+	.ph-404-btn-primary:hover {
+		background: var(--ph-404-primary-dark);
+		color: #fff;
+	}
+
+	.ph-404-btn-light {
+		background: #fff;
+		border-color: #d7dce5;
+		color: #374151;
+	}
+
+	.ph-404-btn-light:hover {
+		background: #f8fafc;
+		color: #111827;
+	}
+
+	.ph-404-links {
+		display: grid;
+		gap: 10px;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		margin-top: 24px;
+		max-width: 620px;
+	}
+
+	.ph-404-link {
+		align-items: center;
+		background: #f8fafc;
+		border: 1px solid var(--ph-404-border);
+		border-radius: 12px;
+		color: #374151;
+		display: flex;
+		gap: 10px;
+		min-height: 58px;
+		padding: 12px;
+		text-decoration: none;
+		transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+	}
+
+	.ph-404-link:hover {
+		border-color: rgba(64, 81, 137, .35);
+		box-shadow: 0 10px 24px rgba(15, 23, 42, .08);
+		color: #111827;
+		transform: translateY(-1px);
+	}
+
+	.ph-404-link-icon {
+		align-items: center;
+		background: #eef2ff;
+		border-radius: 10px;
+		color: var(--ph-404-primary);
+		display: flex;
+		flex: 0 0 34px;
+		font-size: 17px;
+		font-weight: 900;
+		height: 34px;
+		justify-content: center;
+		width: 34px;
+	}
+
+	.ph-404-link strong {
+		display: block;
+		font-size: 13px;
+		font-weight: 900;
+		line-height: 1.2;
+	}
+
+	.ph-404-link span {
+		color: var(--ph-404-muted);
+		display: block;
+		font-size: 11px;
+		font-weight: 700;
+		line-height: 1.25;
+		margin-top: 2px;
+	}
+
+	.ph-404-visual {
+		background: linear-gradient(155deg, #eef2ff 0%, #f8fafc 46%, #e8fbf7 100%);
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		padding: 42px 38px;
+		position: relative;
+	}
+
+	.ph-404-visual::before {
+		background-image: radial-gradient(rgba(64, 81, 137, .18) 1px, transparent 1px);
+		background-size: 18px 18px;
+		bottom: 0;
+		content: "";
+		left: 0;
+		opacity: .45;
+		position: absolute;
+		right: 0;
+		top: 0;
+	}
+
+	.ph-404-illustration {
+		align-items: center;
+		display: flex;
+		justify-content: center;
+		position: relative;
+		z-index: 1;
+	}
+
+	.ph-404-illustration img {
+		display: block;
+		filter: drop-shadow(0 24px 30px rgba(30, 41, 59, .12));
+		height: auto;
+		max-width: 100%;
+		width: 440px;
+	}
+
+	.ph-404-note {
+		background: rgba(255, 255, 255, .78);
+		border: 1px solid rgba(255, 255, 255, .95);
+		border-radius: 14px;
+		box-shadow: 0 14px 30px rgba(15, 23, 42, .08);
+		margin-top: 28px;
+		padding: 16px 18px;
+		position: relative;
+		z-index: 1;
+	}
+
+	.ph-404-note strong {
+		color: #111827;
+		display: block;
+		font-size: 13px;
+		font-weight: 900;
+		margin-bottom: 5px;
+	}
+
+	.ph-404-note span {
+		color: var(--ph-404-muted);
+		display: block;
+		font-size: 12px;
+		font-weight: 600;
+		line-height: 1.5;
+	}
+
+	.ph-404-footer {
+		align-items: center;
+		color: #94a3b8;
+		display: flex;
+		flex-wrap: wrap;
+		font-size: 12px;
+		font-weight: 700;
+		gap: 8px;
+		margin-top: 34px;
+	}
+
+	.ph-404-footer a {
+		color: var(--ph-404-primary);
+		font-weight: 900;
+		text-decoration: none;
+	}
+
+	@media (max-width: 991.98px) {
+		.ph-404-card {
+			grid-template-columns: 1fr;
+			max-width: 720px;
+		}
+
+		.ph-404-content {
+			padding: 36px 28px;
+		}
+
+		.ph-404-visual {
+			order: -1;
+			padding: 30px 28px;
+		}
+
+		.ph-404-illustration img {
+			max-width: 360px;
+		}
+	}
+
+	@media (max-width: 575.98px) {
+		.ph-404-page {
+			align-items: stretch;
+			padding: 20px 12px;
+		}
+
+		.ph-404-card {
+			border-radius: 14px;
+			min-height: 0;
+		}
+
+		.ph-404-brand {
+			align-items: flex-start;
+			flex-direction: column;
+			margin-bottom: 24px;
+		}
+
+		.ph-404-actions,
+		.ph-404-btn {
+			width: 100%;
+		}
+
+		.ph-404-links {
+			grid-template-columns: 1fr;
+		}
+
+		.ph-404-visual {
+			padding: 24px 20px;
+		}
+
+		.ph-404-note {
+			margin-top: 18px;
+		}
+	}
+</style>
+
+<div class="ph-404-page" role="main" aria-label="Pagina no encontrada">
+	<section class="ph-404-card">
+		<div class="ph-404-content">
+			<div class="ph-404-brand">
+				<img src="<?php echo base_url('public/img/phuyu2024-bk.png'); ?>" alt="Phuyu System" onerror="this.onerror=null; this.src='<?php echo base_url('public/img/phuyu.png'); ?>'">
+				<span class="ph-404-badge">Phuyu Sistema</span>
+			</div>
+
+			<div class="ph-404-kicker">Error 404</div>
+			<h1 class="ph-404-title">Pagina no encontrada</h1>
+			<h2 class="ph-404-subtitle">La ruta que intentaste abrir no existe o fue movida.</h2>
+			<p class="ph-404-text">
+				No pasa nada, puedes volver al inicio del sistema o entrar directo a uno de los modulos principales.
+			</p>
+
+			<div class="ph-404-actions">
+				<a href="<?php echo base_url('phuyu/w/'); ?>" class="ph-404-btn ph-404-btn-primary" data-force-nav>
+					<span>Inicio</span>
+				</a>
+				<button type="button" class="ph-404-btn ph-404-btn-light" id="backButton">
+					<span>Volver atras</span>
+				</button>
+			</div>
+
+			<div class="ph-404-links" aria-label="Accesos rapidos">
+				<a href="<?php echo base_url('phuyu/w/administracion/dashboard'); ?>" class="ph-404-link" data-force-nav>
+					<span class="ph-404-link-icon">A</span>
+					<span>
+						<strong>Administracion</strong>
+						<span>Configurar sistema</span>
+					</span>
+				</a>
+				<a href="<?php echo base_url('phuyu/w/ventas/ventas'); ?>" class="ph-404-link" data-force-nav>
+					<span class="ph-404-link-icon">V</span>
+					<span>
+						<strong>Ventas</strong>
+						<span>Ir a operaciones</span>
+					</span>
+				</a>
+				<a href="<?php echo base_url('phuyu/w/almacen/productos'); ?>" class="ph-404-link" data-force-nav>
+					<span class="ph-404-link-icon">K</span>
+					<span>
+						<strong>Almacen</strong>
+						<span>Productos y stock</span>
+					</span>
+				</a>
+			</div>
+
+			<div class="ph-404-footer">
+				<span>&copy; <?php echo date('Y'); ?> Phuyu System</span>
+				<span>|</span>
+				<a href="<?php echo base_url('phuyu/w/'); ?>" data-force-nav>Ir al panel</a>
+			</div>
+		</div>
+
+		<aside class="ph-404-visual" aria-hidden="true">
+			<div class="ph-404-illustration">
+				<img src="<?php echo base_url('public/img1/404.png'); ?>" alt="">
+			</div>
+			<div class="ph-404-note">
+				<strong>Ruta no disponible</strong>
+				<span>Si llegaste desde un menu, revisa permisos o que el modulo siga activo.</span>
+			</div>
+		</aside>
+	</section>
 </div>
+
+<script>
+	(function() {
+		document.querySelectorAll("[data-force-nav]").forEach(function(el) {
+			el.addEventListener("click", function(event) {
+				var href = el.getAttribute("href");
+				if (href) {
+					event.preventDefault();
+					window.location.href = href;
+				}
+			});
+		});
+
+		var backBtn = document.getElementById("backButton");
+		if (backBtn) {
+			backBtn.addEventListener("click", function() {
+				if (window.history.length > 1) {
+					window.history.back();
+					return;
+				}
+				window.location.href = "<?php echo base_url('phuyu/w/'); ?>";
+			});
+		}
+	})();
+</script>

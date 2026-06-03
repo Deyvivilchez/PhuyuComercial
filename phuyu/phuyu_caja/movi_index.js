@@ -4,7 +4,8 @@ var phuyu_datos = new Vue({
 		cargando: true, registro:0, buscar: "", datos: [], transferencias:[], 
 		campos_t:{"codmovimiento":"","codpersona":"","codcaja":0,"codtipopago":0,"importe":0,"codcomprobantetipo":0,
 		"seriecomprobante":"","nrocomprobante":"","fechadocbanco":"","nrodocbanco":""},
-		paginacion: {"total":0, "actual":1, "ultima":0, "desde":0, "hasta":0}, offset: 3
+		paginacion: {"total":0, "actual":1, "ultima":0, "desde":0, "hasta":0}, offset: 3,
+		fecha_desde: "", fecha_hasta: "",
 	},
 	computed: {
 		phuyu_actual: function(){
@@ -31,6 +32,49 @@ var phuyu_datos = new Vue({
 		}
 	},
 	methods: {
+		exportarExcelDetallado() {
+			let desde = this.fecha_desde;
+			let hasta = this.fecha_hasta;
+
+			if (!desde || !hasta) {
+				phuyu_sistema.phuyu_noti("FALTAN FECHAS", "Debes seleccionar el rango de fechas", "warning");
+				return;
+			}
+
+			if (desde > hasta) {
+				phuyu_sistema.phuyu_noti("FECHAS INVÁLIDAS", "La fecha 'Desde' no puede ser mayor que la fecha 'Hasta'", "danger");
+				return;
+			}
+
+			window.open(`${url + phuyu_controller}/exportar_excel_detallado?desde=${desde}&hasta=${hasta}`);
+		},
+		exportarPdfDetallado() {
+			let desde = this.fecha_desde;
+			let hasta = this.fecha_hasta;
+
+			if (!desde || !hasta) {
+				phuyu_sistema.phuyu_noti("FALTAN FECHAS", "Debes seleccionar el rango de fechas", "warning");
+				return;
+			}
+
+			if (desde > hasta) {
+				phuyu_sistema.phuyu_noti("FECHAS INVÁLIDAS", "La fecha 'Desde' no puede ser mayor que la fecha 'Hasta'", "danger");
+				return;
+			}
+
+			window.open(url + phuyu_controller +'/exportar_pdf_detallado?desde=' + desde + '&hasta=' + hasta);
+		},
+
+		exportarMovimientosDetallePDF() {
+   			 window.open(url + phuyu_controller+ "/reporte_movimientos_detallado_pdf", "_blank");
+			// exportar_movimientos_detallado_excel
+			 
+		},
+		exportarExcelMovimientos() {
+    		window.open(url + phuyu_controller + "/exportar_movimientos_detallado_excel", "_blank");
+		},
+
+
 		phuyu_datos: function(){
 			this.cargando = true; this.registro = 0;
 			this.$http.post(url+phuyu_controller+"/lista",{"buscar":this.buscar, "pagina":this.paginacion.actual}).then(function(data){
