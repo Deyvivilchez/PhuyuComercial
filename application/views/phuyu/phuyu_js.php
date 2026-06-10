@@ -198,7 +198,8 @@
     function phuyuToggleDesktopSidebar() {
         var html = document.documentElement;
         var current = html.getAttribute('data-sidebar-size') || 'lg';
-        var next = current === 'sm' ? 'lg' : 'sm';
+        var compactSizes = ['sm', 'sm-hover', 'sm-hover-active'];
+        var next = compactSizes.indexOf(current) !== -1 ? 'lg' : 'sm';
         html.setAttribute('data-sidebar-size', next);
         sessionStorage.setItem('data-sidebar-size', next);
     }
@@ -218,6 +219,7 @@
         var $hamburger = $('#topnav-hamburger-icon');
         var $overlay = $('#phuyu-vertical-overlay');
         var $verticalHover = $('#vertical-hover');
+        var $appMenu = $('#phuyu-navbar-menu');
 
         function syncHamburgerState() {
             var isMobileMenuOpen = document.body.classList.contains('vertical-sidebar-enable');
@@ -252,12 +254,45 @@
 
             var html = document.documentElement;
             var current = html.getAttribute('data-sidebar-size') || 'lg';
-            var next = current === 'sm-hover' || current === 'sm-hover-active' ? 'lg' : 'sm-hover';
+            var next;
+
+            if (current === 'sm-hover') {
+                next = 'sm-hover-active';
+            } else if (current === 'sm-hover-active') {
+                next = 'sm-hover';
+            } else {
+                next = 'sm-hover';
+            }
 
             html.setAttribute('data-sidebar-size', next);
             sessionStorage.setItem('data-sidebar-size', next);
             syncHamburgerState();
         });
+
+        $appMenu.off('mouseenter.phuyuFallback mouseleave.phuyuFallback')
+            .on('mouseenter.phuyuFallback', function () {
+                if (window.innerWidth < 992) {
+                    return;
+                }
+
+                var html = document.documentElement;
+                if (html.getAttribute('data-sidebar-size') === 'sm-hover') {
+                    html.setAttribute('data-sidebar-size', 'sm-hover-active');
+                    syncHamburgerState();
+                }
+            })
+            .on('mouseleave.phuyuFallback', function () {
+                if (window.innerWidth < 992) {
+                    return;
+                }
+
+                var html = document.documentElement;
+                if (html.getAttribute('data-sidebar-size') === 'sm-hover-active') {
+                    html.setAttribute('data-sidebar-size', 'sm-hover');
+                    phuyuCloseAllSubmenus();
+                    syncHamburgerState();
+                }
+            });
 
         $SIDEBAR_MENU.find('a[data-phuyu-menu-toggle="true"]').off('click.phuyuFallback').on('click.phuyuFallback', function (e) {
             e.preventDefault();
@@ -265,10 +300,9 @@
 
             if (window.innerWidth >= 992) {
                 var sidebarSize = document.documentElement.getAttribute('data-sidebar-size') || 'lg';
-                if (['sm', 'sm-hover', 'sm-hover-active'].indexOf(sidebarSize) !== -1) {
-                    document.documentElement.setAttribute('data-sidebar-size', 'lg');
-                    sessionStorage.setItem('data-sidebar-size', 'lg');
+                if (sidebarSize === 'sm') {
                     syncHamburgerState();
+                    return;
                 }
             }
 

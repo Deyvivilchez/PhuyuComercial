@@ -104,7 +104,7 @@ class Notascredito extends CI_Controller {
 
 	function comprobantes($codpersona,$codcomprobantetipo,$seriecomprobante,$fechacomprobante){
 		if ($this->input->is_ajax_request()) {
-			$lista = $this->db->query("select codkardex,codcomprobantetipo,seriecomprobante,nrocomprobante,fechacomprobante,round(kardex.importe,2) as importe,kardex.estado,kardex.cliente,kardex.direccion,kardex.procesoestadonota from kardex.kardex where fechacomprobante='".$fechacomprobante."' and codpersona=".$codpersona." and codmovimientotipo=20 and codsucursal=".$_SESSION["phuyu_codsucursal"]." and codcomprobantetipo=".$codcomprobantetipo." and seriecomprobante='".$seriecomprobante."' and estado=1 order by codkardex")->result_array();
+			$lista = $this->db->query("select k.codkardex,k.codcomprobantetipo,k.seriecomprobante,k.nrocomprobante,k.fechacomprobante,round(k.importe,2) as importe,k.estado,k.cliente,k.direccion,k.procesoestadonota from kardex.kardex as k inner join sunat.kardexsunat as ks on(k.codkardex=ks.codkardex and ks.estado=1) where k.fechacomprobante='".$fechacomprobante."' and k.codpersona=".$codpersona." and k.codmovimientotipo=20 and k.codsucursal=".$_SESSION["phuyu_codsucursal"]." and k.codcomprobantetipo=".$codcomprobantetipo." and k.seriecomprobante='".$seriecomprobante."' and k.estado=1 order by k.codkardex")->result_array();
 			foreach ($lista as $key => $value) {
 				$motivo = $this->db->query("select count(*) as cantidad from kardex.kardex as k inner join kardex.motivonotas as mn on(k.codmotivonota=mn.codmotivonota) where k.codkardex_ref=".$value["codkardex"]." AND k.estado=1")->result_array();
 
@@ -139,6 +139,40 @@ class Notascredito extends CI_Controller {
 			if (isset( $_SESSION["phuyu_codusuario"]) ) {
 				$this->request = json_decode(file_get_contents('php://input'));
 
+				$codkardex_ref = (int)$this->request->campos->codkardex_ref;
+				$importeNota = (double)$this->request->totales->importe;
+				$comprobante = $this->db->query("select importe from kardex.kardex where codkardex=".$codkardex_ref)->result_array();
+				$comprobanteAceptado = $this->db->query("select codkardexsunat from sunat.kardexsunat where codkardex=".$codkardex_ref." and estado=1")->result_array();
+				$notasExistentes = $this->db->query("select coalesce(sum(importe),0) as total from kardex.kardex where codkardex_ref=".$codkardex_ref." and codcomprobantetipo=14 and estado=1")->result_array();
+
+				if (count($comprobante)==0) {
+					echo json_encode(["estado" => 0, "mensaje" => "Comprobante afectado no encontrado"]);
+					return;
+				}
+				if (count($comprobanteAceptado)==0) {
+					echo json_encode(["estado" => 0, "mensaje" => "El comprobante afectado aun no esta aceptado por SUNAT. No se puede emitir una nota de credito contra ese documento."]);
+					return;
+				}
+
+				$importeFactura = round((double)$comprobante[0]["importe"], 2);
+				$importeNotasExistentes = round((double)$notasExistentes[0]["total"], 2);
+				$importeDisponible = round($importeFactura - $importeNotasExistentes, 2);
+				if ($importeNota > $importeDisponible) {
+					echo json_encode([
+						"estado" => 0,
+						"mensaje" => "El monto total de la nota de crédito no debe exceder el monto disponible del comprobante afectado.",
+						"importe_factura" => $importeFactura,
+						"importe_notas" => $importeNotasExistentes,
+						"importe_disponible" => $importeDisponible,
+						"importe_nota" => $importeNota
+					]);
+					return;
+				}
+				$codmotivonota = (int)$this->request->campos->codmotivonota;
+				if (round($importeNota, 2) == $importeDisponible && !in_array($codmotivonota, [1, 2, 6])) {
+					$codmotivonota = 6;
+				}
+
 				$this->db->trans_begin();
 //echo "1";exit;
 
@@ -152,7 +186,7 @@ class Notascredito extends CI_Controller {
 					(int)$this->request->campos->codkardex_ref,
 					(int)$this->request->campos->codpersona,
 					(int)$_SESSION["phuyu_codusuario"],
-					(int)$this->request->campos->codmotivonota,
+					$codmotivonota,
 					(int)$this->request->campos->codmovimientotipo,date("Y-m-d"),date("Y-m-d"),
 					(int)$comprobante_nota,$this->request->campos->seriecomprobante,
 					(int)$this->request->campos->codcomprobantetipo_ref,

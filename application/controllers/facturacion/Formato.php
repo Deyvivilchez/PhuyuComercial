@@ -1159,6 +1159,7 @@ class Formato extends CI_Controller
     if (!is_dir($tempDir)) {
         mkdir($tempDir, 0777, true);
     }
+    $fontDir = FCPATH . 'vendor/dompdf/dompdf/lib/fonts';
 
     $options = new \Dompdf\Options();
     $options->set('isHtml5ParserEnabled', true);
@@ -1166,7 +1167,7 @@ class Formato extends CI_Controller
     $options->set('defaultFont', 'DejaVu Sans');
     $options->set('chroot', FCPATH);
     $options->set('tempDir', $tempDir);
-    $options->set('fontDir', $tempDir);
+    $options->set('fontDir', $fontDir);
     $options->set('fontCache', $tempDir);
     $options->set('dpi', 96);
 
@@ -1952,6 +1953,7 @@ class Formato extends CI_Controller
     if (!is_dir($tempDir)) {
         mkdir($tempDir, 0777, true);
     }
+    $fontDir = FCPATH . 'vendor/dompdf/dompdf/lib/fonts';
 
     $options = new \Dompdf\Options();
     $options->set('isHtml5ParserEnabled', true);
@@ -1959,7 +1961,7 @@ class Formato extends CI_Controller
     $options->set('defaultFont', 'DejaVu Sans');
     $options->set('chroot', FCPATH);
     $options->set('tempDir', $tempDir);
-    $options->set('fontDir', $tempDir);
+    $options->set('fontDir', $fontDir);
     $options->set('fontCache', $tempDir);
     $options->set('dpi', 96);
 
@@ -2895,6 +2897,7 @@ class Formato extends CI_Controller
         if (!is_dir($tempDir)) {
             mkdir($tempDir, 0777, true);
         }
+        $fontDir = FCPATH . 'vendor/dompdf/dompdf/lib/fonts';
 
         $options = new \Dompdf\Options();
         $options->set('isHtml5ParserEnabled', true);
@@ -2902,7 +2905,7 @@ class Formato extends CI_Controller
         $options->set('defaultFont', 'DejaVu Sans');
         $options->set('chroot', FCPATH);
         $options->set('tempDir', $tempDir);
-        $options->set('fontDir', $tempDir);
+        $options->set('fontDir', $fontDir);
         $options->set('fontCache', $tempDir);
         $options->set('dpi', 96);
 

@@ -42,10 +42,48 @@ class Facturacion extends Sunat {
 		}
 	}
 
-	function comprobantes_enviar($codkardex,$codoficial){
+	function validar_nota_credito($codkardex){
+		$nota = $this->db->query("select codkardex, codkardex_ref, seriecomprobante, nrocomprobante, seriecomprobante_ref, nrocomprobante_ref, round(importe,2) as importe from kardex.kardex where codkardex=".(int)$codkardex." and codcomprobantetipo=14")->result_array();
+		if (count($nota)==0) {
+			return ["estado" => 1];
+		}
+
+		$referencia = $this->db->query("select k.codkardex, k.seriecomprobante, k.nrocomprobante, round(k.importe,2) as importe, ks.estado as estadosunat from kardex.kardex as k left join sunat.kardexsunat as ks on(k.codkardex=ks.codkardex and ks.estado=1) where k.codkardex=".(int)$nota[0]["codkardex_ref"]." and k.estado=1")->result_array();
+		if (count($referencia)==0) {
+			return ["estado" => 0, "mensaje" => "La nota ".$nota[0]["seriecomprobante"]."-".$nota[0]["nrocomprobante"]." no tiene comprobante afectado valido."];
+		}
+		if ((int)$referencia[0]["estadosunat"]!=1) {
+			return ["estado" => 0, "mensaje" => "La nota ".$nota[0]["seriecomprobante"]."-".$nota[0]["nrocomprobante"]." afecta a ".$nota[0]["seriecomprobante_ref"]."-".$nota[0]["nrocomprobante_ref"].", pero ese comprobante no esta aceptado por SUNAT. Elimine esa nota y genere una nueva contra el comprobante aceptado."];
+		}
+
+		$notas = $this->db->query("select coalesce(sum(importe),0) as total from kardex.kardex where codkardex_ref=".(int)$nota[0]["codkardex_ref"]." and codcomprobantetipo=14 and estado=1 and codkardex<>".(int)$codkardex)->result_array();
+		$importeDisponible = round((double)$referencia[0]["importe"] - (double)$notas[0]["total"], 2);
+		if ((double)$nota[0]["importe"] > $importeDisponible) {
+			return ["estado" => 0, "mensaje" => "La nota ".$nota[0]["seriecomprobante"]."-".$nota[0]["nrocomprobante"]." es por S/ ".number_format((double)$nota[0]["importe"],2).", pero el disponible del comprobante afectado ".$referencia[0]["seriecomprobante"]."-".$referencia[0]["nrocomprobante"]." es S/ ".number_format($importeDisponible,2)."."];
+		}
+
+		return ["estado" => 1];
+	}
+
+	function comprobantes_enviar($codkardex,$codoficial = ""){
 		if ($this->input->is_ajax_request()) {
 			if (isset($_SESSION["phuyu_codusuario"])) {
 				$empresa = $this->db->query("select *from public.webservice where codempresa=1")->result_array();
+				if ($codoficial=="") {
+					$comprobante = $this->db->query("select ct.oficial from kardex.kardex as k inner join caja.comprobantetipos as ct on(k.codcomprobantetipo=ct.codcomprobantetipo) where k.codkardex=".(int)$codkardex)->result_array();
+					if (count($comprobante)==0) {
+						echo json_encode(["estado" => 0, "mensaje" => "Comprobante no encontrado", "alerta" => "error"]);
+						return;
+					}
+					$codoficial = $comprobante[0]["oficial"];
+				}
+				if ($codoficial=="07") {
+					$validacionNota = $this->validar_nota_credito($codkardex);
+					if ($validacionNota["estado"]==0) {
+						echo json_encode(["estado" => 0, "mensaje" => $validacionNota["mensaje"], "alerta" => "error"]);
+						return;
+					}
+				}
 
 				$estado = $this->Facturacion_model->phuyu_crearXML($codoficial,$codkardex);
 				if ($estado["estado"]!=0) {
@@ -178,10 +216,10 @@ class Facturacion extends Sunat {
 					$fechas_resumen = $this->db->query("select distinct(k.fechacomprobante) as fechacomprobante from kardex.kardexanulados as ka inner join kardex.kardex as k on(ka.codkardex=k.codkardex) inner join sunat.kardexsunat as ks on(k.codkardex=ks.codkardex) where ka.fechaanulacion<='".$fecha."' and k.codmovimientotipo=20 and k.codcomprobantetipo=10 and (ks.estado=1 or ks.estado=2) and k.codkardex not in (select codkardex from sunat.kardexsunatanulados where fechaanulacion<='".$fecha."') ")->result_array();
 					$tipo = "FACTURAS ANULADAS";
 				}elseif($codresumentipo==3){
-					$fechas_resumen = $this->db->query("select distinct(kardex.fechacomprobante) as fechacomprobante from kardex.kardex as kardex inner join sunat.kardexsunat as kardexs on(kardex.codkardex=kardexs.codkardex) where kardexs.fechacreado<='".$fecha."' and kardex.codmovimientotipo=20 and kardex.codcomprobantetipo=12 and kardex.codkardex not in (select codkardex from sunat.kardexsunatdetalle where fecharesumen<='".$fecha."')")->result_array();
+					$fechas_resumen = $this->db->query("select distinct(kardex.fechacomprobante) as fechacomprobante from kardex.kardex as kardex inner join sunat.kardexsunat as kardexs on(kardex.codkardex=kardexs.codkardex) where kardexs.fechacreado<='".$fecha."' and kardex.codmovimientotipo=20 and kardex.codcomprobantetipo=12 and upper(kardex.seriecomprobante) like 'B%' and kardex.codkardex not in (select codkardex from sunat.kardexsunatdetalle where fecharesumen<='".$fecha."')")->result_array();
 					$tipo = "BOLETAS";
 				}else{
-					$fechas_resumen = $this->db->query("select distinct(k.fechacomprobante) as fechacomprobante from kardex.kardexanulados as ka inner join kardex.kardex as k on(ka.codkardex=k.codkardex) inner join sunat.kardexsunat as ks on(k.codkardex=ks.codkardex) where ka.fechaanulacion<='".$fecha."' and k.codmovimientotipo=20 and k.codcomprobantetipo=12 and (ks.estado=1 or ks.estado=2) and k.codkardex not in (select codkardex from sunat.kardexsunatanulados where fechaanulacion<='".$fecha."')")->result_array();
+					$fechas_resumen = $this->db->query("select distinct(k.fechacomprobante) as fechacomprobante from kardex.kardexanulados as ka inner join kardex.kardex as k on(ka.codkardex=k.codkardex) inner join sunat.kardexsunat as ks on(k.codkardex=ks.codkardex) where ka.fechaanulacion<='".$fecha."' and k.codmovimientotipo=20 and k.codcomprobantetipo=12 and upper(k.seriecomprobante) like 'B%' and (ks.estado=1 or ks.estado=2) and k.codkardex not in (select codkardex from sunat.kardexsunatanulados where fechaanulacion<='".$fecha."')")->result_array();
 					$tipo = "BOLETAS ANULADAS";
 				}
 
@@ -192,9 +230,9 @@ class Facturacion extends Sunat {
 						if ($codresumentipo==1) {
 				            $lista = $this->db->query("select ka.codkardex,ka.observaciones from kardex.kardexanulados as ka inner join kardex.kardex as k on(ka.codkardex=k.codkardex) inner join sunat.kardexsunat as ks on(k.codkardex=ks.codkardex) where k.fechacomprobante='".$value["fechacomprobante"]."' and ka.fechaanulacion<='".$fecha."' and k.codmovimientotipo=20 and k.codcomprobantetipo=10 and (ks.estado=1 or ks.estado=2) and k.codkardex not in (select codkardex from sunat.kardexsunatanulados where fechaanulacion<='".$fecha."') ")->result_array();
 				        }elseif($codresumentipo==3){
-				            $lista = $this->db->query("select kardex.codkardex from kardex.kardex as kardex inner join sunat.kardexsunat as kardexs on(kardex.codkardex=kardexs.codkardex) where kardex.fechacomprobante='".$value["fechacomprobante"]."' and kardex.codmovimientotipo=20 and kardex.codcomprobantetipo=12 and kardex.codkardex not in (select codkardex from sunat.kardexsunatdetalle where fecharesumen<='".$fecha."')")->result_array();
+				            $lista = $this->db->query("select kardex.codkardex from kardex.kardex as kardex inner join sunat.kardexsunat as kardexs on(kardex.codkardex=kardexs.codkardex) where kardex.fechacomprobante='".$value["fechacomprobante"]."' and kardex.codmovimientotipo=20 and kardex.codcomprobantetipo=12 and upper(kardex.seriecomprobante) like 'B%' and kardex.codkardex not in (select codkardex from sunat.kardexsunatdetalle where fecharesumen<='".$fecha."')")->result_array();
 				        }else{
-				            $lista = $this->db->query("select ka.codkardex,ka.observaciones from kardex.kardexanulados as ka inner join kardex.kardex as k on(ka.codkardex=k.codkardex) inner join sunat.kardexsunat as ks on(k.codkardex=ks.codkardex) where k.fechacomprobante='".$value["fechacomprobante"]."' and ka.fechaanulacion<='".$fecha."' and k.codmovimientotipo=20 and k.codcomprobantetipo=12 and (ks.estado=1 or ks.estado=2) and k.codkardex not in (select codkardex from sunat.kardexsunatanulados where fechaanulacion<='".$fecha."') ")->result_array();
+				            $lista = $this->db->query("select ka.codkardex,ka.observaciones from kardex.kardexanulados as ka inner join kardex.kardex as k on(ka.codkardex=k.codkardex) inner join sunat.kardexsunat as ks on(k.codkardex=ks.codkardex) where k.fechacomprobante='".$value["fechacomprobante"]."' and ka.fechaanulacion<='".$fecha."' and k.codmovimientotipo=20 and k.codcomprobantetipo=12 and upper(k.seriecomprobante) like 'B%' and (ks.estado=1 or ks.estado=2) and k.codkardex not in (select codkardex from sunat.kardexsunatanulados where fechaanulacion<='".$fecha."') ")->result_array();
 				        }
 
 				        $fecharesumen = $value["fechacomprobante"];

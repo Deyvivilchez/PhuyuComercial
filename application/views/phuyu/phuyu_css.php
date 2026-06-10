@@ -1168,5 +1168,10 @@
                 width: 100%;
             }
         }
+
+        /* Ensure hover toggle button is visible in compact sidebar state */
+        html[data-sidebar-size="sm"] .btn-vertical-sm-hover {
+            display: inline-block !important;
+        }
     </style>
 </head>

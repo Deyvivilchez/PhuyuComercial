@@ -1171,29 +1171,6 @@ class Ventas extends CI_Controller
                     ? $this->request->campos->codpersona
                     : $this->request->codpersonapedido;
 
-                $personaComprobante = $this->db->query(
-                    'select codpersona, documento, coddocumentotipo from public.personas where codpersona=' . (int)$this->request->campos->codpersona . ' and estado=1 limit 1'
-                )->row_array();
-                $codComprobante = (int)$this->request->campos->codcomprobantetipo;
-                $esFactura = in_array($codComprobante, [10, 25], true);
-                $esBoleta = in_array($codComprobante, [12, 26], true);
-
-                if ($esFactura && (empty($personaComprobante) || (int)$personaComprobante['coddocumentotipo'] != 4 || strlen(trim($personaComprobante['documento'])) != 11)) {
-                    echo json_encode([
-                        'estado' => 0,
-                        'informacion' => 'Para emitir factura debe seleccionar un cliente con RUC de 11 digitos.'
-                    ]);
-                    return;
-                }
-
-                if ($esBoleta && !empty($personaComprobante) && (int)$personaComprobante['coddocumentotipo'] == 4) {
-                    echo json_encode([
-                        'estado' => 0,
-                        'informacion' => 'No puede emitir boleta a un cliente con RUC. Use factura o nota de venta.'
-                    ]);
-                    return;
-                }
-
                 // VALIDAMOS SI ES BOLETA Y EL IMPORTE SEA MENOR A 700
                 if ($this->request->campos->codpersona == 2 && $this->request->campos->codcomprobantetipo == 12) {
                     if ($this->request->totales->importe >= 700) {
@@ -1437,29 +1414,6 @@ class Ventas extends CI_Controller
                 $this->request->campos->codpersona = $this->request->codpersonapedido == 0
                     ? $this->request->campos->codpersona
                     : $this->request->codpersonapedido;
-
-                $personaComprobante = $this->db->query(
-                    'select codpersona, documento, coddocumentotipo from public.personas where codpersona=' . (int)$this->request->campos->codpersona . ' and estado=1 limit 1'
-                )->row_array();
-                $codComprobante = (int)$this->request->campos->codcomprobantetipo;
-                $esFactura = in_array($codComprobante, [10, 25], true);
-                $esBoleta = in_array($codComprobante, [12, 26], true);
-
-                if ($esFactura && (empty($personaComprobante) || (int)$personaComprobante['coddocumentotipo'] != 4 || strlen(trim($personaComprobante['documento'])) != 11)) {
-                    echo json_encode([
-                        'estado' => 0,
-                        'informacion' => 'Para emitir factura debe seleccionar un cliente con RUC de 11 digitos.'
-                    ]);
-                    return;
-                }
-
-                if ($esBoleta && !empty($personaComprobante) && (int)$personaComprobante['coddocumentotipo'] == 4) {
-                    echo json_encode([
-                        'estado' => 0,
-                        'informacion' => 'No puede emitir boleta a un cliente con RUC. Use factura o nota de venta.'
-                    ]);
-                    return;
-                }
 
                 // VALIDAMOS SI ES BOLETA Y EL IMPORTE SEA MENOR A 700
                 if ($this->request->campos->codpersona == 2 && $this->request->campos->codcomprobantetipo == 12) {
