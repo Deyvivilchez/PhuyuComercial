@@ -161,20 +161,23 @@ class Programacionsunat extends Sunat {
 	}
 
 	private function cron_base_info(){
-		$host = isset($_SERVER["HTTP_HOST"]) ? strtolower(trim($_SERVER["HTTP_HOST"])) : "";
-		$host = preg_replace('/:\d+$/', '', $host);
+		$ruta = realpath(FCPATH);
+		if ($ruta === false || !is_file($ruta.DIRECTORY_SEPARATOR."index.php")) {
+			throw new Exception("No se pudo detectar la ruta real del index.php del proyecto.");
+		}
 
-		if ($host === "" || !preg_match('/^[a-z0-9.-]+$/', $host)) {
+		$ruta = rtrim($ruta, DIRECTORY_SEPARATOR);
+		$proyecto = strtolower(basename($ruta));
+		if ($proyecto === "" || !preg_match('/^[a-z0-9.-]+$/', $proyecto)) {
 			throw new Exception("No se pudo detectar un nombre de proyecto valido.");
 		}
 
-		$nombre_archivo = preg_replace('/[^a-z0-9_-]+/', '-', $host);
-		$ruta = "/var/www/".$host;
+		$nombre_archivo = preg_replace('/[^a-z0-9_-]+/', '-', $proyecto);
 		$archivo = "/etc/cron.d/phuyu-".$nombre_archivo."-programacion-sunat";
 		$comando = "* * * * * www-data cd ".$ruta." && /usr/bin/php7.4 index.php facturacion/programacionsunat/cron >/dev/null 2>&1";
 
 		return [
-			"proyecto" => $host,
+			"proyecto" => $proyecto,
 			"ruta" => $ruta,
 			"archivo" => $archivo,
 			"comando" => $comando
