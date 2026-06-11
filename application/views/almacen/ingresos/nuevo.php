@@ -611,7 +611,7 @@
 
 </div>
 
-<script src="<?php echo base_url();?>phuyu/phuyu_almacen/nuevoingreso.js"> </script>
+<script src="<?php echo base_url();?>phuyu/phuyu_almacen/nuevoingreso.js?v=<?php echo filemtime(FCPATH . 'phuyu/phuyu_almacen/nuevoingreso.js'); ?>"> </script>
 <script src="<?php echo base_url();?>phuyu/phuyu_personas_2.js"> </script>
 <script>
 	if (typeof AcornIcons !== 'undefined') {

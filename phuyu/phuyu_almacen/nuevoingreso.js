@@ -605,6 +605,19 @@ var phuyu_operacion = new Vue({
 				return false;
 			}
 
+			const itemSinSeries = this.detalle.find(item =>
+				Number(item.controlarseries) === 1 &&
+				(!Array.isArray(item.series) || item.series.length === 0)
+			);
+			if (itemSinSeries) {
+				phuyu_sistema.phuyu_noti(
+					"SERIES REQUERIDAS",
+					"Registre al menos una serie para " + itemSinSeries.producto,
+					"error"
+				);
+				return false;
+			}
+
 			this.campos.fechakardex = $("#fechakardex").val();
 			this.estado = 1; phuyu_sistema.phuyu_inicio_guardar("GUARDANDO INGRESO DE ALMACEN . . .");
 

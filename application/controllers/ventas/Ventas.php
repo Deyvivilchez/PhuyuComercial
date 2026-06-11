@@ -135,6 +135,37 @@ class Ventas extends CI_Controller
         return 'data:image/' . $mime . ';base64,' . base64_encode(file_get_contents($path));
     }
 
+    private function phuyu_mesa_restaurante($codkardex)
+    {
+        $tablas = $this->db->query("
+            SELECT
+                to_regclass('kardex.kardexpedido') AS kardexpedido,
+                to_regclass('restaurante.mesaspedido') AS mesaspedido
+        ")->row_array();
+
+        if (empty($tablas['kardexpedido']) || empty($tablas['mesaspedido'])) {
+            return '';
+        }
+
+        $mesa = $this->db->query("
+            SELECT string_agg(DISTINCT mp.nromesa::text, ' - ') AS numero
+            FROM restaurante.mesaspedido mp
+            WHERE mp.codpedido IN (
+                SELECT p.codpedido
+                FROM kardex.pedidos p
+                WHERE p.codkardex = " . (int)$codkardex . "
+
+                UNION
+
+                SELECT kp.codpedido
+                FROM kardex.kardexpedido kp
+                WHERE kp.codkardex = " . (int)$codkardex . "
+            )
+        ")->row_array();
+
+        return trim((string)($mesa['numero'] ?? ''));
+    }
+
     private function phuyu_whatsapp_datos_pdf($codkardex, $formato)
     {
         $codkardex = (int)$codkardex;
@@ -378,6 +409,7 @@ class Ventas extends CI_Controller
                 'detallemovimiento' => $detallemovimiento,
                 'efectivo' => !empty($detallemovimiento) ? 1 : 0,
                 'logoEmpresa' => $_SESSION['phuyu_logo'] ?? '',
+                'mesa_restaurante' => $this->phuyu_mesa_restaurante($codkardex),
             ],
         ];
     }
