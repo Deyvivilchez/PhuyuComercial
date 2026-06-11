@@ -30,6 +30,17 @@ var phuyu_ventas = new Vue({
 		}
 	},
 	methods: {
+		phuyu_cliente_nombre: function(dato){
+			var cliente = String(dato.cliente || "").trim();
+			var documento = String(dato.documento || "").trim();
+
+			if (!documento) {
+				return cliente;
+			}
+
+			var documentoRegex = documento.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+			return cliente.replace(new RegExp("\\s*-\\s*" + documentoRegex + "\\s*$"), "").trim();
+		},
 		phuyu_datos: function(){
 			this.fechas.desde = $("#fecha_desde").val(); this.fechas.hasta = $("#fecha_hasta").val();
 			this.cargando = true; this.registro = 0;

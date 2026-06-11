@@ -356,8 +356,8 @@
 
                 <td>{{dato.documento}}</td>
                 <td class="fw-semibold text-dark">
-                  <span class="phuyu-cliente-truncado" :title="dato.cliente">
-                    {{dato.cliente}}
+                  <span class="phuyu-cliente-truncado" :title="phuyu_cliente_nombre(dato)">
+                    {{phuyu_cliente_nombre(dato)}}
                   </span>
                 </td>
 
