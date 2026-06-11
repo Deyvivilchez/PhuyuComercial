@@ -25,6 +25,13 @@ var phuyu_form = new Vue({
 						phuyu_creditos.phuyu_datos();
 					}
 					var socio = eval(data.body);
+					if(typeof phuyu_hotel_reservas !== "undefined"){
+						phuyu_hotel_reservas.seleccionar_cliente({
+							codpersona: socio[0]["codpersona"],
+							razonsocial: socio[0]["razonsocial"],
+							documento: socio[0]["documento"] || ""
+						});
+					}
 					if(phuyu_controller=="ventas/ventas" || phuyu_controller=="ventas/pedidos" || phuyu_controller=="ventas/proformas" || phuyu_controller=="compras/compras"){ 
 						if($("#acv").is(':checked')){
 							$("#acv").click();
@@ -36,7 +43,16 @@ var phuyu_form = new Vue({
 						$("#codpersona").empty().html("<option value='"+socio[0]["codpersona"]+"'>"+socio[0]["razonsocial"]+"</option>");
 						phuyu_operacion.phuyu_infocliente();
 					}
-					$(".select2-selection__rendered").empty().append(socio[0]["razonsocial"]); 					
+					if(phuyu_controller=="ventas/lineascredito"){
+						phuyu_operacion.campos.codsocio = socio[0]["codpersona"];
+						phuyu_operacion.campos.codsocioreferencia = socio[0]["codpersona"];
+						phuyu_operacion.campos.cliente = socio[0]["razonsocial"];
+						phuyu_operacion.campos.direccion = socio[0]["direccion"];
+						$("#codsocio").empty().append(new Option(socio[0]["razonsocial"], socio[0]["codpersona"], true, true)).trigger("change");
+						$("#codsocioreferencia").empty().append(new Option(socio[0]["razonsocial"], socio[0]["codpersona"], true, true)).trigger("change");
+					}else{
+						$(".select2-selection__rendered").empty().append(socio[0]["razonsocial"]);
+					}
 					
 				}
 				this.phuyu_cerrar();

@@ -1,8 +1,9 @@
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
 
-<div id="phuyu_nuevocredito">
+<div id="phuyu_nuevocredito" class="phuyu-velzon-form phuyu-creditos-velzon">
 	<form id="formulario" class="form-horizontal" v-on:submit.prevent="phuyu_guardar()">
 		<div class="phuyu_body">
-			<div class="card">
+			<div class="card phuyu-card">
 				<div class="card-body">
 					<input type="hidden" id="rubro" value="<?php echo $_SESSION["phuyu_rubro"]?>" name="">
 					<div class="row form-group">

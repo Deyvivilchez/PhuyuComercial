@@ -9,23 +9,22 @@ class Phuyu_model extends CI_Model {
 
 	function phuyu_login($usuario,$clave){
 
-		$usuario = stripslashes($usuario);
-    	$array = array("'", "=", "/", "\"", "<", ">", "|", "&", "*");
-    	$usuario = str_replace($array, "", $usuario );
-
-    	$clave = stripslashes($clave);
-    	$array = array("'", "=", "/", "\"", "<", ">", "|", "&", "*");
-    	$clave = str_replace($array, "", $clave );
+		$usuario = trim((string) $usuario);
+		$clave = trim((string) $clave);
 
 		$existe = $this->db->query("select u.*,p.descripcion as perfil
 		from seguridad.usuarios u 
 		inner join seguridad.perfiles p ON(u.codperfil=p.codperfil) 
-		where u.usuario='".$usuario."' and u.clave='".$clave."' and u.estado=1")->result_array();
+		where u.usuario=? and u.clave=? and u.estado=1", [$usuario, $clave])->result_array();
 
 		if (count($existe)>0) {
-			$empleado = $this->db->query("select *from public.personas where codpersona=".$existe[0]["codempleado"])->result_array();
+			$empleado = $this->db->query("select *from public.personas where codpersona=?", [(int) $existe[0]["codempleado"]])->result_array();
 
 			$empresa = $this->db->query("select personas.documento, personas.nombrecomercial, personas.foto, empresas.igvsunat,empresas.icbpersunat,empresas.rubro,itemrepetircomprobante from empresas as empresas inner join public.personas as personas on (empresas.codpersona=personas.codpersona) where empresas.codempresa=1")->result_array();
+
+			if (count($empleado) == 0 || count($empresa) == 0) {
+				return 0;
+			}
 
 			$_SESSION["phuyu_codusuario"] = $existe[0]["codusuario"];
             $_SESSION["phuyu_usuario"] = $existe[0]["usuario"];
@@ -57,7 +56,20 @@ class Phuyu_model extends CI_Model {
 	}
 
 	function phuyu_web($sucursal, $almacen, $caja){
-		$info = $this->db->query("select *from public.sucursales where codsucursal=".$sucursal)->result_array();
+		$sucursal = (int) $sucursal;
+		$almacen = (int) $almacen;
+		$caja = (int) $caja;
+		$codusuario = isset($_SESSION["phuyu_codusuario"]) ? (int) $_SESSION["phuyu_codusuario"] : 0;
+
+		$info = $this->db->query(
+			"select sucursal.* from public.sucursales as sucursal
+			inner join seguridad.sucursalusuarios as sucursalusuario on(sucursal.codsucursal=sucursalusuario.codsucursal)
+			where sucursalusuario.codusuario=? and sucursal.codsucursal=? and sucursal.estado=1",
+			[$codusuario, $sucursal]
+		)->result_array();
+		if (count($info) == 0) {
+			return 0;
+		}
 		$_SESSION["phuyu_codempresa"] = $info[0]["codempresa"];
 		$_SESSION["phuyu_codsucursal"] = $info[0]["codsucursal"];
 		$_SESSION["phuyu_sucursal"] = $info[0]["descripcion"];
@@ -66,19 +78,25 @@ class Phuyu_model extends CI_Model {
 		$_SESSION["phuyu_ventaconproforma"] = $info[0]["ventaconproforma"];
 		$_SESSION["phuyu_creditoprogramado"] = $info[0]["creditoprogramado"];
 
-		$info = $this->db->query("select *from almacen.almacenes where codalmacen=".$almacen)->result_array();
+		$info = $this->db->query("select *from almacen.almacenes where codalmacen=? and codsucursal=? and estado=1", [$almacen, $sucursal])->result_array();
+		if (count($info) == 0) {
+			return 0;
+		}
 		$_SESSION["phuyu_codalmacen"] = $info[0]["codalmacen"];
 		$_SESSION["phuyu_almacen"] = $info[0]["descripcion"];
 		$_SESSION["phuyu_stockalmacen"] = $info[0]["controlstock"];
 		$_SESSION["phuyu_conpedido"] = $info[0]["conpedido"];
 		$_SESSION["phuyu_afectacionigv"] = $info[0]["codafectacionigv"];
 
-        $info = $this->db->query("select *from caja.cajas where codcaja=".$caja)->result_array();
+        $info = $this->db->query("select *from caja.cajas where codcaja=? and codsucursal=? and estado=1", [$caja, $sucursal])->result_array();
+		if (count($info) == 0) {
+			return 0;
+		}
 		$_SESSION["phuyu_codcaja"] = $info[0]["codcaja"];
 		$_SESSION["phuyu_caja"] = $info[0]["descripcion"];
 
 		// Verficiar el estado de la caja //
-		$caja = $this->db->query("select *from caja.controldiario where codcaja=".$_SESSION["phuyu_codcaja"]." and codsucursal=".$_SESSION["phuyu_codsucursal"]." and cerrado=1 and estado=1")->result_array();
+		$caja = $this->db->query("select *from caja.controldiario where codcaja=? and codsucursal=? and cerrado=1 and estado=1", [(int) $_SESSION["phuyu_codcaja"], (int) $_SESSION["phuyu_codsucursal"]])->result_array();
 		if (count($caja)>0) {
 			$_SESSION["phuyu_codcontroldiario"] = $caja[0]["codcontroldiario"];
 		}else{
@@ -89,12 +107,63 @@ class Phuyu_model extends CI_Model {
 	}
 
 	function phuyu_modulos(){
-		$modulos = $this->db->query("select *from seguridad.modulos where codpadre=0 and estado=1 and codsistema=".$_SESSION["phuyu_codsistema"]." order by orden asc")->result_array();
+		$modulos = $this->db->query("select *from seguridad.modulos where codpadre=0 and estado=1 and codsistema=? order by orden asc", [(int) $_SESSION["phuyu_codsistema"]])->result_array();
         foreach ($modulos as $key => $value) {
-            $modulos[$key]["submodulos"] = $this->db->query("select seguridad.modulos.* from seguridad.modulos inner join seguridad.moduloperfiles on(seguridad.modulos.codmodulo=seguridad.moduloperfiles.codmodulo) where seguridad.moduloperfiles.codperfil=".$_SESSION["phuyu_codperfil"]." and seguridad.modulos.codpadre=".$value["codmodulo"]." and seguridad.modulos.estado=1 order by seguridad.modulos.orden asc")->result_array();
+            $modulos[$key]["submodulos"] = $this->db->query("select seguridad.modulos.* from seguridad.modulos inner join seguridad.moduloperfiles on(seguridad.modulos.codmodulo=seguridad.moduloperfiles.codmodulo) where seguridad.moduloperfiles.codperfil=? and seguridad.modulos.codpadre=? and seguridad.modulos.estado=1 order by seguridad.modulos.orden asc", [(int) $_SESSION["phuyu_codperfil"], (int) $value["codmodulo"]])->result_array();
         }
         return $modulos;
 	}
+
+	function phuyu_tiene_permiso_modulo_valida_ruta($url){
+		$url = trim((string) $url, "/");
+		$modulos_libres = ["administracion/dashboard", "administracion/configuraciones"];
+		if ($url === "" || in_array($url, $modulos_libres, true)) {
+			return true;
+		}
+
+		if (!isset($_SESSION["phuyu_codperfil"])) {	return false;}
+
+		$codsistema = isset($_SESSION["phuyu_codsistema"]) ? (int) $_SESSION["phuyu_codsistema"] : 1;
+		$permiso = $this->db->query(
+			"select count(*) as total
+			from seguridad.modulos as modulos
+			inner join seguridad.moduloperfiles as perfiles on(modulos.codmodulo=perfiles.codmodulo)
+			where perfiles.codperfil=?
+				and modulos.estado=1
+				and modulos.codsistema=?
+				and modulos.url<>'' 
+				and (?=modulos.url or ? like modulos.url || '/%')",
+			[(int) $_SESSION["phuyu_codperfil"], $codsistema, $url, $url]
+		)->row_array();
+
+		return !empty($permiso) && (int) $permiso["total"] > 0;
+	}
+
+	function phuyu_tiene_permiso_modulo($url){
+    $url = trim((string) $url, "/");
+    $modulos_libres = ["administracion/dashboard", "administracion/configuraciones"];
+
+    if ($url === "" || in_array($url, $modulos_libres, true)) {
+        return true;
+    }
+
+    if (!isset($_SESSION["phuyu_codperfil"])) {
+        return false;
+    }
+
+    $permiso = $this->db->query(
+        "select count(*) as total
+        from seguridad.modulos as modulos
+        inner join seguridad.moduloperfiles as perfiles on(modulos.codmodulo=perfiles.codmodulo)
+        where perfiles.codperfil=?
+            and modulos.estado=1
+            and modulos.url<>'' 
+            and (?=modulos.url or ? like modulos.url || '/%')",
+        [(int) $_SESSION["phuyu_codperfil"], $url, $url]
+    )->row_array();
+
+    return !empty($permiso) && (int) $permiso["total"] > 0;
+}
 
 	function phuyu_guardar($tabla, $campos, $valores, $return_id="false"){
 		for($i = 0 ; $i < count($campos); $i++) {

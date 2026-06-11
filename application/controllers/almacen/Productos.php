@@ -1,6 +1,7 @@
 <?php defined('BASEPATH') or exit('No direct script access allowed');
 
 require_once APPPATH . 'third_party/phuyu_excel/PHPExcel.php';
+require_once APPPATH . 'third_party/phuyu_excel/PHPExcel/IOFactory.php';
 
 class Productos extends CI_Controller
 {
@@ -35,7 +36,27 @@ class Productos extends CI_Controller
             $limit = 12;
             $offset = $this->request->pagina * $limit - $limit;
 
-            $lista = $this->db->query("select productos.*, marcas.descripcion as marca from almacen.productos as productos inner join almacen.marcas as marcas on(productos.codmarca=marcas.codmarca) where (UPPER(productos.descripcion) like UPPER('%" . $this->request->buscar . "%') or UPPER(productos.codigo) like UPPER('%" . $this->request->buscar . "%') or UPPER(marcas.descripcion) like UPPER('%" . $this->request->buscar . "%') ) and productos.estado=1 order by productos.descripcion, productos.codproducto asc offset " . $offset . ' limit ' . $limit)->result_array();
+            $lista = $this->db->query("select productos.*, marcas.descripcion as marca 
+            from almacen.productos as productos 
+            inner join almacen.marcas as marcas on(productos.codmarca=marcas.codmarca)
+            where (UPPER(productos.descripcion)
+             like UPPER('%" . $this->request->buscar . "%') or UPPER(productos.codigo) 
+             like UPPER('%" . $this->request->buscar . "%') or UPPER(marcas.descripcion) 
+             like UPPER('%" . $this->request->buscar . "%')
+             OR EXISTS (
+                SELECT 1 FROM almacen.productounidades pbu
+                WHERE pbu.codproducto = productos.codproducto
+                  AND pbu.estado = 1
+                  AND UPPER(COALESCE(pbu.codigobarra, '')) LIKE UPPER('%" . $this->request->buscar . "%')
+             )
+             OR EXISTS (
+                SELECT 1 FROM almacen.productoubicacion pbo
+                WHERE pbo.codproducto = productos.codproducto
+                  AND pbo.estado = 1
+                  AND UPPER(COALESCE(pbo.codigobarra, '')) LIKE UPPER('%" . $this->request->buscar . "%')
+             )
+             ) and productos.estado=1 
+             order by productos.descripcion, productos.codproducto asc offset " . $offset . ' limit ' . $limit)->result_array();
 
             foreach ($lista as $key => $value) {
                 $precio = $this->db->query('select pventapublico,codunidad,preciocosto from almacen.productounidades where codproducto=' . $value['codproducto'] . ' order by factor')->result_array();
@@ -60,7 +81,7 @@ class Productos extends CI_Controller
                 }
             }
 
-            $total = $this->db->query("select count(*) as total from almacen.productos as productos inner join almacen.marcas as marcas on(productos.codmarca=marcas.codmarca) where (UPPER(productos.descripcion) like UPPER('%" . $this->request->buscar . "%') or UPPER(productos.codigo) like UPPER('%" . $this->request->buscar . "%') or UPPER(marcas.descripcion) like UPPER('%" . $this->request->buscar . "%') ) and productos.estado=1")->result_array();
+            $total = $this->db->query("select count(*) as total from almacen.productos as productos inner join almacen.marcas as marcas on(productos.codmarca=marcas.codmarca) where (UPPER(productos.descripcion) like UPPER('%" . $this->request->buscar . "%') or UPPER(productos.codigo) like UPPER('%" . $this->request->buscar . "%') or UPPER(marcas.descripcion) like UPPER('%" . $this->request->buscar . "%') OR EXISTS (SELECT 1 FROM almacen.productounidades pbu WHERE pbu.codproducto = productos.codproducto AND pbu.estado = 1 AND UPPER(COALESCE(pbu.codigobarra, '')) LIKE UPPER('%" . $this->request->buscar . "%')) OR EXISTS (SELECT 1 FROM almacen.productoubicacion pbo WHERE pbo.codproducto = productos.codproducto AND pbo.estado = 1 AND UPPER(COALESCE(pbo.codigobarra, '')) LIKE UPPER('%" . $this->request->buscar . "%')) ) and productos.estado=1")->result_array();
 
             $paginas = floor($total[0]['total'] / $limit);
             if ($total[0]['total'] % $limit != 0) {
@@ -84,19 +105,14 @@ class Productos extends CI_Controller
     {
         if ($this->input->is_ajax_request()) {
             if (isset($_POST['q'])) {
+                $condicionBusqueda = $this->condicion_busqueda_productos($_POST['q'], 'producto', 'marca');
                 $productos = $this->db
                     ->query(
                         "select producto.codproducto, producto.codigo,
                         producto.descripcion,
                         marca.descripcion as marca from almacen.productos as producto
                         inner join almacen.marcas as marca on (producto.codmarca=marca.codmarca)
-                        where (REPLACE(UPPER(producto.descripcion),' ','%') like REPLACE (UPPER('%" .
-                            $_POST['q'] .
-                            "%'),' ','%') or UPPER(producto.codigo) like UPPER('%" .
-                            $_POST['q'] .
-                            "%') or UPPER(marca.descripcion) like UPPER('%" .
-                            $_POST['q'] .
-                            "%') ) and producto.estado=1 limit 10",
+                        where " . $condicionBusqueda . " and producto.estado=1 limit 10",
                     )
                     ->result_array();
             } else {
@@ -104,6 +120,29 @@ class Productos extends CI_Controller
             }
             echo json_encode($productos);
         }
+    }
+
+    private function condicion_busqueda_productos($buscar, $productoAlias = 'p', $marcaAlias = 'ma')
+    {
+        $like = $this->db->escape('%' . $this->db->escape_like_str((string) $buscar) . '%');
+
+        return "(REPLACE(UPPER(" . $productoAlias . ".descripcion),' ','%') LIKE REPLACE(UPPER(" . $like . "),' ','%')
+            OR UPPER(" . $productoAlias . ".codigo) LIKE UPPER(" . $like . ")
+            OR UPPER(" . $marcaAlias . ".descripcion) LIKE UPPER(" . $like . ")
+            OR EXISTS (
+                SELECT 1
+                FROM almacen.productounidades pbu
+                WHERE pbu.codproducto = " . $productoAlias . ".codproducto
+                    AND pbu.estado = 1
+                    AND UPPER(COALESCE(pbu.codigobarra, '')) LIKE UPPER(" . $like . ")
+            )
+            OR EXISTS (
+                SELECT 1
+                FROM almacen.productoubicacion pbo
+                WHERE pbo.codproducto = " . $productoAlias . ".codproducto
+                    AND pbo.estado = 1
+                    AND UPPER(COALESCE(pbo.codigobarra, '')) LIKE UPPER(" . $like . ")
+            ))";
     }
 
     public function nuevo()
@@ -134,6 +173,184 @@ class Productos extends CI_Controller
             $this->load->view('phuyu/404');
         }
     }
+
+    public function formato_cargarproductos()
+    {
+        if (!isset($_SESSION['phuyu_codusuario'])) {
+            $this->load->view('phuyu/404');
+            return;
+        }
+
+        $this->limpiar_salida_excel();
+
+        $archivo = 'formato-carga-productos.xls';
+
+        $this->descargar_xls($archivo, [
+            [
+                'nombre' => 'Productos',
+                'filas' => [
+                    $this->cabeceras_carga_productos(),
+                    [
+                        'PROD001',
+                        'PRODUCTO DE EJEMPLO',
+                        1,
+                        'GENERAL',
+                        'GENERAL',
+                        'GENERICO',
+                        'UNIDAD',
+                        1,
+                        10,
+                        15,
+                        14,
+                        15,
+                        13,
+                        15,
+                        '',
+                        0,
+                        1,
+                        1,
+                        isset($_SESSION['phuyu_afectacionigv']) ? (int) $_SESSION['phuyu_afectacionigv'] : 9,
+                        0,
+                        0,
+                        '',
+                        0
+                    ],
+                    [
+                        'SERV001',
+                        'SERVICIO DE EJEMPLO',
+                        2,
+                        'GENERAL',
+                        'GENERAL',
+                        'GENERICO',
+                        'SERVICIO',
+                        1,
+                        0,
+                        50,
+                        50,
+                        50,
+                        50,
+                        50,
+                        '',
+                        0,
+                        0,
+                        1,
+                        isset($_SESSION['phuyu_afectacionigv']) ? (int) $_SESSION['phuyu_afectacionigv'] : 9,
+                        0,
+                        0,
+                        '',
+                        0
+                    ]
+                ]
+            ],
+            [
+                'nombre' => 'Ayuda',
+                'filas' => [
+                    ['Campo', 'Descripcion'],
+                    ['codigo', 'Opcional. Si existe, actualiza el producto con ese codigo; si esta vacio se genera automaticamente.'],
+                    ['descripcion', 'Obligatorio. Nombre del producto o servicio.'],
+                    ['tipo', '1 = bien/producto, 2 = servicio.'],
+                    ['familia, linea, marca, unidad', 'Puede ingresar el codigo interno o el nombre. Si el nombre no existe, el sistema lo crea.'],
+                    ['factor', 'Conversion de la unidad. Use 1 para la unidad base.'],
+                    ['precios', 'Ingrese valores numericos sin simbolos o con S/. si lo necesita.'],
+                    ['stock_inicial', 'Carga stock solo en el almacen actual y solo cuando la celda tiene valor.'],
+                    ['control_stock, afecto_icbper, controlar_series', 'Use 1/SI para activar y 0/NO para desactivar.'],
+                    ['cod_afectacion_igv_compra / venta', 'Puede ingresar codigo, descripcion u oficial de afectacion IGV.']
+                ]
+            ]
+        ]);
+    }
+
+    public function formato_stockextra()
+    {
+        if (!isset($_SESSION['phuyu_codusuario'])) {
+            $this->load->view('phuyu/404');
+            return;
+        }
+
+        $this->limpiar_salida_excel();
+
+        $archivo = 'formato-stock-extra.xls';
+
+        $this->descargar_xls($archivo, [
+            [
+                'nombre' => 'Stock extra',
+                'filas' => [
+                    ['codigo', 'descripcion_referencia', 'unidad_referencia', 'nota', 'stock_extra'],
+                    ['PROD001', 'PRODUCTO DE EJEMPLO', 'UNIDAD', '', 25],
+                    ['PROD002', 'OTRO PRODUCTO', 'UNIDAD', '', 10]
+                ]
+            ],
+            [
+                'nombre' => 'Ayuda',
+                'filas' => [
+                    ['Campo', 'Descripcion'],
+                    ['codigo', 'Obligatorio. Debe coincidir con almacen.productos.codigo.'],
+                    ['stock_extra', 'Obligatorio. Es la cantidad que se mostrara como STOCK P en el buscador de productos de pedidos.'],
+                    ['columnas B, C y D', 'Son solo referencia visual. El proceso actual solo lee la columna A y la columna E.'],
+                    ['Importante', 'Antes de cargar el archivo, el sistema pone stockproveedor en 0 para todos los productos y luego aplica las cantidades del Excel.']
+                ]
+            ]
+        ]);
+    }
+
+	    public function cargarproductos()
+	    {
+	        if (!$this->input->is_ajax_request() || !isset($_SESSION['phuyu_codusuario'])) {
+	            $this->load->view('phuyu/404');
+	            return;
+	        }
+	        $this->output->set_content_type('application/json', 'utf-8');
+
+	        if (!isset($_FILES['archivo']) || $_FILES['archivo']['name'] == '') {
+	            echo json_encode(['estado' => 0, 'mensaje' => 'Debe seleccionar el archivo de productos.']);
+	            return;
+	        }
+
+	        $procesados = 0;
+	        $errores = [];
+	        $transaccion = false;
+
+	        try {
+	            $filas = $this->leer_archivo_carga_productos($_FILES['archivo']);
+
+	            $this->db->trans_begin();
+	            $transaccion = true;
+
+            foreach ($filas as $row => $fila) {
+                $resultado = $this->procesar_fila_carga_producto($fila, $row);
+
+                if ($resultado['estado'] == 1) {
+                    $procesados++;
+                } elseif ($resultado['mensaje'] !== '') {
+                    $errores[] = $resultado['mensaje'];
+                }
+            }
+
+            if ($procesados == 0 || $this->db->trans_status() === false) {
+                $this->db->trans_rollback();
+                $mensaje = $procesados == 0 ? 'No se encontro ninguna fila valida para cargar.' : 'No se pudo guardar la carga de productos.';
+                if (count($errores) > 0) {
+                    $mensaje .= ' ' . implode(' ', array_slice($errores, 0, 5));
+                }
+                echo json_encode(['estado' => 0, 'mensaje' => $mensaje]);
+                return;
+            }
+
+            $this->db->trans_commit();
+
+            $mensaje = 'Productos procesados: ' . $procesados . '.';
+            if (count($errores) > 0) {
+                $mensaje .= ' Filas omitidas: ' . count($errores) . '. ' . implode(' ', array_slice($errores, 0, 3));
+            }
+
+            echo json_encode(['estado' => 1, 'mensaje' => $mensaje, 'procesados' => $procesados, 'errores' => $errores]);
+	        } catch (Exception $e) {
+	            if ($transaccion) {
+	                $this->db->trans_rollback();
+	            }
+	            echo json_encode(['estado' => 0, 'mensaje' => 'No se pudo leer el archivo. Verifique que sea un Excel o CSV valido.']);
+	        }
+	    }
 
     function ver($codregistro)
     {
@@ -220,6 +437,7 @@ class Productos extends CI_Controller
                 }
 
                 if (isset($this->request->unidades)) {
+                    
                     foreach ($this->request->unidades as $key => $value) {
                         $valores_1 = [(int) $codproducto, (int) $this->request->unidades[$key]->codunidad, (int) $_SESSION['phuyu_codsucursal'], $this->request->unidades[$key]->factor, (float) $this->request->unidades[$key]->preciocompra, (float) $this->request->unidades[$key]->preciocompra, (float) $this->request->unidades[$key]->pventapublico, (float) $this->request->unidades[$key]->pventamin, (float) $this->request->unidades[$key]->pventacredito, (float) $this->request->unidades[$key]->pventaxmayor, (float) $this->request->unidades[$key]->pventaadicional, $this->request->unidades[$key]->codigobarra, 1];
                         $estado = $this->phuyu_model->phuyu_guardar('almacen.productounidades', $campos_1, $valores_1);
@@ -232,7 +450,25 @@ class Productos extends CI_Controller
                                 $this->request->campos->codafectacionigvventa = $val['codafectacionigv'];
                             }
                             $campos = ['codalmacen', 'codproducto', 'codunidad', 'codsucursal', 'factor', 'preciocompra', 'preciocosto', 'pventapublico', 'pventamin', 'pventacredito', 'pventaxmayor', 'pventaadicional', 'codigobarra', 'estado', 'codafectacionigvcompra', 'codafectacionigvventa', 'comisionvendedor'];
-                            $valores = [(int) $val['codalmacen'], (int) $codproducto, (int) $this->request->unidades[$key]->codunidad, (int) $val['codsucursal'], $this->request->unidades[$key]->factor, (float) $this->request->unidades[$key]->preciocompra, (float) $this->request->unidades[$key]->preciocompra, (float) $this->request->unidades[$key]->pventapublico, (float) $this->request->unidades[$key]->pventamin, (float) $this->request->unidades[$key]->pventacredito, (float) $this->request->unidades[$key]->pventaxmayor, (float) $this->request->unidades[$key]->pventaadicional, $this->request->unidades[$key]->codigobarra, 1, (int) $this->request->campos->codafectacionigvcompra, (int) $this->request->campos->codafectacionigvventa, (int) $this->request->campos->comisionvendedor];
+                            $valores = [
+                                (int) $val['codalmacen'],
+                                (int) $codproducto,
+                                (int) $this->request->unidades[$key]->codunidad,
+                                (int) $val['codsucursal'],
+                                $this->request->unidades[$key]->factor,
+                                (float) $this->request->unidades[$key]->preciocompra,
+                                (float) $this->request->unidades[$key]->preciocompra,
+                                (float) $this->request->unidades[$key]->pventapublico,
+                                (float) $this->request->unidades[$key]->pventamin,
+                                (float) $this->request->unidades[$key]->pventacredito,
+                                (float) $this->request->unidades[$key]->pventaxmayor,
+                                (float) $this->request->unidades[$key]->pventaadicional,
+                                $this->request->unidades[$key]->codigobarra,
+                                1,
+                                (int) $this->request->campos->codafectacionigvcompra,
+                                (int) $this->request->campos->codafectacionigvventa,
+                                (int) $this->request->campos->comisionvendedor
+                            ];
                             $estado = $this->phuyu_model->phuyu_guardar('almacen.productoubicacion', $campos, $valores);
                         }
                     }
@@ -264,10 +500,13 @@ class Productos extends CI_Controller
                             $estado = $this->phuyu_model->phuyu_editar_1('almacen.productounidades', $campos_1, $valores_1, $f, $v);
                         }
 
-                        $existe_ubi = $this->db->query('select *from almacen.productoubicacion where codproducto=' . $codproducto . ' and codunidad=' . $this->request->unidades[$key]->codunidad)->result_array();
+                        $existe_ubi = $this->db->query(
+                            'select *from almacen.productoubicacion 
+                        where codproducto=' . $codproducto . ' and codunidad=' . $this->request->unidades[$key]->codunidad
+                        )->result_array();
 
                         if (count($existe_ubi) == 0) {
-                            $almacenes = $this->db->query('select *from almacen.almacenes where estado = 1')->result_array();
+                            $almacenes = $this->db->query('select * from almacen.almacenes where estado = 1')->result_array();
 
                             foreach ($almacenes as $k => $val) {
                                 if ($_SESSION['phuyu_codalmacen'] != (int) $val['codalmacen']) {
@@ -275,7 +514,25 @@ class Productos extends CI_Controller
                                     $this->request->campos->codafectacionigvventa = $val['codafectacionigv'];
                                 }
                                 $campos = ['codalmacen', 'codproducto', 'codunidad', 'codsucursal', 'factor', 'preciocompra', 'preciocosto', 'pventapublico', 'pventamin', 'pventacredito', 'pventaxmayor', 'pventaadicional', 'codigobarra', 'estado', 'codafectacionigvcompra', 'codafectacionigvventa', 'comisionvendedor'];
-                                $valores = [(int) $val['codalmacen'], (int) $codproducto, (int) $this->request->unidades[$key]->codunidad, (int) $val['codsucursal'], $this->request->unidades[$key]->factor, (float) $this->request->unidades[$key]->preciocompra, (float) $this->request->unidades[$key]->preciocompra, (float) $this->request->unidades[$key]->pventapublico, (float) $this->request->unidades[$key]->pventamin, (float) $this->request->unidades[$key]->pventacredito, (float) $this->request->unidades[$key]->pventaxmayor, (float) $this->request->unidades[$key]->pventaadicional, $this->request->unidades[$key]->codigobarra, 1, (int) $this->request->campos->codafectacionigvcompra, (int) $this->request->campos->codafectacionigvventa, (int) $this->request->campos->comisionvendedor];
+                                $valores = [
+                                    (int) $val['codalmacen'],
+                                    (int) $codproducto,
+                                    (int) $this->request->unidades[$key]->codunidad,
+                                    (int) $val['codsucursal'],
+                                    $this->request->unidades[$key]->factor,
+                                    (float) $this->request->unidades[$key]->preciocompra,
+                                    (float) $this->request->unidades[$key]->preciocompra,
+                                    (float) $this->request->unidades[$key]->pventapublico,
+                                    (float) $this->request->unidades[$key]->pventamin,
+                                    (float) $this->request->unidades[$key]->pventacredito,
+                                    (float) $this->request->unidades[$key]->pventaxmayor,
+                                    (float) $this->request->unidades[$key]->pventaadicional,
+                                    $this->request->unidades[$key]->codigobarra,
+                                    1,
+                                    (int) $this->request->campos->codafectacionigvcompra,
+                                    (int) $this->request->campos->codafectacionigvventa,
+                                    (int) $this->request->campos->comisionvendedor
+                                ];
                                 $estado = $this->phuyu_model->phuyu_guardar('almacen.productoubicacion', $campos, $valores);
                             }
                         } else {
@@ -492,12 +749,42 @@ class Productos extends CI_Controller
         if ($this->input->is_ajax_request()) {
             $info = $this->db
                 ->query(
-                    "select p.codproducto,p.descripcion,p.caracteristicas, p.afectoicbper,p.controlstock, p.afectoigvcompra, p.afectoigvventa, p.codigo,p.calcular,p.foto,u.codunidad,u.descripcion as unidad,round(pu.stockactual,3) as stock, m.descripcion as marca, puv.factor, puv.factor as factormaximo, round(puv.pventapublico,2) as precio, round(puv.pventamin,2) as preciomin, round(puv.pventacredito,2) as preciocredito, round(puv.pventaxmayor,2) as preciomayor, round(puv.preciocosto,2) as preciocosto, round(puv.pventaadicional,2) as precioadicional from almacen.productos as p inner join almacen.productoubicacion as pu on(p.codproducto=pu.codproducto) inner join almacen.unidades as u on(u.codunidad=pu.codunidad) inner join almacen.marcas as m on(p.codmarca=m.codmarca) inner join almacen.productounidades as puv on(pu.codproducto=puv.codproducto and pu.codunidad=puv.codunidad) where puv.codigobarra='" .
+                    "select p.codproducto,p.descripcion,p.caracteristicas, p.afectoicbper,p.controlstock, p.afectoigvcompra, p.afectoigvventa, p.codigo,p.calcular,p.foto,p.controlarseries,u.codunidad,u.descripcion as unidad,round(pu.stockactual,3) as stock, m.descripcion as marca, puv.factor, puv.factor as factormaximo, round(puv.pventapublico,2) as precio, round(puv.pventamin,2) as preciomin, round(puv.pventacredito,2) as preciocredito, round(puv.pventaxmayor,2) as preciomayor, round(puv.preciocosto,2) as preciocosto, round(puv.pventaadicional,2) as precioadicional,
+                    COALESCE(
+                        (SELECT vpun.unidades
+                        FROM almacen.v_productounidades vpun
+                        WHERE vpun.codproducto = p.codproducto
+                        AND vpun.codalmacen = pu.codalmacen
+                        LIMIT 1),
+                        ''
+                    ) AS unidades,
+                    COALESCE(
+                        (SELECT jsonb_agg(jsonb_build_object(
+                            'serie_codigo', s.serie_codigo,
+                            'estado', s.estado,
+                            'fecha_ingreso', s.fecha_ingreso,
+                            'id_serie', s.id_serie,
+                            'codproducto', p.codproducto
+                        ))
+                        FROM almacen.series s
+                        WHERE s.codproducto = p.codproducto
+                        AND s.estado = 'EN_ALMACEN'
+                        AND s.codalmacen = " . $_SESSION['phuyu_codalmacen'] . "),
+                        '[]'::jsonb
+                    ) AS series
+                    from almacen.productos as p inner join almacen.productoubicacion as pu on(p.codproducto=pu.codproducto) inner join almacen.unidades as u on(u.codunidad=pu.codunidad) inner join almacen.marcas as m on(p.codmarca=m.codmarca) inner join almacen.productounidades as puv on(pu.codproducto=puv.codproducto and pu.codunidad=puv.codunidad) where puv.codigobarra='" .
                         $codigobarra .
                         "' and p.estado=1 and pu.estado=1 and pu.codalmacen=" .
                         $_SESSION['phuyu_codalmacen'],
                 )
                 ->result_array();
+            foreach ($info as &$producto) {
+                if (!empty($producto['series']) && is_string($producto['series'])) {
+                    $producto['series'] = json_decode($producto['series'], true);
+                } else {
+                    $producto['series'] = [];
+                }
+            }
             $data = [];
             $precio = 0;
             if (count($info) > 0) {
@@ -517,25 +804,27 @@ class Productos extends CI_Controller
             $this->request = json_decode(file_get_contents('php://input'));
             $limit = 10;
             $offset = $this->request->pagina * $limit - $limit;
+            $condicionBusqueda = $this->condicion_busqueda_productos($this->request->buscar, 'p', 'ma');
 
             // $lista = $this->db->query(
             //         "SELECT pun.codalmacen, p.codproducto, p.codigo,p.codfamilia, p.codlinea, p.codmarca, ma.descripcion AS marca,
-			// 		 p.descripcion, pun.unidades, p.afectoicbper, p.controlstock, p.afectoigvcompra, p.afectoigvventa, p.foto, p.calcular,
-			// 		  p.paraventa, p.codmodelo, p.codcolor, p.codtalla, p.tipo,p.controlarseries
-			// 		FROM almacen.productos p
-			// 		JOIN almacen.v_productounidades pun ON (p.codproducto = pun.codproducto AND p.estado = 1 )
-			// 		JOIN almacen.lineasxsucursales ls ON (pun.codsucursal = ls.codsucursal 
-			// 		AND p.codlinea = ls.codlinea AND ls.codsucursal = " .	$_SESSION['phuyu_codsucursal'] . " )
-			// 		JOIN almacen.marcas ma ON (p.codmarca = ma.codmarca)
-			// 		where (REPLACE(UPPER(p.descripcion),' ','%') 
-			// 		like REPLACE (UPPER('%" .$this->request->buscar ."%'),' ','%') or UPPER(p.codigo) 
-			// 		like UPPER('%" .$this->request->buscar ."%') or UPPER(ma.descripcion) 
-			// 		like UPPER('%" .$this->request->buscar ."%') ) 
-			// 		and p.estado=1 and pun.codalmacen=" .$_SESSION['phuyu_codalmacen'] .' 
-			// 		order by p.codproducto desc offset ' .$offset .' limit ' .$limit,)
+            // 		 p.descripcion, pun.unidades, p.afectoicbper, p.controlstock, p.afectoigvcompra, p.afectoigvventa, p.foto, p.calcular,
+            // 		  p.paraventa, p.codmodelo, p.codcolor, p.codtalla, p.tipo,p.controlarseries
+            // 		FROM almacen.productos p
+            // 		JOIN almacen.v_productounidades pun ON (p.codproducto = pun.codproducto AND p.estado = 1 )
+            // 		JOIN almacen.lineasxsucursales ls ON (pun.codsucursal = ls.codsucursal 
+            // 		AND p.codlinea = ls.codlinea AND ls.codsucursal = " .	$_SESSION['phuyu_codsucursal'] . " )
+            // 		JOIN almacen.marcas ma ON (p.codmarca = ma.codmarca)
+            // 		where (REPLACE(UPPER(p.descripcion),' ','%') 
+            // 		like REPLACE (UPPER('%" .$this->request->buscar ."%'),' ','%') or UPPER(p.codigo) 
+            // 		like UPPER('%" .$this->request->buscar ."%') or UPPER(ma.descripcion) 
+            // 		like UPPER('%" .$this->request->buscar ."%') ) 
+            // 		and p.estado=1 and pun.codalmacen=" .$_SESSION['phuyu_codalmacen'] .' 
+            // 		order by p.codproducto desc offset ' .$offset .' limit ' .$limit,)
             //     ->result_array();
 
-            $lista = $this->db->query("
+            $lista = $this->db->query(
+                "
                     SELECT 
                         pun.codalmacen, 
                         p.codproducto, 
@@ -578,15 +867,12 @@ class Productos extends CI_Controller
                     JOIN almacen.lineasxsucursales ls ON (pun.codsucursal = ls.codsucursal 
                         AND p.codlinea = ls.codlinea AND ls.codsucursal = " . $_SESSION['phuyu_codsucursal'] . ")
                     JOIN almacen.marcas ma ON (p.codmarca = ma.codmarca)
-                    WHERE (REPLACE(UPPER(p.descripcion),' ','%') 
-                        LIKE REPLACE(UPPER('%" . $this->request->buscar . "%'),' ','%') 
-                        OR UPPER(p.codigo) LIKE UPPER('%" . $this->request->buscar . "%') 
-                        OR UPPER(ma.descripcion) LIKE UPPER('%" . $this->request->buscar . "%'))
+                    WHERE " . $condicionBusqueda . "
                     AND p.estado = 1 
                     AND pun.codalmacen = " . $_SESSION['phuyu_codalmacen'] . "
                     ORDER BY p.codproducto DESC 
                     OFFSET " . $offset . " LIMIT " . $limit
-                )->result_array();
+            )->result_array();
 
             foreach ($lista as $key => $value) {
                 $factormaximo = $this->db->query('
@@ -621,10 +907,7 @@ class Productos extends CI_Controller
                     JOIN almacen.lineasxsucursales ls ON (pun.codsucursal = ls.codsucursal AND p.codlinea = ls.codlinea 
                     AND ls.codsucursal = " . $_SESSION['phuyu_codsucursal'] . " )
                     JOIN almacen.marcas ma ON (p.codmarca = ma.codmarca)
-                    where (REPLACE(UPPER(p.descripcion),' ','%') 
-                    like REPLACE (UPPER('%" . $this->request->buscar . "%'),' ','%') or UPPER(p.codigo) 
-                    like UPPER('%" .$this->request->buscar . "%') or UPPER(ma.descripcion) 
-                    like UPPER('%" . $this->request->buscar . "%') ) and p.estado=1 
+                    where " . $condicionBusqueda . " and p.estado=1 
                     and pun.codalmacen=" . $_SESSION['phuyu_codalmacen'],
                 )
                 ->result_array();
@@ -641,12 +924,12 @@ class Productos extends CI_Controller
             $paginacion['desde'] = $offset;
             $paginacion['hasta'] = $offset + $limit;
             foreach ($lista as &$producto) {
-            if (!empty($producto['series']) && is_string($producto['series'])) {
-                $producto['series'] = json_decode($producto['series'], true);
-            } else {
-                $producto['series'] = [];
+                if (!empty($producto['series']) && is_string($producto['series'])) {
+                    $producto['series'] = json_decode($producto['series'], true);
+                } else {
+                    $producto['series'] = [];
+                }
             }
-        }
 
 
             echo json_encode(['lista' => $lista, 'paginacion' => $paginacion]);
@@ -713,6 +996,7 @@ class Productos extends CI_Controller
             $this->request = json_decode(file_get_contents('php://input'));
             $limit = 10;
             $offset = $this->request->pagina * $limit - $limit;
+            $condicionBusqueda = $this->condicion_busqueda_productos($this->request->buscar, 'p', 'ma');
 
             $lista = $this->db
                 ->query(
@@ -726,13 +1010,7 @@ class Productos extends CI_Controller
                         $_SESSION['phuyu_codsucursal'] .
                         " )
    JOIN almacen.marcas ma ON (p.codmarca = ma.codmarca)
-   where (REPLACE(UPPER(p.descripcion),' ','%') like REPLACE (UPPER('%" .
-                        $this->request->buscar .
-                        "%'),' ','%') or UPPER(p.codigo) like UPPER('%" .
-                        $this->request->buscar .
-                        "%') or UPPER(ma.descripcion) like UPPER('%" .
-                        $this->request->buscar .
-                        "%') ) and p.estado=1 and pun.codalmacen=" .
+   where " . $condicionBusqueda . " and p.estado=1 and pun.codalmacen=" .
                         $_SESSION['phuyu_codalmacen'] .
                         ' order by p.codproducto desc offset ' .
                         $offset .
@@ -767,13 +1045,7 @@ class Productos extends CI_Controller
                         $_SESSION['phuyu_codsucursal'] .
                         " )
    JOIN almacen.marcas ma ON (p.codmarca = ma.codmarca)
-   where (REPLACE(UPPER(p.descripcion),' ','%') like REPLACE (UPPER('%" .
-                        $this->request->buscar .
-                        "%'),' ','%') or UPPER(p.codigo) like UPPER('%" .
-                        $this->request->buscar .
-                        "%') or UPPER(ma.descripcion) like UPPER('%" .
-                        $this->request->buscar .
-                        "%') ) and p.estado=1 and pun.codalmacen=" .
+   where " . $condicionBusqueda . " and p.estado=1 and pun.codalmacen=" .
                         $_SESSION['phuyu_codalmacen'],
                 )
                 ->result_array();
@@ -987,44 +1259,81 @@ class Productos extends CI_Controller
         }
     }
 
-    public function stockextra()
-    {
-        if ($this->input->is_ajax_request()) {
-            if ($_FILES['archivo']['name'] != '') {
-                $file = str_replace(' ', '_', $_FILES['archivo']['name']);
-                move_uploaded_file($_FILES['archivo']['tmp_name'], './public/arch_stock/' . $file);
+	    public function stockextra()
+	    {
+	        if (!$this->input->is_ajax_request() || !isset($_SESSION['phuyu_codusuario'])) {
+	            $this->load->view('phuyu/404');
+	            return;
+	        }
+	        $this->output->set_content_type('application/json', 'utf-8');
 
-                $data = ['stockproveedor' => 0];
-                $estado = $this->db->update('almacen.productoubicacion', $data);
-            } else {
-                $estado = 0;
-            }
+	        if (!isset($_FILES['archivo']) || $_FILES['archivo']['name'] == '') {
+	            echo json_encode(['estado' => 0, 'mensaje' => 'Debe seleccionar el archivo de stock extra.']);
+	            return;
+	        }
 
-            if ($estado == 1) {
-                $archivo = './public/arch_stock/' . $file;
-                $inputFileType = PHPExcel_IOFactory::identify($archivo);
-                $objReader = PHPExcel_IOFactory::createReader($inputFileType);
-                $objPHPExcel = $objReader->load($archivo);
-                $sheet = $objPHPExcel->getSheet(0);
-                $highestRow = $sheet->getHighestRow();
-                $highestColumn = $sheet->getHighestColumn();
+	        $procesados = 0;
+	        $errores = [];
+	        $transaccion = false;
 
-                for ($row = 2; $row <= $highestRow; $row++) {
-                    $producto = $this->db->get_where('almacen.productos', ['codigo' => trim($sheet->getCell('A' . $row)->getValue())])->result_array();
-                    if (count($producto) > 0) {
-                        $data = ['stockproveedor' => (float) $sheet->getCell('E' . $row)->getValue()];
-                        $this->db->where('codproducto', $producto[0]['codproducto']);
-                        $this->db->where('factor', 1);
-                        $estado = $this->db->update('almacen.productoubicacion', $data);
-                    }
+	        try {
+	            $filas = $this->leer_archivo_stockextra($_FILES['archivo']);
+
+	            $this->db->trans_begin();
+	            $transaccion = true;
+	            $this->db->update('almacen.productoubicacion', ['stockproveedor' => 0]);
+
+            foreach ($filas as $row => $fila) {
+                $codigo = $this->normalizar_texto($this->valor_fila($fila, 'A'));
+                $stock = $this->numero_excel($this->valor_fila($fila, 'E'), null);
+
+                if ($codigo === '' && $stock === null) {
+                    continue;
                 }
 
-                unlink($archivo);
+                if ($codigo === '' || $stock === null) {
+                    $errores[] = 'Fila ' . $row . ': falta codigo o stock extra.';
+                    continue;
+                }
+
+                $producto = $this->db->get_where('almacen.productos', ['codigo' => $codigo])->row_array();
+                if (empty($producto)) {
+                    $errores[] = 'Fila ' . $row . ': no existe producto con codigo ' . $codigo . '.';
+                    continue;
+                }
+
+                $this->db->where('codproducto', (int) $producto['codproducto']);
+                $this->db->where('factor', 1);
+                $this->db->where('estado', 1);
+                $this->db->update('almacen.productoubicacion', ['stockproveedor' => (float) $stock]);
+                $procesados++;
             }
 
-            echo json_encode(['estado' => (int) $estado, 'mensaje' => 'Operación registrada']);
-        }
-    }
+            if ($procesados == 0 || $this->db->trans_status() === false) {
+                $this->db->trans_rollback();
+                $mensaje = 'No se encontro ninguna fila valida para cargar stock extra.';
+                if (count($errores) > 0) {
+                    $mensaje .= ' ' . implode(' ', array_slice($errores, 0, 5));
+                }
+                echo json_encode(['estado' => 0, 'mensaje' => $mensaje]);
+                return;
+            }
+
+            $this->db->trans_commit();
+
+            $mensaje = 'Stock extra procesado: ' . $procesados . ' productos.';
+            if (count($errores) > 0) {
+                $mensaje .= ' Filas omitidas: ' . count($errores) . '. ' . implode(' ', array_slice($errores, 0, 3));
+            }
+
+            echo json_encode(['estado' => 1, 'mensaje' => $mensaje, 'procesados' => $procesados, 'errores' => $errores]);
+	        } catch (Exception $e) {
+	            if ($transaccion) {
+	                $this->db->trans_rollback();
+	            }
+	            echo json_encode(['estado' => 0, 'mensaje' => 'No se pudo leer el archivo. Verifique que sea un Excel o CSV valido.']);
+	        }
+	    }
 
     function phuyu_masprecios()
     {
@@ -1082,7 +1391,8 @@ class Productos extends CI_Controller
         }
     }
 
-    public function buscar_serie() {
+    public function buscar_serie()
+    {
         if ($this->input->is_ajax_request()) {
 
             $request = json_decode(file_get_contents('php://input'));
@@ -1116,6 +1426,748 @@ class Productos extends CI_Controller
                     : "Serie disponible.",
                 "data"    => $data
             ]);
+        }
+    }
+
+    private function leer_archivo_carga_productos($archivo)
+    {
+        $extension = strtolower(pathinfo($archivo['name'], PATHINFO_EXTENSION));
+
+        if ($extension === 'csv' || $extension === 'txt') {
+            return $this->leer_csv_productos($archivo['tmp_name']);
+        }
+
+        if ($extension === 'xlsx') {
+            return $this->leer_xlsx_productos($archivo['tmp_name']);
+        }
+
+        if ($extension === 'xls' || $extension === 'html' || $extension === 'htm') {
+            return $this->leer_xls_productos($archivo['tmp_name']);
+        }
+
+        throw new Exception('Formato no soportado');
+    }
+
+    private function leer_archivo_stockextra($archivo)
+    {
+        $extension = strtolower(pathinfo($archivo['name'], PATHINFO_EXTENSION));
+
+        if ($extension === 'csv' || $extension === 'txt') {
+            return $this->leer_csv_productos($archivo['tmp_name']);
+        }
+
+        if ($extension === 'xlsx') {
+            return $this->leer_xlsx_productos($archivo['tmp_name']);
+        }
+
+        if ($extension === 'xls' || $extension === 'html' || $extension === 'htm') {
+            return $this->leer_xls_productos($archivo['tmp_name']);
+        }
+
+        throw new Exception('Formato no soportado');
+    }
+
+    private function cabeceras_carga_productos()
+    {
+        return [
+            'codigo',
+            'descripcion',
+            'tipo',
+            'familia',
+            'linea',
+            'marca',
+            'unidad',
+            'factor',
+            'precio_compra',
+            'precio_venta',
+            'precio_minimo',
+            'precio_credito',
+            'precio_mayor',
+            'precio_adicional',
+            'codigo_barra',
+            'stock_inicial',
+            'control_stock',
+            'cod_afectacion_igv_compra',
+            'cod_afectacion_igv_venta',
+            'afecto_icbper',
+            'comision_vendedor',
+            'caracteristicas',
+            'controlar_series'
+        ];
+    }
+
+    private function leer_csv_productos($archivo)
+    {
+        $lineaInicial = (string) file_get_contents($archivo, false, null, 0, 4096);
+        $delimitador = $this->detectar_delimitador_csv($lineaInicial);
+        $handle = fopen($archivo, 'r');
+        $filas = [];
+        $numeroFila = 0;
+
+        while (($data = fgetcsv($handle, 0, $delimitador)) !== false) {
+            $numeroFila++;
+            if ($numeroFila == 1) {
+                continue;
+            }
+
+            $fila = [];
+            foreach ($data as $index => $valor) {
+                $fila[$this->columna_excel_desde_indice($index)] = $valor;
+            }
+            $filas[$numeroFila] = $fila;
+        }
+
+        fclose($handle);
+        return $filas;
+    }
+
+    private function leer_html_xls_productos($archivo)
+    {
+        $contenido = file_get_contents($archivo);
+        if ($contenido === false || trim($contenido) === '') {
+            return [];
+        }
+
+        libxml_use_internal_errors(true);
+        $dom = new DOMDocument();
+        $dom->loadHTML('<?xml encoding="utf-8" ?>' . $contenido);
+        libxml_clear_errors();
+
+        $tablas = $dom->getElementsByTagName('table');
+        if ($tablas->length == 0) {
+            return $this->leer_csv_productos($archivo);
+        }
+
+        $filas = [];
+        $numeroFila = 0;
+        $rows = $tablas->item(0)->getElementsByTagName('tr');
+
+        foreach ($rows as $row) {
+            $numeroFila++;
+            if ($numeroFila == 1) {
+                continue;
+            }
+
+            $fila = [];
+            $celdaIndex = 0;
+            foreach ($row->childNodes as $cell) {
+                if (!in_array(strtolower($cell->nodeName), ['td', 'th'], true)) {
+                    continue;
+                }
+
+                $fila[$this->columna_excel_desde_indice($celdaIndex)] = trim($cell->textContent);
+                $celdaIndex++;
+            }
+
+            $filas[$numeroFila] = $fila;
+        }
+
+        return $filas;
+    }
+
+    private function leer_xls_productos($archivo)
+    {
+        $contenido = (string) file_get_contents($archivo, false, null, 0, 512);
+        if (stripos($contenido, '<html') !== false || stripos($contenido, '<table') !== false) {
+            return $this->leer_html_xls_productos($archivo);
+        }
+
+        return $this->leer_phpexcel_productos($archivo);
+    }
+
+	    private function leer_phpexcel_productos($archivo)
+	    {
+	        $anterior = error_reporting();
+	        $displayErrors = ini_get('display_errors');
+	        ini_set('display_errors', '0');
+	        error_reporting(0);
+
+	        try {
+	            $inputFileType = PHPExcel_IOFactory::identify($archivo);
+	            $objReader = PHPExcel_IOFactory::createReader($inputFileType);
+	            $objPHPExcel = $objReader->load($archivo);
+	        } finally {
+	            error_reporting($anterior);
+	            ini_set('display_errors', $displayErrors);
+	        }
+
+        $sheet = $objPHPExcel->getSheet(0);
+        $highestRow = $sheet->getHighestRow();
+        $highestColumn = $sheet->getHighestColumn();
+        $highestColumnIndex = PHPExcel_Cell::columnIndexFromString($highestColumn);
+        $filas = [];
+
+        for ($row = 2; $row <= $highestRow; $row++) {
+            $fila = [];
+            for ($col = 0; $col < $highestColumnIndex; $col++) {
+                $fila[$this->columna_excel_desde_indice($col)] = $this->valor_celda($sheet, $this->columna_excel_desde_indice($col), $row);
+            }
+            $filas[$row] = $fila;
+        }
+
+        return $filas;
+    }
+
+    private function leer_xlsx_productos($archivo)
+    {
+        $zip = new ZipArchive();
+        if ($zip->open($archivo) !== true) {
+            throw new Exception('No se pudo abrir el xlsx');
+        }
+
+        $sharedStrings = $this->leer_xlsx_shared_strings($zip);
+        $xmlHoja = $zip->getFromName('xl/worksheets/sheet1.xml');
+        $zip->close();
+
+        if ($xmlHoja === false) {
+            throw new Exception('El xlsx no contiene hoja principal');
+        }
+
+        $xml = simplexml_load_string($xmlHoja);
+        $filas = [];
+
+        foreach ($xml->sheetData->row as $row) {
+            $numeroFila = (int) $row['r'];
+            if ($numeroFila <= 1) {
+                continue;
+            }
+
+            $fila = [];
+            foreach ($row->c as $cell) {
+                $referencia = (string) $cell['r'];
+                $columna = preg_replace('/[0-9]/', '', $referencia);
+                $tipo = (string) $cell['t'];
+                $valor = '';
+
+                if ($tipo === 's') {
+                    $indice = (int) $cell->v;
+                    $valor = isset($sharedStrings[$indice]) ? $sharedStrings[$indice] : '';
+                } elseif ($tipo === 'inlineStr') {
+                    $valor = isset($cell->is->t) ? (string) $cell->is->t : '';
+                } else {
+                    $valor = isset($cell->v) ? (string) $cell->v : '';
+                }
+
+                $fila[$columna] = $valor;
+            }
+
+            $filas[$numeroFila] = $fila;
+        }
+
+        return $filas;
+    }
+
+    private function leer_xlsx_shared_strings($zip)
+    {
+        $xmlStrings = $zip->getFromName('xl/sharedStrings.xml');
+        if ($xmlStrings === false) {
+            return [];
+        }
+
+        $xml = simplexml_load_string($xmlStrings);
+        $strings = [];
+
+        foreach ($xml->si as $si) {
+            if (isset($si->t)) {
+                $strings[] = (string) $si->t;
+                continue;
+            }
+
+            $texto = '';
+            if (isset($si->r)) {
+                foreach ($si->r as $run) {
+                    $texto .= isset($run->t) ? (string) $run->t : '';
+                }
+            }
+            $strings[] = $texto;
+        }
+
+        return $strings;
+    }
+
+    private function descargar_xls($archivo, $hojas)
+    {
+        $anterior = error_reporting();
+        $displayErrors = ini_get('display_errors');
+        ini_set('display_errors', '0');
+        error_reporting(0);
+
+        $excel = new PHPExcel();
+        $excel->getProperties()
+            ->setCreator('Phuyu Comercial')
+            ->setTitle(pathinfo($archivo, PATHINFO_FILENAME));
+
+        foreach ($hojas as $index => $hoja) {
+            $sheet = $index == 0 ? $excel->setActiveSheetIndex(0) : $excel->createSheet($index);
+            $sheet->setTitle($this->nombre_hoja_excel(isset($hoja['nombre']) ? $hoja['nombre'] : 'Hoja ' . ($index + 1)));
+            $sheet->fromArray($hoja['filas'], null, 'A1');
+            $highestColumn = $sheet->getHighestColumn();
+            $highestRow = $sheet->getHighestRow();
+
+            $sheet->freezePane('A2');
+            $sheet->setAutoFilter('A1:' . $highestColumn . $highestRow);
+            $sheet->getStyle('A1:' . $highestColumn . '1')->getFont()->setBold(true);
+
+            $highestColumnIndex = PHPExcel_Cell::columnIndexFromString($highestColumn);
+            for ($col = 0; $col < $highestColumnIndex; $col++) {
+                $sheet->getColumnDimensionByColumn($col)->setAutoSize(true);
+            }
+        }
+
+        $excel->setActiveSheetIndex(0);
+
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment; filename="' . $archivo . '"');
+        header('Cache-Control: max-age=0');
+        header('Pragma: public');
+
+        $writer = PHPExcel_IOFactory::createWriter($excel, 'Excel5');
+        $writer->save('php://output');
+
+        error_reporting($anterior);
+        ini_set('display_errors', $displayErrors);
+        exit;
+    }
+
+    private function nombre_hoja_excel($nombre)
+    {
+        $nombre = preg_replace('/[\\\\\\/\\?\\*\\[\\]\\:]/', ' ', $this->normalizar_texto($nombre));
+        $nombre = trim(substr($nombre, 0, 31));
+        return $nombre === '' ? 'Hoja' : $nombre;
+    }
+
+    private function detectar_delimitador_csv($linea)
+    {
+        $puntoComa = substr_count($linea, ';');
+        $coma = substr_count($linea, ',');
+        return $puntoComa >= $coma ? ';' : ',';
+    }
+
+    private function columna_excel_desde_indice($indice)
+    {
+        $columna = '';
+        $indice++;
+
+        while ($indice > 0) {
+            $modulo = ($indice - 1) % 26;
+            $columna = chr(65 + $modulo) . $columna;
+            $indice = (int) (($indice - $modulo) / 26);
+        }
+
+        return $columna;
+    }
+
+    private function procesar_fila_carga_producto($fila, $row)
+    {
+        $codigo = $this->normalizar_texto($this->valor_fila($fila, 'A'));
+        $descripcion = $this->normalizar_texto($this->valor_fila($fila, 'B'));
+        $familia = $this->valor_fila($fila, 'D');
+        $linea = $this->valor_fila($fila, 'E');
+        $marca = $this->valor_fila($fila, 'F');
+        $unidad = $this->valor_fila($fila, 'G');
+
+        if ($codigo === '' && $descripcion === '' && $this->normalizar_texto($familia) === '' && $this->normalizar_texto($linea) === '' && $this->normalizar_texto($marca) === '' && $this->normalizar_texto($unidad) === '') {
+            return ['estado' => 0, 'mensaje' => ''];
+        }
+
+        if ($descripcion === '') {
+            return ['estado' => 0, 'mensaje' => 'Fila ' . $row . ': falta descripcion.'];
+        }
+
+        $tipo = $this->entero_excel($this->valor_fila($fila, 'C'), 1);
+        if ($tipo != 1 && $tipo != 2) {
+            $tipo = 1;
+        }
+
+        $codfamilia = $this->resolver_catalogo('familias', 'codfamilia', $familia, 'GENERAL');
+        $codlinea = $this->resolver_catalogo('lineas', 'codlinea', $linea, 'GENERAL');
+        $codmarca = $this->resolver_catalogo('marcas', 'codmarca', $marca, 'GENERICO');
+        $codunidad = $this->resolver_unidad($unidad);
+
+        if ($codfamilia === null || $codlinea === null || $codmarca === null || $codunidad === null) {
+            return ['estado' => 0, 'mensaje' => 'Fila ' . $row . ': no se pudo resolver familia, linea, marca o unidad.'];
+        }
+
+        $factor = $this->numero_excel($this->valor_fila($fila, 'H'), 1);
+        if ($factor <= 0) {
+            $factor = 1;
+        }
+
+        $precioCompra = $this->numero_excel($this->valor_fila($fila, 'I'), 0);
+        $precioVenta = $this->numero_excel($this->valor_fila($fila, 'J'), 0);
+        $precioMinimo = $this->numero_excel($this->valor_fila($fila, 'K'), $precioVenta);
+        $precioCredito = $this->numero_excel($this->valor_fila($fila, 'L'), $precioVenta);
+        $precioMayor = $this->numero_excel($this->valor_fila($fila, 'M'), $precioVenta);
+        $precioAdicional = $this->numero_excel($this->valor_fila($fila, 'N'), $precioVenta);
+        $codigoBarra = $this->normalizar_texto($this->valor_fila($fila, 'O'));
+        $stockInicial = $this->numero_excel($this->valor_fila($fila, 'P'), null);
+        $controlStock = $this->booleano_excel($this->valor_fila($fila, 'Q'), 1);
+        $codAfectacionCompra = $this->resolver_afectacion($this->valor_fila($fila, 'R'), 1);
+        $codAfectacionVenta = $this->resolver_afectacion($this->valor_fila($fila, 'S'), isset($_SESSION['phuyu_afectacionigv']) ? (int) $_SESSION['phuyu_afectacionigv'] : 9);
+        $afectoIcbper = $this->booleano_excel($this->valor_fila($fila, 'T'), 0);
+        $comisionVendedor = $this->numero_excel($this->valor_fila($fila, 'U'), 0);
+        $caracteristicas = $this->normalizar_texto($this->valor_fila($fila, 'V'));
+        $controlarSeries = $this->booleano_excel($this->valor_fila($fila, 'W'), 0);
+
+        $producto = [];
+        if ($codigo !== '') {
+            $producto = $this->db->get_where('almacen.productos', ['codigo' => $codigo])->row_array();
+        }
+
+        if (empty($producto) && $codigoBarra !== '') {
+            $producto = $this->db->query(
+                "select p.* from almacen.productos p inner join almacen.productounidades u on (p.codproducto = u.codproducto) where p.estado = 1 and u.codigobarra = ? limit 1",
+                [$codigoBarra]
+            )->row_array();
+        }
+
+        if (empty($producto) && $descripcion !== '') {
+            $producto = $this->db->query(
+                "select * from almacen.productos where estado = 1 and upper(trim(descripcion)) = upper(trim(?)) limit 1",
+                [$descripcion]
+            )->row_array();
+        }
+
+        $dataProducto = [
+            'codfamilia' => (int) $codfamilia,
+            'codlinea' => (int) $codlinea,
+            'codmarca' => (int) $codmarca,
+            'codempresa' => isset($_SESSION['phuyu_codempresa']) ? (int) $_SESSION['phuyu_codempresa'] : 1,
+            'descripcion' => $descripcion,
+            'afectoicbper' => (int) $afectoIcbper,
+            'controlstock' => (int) $controlStock,
+            'afectoigvcompra' => $codAfectacionCompra == 1 ? 1 : 0,
+            'afectoigvventa' => $codAfectacionVenta == 1 ? 1 : 0,
+            'calcular' => 0,
+            'paraventa' => 1,
+            'codatencion' => 0,
+            'caracteristicas' => $caracteristicas,
+            'tipo' => (int) $tipo,
+            'controlarseries' => (int) $controlarSeries,
+            'estado' => 1
+        ];
+
+        if ($codigo !== '') {
+            $dataProducto['codigo'] = $codigo;
+        }
+
+        if (!empty($producto)) {
+            $codproducto = (int) $producto['codproducto'];
+            $this->db->where('codproducto', $codproducto);
+            $this->db->update('almacen.productos', $dataProducto);
+        } else {
+            $this->db->insert('almacen.productos', $dataProducto);
+            $codproducto = $this->ultimo_id_insertado('almacen.productos', 'codproducto');
+
+            if ($codigo === '') {
+                $codigo = '000' . $codproducto;
+                $this->db->where('codproducto', $codproducto);
+                $this->db->update('almacen.productos', ['codigo' => $codigo]);
+            }
+        }
+
+        $dataUnidad = [
+            'codproducto' => (int) $codproducto,
+            'codunidad' => (int) $codunidad,
+            'codsucursal' => isset($_SESSION['phuyu_codsucursal']) ? (int) $_SESSION['phuyu_codsucursal'] : null,
+            'factor' => (float) $factor,
+            'preciocompra' => (float) $precioCompra,
+            'preciocosto' => (float) $precioCompra,
+            'pventapublico' => (float) $precioVenta,
+            'pventamin' => (float) $precioMinimo,
+            'pventacredito' => (float) $precioCredito,
+            'pventaxmayor' => (float) $precioMayor,
+            'pventaadicional' => (float) $precioAdicional,
+            'codigobarra' => $codigoBarra,
+            'estado' => 1
+        ];
+
+        $this->upsert_por_filtro('almacen.productounidades', $dataUnidad, [
+            'codproducto' => (int) $codproducto,
+            'codunidad' => (int) $codunidad
+        ]);
+
+        $almacenes = $this->db->query('select codalmacen, codsucursal, codafectacionigv from almacen.almacenes where estado=1 order by codalmacen')->result_array();
+        foreach ($almacenes as $almacen) {
+            $esAlmacenActual = isset($_SESSION['phuyu_codalmacen']) && (int) $_SESSION['phuyu_codalmacen'] == (int) $almacen['codalmacen'];
+            $afectacionAlmacen = (int) $almacen['codafectacionigv'] > 0 ? (int) $almacen['codafectacionigv'] : $codAfectacionVenta;
+
+            $dataUbicacion = [
+                'codalmacen' => (int) $almacen['codalmacen'],
+                'codproducto' => (int) $codproducto,
+                'codunidad' => (int) $codunidad,
+                'codsucursal' => (int) $almacen['codsucursal'],
+                'factor' => (float) $factor,
+                'preciocompra' => (float) $precioCompra,
+                'preciocosto' => (float) $precioCompra,
+                'pventapublico' => (float) $precioVenta,
+                'pventamin' => (float) $precioMinimo,
+                'pventacredito' => (float) $precioCredito,
+                'pventaxmayor' => (float) $precioMayor,
+                'pventaadicional' => (float) $precioAdicional,
+                'codigobarra' => $codigoBarra,
+                'estado' => 1,
+                'codafectacionigvcompra' => $esAlmacenActual ? (int) $codAfectacionCompra : $afectacionAlmacen,
+                'codafectacionigvventa' => $esAlmacenActual ? (int) $codAfectacionVenta : $afectacionAlmacen,
+                'comisionvendedor' => (float) $comisionVendedor
+            ];
+
+            if ($stockInicial !== null && $esAlmacenActual) {
+                $existenciaUbicacion = $this->db->get_where('almacen.productoubicacion', [
+                    'codalmacen' => (int) $almacen['codalmacen'],
+                    'codproducto' => (int) $codproducto,
+                    'codunidad' => (int) $codunidad,
+                    'estado' => 1
+                ])->row_array();
+
+                if (!empty($existenciaUbicacion)) {
+                    $dataUbicacion['stockactual'] = (float) $existenciaUbicacion['stockactual'] + (float) $stockInicial;
+                    $dataUbicacion['stockactualreal'] = (float) $existenciaUbicacion['stockactualreal'] + (float) $stockInicial;
+                    $dataUbicacion['stockactualconvertido'] = (float) $existenciaUbicacion['stockactualconvertido'] + (float) $stockInicial;
+                    $dataUbicacion['preciostockvalorizado'] = (float) $existenciaUbicacion['preciostockvalorizado'] + ((float) $stockInicial * (float) $precioCompra);
+                } else {
+                    $dataUbicacion['stockactual'] = (float) $stockInicial;
+                    $dataUbicacion['stockactualreal'] = (float) $stockInicial;
+                    $dataUbicacion['stockactualconvertido'] = (float) $stockInicial;
+                    $dataUbicacion['preciostockvalorizado'] = (float) $stockInicial * (float) $precioCompra;
+                }
+            }
+
+            $shouldUpsertUbicacion = true;
+            $existenciaUbicacion = $this->db->get_where('almacen.productoubicacion', [
+                'codalmacen' => (int) $almacen['codalmacen'],
+                'codproducto' => (int) $codproducto,
+                'codunidad' => (int) $codunidad,
+                'estado' => 1
+            ])->row_array();
+
+            if ($stockInicial === null) {
+                if (empty($existenciaUbicacion)) {
+                    // No vamos a crear una ubicación de stock en 0 si el Excel no trae valor de stock.
+                    $shouldUpsertUbicacion = false;
+                } else {
+                    // Si hay stock_inicial null pero el registro existe, solo actualizar precios sin tocar el stock
+                    $dataUbicacion['stockactual'] = (float) $existenciaUbicacion['stockactual'];
+                    $dataUbicacion['stockactualreal'] = (float) $existenciaUbicacion['stockactualreal'];
+                    $dataUbicacion['stockactualconvertido'] = (float) $existenciaUbicacion['stockactualconvertido'];
+                    $dataUbicacion['preciostockvalorizado'] = (float) $existenciaUbicacion['preciostockvalorizado'];
+                }
+            }
+
+            if ($shouldUpsertUbicacion) {
+                $this->upsert_por_filtro('almacen.productoubicacion', $dataUbicacion, [
+                    'codalmacen' => (int) $almacen['codalmacen'],
+                    'codproducto' => (int) $codproducto,
+                    'codunidad' => (int) $codunidad
+                ]);
+            }
+        }
+
+        return ['estado' => 1, 'mensaje' => ''];
+    }
+
+    private function resolver_catalogo($tabla, $pk, $valor, $defecto)
+    {
+        $texto = $this->normalizar_texto($valor);
+
+        if ($texto !== '' && is_numeric($texto)) {
+            $registro = $this->db->get_where('almacen.' . $tabla, [$pk => (int) $texto, 'estado' => 1])->row_array();
+            if (!empty($registro)) {
+                if ($tabla === 'lineas') {
+                    $this->asegurar_linea_sucursal((int) $registro[$pk]);
+                }
+                return (int) $registro[$pk];
+            }
+        }
+
+        if ($texto === '') {
+            $texto = $defecto;
+        }
+
+        $registro = $this->db->query('select ' . $pk . ' from almacen.' . $tabla . ' where estado=1 and upper(trim(descripcion))=? limit 1', [strtoupper($texto)])->row_array();
+        if (!empty($registro)) {
+            if ($tabla === 'lineas') {
+                $this->asegurar_linea_sucursal((int) $registro[$pk]);
+            }
+            return (int) $registro[$pk];
+        }
+
+        $this->db->insert('almacen.' . $tabla, [
+            'descripcion' => $texto,
+            'estado' => 1
+        ]);
+
+        $codigo = $this->ultimo_id_insertado('almacen.' . $tabla, $pk);
+        if ($tabla === 'lineas') {
+            $this->asegurar_linea_sucursal($codigo);
+        }
+
+        return $codigo > 0 ? $codigo : null;
+    }
+
+    private function resolver_unidad($valor)
+    {
+        $texto = $this->normalizar_texto($valor);
+
+        if ($texto !== '' && is_numeric($texto)) {
+            $registro = $this->db->get_where('almacen.unidades', ['codunidad' => (int) $texto, 'estado' => 1])->row_array();
+            if (!empty($registro)) {
+                return (int) $registro['codunidad'];
+            }
+        }
+
+        if ($texto === '') {
+            $texto = 'UNIDAD';
+        }
+
+        $registro = $this->db->query("select codunidad from almacen.unidades where estado=1 and (upper(trim(descripcion))=? or upper(trim(oficial))=?) limit 1", [strtoupper($texto), strtoupper($texto)])->row_array();
+        if (!empty($registro)) {
+            return (int) $registro['codunidad'];
+        }
+
+        $oficial = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $texto), 0, 3));
+        if ($oficial === '') {
+            $oficial = 'NIU';
+        }
+
+        $this->db->insert('almacen.unidades', [
+            'descripcion' => $texto,
+            'oficial' => $oficial,
+            'estado' => 1
+        ]);
+
+        $codigo = $this->ultimo_id_insertado('almacen.unidades', 'codunidad');
+        return $codigo > 0 ? $codigo : null;
+    }
+
+    private function resolver_afectacion($valor, $defecto)
+    {
+        $texto = $this->normalizar_texto($valor);
+
+        if ($texto !== '' && is_numeric($texto)) {
+            $registro = $this->db->get_where('afectacionigv', ['codafectacionigv' => (int) $texto, 'estado' => 1])->row_array();
+            if (!empty($registro)) {
+                return (int) $registro['codafectacionigv'];
+            }
+        }
+
+        if ($texto !== '') {
+            $registro = $this->db->query("select codafectacionigv from afectacionigv where estado=1 and (upper(trim(descripcion))=? or upper(trim(oficial))=?) limit 1", [strtoupper($texto), strtoupper($texto)])->row_array();
+            if (!empty($registro)) {
+                return (int) $registro['codafectacionigv'];
+            }
+        }
+
+        return (int) $defecto;
+    }
+
+    private function asegurar_linea_sucursal($codlinea)
+    {
+        if ($codlinea <= 0 || !isset($_SESSION['phuyu_codsucursal'])) {
+            return;
+        }
+
+        $existe = $this->db->get_where('almacen.lineasxsucursales', [
+            'codlinea' => (int) $codlinea,
+            'codsucursal' => (int) $_SESSION['phuyu_codsucursal']
+        ])->row_array();
+
+        if (empty($existe)) {
+            $this->db->insert('almacen.lineasxsucursales', [
+                'codlinea' => (int) $codlinea,
+                'codsucursal' => (int) $_SESSION['phuyu_codsucursal']
+            ]);
+        }
+    }
+
+    private function upsert_por_filtro($tabla, $data, $filtro)
+    {
+        $existe = $this->db->get_where($tabla, $filtro)->row_array();
+
+        if (empty($existe)) {
+            $this->db->insert($tabla, $data);
+            return;
+        }
+
+        foreach ($filtro as $campo => $valor) {
+            $this->db->where($campo, $valor);
+        }
+        $this->db->update($tabla, $data);
+    }
+
+    private function ultimo_id_insertado($tabla, $columna)
+    {
+        $id = (int) $this->db->insert_id();
+        if ($id > 0) {
+            return $id;
+        }
+
+        $registro = $this->db->query("select currval(pg_get_serial_sequence(?, ?)) as id", [$tabla, $columna])->row_array();
+        return isset($registro['id']) ? (int) $registro['id'] : 0;
+    }
+
+    private function valor_celda($sheet, $columna, $fila)
+    {
+        $valor = $sheet->getCell($columna . $fila)->getCalculatedValue();
+        if ($valor instanceof PHPExcel_RichText) {
+            $valor = $valor->getPlainText();
+        }
+        return $valor;
+    }
+
+    private function valor_fila($fila, $columna)
+    {
+        return isset($fila[$columna]) ? $fila[$columna] : '';
+    }
+
+    private function normalizar_texto($valor)
+    {
+        $valor = str_replace("\xEF\xBB\xBF", '', (string) $valor);
+        return trim(preg_replace('/\s+/', ' ', $valor));
+    }
+
+    private function numero_excel($valor, $defecto = 0)
+    {
+        $valor = $this->normalizar_texto($valor);
+        if ($valor === '') {
+            return $defecto;
+        }
+
+        $valor = str_ireplace(['S/', 'USD', '$', ' '], '', $valor);
+        if (strpos($valor, ',') !== false && strpos($valor, '.') === false) {
+            $valor = str_replace(',', '.', $valor);
+        } else {
+            $valor = str_replace(',', '', $valor);
+        }
+
+        return is_numeric($valor) ? (float) $valor : $defecto;
+    }
+
+    private function entero_excel($valor, $defecto = 0)
+    {
+        return (int) $this->numero_excel($valor, $defecto);
+    }
+
+    private function booleano_excel($valor, $defecto = 0)
+    {
+        $texto = strtoupper($this->normalizar_texto($valor));
+        if ($texto === '') {
+            return (int) $defecto;
+        }
+
+        if (in_array($texto, ['1', 'SI', 'S', 'YES', 'Y', 'TRUE', 'VERDADERO'], true)) {
+            return 1;
+        }
+
+        return 0;
+    }
+
+    private function limpiar_salida_excel()
+    {
+        while (ob_get_level() > 0) {
+            if (!@ob_end_clean()) {
+                break;
+            }
         }
     }
 }

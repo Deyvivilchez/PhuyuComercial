@@ -78,6 +78,9 @@ class Movimientos extends CI_Controller {
 	public function nuevo_1($tipomovimiento,$codkardex){
 		if ($this->input->is_ajax_request()) {
 			if (isset($_SESSION["phuyu_usuario"])) {
+				$tipomovimiento = (int)$tipomovimiento;
+				$codkardex = (int)$codkardex;
+				$configuracion_error = "";
 				$tipocomprobantes = $this->db->query("select *from caja.comprobantetipos where codcomprobantetipo>=10 and estado=1 order by codcomprobantetipo")->result_array();
 				if ($tipomovimiento==1) {
 					$comprobante_caja = $this->db->query("select caja.comprobantetipos.* from caja.comprobantetipos inner join caja.comprobantes on(caja.comprobantetipos.codcomprobantetipo=caja.comprobantes.codcomprobantetipo) where caja.comprobantetipos.codcomprobantetipo=1 and caja.comprobantes.codsucursal=".$_SESSION["phuyu_codsucursal"]." and caja.comprobantes.codcaja=".$_SESSION["phuyu_codcaja"]." and caja.comprobantes.estado=1 order by caja.comprobantetipos.codcomprobantetipo")->result_array();
@@ -86,7 +89,16 @@ class Movimientos extends CI_Controller {
 				}
 				$conceptos = $this->db->query("select *from caja.conceptos where tipo=".$tipomovimiento." and estado=1 order by codconcepto")->result_array();
 
+				if (count($comprobante_caja)==0) {
+					$configuracion_error = "No hay comprobante de caja configurado para este movimiento en la caja actual.";
+					$comprobante_caja = [["codcomprobantetipo" => ($tipomovimiento==1 ? 1 : 2)]];
+				}
+
 				$series = $this->db->query("select seriecomprobante from caja.comprobantes where codcomprobantetipo=".$comprobante_caja[0]["codcomprobantetipo"]." and codsucursal=".$_SESSION["phuyu_codsucursal"]." and codcaja=".$_SESSION["phuyu_codcaja"]." and estado=1")->result_array();
+				if (count($series)==0) {
+					$configuracion_error = "No hay serie activa para el comprobante de caja en la caja actual.";
+					$series = [["seriecomprobante" => ""]];
+				}
 
 				if ($comprobante_caja[0]["codcomprobantetipo"]==1) {
 					$tipopagos = $this->db->query("select *from caja.tipopagos where (ingreso=1 or abono=1) and estado=1 order by codtipopago")->result_array();
@@ -97,10 +109,20 @@ class Movimientos extends CI_Controller {
 				if ($codkardex==0) {
 					$productos = [];
 				}else{
-					$productos = $this->db->query("select codproducto,descripcion from almacen.productos where controlstock=0 and estado=1")->result_array();
+					$productos = $this->db->query("
+						select distinct p.codproducto, p.descripcion
+						from almacen.productos as p
+						left join almacen.productounidades as pu on(p.codproducto=pu.codproducto and pu.estado=1)
+						where p.estado=1
+						and (
+							coalesce(p.tipo, 0)=2
+							or coalesce(p.controlstock, 0)=0
+						)
+						order by p.descripcion
+					")->result_array();
 				}
 
-				$this->load->view("caja/movimientos/nuevo_1",compact("tipocomprobantes","tipomovimiento","codkardex","comprobante_caja","conceptos","series","tipopagos","productos"));
+				$this->load->view("caja/movimientos/nuevo_1",compact("tipocomprobantes","tipomovimiento","codkardex","comprobante_caja","conceptos","series","tipopagos","productos","configuracion_error"));
 			}else{
 				$this->load->view("phuyu/505");
 			}

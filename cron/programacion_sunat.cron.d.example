@@ -1,0 +1,8 @@
+# Cron maestro para Programacion SUNAT / CPE
+#
+# Instalacion sugerida en Linux:
+# sudo cp cron/programacion_sunat.cron.d.example /etc/cron.d/phuyu-demo-programacion-sunat
+# sudo chmod 644 /etc/cron.d/phuyu-demo-programacion-sunat
+#
+# Formato /etc/cron.d: minuto hora dia_mes mes dia_semana usuario comando
+* * * * * www-data cd /var/www/demo.comercial.phuyusystem.com && /usr/bin/php7.4 index.php facturacion/programacionsunat/cron >/dev/null 2>&1

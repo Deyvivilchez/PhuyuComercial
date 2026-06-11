@@ -1,17 +1,54 @@
+function phuyuShowBootstrapModal(id, options) {
+	var modalElement = document.getElementById(id);
+
+	if (!modalElement) {
+		return;
+	}
+
+	if (typeof bootstrap !== "undefined" && bootstrap.Modal) {
+		bootstrap.Modal.getOrCreateInstance(modalElement, options || {}).show();
+		return;
+	}
+
+	if (typeof jQuery !== "undefined" && typeof jQuery.fn.modal === "function") {
+		jQuery(modalElement).modal(options || "show");
+	}
+}
+
+function phuyuHideBootstrapModal(id) {
+	var modalElement = document.getElementById(id);
+
+	if (!modalElement) {
+		return;
+	}
+
+	if (typeof bootstrap !== "undefined" && bootstrap.Modal) {
+		bootstrap.Modal.getOrCreateInstance(modalElement).hide();
+		return;
+	}
+
+	if (typeof jQuery !== "undefined" && typeof jQuery.fn.modal === "function") {
+		jQuery(modalElement).modal("hide");
+	}
+}
+
 var phuyu_operacion = new Vue({
 	el: "#phuyu_operacion",
 	data: {
-		estado:0, codigobarra: "",rubro:0, series:[], detalle:[],codkardex:[],detallecomprobante:[], putunidades:[],
+		estado:0, estadoVehiculo:0, codigobarra: "",rubro:0, series:[], detalle:[],codkardex:[],detallecomprobante:[], putunidades:[],
 		campos:{
 			codguiar:0, codpersona:0, codcomprobantetipo:16,seriecomprobante:$("#serie").val(), nro:"",codmotivotraslado:'',codmodalidadtraslado:'',
 			fechaguia:$("#fechaguia").val(), fechatraslado:$("#fechatraslado").val(), descripcion:"REGISTRO POR GUIA DE REMISION", destinatario:"", direccion:"-",descripcionmotivo:"",
 			codempleado:0, codmoneda:1, tipocambio:0.00, codcentrocosto:0, nroplaca:"", retirar:true, almacenpartida:$("#almacen_principal").val(),
 			almacendestino: $("#almacen_llegada").val(),codunidad:'',peso:0,nropaquetes:0,observaciones:"",codubigeopartida:0,codubigeollegada:0,
 			coddocumentotipotransportista:0,documentotransportista:'',razonsocialtransportista:'',coddocumentotipoconductor:0,nrocontenedor:1,constancia:'',
-			documentoconductor:'',razonsocialconductor:'',codmovimientotipo:0,marca:'',licenciaconductor:'',codremitente,coddocumentotiporemitente:0, documentoremitente:'',remitente:''
+			documentoconductor:'',razonsocialconductor:'',codmovimientotipo:0,marca:'',licenciaconductor:'',codtransportista:0,codconductor:0,codvehiculo:0,codremitente:0,coddocumentotiporemitente:0, documentoremitente:'',remitente:''
 		},
 		item:{
 			producto:"", unidad:"", cantidad:0, pesoitem:0, descripcion:""
+		},
+		vehiculo:{
+			descripcion:"", nroplaca:"", constancia:""
 		}
 	},
 	methods: {
@@ -77,6 +114,11 @@ var phuyu_operacion = new Vue({
         phuyu_infovehiculo: function(codvehiculo,placa){
 			this.campos.codvehiculo = codvehiculo;
 			this.campos.nroplaca = placa;
+			this.$http.get(url+"administracion/vehiculos/infovehiculo/"+codvehiculo).then(function(data){
+				if (data.body.length > 0) {
+					this.campos.constancia = data.body[0].constancia || "";
+				}
+			});
         },
 
 		/* DETALLE DE LA VENTA Y TOTALES */
@@ -157,10 +199,10 @@ var phuyu_operacion = new Vue({
             		})
             	}
             }
-		},
-		phuyu_itemdetalle: function(index,producto){
-			this.item = producto; $("#modal_itemdetalle").modal({backdrop: 'static', keyboard: false});
-		},
+			},
+			phuyu_itemdetalle: function(index,producto){
+				this.item = producto; phuyuShowBootstrapModal("modal_itemdetalle", {backdrop: "static", keyboard: false});
+			},
         phuyu_deleteitemcomprobante: function(index,comprobante){
 			this.detallecomprobante.splice(index,1);
             var i = this.codkardex.indexOf(comprobante.codkardex);
@@ -223,15 +265,15 @@ var phuyu_operacion = new Vue({
 				phuyu_sistema.phuyu_noti("SELECCIONAR VEHICULO", "PARA GUARDAR LA GUIA DE REMISION","error"); return false;
 			}
 			
-			this.campos.fechacomprobante = $("#fechacomprobante").val();
-			this.campos.fechakardex = $("#fechakardex").val();
+			this.campos.fechaguia = $("#fechaguia").val();
+			this.campos.fechatraslado = $("#fechatraslado").val();
 			
 			this.phuyu_pagar()
 		},
 
-		/* PAGO DE LA VENTA */
+			/* PAGO DE LA VENTA */
 
-		phuyu_series: function(){
+			phuyu_series: function(){
 			if (this.campos.codcomprobantetipo!=undefined) {
 				this.estado = 1;
 				this.$http.get(url+"caja/controlcajas/phuyu_seriescaja/"+this.campos.codcomprobantetipo).then(function(data){
@@ -257,12 +299,13 @@ var phuyu_operacion = new Vue({
 			}
 			this.validar_general()
 		},
-		phuyu_pagar: function(){
-			
-			this.estado = 1; $("#modal_pago").modal("hide"); phuyu_sistema.phuyu_inicio_guardar("GUARDANDO GUIA . . .");
-			this.$http.post(url+phuyu_controller+"/guardar", {"codkardex":this.codkardex,"detallecomprobante":this.detallecomprobante,"campos":this.campos,"detalle":this.detalle}).then(function(data){
-				if (data.body=="e") {
-					phuyu_sistema.phuyu_alerta("SESION DEL USUARIO TERMINADA","DEBE INICIAR SESION NUEVAMENTE","error");
+			phuyu_pagar: function(){
+				this.estado = 1;
+				phuyuHideBootstrapModal("modal_pago");
+				phuyu_sistema.phuyu_inicio_guardar("GUARDANDO GUIA . . .");
+				this.$http.post(url+phuyu_controller+"/guardar", {"codkardex":this.codkardex,"detallecomprobante":this.detallecomprobante,"campos":this.campos,"detalle":this.detalle}).then(function(data){
+					if (data.body=="e") {
+						phuyu_sistema.phuyu_alerta("SESION DEL USUARIO TERMINADA","DEBE INICIAR SESION NUEVAMENTE","error");
 				}else{
 					if (data.body.estado==1) {
 						swal({
@@ -283,31 +326,13 @@ var phuyu_operacion = new Vue({
 				}
 				phuyu_sistema.phuyu_fin(); this.phuyu_nueva_venta();
 			}, function(){
-				phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR GUIA DE REMISION","ERROR DE RED","error");
-				phuyu_sistema.phuyu_fin(); this.phuyu_nueva_venta();
-			});
-		},
-		phuyu_imprimir: function(codkardex){
-			if ($("#formato").val()=="ticket") {
-				window.open(url+"facturacion/formato/ticket/"+codkardex,"_blank");
-			}else{
-				var phuyu_url = url+"facturacion/formato/formato_guia/"+codkardex;
-				//$("#phuyu_pdf").attr("src",phuyu_url); $("#modal_reportes").modal("show");
-				window.open(phuyu_url,"_blank");
-			}
-
-			/* if ($("#phuyu_formato").val()==0) {
-				var phuyu_url = url+"facturacion/formato/a4/"+codkardex;
-            	$("#phuyu_pdf").attr("src",phuyu_url); $("#modal_reportes").modal("show");
-			}else{
-				if ($("#phuyu_formato").val()==1) {
-					var phuyu_url = url+"facturacion/formato/a5/"+codkardex;
-            		$("#phuyu_pdf").attr("src",phuyu_url); $("#modal_reportes").modal("show");
-				}else{
-					window.open(url+"facturacion/formato/ticket/"+codkardex,"_blank");
-				}
-			} */
-        },
+					phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR GUIA DE REMISION","ERROR DE RED","error");
+					phuyu_sistema.phuyu_fin(); this.phuyu_nueva_venta();
+				});
+			},
+			phuyu_imprimir: function(codkardex){
+				window.open(url+"facturacion/formato/formato_guia/"+codkardex,"_blank");
+	        },
         phuyu_prov_part: function(pro){
 			if ($("#dep_par").val()!=undefined) {
 				this.$http.get(url+"ventas/clientes/provincias/"+$("#dep_par").val()).then(function(data){
@@ -331,14 +356,14 @@ var phuyu_operacion = new Vue({
             var propar = $("#pro_par option:selected").text()
             var dispar = $("#dis_par option:selected").text()
 
-            this.campos.codubigeopartida = $("#dis_par").val()
-            $("#ubigeopartida").val(deparpar+', '+propar+', '+dispar)
-            $("#modal-ubigeo-partida").modal('hide')
-            this.validar_envio()
-		},
-        phuyu_bsubigeo: function (){
-            $("#modal-ubigeo-partida").modal('show')
-        },
+	            this.campos.codubigeopartida = $("#dis_par").val()
+	            $("#ubigeopartida").val(deparpar+', '+propar+', '+dispar)
+	            phuyuHideBootstrapModal("modal-ubigeo-partida")
+	            this.validar_envio()
+			},
+	        phuyu_bsubigeo: function (){
+	            phuyuShowBootstrapModal("modal-ubigeo-partida")
+	        },
 		phuyu_prov_lleg: function(pro){
 			if ($("#dep_lle").val()!=undefined) {
 				this.$http.get(url+"ventas/clientes/provincias/"+$("#dep_lle").val()).then(function(data){
@@ -361,14 +386,14 @@ var phuyu_operacion = new Vue({
             var deparpar = $("#dep_lle option:selected").text()
             var propar = $("#pro_lle option:selected").text()
             var dispar = $("#dis_lle option:selected").text()
-            this.campos.codubigeollegada = $("#dis_lle").val()
-            $("#ubigeollegada").val(deparpar+', '+propar+', '+dispar)
-            $("#modal-ubigeo-llegada").modal('hide')
-            this.validar_envio()
-		},
-        phuyu_bsubigeollegada: function (){
-            $("#modal-ubigeo-llegada").modal('show')
-        },
+	            this.campos.codubigeollegada = $("#dis_lle").val()
+	            $("#ubigeollegada").val(deparpar+', '+propar+', '+dispar)
+	            phuyuHideBootstrapModal("modal-ubigeo-llegada")
+	            this.validar_envio()
+			},
+	        phuyu_bsubigeollegada: function (){
+	            phuyuShowBootstrapModal("modal-ubigeo-llegada")
+	        },
         motivotraslado: function(){
         	if($("#motivotraslado").val() == 4){
         		$(".almacenes").show()
@@ -429,25 +454,24 @@ var phuyu_operacion = new Vue({
 			$("#codpersona").val(venta.codpersona);
             this.campos.codpersona = venta.codpersona;
             $("#select2-codpersona-container").empty().text(venta.cliente);
-			this.campos.direccionpartida = venta.direccionpartida;
-			$("#ubigeopartida").val(venta.ubigeodescripcion);
-			this.campos.codubigeopartida = venta.ubigeopartida;
-			var tmno = (venta.direcciondestino).length
-			console.log(tmno)
-			if(tmno>100){
-				llegadadir = (venta.direcciondestino).substring(0,100);
-			}else{
-				llegadadir = venta.direcciondestino
-			}
+				this.campos.direccionpartida = venta.direccionpartida;
+				$("#ubigeopartida").val(venta.ubigeodescripcion);
+				this.campos.codubigeopartida = venta.ubigeopartida;
+				var tmno = (venta.direcciondestino).length
+				var llegadadir = "";
+				if(tmno>100){
+					llegadadir = (venta.direcciondestino).substring(0,100);
+				}else{
+					llegadadir = venta.direcciondestino
+				}
 
 			this.campos.direccionllegada = llegadadir;
 			$("#ubigeollegada").val(venta.ubigeodescripciondestino);
 			this.campos.codubigeollegada = venta.ubigeodestino;
 			
-            this.detallecomprobante.push({codcomprobantetipo:venta.codcomprobantetipo,tipo:venta.tipo,seriecomprobante:venta.seriecomprobante,nrocomprobante:venta.nrocomprobante,codkardex:venta.codkardex})
-            if(!$.isEmptyObject(this.codkardex)){
-            	this.$http.get(url+"ventas/ventas/buscarproductos/"+venta.codkardex).then(function(data){
-            		//console.log(data.body)
+	            this.detallecomprobante.push({codcomprobantetipo:venta.codcomprobantetipo,tipo:venta.tipo,seriecomprobante:venta.seriecomprobante,nrocomprobante:venta.nrocomprobante,codkardex:venta.codkardex})
+	            if(!$.isEmptyObject(this.codkardex)){
+	                this.$http.get(url+"ventas/ventas/buscarproductos/"+venta.codkardex).then(function(data){
 					if (data.body.length==0) {
 						phuyu_sistema.phuyu_alerta("NO EXISTE EL DETALLE DE LA VENTA", "CORREGIR POR FAVOR", "error");return;
 					}else{
@@ -508,6 +532,72 @@ var phuyu_operacion = new Vue({
 			},function(){
 				phuyu_sistema.phuyu_error_operacion(); 
 				phuyu_sistema.phuyu_finloader("phuyu_formulario");
+			});
+		},
+		phuyu_addvehiculo: function(){
+			this.vehiculo = {descripcion:"", nroplaca:"", constancia:""};
+			phuyuShowBootstrapModal("modal-vehiculo-guia", {backdrop: "static", keyboard: false});
+		},
+		phuyu_guardarvehiculo: function(){
+			var descripcion = (this.vehiculo.descripcion || "").trim();
+			var nroplaca = (this.vehiculo.nroplaca || "").trim();
+			var constancia = (this.vehiculo.constancia || "").trim();
+
+			if (descripcion === "") {
+				phuyu_sistema.phuyu_noti("INGRESE LA DESCRIPCION", "PARA REGISTRAR EL VEHICULO", "error");
+				return false;
+			}
+
+			if (nroplaca === "") {
+				phuyu_sistema.phuyu_noti("INGRESE LA PLACA", "PARA REGISTRAR EL VEHICULO", "error");
+				return false;
+			}
+
+			this.estadoVehiculo = 1;
+			this.$http.post(url+"administracion/vehiculos/guardar_inline", {
+				descripcion: descripcion,
+				nroplaca: nroplaca,
+				constancia: constancia
+			}).then(function(data){
+				var respuesta = data.body;
+
+				if (typeof respuesta === "string") {
+					try {
+						respuesta = JSON.parse(respuesta);
+					} catch (e) {
+						respuesta = {estado: 0};
+					}
+				}
+
+				this.estadoVehiculo = 0;
+
+				if (respuesta.estado == 1 && respuesta.vehiculo) {
+					var vehiculo = respuesta.vehiculo;
+					var $codvehiculo = $("#codvehiculo");
+
+					this.campos.codvehiculo = vehiculo.codvehiculo;
+					this.campos.nroplaca = vehiculo.nroplaca;
+					this.campos.constancia = vehiculo.constancia || "";
+
+					if ($codvehiculo.find("option[value='" + vehiculo.codvehiculo + "']").length == 0) {
+						$codvehiculo.append(new Option(vehiculo.nroplaca, vehiculo.codvehiculo, true, true));
+					}
+
+					$codvehiculo.val(vehiculo.codvehiculo).trigger("change");
+					$("#select2-codvehiculo-container").empty().text(vehiculo.nroplaca);
+					phuyuHideBootstrapModal("modal-vehiculo-guia");
+
+					if (respuesta.existente == 1) {
+						phuyu_sistema.phuyu_noti("PLACA YA EXISTIA", "SE SELECCIONO EL VEHICULO REGISTRADO", "success");
+					}else{
+						phuyu_sistema.phuyu_noti("VEHICULO REGISTRADO", "PLACA AGREGADA A LA GUIA", "success");
+					}
+				}else{
+					phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR VEHICULO", "REVISA LOS DATOS E INTENTA NUEVAMENTE", "error");
+				}
+			}, function(){
+				this.estadoVehiculo = 0;
+				phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR VEHICULO", "ERROR DE RED", "error");
 			});
 		},
 		validar_general: function(){

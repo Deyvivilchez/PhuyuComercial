@@ -1,4 +1,6 @@
-<div id="phuyu_datos">
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<div id="phuyu_datos" class="phuyu-reportes-velzon phuyu-velzon-list">
 	<div class="phuyu_header">
 		<div class="row phuyu_header_title">
 			<div class="col-md-5">
@@ -33,8 +35,8 @@
 				<input type="text" class="form-control input-sm datepicker" id="fechahasta" value="<?php echo date('Y-m-d');?>" autocomplete="off">
 			</div>
 			<div class="col-md-1" style="margin-top: 2.5rem">
-				<button type="button" class="btn btn-success btn-block btn-sm" v-on:click="generar_utilidades()">
-					<i class="fa fa-search"></i>
+				<button type="button" class="btn btn-success w-100 btn-sm" v-on:click="generar_utilidades()">
+					<i class="bi bi-search"></i>
 				</button>
 			</div>
 		</div>
@@ -42,7 +44,7 @@
 			<table class="table table-bordered">
 				<thead>
 					<tr>
-						<th style="width:5px;"> <center> <i class="fa fa-circle-o"></i> </center> </th>
+						<th style="width:5px;"> <center> <i class="bi bi-circle"></i> </center> </th>
 						<th style="width:5px;">ID</th>
 						<th style="width:15px;">CODIGO</th>
 						<th style="width:40%;">DESCRIPCION</th>

@@ -7,6 +7,46 @@ class Empresa extends CI_Controller {
 		$this->load->model("phuyu_model"); $this->load->model("Caja_model"); $this->load->model("Kardex_model");
 	}
 
+	private function phuyu_generar_pem_desde_pfx($archivo_pfx, $clave, $carpeta_certificados){
+		if (!is_readable($archivo_pfx)) {
+			throw new Exception("No se puede leer el certificado PFX: ".$archivo_pfx);
+		}
+
+		$carpeta_certificados = rtrim($carpeta_certificados, "/");
+		if (!is_dir($carpeta_certificados) || !is_writable($carpeta_certificados)) {
+			throw new Exception("La carpeta de certificados no tiene permisos de escritura: ".$carpeta_certificados);
+		}
+
+		$pkcs12 = file_get_contents($archivo_pfx);
+		$certificados = array();
+		$respuesta = openssl_pkcs12_read($pkcs12, $certificados, $clave);
+
+		if (!$respuesta || empty($certificados["cert"]) || empty($certificados["pkey"])) {
+			$errores = array();
+			while ($error = openssl_error_string()) {
+				$errores[] = $error;
+			}
+			throw new Exception("No se pudo leer el PFX. Verifica la clave del certificado. ".implode(" | ", $errores));
+		}
+
+		$this->phuyu_reemplazar_archivo_pem($carpeta_certificados."/private_key.pem", $certificados["pkey"]);
+		$this->phuyu_reemplazar_archivo_pem($carpeta_certificados."/public_key.pem", $certificados["cert"]);
+	}
+
+	private function phuyu_reemplazar_archivo_pem($ruta, $contenido){
+		$tmp = dirname($ruta)."/.".basename($ruta).".".getmypid().".tmp";
+		if (file_put_contents($tmp, $contenido, LOCK_EX) === false) {
+			throw new Exception("No se pudo escribir el archivo temporal: ".$tmp);
+		}
+		chmod($tmp, 0644);
+
+		if (!@rename($tmp, $ruta)) {
+			@unlink($tmp);
+			throw new Exception("No se pudo reemplazar el archivo PEM: ".$ruta);
+		}
+		chmod($ruta, 0644);
+	}
+
 	public function index(){
 		if ($this->input->is_ajax_request()) {
 			$info = $this->db->query("select *from public.personas where codpersona=".$_SESSION["phuyu_codempresa"])->result_array();
@@ -41,7 +81,7 @@ class Empresa extends CI_Controller {
 		}
 	}
 
-	function guardar(){
+	function guardar_origen(){
 		if ($this->input->is_ajax_request()) {
 			$campos = ["rubro","facturacion","ubigeo","departamento","provincia","distrito"]; 
 			$valores = [$_POST["rubro"],1,$_POST["ubigeo"],$_POST["departamento"],$_POST["provincia"],$_POST["distrito"]];
@@ -99,6 +139,96 @@ class Empresa extends CI_Controller {
 			$this->load->view("phuyu/404");
 		}
 	}
+	function guardar(){
+    if ($this->input->is_ajax_request()) {
+        $estado = 0;
+        
+        try {
+            // Primera actualización
+            $campos = ["rubro","facturacion","ubigeo","departamento","provincia","distrito"]; 
+            $valores = [$_POST["rubro"],1,$_POST["ubigeo"],$_POST["departamento"],$_POST["provincia"],$_POST["distrito"]];
+            $estado = $this->phuyu_model->phuyu_editar("public.empresas", $campos, $valores,"codempresa",$_POST["codempresa"]);
+
+            // Configuración de servicios
+            $service = "servicesunat"; 
+            $service_guia = "servicesunatguia"; 
+            $service_retencion = "servicesunatretencion";
+            
+            if ($_POST["sunatose"]==1) {
+                $service = "serviceose"; 
+                $service_guia = "serviceoseguia"; 
+                $service_retencion = "serviceoseretencion";
+            }
+            
+            if ($_POST["serviceweb"]==1) {
+                $service = $service."_demo"; 
+                $service_guia = $service_guia."_demo"; 
+                $service_retencion = $service_retencion."_demo";
+            }
+
+            // Segunda actualización
+            $campos = ["usuariosol","clavesol","envioemail","claveemail","certificado_clave","sunatose","serviceweb",$service,$service_guia,$service_retencion];
+            $valores = [$_POST["usuariosol"],$_POST["clavesol"],$_POST["envioemail"],$_POST["claveemail"],$_POST["certificado_clave"],$_POST["sunatose"],$_POST["serviceweb"],$_POST[$service],$_POST[$service_guia],$_POST[$service_retencion]];
+            $estado = $this->phuyu_model->phuyu_editar("public.webservice", $campos, $valores,"codempresa",$_POST["codempresa"]);
+
+            // Procesar certificado si se subió uno
+            if (isset($_FILES["certificado_pfx"]) && $_FILES["certificado_pfx"]["name"] != "") {
+                $carpeta_certificados = "./sunat/certificados/";
+                $file = $_FILES["certificado_pfx"]["name"];
+                $destination = $carpeta_certificados . $file;
+
+                // VERIFICAR Y CREAR DIRECTORIO CON PERMISOS
+                if (!is_dir($carpeta_certificados)) {
+                    if (!mkdir($carpeta_certificados, 0755, true)) {
+                        throw new Exception("No se pudo crear el directorio de certificados");
+                    }
+                }
+
+                // VERIFICAR PERMISOS DE ESCRITURA
+                if (!is_writable($carpeta_certificados)) {
+                    if (!chmod($carpeta_certificados, 0755)) {
+                        throw new Exception("El directorio no tiene permisos de escritura");
+                    }
+                }
+
+                // MOVER ARCHIVO
+                if (!move_uploaded_file($_FILES["certificado_pfx"]["tmp_name"], $destination)) {
+                    $error = error_get_last();
+                    throw new Exception("Error al mover archivo: " . ($error['message'] ?? 'Error desconocido'));
+                }
+
+                // VERIFICAR QUE EL ARCHIVO SE MOVIÓ CORRECTAMENTE
+                if (!file_exists($destination)) {
+                    throw new Exception("El archivo certificado no se encuentra en el destino");
+                }
+
+                // ACTUALIZAR BASE DE DATOS
+                $data = array("certificado_pfx" => $file);
+                $this->db->where("codempresa", $_POST["codempresa"]);
+                $estado = $this->db->update("public.webservice", $data);
+
+                $this->phuyu_generar_pem_desde_pfx($destination, $_POST["certificado_clave"], $carpeta_certificados);
+            }
+
+            // Actualizar sesión
+            unset($_SESSION["phuyu_rubro"]);
+            $_SESSION["phuyu_rubro"] = (int)$_POST["rubro"];
+
+            $estado = 1;
+
+        } catch (Exception $e) {
+            error_log("Error en guardar certificado: " . $e->getMessage());
+            $estado = 0;
+            echo "ERROR: " . $e->getMessage();
+            return;
+        }
+
+        echo $estado;
+        
+    } else {
+        $this->load->view("phuyu/404");
+    }
+}
 
 	function copia_seguridad(){
 		/* echo exec('whoami');

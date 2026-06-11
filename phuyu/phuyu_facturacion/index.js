@@ -145,8 +145,8 @@ var phuyu_datos = new Vue({
 				if (data.body=="e") {
 					phuyu_sistema.phuyu_alerta("SESION DEL USUARIO TERMINADA","DEBE INICIAR SESION NUEVAMENTE","error");
 				}else{
-					// data.body.estado==0 || data.body.estado==3 || data.body.estado==4
-					phuyu_sistema.phuyu_noti("ATENCION USUARIO:",data.body.mensaje,"success"); 
+					var alerta = (data.body.estado==1 || data.body.estado==2) ? "success" : "error";
+					phuyu_sistema.phuyu_noti("ATENCION USUARIO:",data.body.mensaje,alerta); 
 					$("#"+periodo).removeAttr("disabled"); phuyu_sistema.phuyu_fin(); this.phuyu_resumenes();
 				}
 			}, function(){

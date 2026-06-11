@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Phuyu System | Iniciar Sesion</title>
+    <link rel="icon" href="<?php echo base_url(); ?>public/img/icono-phuyu.ico">
+
+    <link rel="stylesheet" href="<?php echo base_url(); ?>public/css/vendor/bootstrap.min.css" />
+    <link rel="stylesheet" href="<?php echo base_url(); ?>public/css/main.css" />
+    <link rel="stylesheet" href="<?php echo base_url(); ?>public/font/bootstrap-icons/font/bootstrap-icons.min.css" />
+    <script src="<?php echo base_url(); ?>public/js/base/loader.js"></script>
+
+    <style>
+        html,
+        body {
+            min-height: 100%;
+            margin: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+            color: #0f172a;
+            background-color: #eff6ff;
+        }
+
+        .auth-bg {
+            min-height: 100vh;
+            background-image:
+                radial-gradient(circle at 14% 24%, rgba(99, 102, 241, 0.20), transparent 20%),
+                radial-gradient(circle at 82% 16%, rgba(59, 130, 246, 0.16), transparent 18%),
+                linear-gradient(140deg, rgba(15, 23, 42, 0.86), rgba(99, 102, 241, 0.08)),
+                url('<?php echo base_url(); ?>public/img/background/sesion.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .auth-container {
+            max-width: 1080px;
+        }
+
+        .auth-shell {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 1.5rem;
+            align-items: stretch;
+        }
+
+        .auth-aside {
+            border-radius: 1.5rem;
+            padding: 2rem;
+            color: #eff6ff;
+            background: linear-gradient(160deg, rgba(15, 118, 110, 0.95) 0%, rgba(12, 74, 110, 0.95) 100%);
+            box-shadow: 0 20px 45px rgba(15, 23, 42, 0.24);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .auth-aside-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.4rem 0.9rem;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .auth-aside-title {
+            margin: 1.4rem 0 0.3rem;
+            font-size: clamp(2rem, 4.6vw, 3.2rem);
+            line-height: 1.02;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            text-shadow: 0 6px 22px rgba(0, 0, 0, 0.22);
+        }
+
+        .auth-aside-subtitle {
+            margin: 0 0 1rem;
+            font-size: clamp(1rem, 1.8vw, 1.2rem);
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.92);
+        }
+
+        .auth-aside-text {
+            margin: 0;
+            max-width: 34ch;
+            color: rgba(236, 253, 245, 0.88);
+            font-size: 0.98rem;
+            line-height: 1.7;
+        }
+
+        .auth-aside-meta {
+            margin-top: 1.35rem;
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .auth-aside-points {
+            margin: 1.1rem 0 0;
+            padding: 0;
+            list-style: none;
+            display: grid;
+            gap: 0.75rem;
+            color: rgba(255, 255, 255, 0.92);
+            font-size: 0.92rem;
+        }
+
+        .auth-aside-points li {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+        }
+
+        .auth-aside-points li i {
+            color: #67e8f9;
+            font-size: 1.05rem;
+        }
+
+        .auth-aside-quote {
+            margin-top: auto;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.22);
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.96rem;
+            font-style: italic;
+            letter-spacing: 0.01em;
+        }
+
+        .auth-aside-quote-author {
+            margin: 0.5rem 0 0;
+            text-transform: uppercase;
+            font-size: 0.78rem;
+            letter-spacing: 0.08em;
+            color: rgba(255, 255, 255, 0.78);
+        }
+
+        .auth-form-wrap {
+            display: flex;
+        }
+
+        .glass-card {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16);
+            border-radius: 1.5rem;
+            overflow: hidden;
+            border: 1px solid rgba(148, 163, 184, 0.16);
+        }
+
+        .card-header {
+            padding: 2rem 2.5rem 1rem;
+            text-align: center;
+        }
+
+        .brand-wrap {
+            width: 86px;
+            height: 86px;
+            margin: 0 auto 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(59, 130, 246, 0.12);
+            border: 1px solid rgba(59, 130, 246, 0.18);
+        }
+
+        .brand-logo {
+            width: 46px;
+            height: 46px;
+            object-fit: contain;
+        }
+
+        .card-title {
+            margin-bottom: 0.35rem;
+            font-size: 1.55rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .card-text {
+            color: #64748b;
+            margin-bottom: 1.5rem;
+            font-size: 0.97rem;
+        }
+
+        .card-body {
+            padding: 1.75rem 2.5rem 2.25rem;
+        }
+
+        .form-label {
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .input-group-text {
+            background: #ffffff;
+            border-right: 0;
+            color: #64748b;
+            min-width: 52px;
+            justify-content: center;
+        }
+
+        .custom-group .form-control {
+            border-left: 0;
+            border-right: 0;
+            box-shadow: none;
+            min-height: 56px;
+        }
+
+        .custom-group .form-control:focus {
+            box-shadow: none;
+            border-color: #60a5fa;
+        }
+
+        .custom-group .input-group-text.bg-white {
+            border-left: 1px solid #d1d5db;
+        }
+
+        .btn-toggle-eye {
+            border-left: 0;
+            border-radius: 0 0.75rem 0.75rem 0;
+            color: #475569;
+            background: #ffffff;
+        }
+
+        .btn-toggle-eye:hover {
+            background: #f8fafc;
+        }
+
+        .form-control::placeholder {
+            color: #94a3b8;
+        }
+
+        .form-check-label {
+            color: #64748b;
+        }
+
+        .forgot-link {
+            color: #0f766e;
+            font-weight: 600;
+        }
+
+        .forgot-link:hover {
+            color: #075985;
+        }
+
+        .alert-custom {
+            border-radius: 0.85rem;
+            font-size: 0.95rem;
+            padding: 0.85rem 1rem;
+        }
+
+        .btn-login {
+            position: relative;
+            min-height: 52px;
+            font-weight: 700;
+            color: #fff !important;
+            background: linear-gradient(135deg, #0f766e 0%, #0284c7 100%);
+            border: none;
+            border-radius: 0.85rem;
+            box-shadow: 0 14px 30px rgba(12, 74, 110, 0.24);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .btn-login:hover,
+        .btn-login:focus {
+            transform: translateY(-1px);
+            box-shadow: 0 16px 34px rgba(12, 74, 110, 0.28);
+        }
+
+        .btn-login-spinner {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-login-label {
+            padding-left: 1.5rem;
+        }
+
+        .text-small-muted {
+            color: #64748b;
+        }
+
+        .card-footer {
+            padding: 1rem 1.5rem 1.5rem;
+            background: transparent;
+            border-top: 0;
+            text-align: center;
+        }
+
+        .card-footer small {
+            color: #64748b;
+        }
+
+        .form-control:focus,
+        .form-check-input:focus,
+        .btn:focus {
+            box-shadow: 0 0 0 0.2rem rgba(2, 132, 199, 0.18) !important;
+        }
+
+        @media (max-width: 991.98px) {
+            .auth-shell {
+                grid-template-columns: 1fr;
+            }
+
+            .auth-aside {
+                display: none;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .auth-bg {
+                background-position: center;
+            }
+
+            .auth-shell {
+                grid-template-columns: 1fr;
+            }
+
+            .card-header,
+            .card-body,
+            .card-footer {
+                padding-left: 1.3rem;
+                padding-right: 1.3rem;
+            }
+
+            .brand-wrap {
+                width: 72px;
+                height: 72px;
+            }
+
+            .brand-logo {
+                width: 42px;
+                height: 42px;
+            }
+        }
+    </style>
+</head>
+
+<body class="auth-bg min-vh-100 d-flex align-items-center py-4 py-sm-5">
+    <div class="container auth-container">
+        <div class="auth-shell">
+            <section class="auth-aside">
+                <div class="auth-aside-badge"><i class="bi bi-box-seam"></i> Phuyu System</div>
+                <h1 class="auth-aside-title">Qhaway</h1>
+                <h2 class="auth-aside-subtitle">Gestión inteligente y cumplimiento acreditable</h2>
+                <p class="auth-aside-text">Ordena. Controla. Mejora.</p>
+                <div class="auth-aside-meta">
+                    <i class="bi bi-stars"></i>
+                    Evidencia que respalda decisiones
+                </div>
+                <ul class="auth-aside-points">
+                    <li><i class="bi bi-shield-check"></i><span>Estándares</span></li>
+                    <li><i class="bi bi-diagram-3"></i><span>Orden</span></li>
+                    <li><i class="bi bi-clipboard2-data"></i><span>Control</span></li>
+                    <li><i class="bi bi-arrow-repeat"></i><span>Mejora continua</span></li>
+                </ul>
+                <p class="auth-aside-quote">“No puedes controlar lo que no puedes medir.”</p>
+                <p class="auth-aside-quote-author">— Peter Drucker</p>
+            </section>
+
+            <section class="auth-form-wrap">
+                <div class="card border-0 rounded-4 shadow-lg glass-card overflow-hidden">
+                    <div class="card-header bg-transparent border-0 text-center pt-4 pb-2">
+                        <div class="brand-wrap mx-auto mb-3">
+                            <img src="<?php echo base_url(); ?>public/img/logo_completo.png" alt="Qhaway" class="brand-logo" />
+                        </div>
+                        <h4 class="mb-1 fw-bold text-dark">Iniciar sesión</h4>
+                        <p class="text-muted mb-0 small">Accede de forma segura a tu panel de trabajo</p>
+                    </div>
+
+                    <div class="card-body px-4 px-sm-5 pb-4 pt-3">
+                        <form id="form_login" onsubmit="return phuyu_login()" autocomplete="off" novalidate>
+                            <div class="mb-3">
+                                <label for="phuyu_usuario" class="form-label fw-semibold">Usuario</label>
+                                <div class="input-group input-group-lg custom-group">
+                                    <span class="input-group-text bg-white border-end-0">
+                                        <i class="bi bi-person"></i>
+                                    </span>
+                                    <input
+                                        id="phuyu_usuario"
+                                        type="text"
+                                        class="form-control border-start-0"
+                                        placeholder="Ingresa tu usuario"
+                                        autocomplete="username"
+                                        required
+                                    />
+                                    <div class="invalid-feedback">Ingresa tu usuario.</div>
+                                </div>
+                                <small class="text-muted">Ejemplo: usuario o correo registrado</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="phuyu_clave" class="form-label fw-semibold">Contraseña</label>
+                                <div class="input-group input-group-lg custom-group">
+                                    <span class="input-group-text bg-white border-end-0">
+                                        <i class="bi bi-shield-lock"></i>
+                                    </span>
+                                    <input
+                                        id="phuyu_clave"
+                                        type="password"
+                                        class="form-control border-start-0 border-end-0"
+                                        placeholder="Ingresa tu contraseña"
+                                        autocomplete="current-password"
+                                        required
+                                    />
+                                    <button
+                                        class="input-group-text bg-white btn-toggle-eye border-start-0"
+                                        type="button"
+                                        id="btnTogglePass"
+                                        aria-label="Mostrar u ocultar contraseña"
+                                    >
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <div class="invalid-feedback">Ingresa tu contraseña.</div>
+                                </div>
+                                <small class="text-warning d-inline-block mt-1" id="capsLockHelp" style="display:none;">Bloq Mayús está activado</small>
+                            </div>
+
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-3 mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="rememberMe" />
+                                    <label class="form-check-label text-muted small" for="rememberMe">Recordarme</label>
+                                </div>
+                                <a href="javascript:void(0);" class="small text-decoration-none forgot-link">¿Olvidaste tu contraseña?</a>
+                            </div>
+
+                            <div id="serverMessage" class="alert alert-danger alert-custom" role="alert" style="display:none;"></div>
+
+                            <div class="d-grid mt-4">
+                                <button class="btn btn-lg rounded-3 btn-login" type="submit" id="submitLogin">
+                                    <span class="btn-login-spinner" id="loginSpinner" style="display:none;">
+                                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                                    </span>
+                                    <span class="btn-login-label">Iniciar sesión</span>
+                                </button>
+                            </div>
+
+                            <div class="text-center mt-4">
+                                <span class="text-small-muted">Qhaway • Plataforma segura de acceso</span>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="card-footer bg-transparent border-0 text-center pb-4 pt-0">
+                        <small class="text-muted">© <?php echo date('Y'); ?> Phuyu System</small>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="<?php echo base_url(); ?>public/js/vendor/jquery-3.5.1.min.js"></script>
+    <script src="<?php echo base_url(); ?>public/js/vendor/bootstrap.bundle.min.js"></script>
+    <script>var url = "<?php echo base_url(); ?>";</script>
+    <script src="<?php echo base_url(); ?>phuyu/phuyu_login.js"></script>
+    <script>
+        (function () {
+            const input = document.getElementById('phuyu_clave');
+            const btn = document.getElementById('btnTogglePass');
+            const capsHelp = document.getElementById('capsLockHelp');
+            const form = document.getElementById('form_login');
+            const serverMessage = document.getElementById('serverMessage');
+            const spinner = document.getElementById('loginSpinner');
+            const submitButton = document.getElementById('submitLogin');
+
+            if (btn && input) {
+                btn.addEventListener('click', function () {
+                    const show = input.type === 'password';
+                    input.type = show ? 'text' : 'password';
+                    btn.innerHTML = show
+                        ? '<i class="bi bi-eye-slash"></i>'
+                        : '<i class="bi bi-eye"></i>';
+                });
+            }
+
+            if (input && capsHelp) {
+                input.addEventListener('keyup', function (event) {
+                    const caps = event.getModifierState && event.getModifierState('CapsLock');
+                    capsHelp.style.display = caps ? 'inline-block' : 'none';
+                });
+            }
+
+            if (form) {
+                form.addEventListener('submit', function () {
+                    serverMessage.style.display = 'none';
+                    spinner.style.display = 'inline-flex';
+                    submitButton.disabled = true;
+                });
+            }
+        })();
+    </script>
+</body>
+</html>

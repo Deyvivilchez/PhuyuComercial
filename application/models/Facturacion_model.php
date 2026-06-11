@@ -1214,13 +1214,32 @@ class Facturacion_model extends CI_Model
     {
         $empresa = $this->db->query("select p.documento,p.razonsocial,p.direccion,u.* from public.personas as p inner join public.ubigeo as u on(p.codubigeo=u.codubigeo) where p.codpersona=" . $_SESSION["phuyu_codempresa"])->result_array();
 
-        $resumen = $this->db->query("select *from sunat.resumenes where codresumentipo=" . $codresumentipo . " and periodo='" . $periodo . "' and nrocorrelativo=" . $nrocorrelativo)->result_array();
+        $resumen = $this->db->query("select *from sunat.resumenes where codresumentipo=" . $codresumentipo . " and periodo='" . $periodo . "' and nrocorrelativo=" . $nrocorrelativo . " and codempresa=" . $_SESSION["phuyu_codempresa"])->result_array();
+        if (empty($resumen)) {
+            return [
+                "estado" => 0,
+                "mensaje" => "No existe resumen para codresumentipo=" . $codresumentipo . " periodo=" . $periodo . " nrocorrelativo=" . $nrocorrelativo
+            ];
+        }
+        if (empty($resumen[0]["nombre_xml"])) {
+            return [
+                "estado" => 0,
+                "mensaje" => "Resumen sin nombre_xml para codresumentipo=" . $codresumentipo
+            ];
+        }
         if ($codresumentipo == 3) {
             $detalle = $this->db->query("select dt.oficial as coddocumento, p.documento, k.seriecomprobante,k.nrocomprobante, k.igv,k.icbper,k.importe,k.codkardex from sunat.kardexsunatdetalle as ksd inner join kardex.kardex as k on(ksd.codkardex=k.codkardex) inner join public.personas as p on(k.codpersona=p.codpersona) inner join public.documentotipos as dt on(p.coddocumentotipo=dt.coddocumentotipo) where ksd.codresumentipo=" . $codresumentipo . " and ksd.periodo='" . $periodo . "' and ksd.nrocorrelativo=" . $nrocorrelativo . " and ksd.codempresa=" . $_SESSION["phuyu_codempresa"] . " order by k.seriecomprobante,k.nrocomprobante")->result_array();
             $estado = 1;
         } else {
             $detalle = $this->db->query("select dt.oficial as coddocumento, p.documento, k.seriecomprobante,k.nrocomprobante, k.igv,k.icbper,k.importe,k.codkardex from sunat.kardexsunatanulados as ksa inner join kardex.kardex as k on(ksa.codkardex=k.codkardex) inner join public.personas as p on(k.codpersona=p.codpersona) inner join public.documentotipos as dt on(p.coddocumentotipo=dt.coddocumentotipo) where ksa.codresumentipo=" . $codresumentipo . " and ksa.periodo='" . $periodo . "' and ksa.nrocorrelativo=" . $nrocorrelativo . " and ksa.codempresa=" . $_SESSION["phuyu_codempresa"])->result_array();
             $estado = 3;
+        }
+
+        if (empty($detalle)) {
+            return [
+                "estado" => 0,
+                "mensaje" => "No hay detalle para el resumen " . $resumen[0]["nombre_xml"]
+            ];
         }
 
         // 0: CREAMOS UNA CARPETA PARA ALMACENAR EL XML DEL COMPROBANTE TEMPORALMENTE //
@@ -1416,6 +1435,8 @@ class Facturacion_model extends CI_Model
             $cbc->setAttribute("currencyID", "PEN");
             $cac_cat = $xml->createElement("cac:TaxCategory");
             $cac_cat = $cac_sub->appendChild($cac_cat);
+            $cbc = $xml->createElement("cbc:Percent", "18.00");
+            $cbc = $cac_cat->appendChild($cbc);
             $cac_esq = $xml->createElement("cac:TaxScheme");
             $cac_esq = $cac_cat->appendChild($cac_esq);
             $cbc = $xml->createElement("cbc:ID", "1000");

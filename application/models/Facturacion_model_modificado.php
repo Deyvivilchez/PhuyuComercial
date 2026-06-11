@@ -926,7 +926,19 @@ class Facturacion_model extends CI_Model {
         inner join public.ubigeo as u on(p.codubigeo=u.codubigeo)
         where p.codpersona=".$_SESSION["phuyu_codempresa"])->result_array();
 
-        $resumen = $this->db->query("select *from sunat.resumenes where codresumentipo=".$codresumentipo." and periodo='".$periodo."' and nrocorrelativo=".$nrocorrelativo)->result_array();
+        $resumen = $this->db->query("select *from sunat.resumenes where codresumentipo=".$codresumentipo." and periodo='".$periodo."' and nrocorrelativo=".$nrocorrelativo." and codempresa=".$_SESSION["phuyu_codempresa"])->result_array();
+        if (empty($resumen)) {
+            return [
+                "estado" => 0,
+                "mensaje" => "No existe resumen para codresumentipo=".$codresumentipo." periodo=".$periodo." nrocorrelativo=".$nrocorrelativo
+            ];
+        }
+        if (empty($resumen[0]["nombre_xml"])) {
+            return [
+                "estado" => 0,
+                "mensaje" => "Resumen sin nombre_xml para codresumentipo=".$codresumentipo
+            ];
+        }
 
      //   print_r( $resumen);
         if ($codresumentipo==3) {
@@ -935,6 +947,13 @@ class Facturacion_model extends CI_Model {
         }else{
             $detalle = $this->db->query("select dt.oficial as coddocumento, p.documento, k.seriecomprobante,k.nrocomprobante, k.igv,k.icbper,k.importe,k.codkardex from sunat.kardexsunatanulados as ksa inner join kardex.kardex as k on(ksa.codkardex=k.codkardex) inner join public.personas as p on(k.codpersona=p.codpersona) inner join public.documentotipos as dt on(p.coddocumentotipo=dt.coddocumentotipo) where ksa.codresumentipo=".$codresumentipo." and ksa.periodo='".$periodo."' and ksa.nrocorrelativo=".$nrocorrelativo." and ksa.codempresa=".$_SESSION["phuyu_codempresa"])->result_array();
             $estado = 3;
+        }
+
+        if (empty($detalle)) {
+            return [
+                "estado" => 0,
+                "mensaje" => "No hay detalle para el resumen " . $resumen[0]["nombre_xml"]
+            ];
         }
         
         // 0: CREAMOS UNA CARPETA PARA ALMACENAR EL XML DEL COMPROBANTE TEMPORALMENTE //
