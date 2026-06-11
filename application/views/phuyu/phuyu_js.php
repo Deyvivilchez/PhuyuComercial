@@ -404,14 +404,24 @@
 	        phuyuBindBootstrapLegacyBridge();
 	    });
 
-    $('#codsistema').on('change', function () {
+    function phuyuCambiarSistema(codsistema) {
+        codsistema = parseInt(codsistema, 10);
+        if (!codsistema) {
+            return;
+        }
+
         phuyu_sistema.phuyu_inicio();
-	        $.post(url + "phuyu/cambiarsistema/" + $("#codsistema").val()).then(function (data) {
-	            window.location.href = url + "phuyu/w";
-	        }, function () {
-	            phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED", "error");
-	        });
-	    });
+        $.post(url + "phuyu/cambiarsistema/" + codsistema).then(function (data) {
+            window.location.href = url + "phuyu/w";
+        }, function () {
+            phuyu_sistema.phuyu_fin();
+            phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED", "error");
+        });
+    }
+
+    $('#codsistema').on('change', function () {
+        phuyuCambiarSistema($(this).val());
+    });
 
     function cerrar_sesion() {
         phuyu_sistema.phuyu_inicio();
