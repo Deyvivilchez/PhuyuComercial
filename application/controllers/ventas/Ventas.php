@@ -763,7 +763,14 @@ class Ventas extends CI_Controller
             }
             $lista = $this->db
                 ->query(
-                    'select kardex.hora,personas.documento,personas.telefono,kardex.cliente,kardex.codkardex, kardex.codcomprobantetipo, kardex.seriecomprobante,kardex.condicionpago, kardex.nrocomprobante, kardex.fechacomprobante,round(kardex.importe,2) as importe,kardex.estado, comprobantes.descripcion as tipo,comprobantes.abreviatura from kardex.kardex as kardex inner join public.personas as personas on (kardex.codpersona=personas.codpersona) inner join caja.comprobantetipos as comprobantes on(kardex.codcomprobantetipo=comprobantes.codcomprobantetipo) where ' .
+                    "select kardex.hora,personas.documento,personas.telefono,kardex.cliente,kardex.codkardex, kardex.codcomprobantetipo, kardex.seriecomprobante,kardex.condicionpago, kardex.nrocomprobante, kardex.fechacomprobante,round(kardex.importe,2) as importe,kardex.estado, comprobantes.descripcion as tipo,comprobantes.abreviatura,
+                    (
+                        select string_agg(distinct mp.nromesa::text, ' - ')
+                        from kardex.pedidos p
+                        inner join restaurante.mesaspedido mp on mp.codpedido=p.codpedido
+                        where p.codkardex=kardex.codkardex
+                    ) as mesa_restaurante
+                    from kardex.kardex as kardex inner join public.personas as personas on (kardex.codpersona=personas.codpersona) inner join caja.comprobantetipos as comprobantes on(kardex.codcomprobantetipo=comprobantes.codcomprobantetipo) where " .
                         $fechas .
                         " (UPPER(personas.documento) like UPPER('%" .
                         $this->request->buscar .
