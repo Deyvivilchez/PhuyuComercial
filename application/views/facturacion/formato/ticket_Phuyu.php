@@ -438,10 +438,10 @@ $agradecimiento = $formatoData['agradecimiento'] ?? '';
             <span class="label">Vence</span>
             <span class="value"><?= texto_ticket($fechaVencimiento) ?></span>
         </div>
-        <div class="row">
+        <!-- <div class="row">
             <span class="label">Vendedor</span>
             <span class="value"><?= texto_ticket($vendedorNombre) ?></span>
-        </div>
+        </div> -->
         <?php if (!empty($placa) && $placa !== '-'): ?>
         <div class="row">
             <span class="label">Placa</span>
