@@ -31,7 +31,7 @@ function phuyu_select2_velzon_style(){
 
 function personaselect(){
    var tipo = 0;
-    if (phuyu_controller=="ventas/ventas" || phuyu_controller=="ventas/pedidos" 
+    if (phuyu_controller=="ventas/ventas" || phuyu_controller=="ventas/nuevaventa" || phuyu_controller=="ventas/pedidos"
       || phuyu_controller=="ventas/notascredito" || phuyu_controller=="ventas/proformas") {
         tipo = 1;
     }else{
@@ -364,7 +364,7 @@ var tipo = 1;
   // Ajax api connection
   _initAjax() {
     var tipo = 0;
-    if (phuyu_controller=="ventas/ventas" || phuyu_controller=="ventas/pedidos" 
+    if (phuyu_controller=="ventas/ventas" || phuyu_controller=="ventas/nuevaventa" || phuyu_controller=="ventas/pedidos"
       || phuyu_controller=="ventas/notascredito" || phuyu_controller=="ventas/proformas") {
         tipo = 1;
     }else{

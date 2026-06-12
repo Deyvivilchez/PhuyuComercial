@@ -4,13 +4,11 @@
 <script src="<?php echo base_url(); ?>public/plantilla_phuyu/libs/node-waves/waves.min.js"></script>
 <script src="<?php echo base_url(); ?>public/plantilla_phuyu/libs/feather-icons/feather.min.js"></script>
 
-<script src="<?php echo base_url(); ?>public/js/vendor/select2.full.min.js"></script>
-<script src="<?php echo base_url(); ?>public/js/vendor/bootstrap-notify.min.js"></script>
-<script src="<?php echo base_url(); ?>public/js/sweetalert.min.js"></script>
+<script src="<?php echo base_url(); ?>public/plantilla_phuyu/js/plugins.js"></script>
+<script src="<?php echo base_url(); ?>public/plantilla_phuyu/js/app.js"></script>
+<!-- <script src="<?php echo base_url(); ?>public/plantilla_phuyu/libs/choices.js/public/assets/scripts/choices.min.js"></script>
+<script src="<?php echo base_url(); ?>public/plantilla_phuyu/libs/flatpickr/flatpickr.min.js"></script> -->
 
-<script src="<?php echo base_url(); ?>public/js/vue/vue.js"></script>
-<script src="<?php echo base_url(); ?>public/js/vue/vue-resource.min.js"></script>
-<script src="<?php echo base_url(); ?>public/js/validacion.js"></script>
 
 <script>
     window.phuyuLayoutReady = false;
@@ -48,20 +46,21 @@
         });
     }
 
-</script>
-
-<script src="<?php echo base_url(); ?>public/plantilla_phuyu/js/plugins.js"></script>
-<script src="<?php echo base_url(); ?>public/plantilla_phuyu/js/app.js"></script>
-<!-- <script src="<?php echo base_url(); ?>public/plantilla_phuyu/libs/choices.js/public/assets/scripts/choices.min.js"></script>
-<script src="<?php echo base_url(); ?>public/plantilla_phuyu/libs/flatpickr/flatpickr.min.js"></script> -->
-
-
-<script>
     var url = "<?php echo base_url(); ?>";
     var sistema_url = window.location;
     sistema_url = String(sistema_url).split("/w/");
-    var CURRENT_URL = window.location.href.split('#')[0].split('?')[0];
+    var CURRENT_URL = phuyuNormalizeMenuUrl(window.location.href);
     var $SIDEBAR_MENU = $('#navbar-nav');
+
+    function phuyuNormalizeMenuUrl(rawUrl) {
+        var parser = document.createElement('a');
+        parser.href = rawUrl || '';
+
+        var path = parser.pathname || '';
+        path = path.replace(/\/+$/, '');
+
+        return (parser.origin || (parser.protocol + '//' + parser.host)) + path;
+    }
 
     if (sistema_url[1] != undefined && sistema_url[1] != "") {
         phuyu_controller = sistema_url[1];
@@ -171,21 +170,58 @@
         $('.compose').slideToggle();
     });
 
-    if ($SIDEBAR_MENU.length) {
-        var $currentLink = $SIDEBAR_MENU.find('a[href="' + CURRENT_URL + '"]');
-
-        if ($currentLink.length) {
-            $currentLink.addClass('active');
-            $currentLink.parents('.collapse').addClass('show');
-            $currentLink.parents('.collapse').prev('a').addClass('active');
-            $currentLink.parents('.collapse').prev('a').attr('aria-expanded', 'true');
+    function phuyuOpenActiveSidebarLink() {
+        if (!$SIDEBAR_MENU.length) {
+            return;
         }
+
+        var $currentLink = $();
+        var bestMatchLength = 0;
+
+        $SIDEBAR_MENU.find('a.nav-link[href]').each(function () {
+            var href = this.getAttribute('href');
+
+            if (!href || href.charAt(0) === '#') {
+                return;
+            }
+
+            var normalizedHref = phuyuNormalizeMenuUrl(this.href);
+            var isCurrent = normalizedHref === CURRENT_URL || CURRENT_URL.indexOf(normalizedHref + '/') === 0;
+
+            if (isCurrent && normalizedHref.length > bestMatchLength) {
+                $currentLink = $(this);
+                bestMatchLength = normalizedHref.length;
+            }
+        });
+
+        if (!$currentLink.length) {
+            return;
+        }
+
+        $SIDEBAR_MENU.find('a.nav-link').removeClass('active');
+        $SIDEBAR_MENU.find('.collapse.menu-dropdown').removeClass('show')
+            .prev('a.menu-link')
+            .addClass('collapsed')
+            .attr('aria-expanded', 'false');
+
+        $currentLink.addClass('active');
+        $currentLink.parents('.collapse.menu-dropdown').addClass('show');
+        $currentLink.parents('.collapse.menu-dropdown').prev('a.menu-link')
+            .addClass('active')
+            .removeClass('collapsed')
+            .attr('aria-expanded', 'true');
     }
+
+    phuyuOpenActiveSidebarLink();
 
     function phuyuToggleMobileSidebar(forceOpen) {
         var shouldOpen = typeof forceOpen === 'boolean'
             ? forceOpen
             : !document.body.classList.contains('vertical-sidebar-enable');
+
+        if (window.innerWidth < 992) {
+            document.documentElement.setAttribute('data-sidebar-size', 'lg');
+        }
 
         document.body.classList.toggle('vertical-sidebar-enable', shouldOpen);
 
@@ -213,13 +249,26 @@
             $(this).removeClass('show');
             $(this).prev('a.menu-link').addClass('collapsed').attr('aria-expanded', 'false');
         });
+        $SIDEBAR_MENU.find('.nav-item.phuyu-compact-open').each(function () {
+            var $submenu = $(this).children('.collapse.menu-dropdown');
+            if ($except && $submenu.length && $submenu[0] === $except[0]) {
+                return;
+            }
+
+            $(this).removeClass('phuyu-compact-open');
+        });
     }
 
-	    function phuyuBindLayoutFallback() {
+    function phuyuBindLayoutFallback() {
         var $hamburger = $('#topnav-hamburger-icon');
         var $overlay = $('#phuyu-vertical-overlay');
         var $verticalHover = $('#vertical-hover');
         var $appMenu = $('#phuyu-navbar-menu');
+        var $navbarNav = $('#navbar-nav');
+
+        if (!$hamburger.length || !$navbarNav.length) {
+            return;
+        }
 
         function syncHamburgerState() {
             var isMobileMenuOpen = document.body.classList.contains('vertical-sidebar-enable');
@@ -227,9 +276,31 @@
             var shouldLookOpen = window.innerWidth < 992 ? isMobileMenuOpen : isCompactDesktop;
 
             $hamburger.find('.hamburger-icon').toggleClass('open', shouldLookOpen);
+            $overlay.toggleClass('active', window.innerWidth < 992 && isMobileMenuOpen);
         }
 
-        $hamburger.off('click.phuyuFallback').on('click.phuyuFallback', function (e) {
+        function normalizeDesktopSidebarState() {
+            var html = document.documentElement;
+
+            if (window.innerWidth < 992) {
+                return;
+            }
+
+            document.body.classList.remove('vertical-sidebar-enable');
+            $overlay.removeClass('active');
+
+            var storedSidebarSize = sessionStorage.getItem('data-sidebar-size');
+            if (storedSidebarSize && ['lg', 'sm', 'md'].indexOf(storedSidebarSize) !== -1) {
+                html.setAttribute('data-sidebar-size', storedSidebarSize);
+            } else if (['sm-hover', 'sm-hover-active'].indexOf(html.getAttribute('data-sidebar-size')) !== -1) {
+                html.setAttribute('data-sidebar-size', 'sm');
+                sessionStorage.setItem('data-sidebar-size', 'sm');
+            }
+        }
+
+        normalizeDesktopSidebarState();
+
+        function handleHamburgerClick(e) {
             e.preventDefault();
             e.stopImmediatePropagation();
 
@@ -240,7 +311,13 @@
             }
 
             syncHamburgerState();
-        });
+        }
+
+        $hamburger.off('click.phuyuFallback');
+        if (!$hamburger[0].phuyuFallbackBound) {
+            $hamburger[0].addEventListener('click', handleHamburgerClick, true);
+            $hamburger[0].phuyuFallbackBound = true;
+        }
 
         $overlay.off('click.phuyuFallback').on('click.phuyuFallback', function () {
             phuyuToggleMobileSidebar(false);
@@ -269,44 +346,12 @@
             syncHamburgerState();
         });
 
-        $appMenu.off('mouseenter.phuyuFallback mouseleave.phuyuFallback')
-            .on('mouseenter.phuyuFallback', function () {
-                if (window.innerWidth < 992) {
-                    return;
-                }
+        function isDesktopCompactSidebar() {
+            var sidebarSize = document.documentElement.getAttribute('data-sidebar-size') || 'lg';
+            return window.innerWidth >= 992 && sidebarSize === 'sm';
+        }
 
-                var html = document.documentElement;
-                if (html.getAttribute('data-sidebar-size') === 'sm-hover') {
-                    html.setAttribute('data-sidebar-size', 'sm-hover-active');
-                    syncHamburgerState();
-                }
-            })
-            .on('mouseleave.phuyuFallback', function () {
-                if (window.innerWidth < 992) {
-                    return;
-                }
-
-                var html = document.documentElement;
-                if (html.getAttribute('data-sidebar-size') === 'sm-hover-active') {
-                    html.setAttribute('data-sidebar-size', 'sm-hover');
-                    phuyuCloseAllSubmenus();
-                    syncHamburgerState();
-                }
-            });
-
-        $SIDEBAR_MENU.find('a[data-phuyu-menu-toggle="true"]').off('click.phuyuFallback').on('click.phuyuFallback', function (e) {
-            e.preventDefault();
-            e.stopImmediatePropagation();
-
-            if (window.innerWidth >= 992) {
-                var sidebarSize = document.documentElement.getAttribute('data-sidebar-size') || 'lg';
-                if (sidebarSize === 'sm') {
-                    syncHamburgerState();
-                    return;
-                }
-            }
-
-            var $trigger = $(this);
+        function phuyuOpenSubmenu($trigger, forceOpen) {
             var targetSelector = $trigger.attr('href');
             var $target = $(targetSelector);
 
@@ -314,15 +359,44 @@
                 return;
             }
 
-            var isOpen = $target.hasClass('show');
-            phuyuCloseAllSubmenus(isOpen ? null : $target);
+            var $navItem = $trigger.closest('.nav-item');
+            var isOpen = isDesktopCompactSidebar()
+                ? $navItem.hasClass('phuyu-compact-open')
+                : $target.hasClass('show');
+            var shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : !isOpen;
 
-            $trigger.toggleClass('collapsed', isOpen);
-            $trigger.attr('aria-expanded', isOpen ? 'false' : 'true');
-            $target.toggleClass('show', !isOpen);
+            phuyuCloseAllSubmenus(shouldOpen ? $target : null);
+
+            $trigger.toggleClass('collapsed', !shouldOpen);
+            $trigger.attr('aria-expanded', shouldOpen ? 'true' : 'false');
+            $target.toggleClass('show', shouldOpen);
+            $navItem.toggleClass('phuyu-compact-open', shouldOpen && isDesktopCompactSidebar());
+        }
+
+        $navbarNav.find('a[data-phuyu-menu-toggle="true"]').off('mouseenter.phuyuFallback').on('mouseenter.phuyuFallback', function () {
+            if (!isDesktopCompactSidebar()) {
+                return;
+            }
+
+            phuyuOpenSubmenu($(this), true);
+            syncHamburgerState();
         });
 
-        $SIDEBAR_MENU.find('a.nav-link:not([data-phuyu-menu-toggle="true"])').off('click.phuyuFallback').on('click.phuyuFallback', function () {
+        $appMenu.off('mouseleave.phuyuFallback').on('mouseleave.phuyuFallback', function () {
+            if (isDesktopCompactSidebar()) {
+                phuyuCloseAllSubmenus();
+            }
+        });
+
+        $navbarNav.find('a[data-phuyu-menu-toggle="true"]').off('click.phuyuFallback').on('click.phuyuFallback', function (e) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+
+            phuyuOpenSubmenu($(this));
+            syncHamburgerState();
+        });
+
+        $navbarNav.find('a.nav-link:not([data-phuyu-menu-toggle="true"])').off('click.phuyuFallback').on('click.phuyuFallback', function () {
             if (window.innerWidth < 992) {
                 phuyuToggleMobileSidebar(false);
                 phuyuCloseAllSubmenus();
@@ -354,6 +428,7 @@
         $(window).off('resize.phuyuFallback').on('resize.phuyuFallback', function () {
             if (window.innerWidth >= 992) {
                 phuyuToggleMobileSidebar(false);
+                normalizeDesktopSidebarState();
             }
 
             syncHamburgerState();
@@ -367,6 +442,46 @@
 	        if (!window.bootstrap || !window.jQuery) {
 	            return;
 	        }
+
+            if (!$.fn.modal && bootstrap.Modal) {
+                $.fn.modal = function (option) {
+                    return this.each(function () {
+                        var instance = bootstrap.Modal.getOrCreateInstance(this, typeof option === 'object' ? option : {});
+
+                        if (typeof option === 'string' && typeof instance[option] === 'function') {
+                            instance[option]();
+                        } else if (option === undefined || typeof option === 'object') {
+                            instance.show();
+                        }
+                    });
+                };
+            }
+
+            if (!$.fn.dropdown && bootstrap.Dropdown) {
+                $.fn.dropdown = function (option) {
+                    return this.each(function () {
+                        var instance = bootstrap.Dropdown.getOrCreateInstance(this);
+
+                        if (typeof option === 'string' && typeof instance[option] === 'function') {
+                            instance[option]();
+                        } else if (option === undefined || option === 'toggle') {
+                            instance.toggle();
+                        }
+                    });
+                };
+            }
+
+            if (!$.fn.tooltip && bootstrap.Tooltip) {
+                $.fn.tooltip = function (option) {
+                    return this.each(function () {
+                        var instance = bootstrap.Tooltip.getOrCreateInstance(this, typeof option === 'object' ? option : {});
+
+                        if (typeof option === 'string' && typeof instance[option] === 'function') {
+                            instance[option]();
+                        }
+                    });
+                };
+            }
 
 	        $(document).off('click.phuyuLegacyModalDismiss').on('click.phuyuLegacyModalDismiss', '[data-dismiss="modal"]', function (e) {
 	            e.preventDefault();
@@ -444,3 +559,10 @@
 	        });
 	    }
 </script>
+
+<script src="<?php echo base_url(); ?>public/js/vendor/select2.full.min.js"></script>
+<script src="<?php echo base_url(); ?>public/js/vendor/bootstrap-notify.min.js"></script>
+<script src="<?php echo base_url(); ?>public/js/sweetalert.min.js"></script>
+<script src="<?php echo base_url(); ?>public/js/vue/vue.js"></script>
+<script src="<?php echo base_url(); ?>public/js/vue/vue-resource.min.js"></script>
+<script src="<?php echo base_url(); ?>public/js/validacion.js"></script>

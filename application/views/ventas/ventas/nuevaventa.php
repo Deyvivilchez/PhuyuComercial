@@ -66,6 +66,42 @@
     max-height: 400px;
     overflow-y: auto;
   }
+  .venta-rapida-tools {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.9rem;
+    background: #fff;
+    padding: 0.85rem;
+  }
+  .venta-rapida-total {
+    border-radius: 0.9rem;
+    background: linear-gradient(135deg, #405189, #2f3d73);
+    color: #fff;
+    padding: 0.85rem 1rem;
+    min-height: 100%;
+  }
+  .venta-rapida-total small {
+    display: block;
+    color: rgba(255, 255, 255, .72);
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+  .venta-rapida-total strong {
+    display: block;
+    font-size: 1.35rem;
+    line-height: 1.1;
+  }
+  .venta-empty-state {
+    padding: 2rem 1rem;
+    text-align: center;
+    color: #74788d;
+  }
+  .venta-empty-state i {
+    display: block;
+    margin-bottom: .5rem;
+    color: #405189;
+    font-size: 2rem;
+  }
   @media (max-width: 768px) {
     .btn-modern {
       padding: 0.3rem 0.6rem;
@@ -185,8 +221,8 @@ if ($_SESSION['phuyu_codcontroldiario'] > 0) { ?>
             </div>
             <div class="col-md-1 col-3">
               <label class="form-label invisible d-none d-md-block">&nbsp;</label>
-              <button type="button" class="btn btn-success btn-modern w-100" v-on:click="phuyu_addcliente()" title="AGREGAR CLIENTE">
-                <i class="fa fa-user-plus"></i>
+              <button type="button" class="btn btn-success btn-modern w-100" v-on:click="phuyu_addcliente()" title="Agregar cliente">
+                <i class="ri-user-add-line"></i>
               </button>
             </div>
             <div class="col-md-2 col-6">
@@ -200,6 +236,33 @@ if ($_SESSION['phuyu_codcontroldiario'] > 0) { ?>
             <div class="col-md-3 col-12">
               <label class="form-label small fw-semibold">DIRECCION CLIENTE</label>
               <input type="text" class="form-control form-control-modern" id="direccion" v-model.trim="campos.direccion" autocomplete="off" maxlength="250" placeholder="Direccion del cliente . . ." required>
+            </div>
+          </div>
+
+          <!-- Entrada rapida de productos -->
+          <div class="venta-rapida-tools mb-3">
+            <div class="row g-2 align-items-end">
+              <div class="col-lg-5 col-md-6">
+                <label class="form-label small fw-semibold">CODIGO DE BARRAS / SKU</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fa fa-barcode"></i></span>
+                  <input type="text" class="form-control form-control-modern" v-model.trim="codigobarra" v-on:keyup.enter="phuyu_codigobarra()" placeholder="Escanear o escribir codigo...">
+                  <button type="button" class="btn btn-primary btn-modern" v-on:click="phuyu_codigobarra()">
+                    <i class="fa fa-plus"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="col-lg-3 col-md-6">
+                <button type="button" class="btn btn-success btn-modern w-100" v-on:click="phuyu_item()">
+                  <i class="fa fa-search me-1"></i> Buscar producto (F11)
+                </button>
+              </div>
+              <div class="col-lg-4">
+                <div class="venta-rapida-total">
+                  <small>Total venta</small>
+                  <strong>{{simbolo}} {{totales.importe}}</strong>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -223,6 +286,14 @@ if ($_SESSION['phuyu_codcontroldiario'] > 0) { ?>
                     </tr>
                   </thead>
                   <tbody>
+                    <tr v-if="detalle.length==0">
+                      <td colspan="10">
+                        <div class="venta-empty-state">
+                          <i class="fa fa-shopping-basket"></i>
+                          Agrega productos con el lector de codigo de barras o con el buscador.
+                        </div>
+                      </td>
+                    </tr>
                     <tr v-for="(dato,index) in detalle">
                       <td class="phuyu-item-mas text-center" v-on:click="phuyu_itemdetalle(index,dato)" style="cursor: pointer;">
                         <i class="fa fa-plus-circle text-success fa-lg"></i> MAS
@@ -645,7 +716,7 @@ if ($_SESSION['phuyu_codcontroldiario'] > 0) { ?>
 </div>
 </div>
 
-<script src="<?php echo base_url();?>phuyu/phuyu_ventas/nuevaventa.js"></script>
+<script src="<?php echo base_url();?>phuyu/phuyu_ventas/nuevaventa.js?v=<?php echo filemtime(FCPATH . 'phuyu/phuyu_ventas/nuevaventa.js'); ?>"></script>
 <script src="<?php echo base_url();?>phuyu/phuyu_personas_2.js"></script>
 <script>
   var pantalla = jQuery(document).height(); $("#reportes_modal").css({height: pantalla - 65});
