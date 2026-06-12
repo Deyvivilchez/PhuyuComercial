@@ -1004,7 +1004,7 @@ var phuyu_operacion = new Vue({
                     calcular: producto.calcular,
                     preciooriginal: producto.preciooriginal,
                     precioventa: producto.precioventa,
-                    descripcion: producto.controlarseries == 1 ? 'SERIE/CODIGO : ' + producto.serie_seleccionada.serie_codigo : producto.descripcion,
+                    descripcion: producto.controlarseries == 1 ? 'SERIE/CODIGO : ' + producto.serie_seleccionada.serie_codigo : "",
                     serie_seleccionada: producto.controlarseries == 1 ? producto.serie_seleccionada : null,
                     phuyu_agregado: true,
                 });
@@ -1078,6 +1078,13 @@ var phuyu_operacion = new Vue({
             this.putunidades = [];
         },
         phuyu_itemdetalle: function(index, producto) {
+            if (
+                producto.controlarseries != 1 &&
+                String(producto.descripcion || "").trim().toUpperCase() ===
+                    String(producto.producto || "").trim().toUpperCase()
+            ) {
+                producto.descripcion = "";
+            }
             this.item = producto;
             $("#modal_itemdetalle").modal('show');
         },

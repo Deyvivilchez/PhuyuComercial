@@ -68,6 +68,23 @@
                                     <span class="align-middle">Mi empresa</span>
                                 </a>
                                 <div class="dropdown-divider"></div>
+                                <h6 class="dropdown-header">Cambiar módulo</h6>
+                                <?php foreach ($sistemas as $value) { ?>
+                                    <a
+                                        class="dropdown-item d-flex align-items-center justify-content-between"
+                                        href="javascript:;"
+                                        onclick="phuyuCambiarSistema(<?php echo (int)$value['codsistema']; ?>)"
+                                    >
+                                        <span>
+                                            <i class="ri-apps-2-line text-muted fs-16 align-middle me-1"></i>
+                                            <span class="align-middle"><?php echo htmlspecialchars($value['descripcion'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                        </span>
+                                        <?php if ((int)$value['codsistema'] === (int)$_SESSION['phuyu_codsistema']) { ?>
+                                            <i class="ri-check-line text-success fs-16"></i>
+                                        <?php } ?>
+                                    </a>
+                                <?php } ?>
+                                <div class="dropdown-divider"></div>
                                 <a class="dropdown-item" href="javascript:;" onclick="cerrar_sesion()">
                                     <i class="ri-logout-box-r-line text-muted fs-16 align-middle me-1"></i>
                                     <span class="align-middle">Cerrar sesion</span>

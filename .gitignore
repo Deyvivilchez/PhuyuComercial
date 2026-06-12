@@ -7,7 +7,7 @@
 # Archivos de configuración sensibles
 /application/config/config.php
 /application/config/database.php
-
+/application/config/config.php
 # Otros archivos sensibles comunes
 .env
 *.key
@@ -17,4 +17,4 @@
 # CodeIgniter
 /application/logs/
 /application/cache/
-/vendor/*
+# /vendor/*

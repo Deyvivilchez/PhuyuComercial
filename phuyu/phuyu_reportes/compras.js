@@ -29,13 +29,21 @@ var phuyu_datos = new Vue({
 			});
 		},
 		pdf_compras: function(){
-			// window.open(url+phuyu_controller+"/pdf_compras?datos="+JSON.stringify(this.campos), "_blank"); //
-			var phuyu_url = url+phuyu_controller+"/pdf_compras?datos="+JSON.stringify(this.campos); 
+			this.phuyu_fecha();
+			var phuyu_url = url+phuyu_controller+"/pdf_compras?datos="+encodeURIComponent(JSON.stringify(this.campos));
             $("#phuyu_pdf").attr("src",phuyu_url); $("#modal_reportes").modal("show");
 		},
 		pdf_compras_detallado: function(){
-			// window.open(url+phuyu_controller+"/pdf_compras?datos="+JSON.stringify(this.campos), "_blank"); //
-			var phuyu_url = url+phuyu_controller+"/pdf_reporte_compras_det?datos="+JSON.stringify(this.campos); 
+			this.phuyu_fecha();
+			var phuyu_url = url+phuyu_controller+"/pdf_reporte_compras_det?datos="+encodeURIComponent(JSON.stringify(this.campos));
+            $("#phuyu_pdf").attr("src",phuyu_url); $("#modal_reportes").modal("show");
+		},
+		pdf_compra_individual: function(codkardex){
+			if (!codkardex) {
+				phuyu_sistema.phuyu_noti("SELECCIONA UNA COMPRA", "No se encontro el registro de compra.", "warning");
+				return;
+			}
+			var phuyu_url = url+phuyu_controller+"/pdf_compra/"+codkardex;
             $("#phuyu_pdf").attr("src",phuyu_url); $("#modal_reportes").modal("show");
 		},
 		mas_reportes: function(){
@@ -51,12 +59,14 @@ var phuyu_datos = new Vue({
 		},
 		phuyu_comprasproveedorpdf: function(){
 			$("#modal_clientes").modal('hide');
-			var phuyu_url = url+phuyu_controller+"/comprasproveedorpdf?datos="+JSON.stringify(this.campos); 
+			this.phuyu_fecha();
+			var phuyu_url = url+phuyu_controller+"/comprasproveedorpdf?datos="+encodeURIComponent(JSON.stringify(this.campos));
             $("#phuyu_pdf").attr("src",phuyu_url); $("#modal_reportes").modal("show");
 		},
 		phuyu_comprasproveedorpdfdet: function(){
 			$("#modal_clientes").modal('hide');
-			var phuyu_url = url+phuyu_controller+"/comprasproveedorpdfdet?datos="+JSON.stringify(this.campos); 
+			this.phuyu_fecha();
+			var phuyu_url = url+phuyu_controller+"/comprasproveedorpdfdet?datos="+encodeURIComponent(JSON.stringify(this.campos));
             $("#phuyu_pdf").attr("src",phuyu_url); $("#modal_reportes").modal("show");
 		},
 		phuyu_comprasproveedorexcel: function(){
