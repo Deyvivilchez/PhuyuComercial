@@ -73,8 +73,14 @@ class Compras extends CI_Controller {
 	// REPORTES PDF DE COMPRAS //
 
 	function pdf_cabecera($titulo, $subtitulo){
-		$logo = base_url().'public/img/'.$_SESSION['phuyu_logo'];
-		if(!file_exists($logo)){
+		$logo = '';
+		if (!empty($_SESSION['phuyu_logo'])) {
+			$logoPath = FCPATH.'public/img/'.$_SESSION['phuyu_logo'];
+			if (file_exists($logoPath)) {
+				$logo = $logoPath;
+			}
+		}
+		if($logo == ''){
 			$logo = '';
 		}
 		$html = '<table width="100%" align="center">';
@@ -118,6 +124,221 @@ class Compras extends CI_Controller {
 
         $nombre_archivo = utf8_decode($descarga);
         $pdf->Output($nombre_archivo, 'I');
+	}
+
+	function pdf_compra($codkardex = 0){
+		if (isset($_SESSION["phuyu_codusuario"])) {
+			$codkardex = (int)$codkardex;
+			if ($codkardex <= 0) {
+				show_error("Compra no valida.");
+				return;
+			}
+
+			$info = $this->db->query("
+				select kardex.*, personas.documento, personas.razonsocial, personas.nombrecomercial, personas.direccion,
+					(CASE WHEN kardex.condicionpago = 1 THEN 'CONTADO' ELSE 'CREDITO' END) AS condicion,
+					comprobantes.descripcion as tipo
+				from kardex.kardex as kardex
+				inner join public.personas as personas on (kardex.codpersona=personas.codpersona)
+				inner join caja.comprobantetipos as comprobantes on(kardex.codcomprobantetipo=comprobantes.codcomprobantetipo)
+				where kardex.codkardex=".$codkardex."
+				and kardex.codmovimientotipo=2
+				and kardex.estado<>0
+			")->result_array();
+
+			if (count($info)==0) {
+				show_error("No se encontro la compra solicitada.");
+				return;
+			}
+
+			$detalle = $this->db->query("
+				select kd.*, p.codigo, p.descripcion as producto, u.descripcion as unidad
+				from kardex.kardexdetalle as kd
+				inner join almacen.productos as p on(kd.codproducto=p.codproducto)
+				inner join almacen.unidades as u on(kd.codunidad=u.codunidad)
+				where kd.codkardex=".$codkardex."
+				and kd.estado=1
+				order by kd.item
+			")->result_array();
+
+			$pagos = $this->db->query("
+				select tp.descripcion as tipopago, md.importe, md.importeentregado, md.vuelto, md.nrodocbanco
+				from caja.movimientos as m
+				inner join caja.movimientosdetalle as md on(m.codmovimiento=md.codmovimiento)
+				inner join caja.tipopagos as tp on(md.codtipopago=tp.codtipopago)
+				where m.codkardex=".$codkardex."
+				and m.estado=1
+				order by tp.codtipopago
+			")->result_array();
+
+			$otros = $this->db->query("
+				select kardex.importe, personas.razonsocial
+				from kardex.kardex as kardex
+				inner join public.personas as personas on (kardex.codpersona=personas.codpersona)
+				where kardex.codkardex_ref=".$codkardex."
+				and kardex.estado=1
+			")->result_array();
+
+			$e = function($valor) {
+				return htmlspecialchars((string)$valor, ENT_QUOTES, 'UTF-8');
+			};
+
+			$compra = $info[0];
+			$simbolo = ((int)$compra["codmoneda"] === 1) ? "S/." : "$";
+			$comprobante = $compra["seriecomprobante"]."-".$compra["nrocomprobante"];
+			$colorPrimario = "#5A3E8C";
+			$colorPrimarioOscuro = "#3D2A63";
+			$colorAcento = "#8C6AC8";
+			$colorBorde = "#E2DAF2";
+			$colorFondo = "#F8F5FC";
+			$colorFondoSuave = "#FCFAFF";
+			$colorTexto = "#2B3445";
+			$logo = '';
+			if (!empty($_SESSION['phuyu_logo'])) {
+				$logoPath = FCPATH.'public/img/'.$_SESSION['phuyu_logo'];
+				if (file_exists($logoPath)) {
+					$logo = $logoPath;
+				}
+			}
+
+			$html = '<table cellpadding="0" cellspacing="0" width="100%">';
+				$html .= '<tr>';
+					$html .= '<td style="width:100%;background-color:'.$colorFondo.';border-top:6px solid '.$colorPrimario.';border-bottom:1px solid '.$colorBorde.';color:'.$colorTexto.';padding:12px 14px;">';
+						$html .= '<table cellpadding="4" width="100%">';
+							$html .= '<tr>';
+								$html .= '<td style="width:13%;text-align:center;">';
+									if ($logo != '') {
+										$html .= '<img src="'.$logo.'" height="42">';
+									}
+								$html .= '</td>';
+								$html .= '<td style="width:54%;color:'.$colorTexto.';">';
+									$html .= '<div style="font-size:15px;font-weight:bold;color:'.$colorPrimarioOscuro.';">'.$e($_SESSION["phuyu_empresa"]).'</div>';
+									$html .= '<div style="font-size:8px;color:#6B6478;">'.$e($_SESSION["phuyu_sucursal"]).'</div>';
+									$html .= '<div style="font-size:8px;color:#6B6478;">Generado: '.date('d/m/Y H:i').'</div>';
+								$html .= '</td>';
+								$html .= '<td style="width:33%;text-align:right;color:'.$colorTexto.';">';
+									$html .= '<div style="font-size:16px;font-weight:bold;color:'.$colorPrimario.';">DETALLE DE COMPRA</div>';
+									$html .= '<div style="font-size:8px;color:#FFFFFF;background-color:'.$colorAcento.';padding:5px;">'.$e($compra["tipo"]).'</div>';
+									$html .= '<div style="font-size:12px;font-weight:bold;color:'.$colorPrimarioOscuro.';">'.$e($comprobante).'</div>';
+								$html .= '</td>';
+							$html .= '</tr>';
+						$html .= '</table>';
+					$html .= '</td>';
+				$html .= '</tr>';
+			$html .= '</table><br>';
+
+			$html .= '<table cellpadding="6" width="100%" style="font-size:8px;color:'.$colorTexto.';">';
+				$html .= '<tr>';
+					$html .= '<td style="width:58%;border:1px solid '.$colorBorde.';background-color:'.$colorFondo.';">';
+						$html .= '<span style="color:'.$colorPrimario.';font-weight:bold;">PROVEEDOR</span><br>';
+						$html .= '<span style="font-size:10px;font-weight:bold;">'.$e($compra["razonsocial"]).'</span><br>';
+						$html .= '<span>Documento: '.$e($compra["documento"]).'</span><br>';
+						$html .= '<span>Direccion: '.$e($compra["direccion"]).'</span>';
+					$html .= '</td>';
+					$html .= '<td style="width:20%;border:1px solid '.$colorBorde.';background-color:'.$colorFondoSuave.';">';
+						$html .= '<span style="color:'.$colorPrimario.';font-weight:bold;">FECHAS</span><br>';
+						$html .= '<span>Compra: '.$e($compra["fechacomprobante"]).'</span><br>';
+						$html .= '<span>Kardex: '.$e($compra["fechakardex"]).'</span>';
+					$html .= '</td>';
+					$html .= '<td style="width:22%;border:1px solid '.$colorBorde.';background-color:'.$colorFondoSuave.';">';
+						$html .= '<span style="color:'.$colorPrimario.';font-weight:bold;">CONDICION</span><br>';
+						$html .= '<span style="font-size:11px;font-weight:bold;">'.$e($compra["condicion"]).'</span><br>';
+						$html .= '<span>Moneda: '.$e($simbolo).'</span>';
+					$html .= '</td>';
+				$html .= '</tr>';
+			$html .= '</table><br>';
+
+			$html .= '<table cellpadding="5" width="100%" style="font-size:9px;">';
+				$html .= '<tr>';
+					$html .= '<td style="width:100%;background-color:'.$colorFondo.';color:'.$colorPrimarioOscuro.';border-left:5px solid '.$colorPrimario.';font-weight:bold;">DETALLE DE PRODUCTOS</td>';
+				$html .= '</tr>';
+			$html .= '</table><br>';
+
+			$html .= '<table cellpadding="4" width="100%" style="border:1px solid '.$colorBorde.';font-size:7.5px;color:'.$colorTexto.';">';
+				$html .= '<tr style="background-color:'.$colorPrimarioOscuro.';color:#FFFFFF;">';
+					$html .= '<th style="width:5%;border:1px solid '.$colorPrimarioOscuro.';text-align:center;">#</th>';
+					$html .= '<th style="width:13%;border:1px solid '.$colorPrimarioOscuro.';">Codigo</th>';
+					$html .= '<th style="width:36%;border:1px solid '.$colorPrimarioOscuro.';">Producto</th>';
+					$html .= '<th style="width:12%;border:1px solid '.$colorPrimarioOscuro.';">Unidad</th>';
+					$html .= '<th style="width:9%;border:1px solid '.$colorPrimarioOscuro.';text-align:right;">Cant.</th>';
+					$html .= '<th style="width:12%;border:1px solid '.$colorPrimarioOscuro.';text-align:right;">Precio</th>';
+					$html .= '<th style="width:13%;border:1px solid '.$colorPrimarioOscuro.';text-align:right;">Subtotal</th>';
+				$html .= '</tr>';
+
+				$item = 1;
+				foreach ($detalle as $value) {
+					$fondoFila = ($item % 2 == 0) ? $colorFondoSuave : "#FFFFFF";
+					$html .= '<tr style="background-color:'.$fondoFila.';">';
+						$html .= '<td style="border:1px solid '.$colorBorde.';text-align:center;">'.$item.'</td>';
+						$html .= '<td style="border:1px solid '.$colorBorde.';">'.$e($value["codigo"]).'</td>';
+						$html .= '<td style="border:1px solid '.$colorBorde.';">'.$e($value["producto"]." ".$value["descripcion"]).'</td>';
+						$html .= '<td style="border:1px solid '.$colorBorde.';">'.$e($value["unidad"]).'</td>';
+						$html .= '<td style="border:1px solid '.$colorBorde.';text-align:right;">'.number_format((double)$value["cantidad"],3).'</td>';
+						$html .= '<td style="border:1px solid '.$colorBorde.';text-align:right;">'.number_format((double)$value["preciounitario"],4).'</td>';
+						$html .= '<td style="border:1px solid '.$colorBorde.';text-align:right;font-weight:bold;">'.number_format((double)$value["subtotal"],2).'</td>';
+					$html .= '</tr>';
+					$item++;
+				}
+			$html .= '</table><br>';
+
+			if (count($pagos)>0) {
+				$html .= '<table cellpadding="5" width="100%" style="font-size:9px;">';
+					$html .= '<tr><td style="width:100%;background-color:'.$colorFondo.';color:'.$colorPrimarioOscuro.';border-left:5px solid '.$colorAcento.';font-weight:bold;">PAGOS</td></tr>';
+				$html .= '</table><br>';
+				$html .= '<table cellpadding="4" width="100%" style="border:1px solid '.$colorBorde.';font-size:8px;color:'.$colorTexto.';">';
+					$html .= '<tr style="background-color:'.$colorFondo.';color:'.$colorPrimario.';font-weight:bold;">';
+						$html .= '<th style="border:1px solid '.$colorBorde.';width:35%;">Tipo pago</th>';
+						$html .= '<th style="border:1px solid '.$colorBorde.';width:20%;text-align:right;">Entregado</th>';
+						$html .= '<th style="border:1px solid '.$colorBorde.';width:20%;text-align:right;">Importe</th>';
+						$html .= '<th style="border:1px solid '.$colorBorde.';width:25%;">Nro doc</th>';
+					$html .= '</tr>';
+					foreach ($pagos as $pago) {
+						$html .= '<tr>';
+							$html .= '<td style="border:1px solid '.$colorBorde.';">'.$e($pago["tipopago"]).'</td>';
+							$html .= '<td style="border:1px solid '.$colorBorde.';text-align:right;">'.number_format((double)$pago["importeentregado"],2).'</td>';
+							$html .= '<td style="border:1px solid '.$colorBorde.';text-align:right;font-weight:bold;">'.number_format((double)$pago["importe"],2).'</td>';
+							$html .= '<td style="border:1px solid '.$colorBorde.';">'.$e($pago["nrodocbanco"]).'</td>';
+						$html .= '</tr>';
+					}
+				$html .= '</table><br>';
+			}
+
+			if (count($otros)>0) {
+				$html .= '<table cellpadding="5" width="100%" style="font-size:9px;">';
+					$html .= '<tr><td style="width:100%;background-color:'.$colorFondo.';color:'.$colorPrimarioOscuro.';border-left:5px solid '.$colorAcento.';font-weight:bold;">OTROS GASTOS</td></tr>';
+				$html .= '</table><br>';
+				$html .= '<table cellpadding="4" width="100%" style="border:1px solid '.$colorBorde.';font-size:8px;color:'.$colorTexto.';">';
+				foreach ($otros as $otro) {
+					$html .= '<tr>';
+						$html .= '<td style="border:1px solid '.$colorBorde.';width:75%;">'.$e($otro["razonsocial"]).'</td>';
+						$html .= '<td style="border:1px solid '.$colorBorde.';width:25%;text-align:right;font-weight:bold;">'.number_format((double)$otro["importe"],2).'</td>';
+					$html .= '</tr>';
+				}
+				$html .= '</table><br>';
+			}
+
+			$html .= '<table cellpadding="5" width="100%" style="font-size:8.5px;color:'.$colorTexto.';">';
+				$html .= '<tr>';
+					$html .= '<td style="width:55%;background-color:'.$colorFondo.';border:1px solid '.$colorBorde.';">';
+						$html .= '<b style="color:'.$colorPrimario.';">OBSERVACION</b><br>';
+						$html .= $e($compra["descripcion"]);
+					$html .= '</td>';
+					$html .= '<td style="width:45%;">';
+						$html .= '<table cellpadding="4" width="100%" style="border:1px solid '.$colorBorde.';font-size:8.5px;">';
+							$html .= '<tr><th style="width:58%;text-align:right;border:1px solid '.$colorBorde.';background-color:'.$colorFondo.';">Valor compra</th><td style="width:42%;text-align:right;border:1px solid '.$colorBorde.';">'.$simbolo.' '.number_format((double)$compra["valorventa"],2).'</td></tr>';
+							$html .= '<tr><th style="text-align:right;border:1px solid '.$colorBorde.';background-color:'.$colorFondo.';">I.G.V.</th><td style="text-align:right;border:1px solid '.$colorBorde.';">'.$simbolo.' '.number_format((double)$compra["igv"],2).'</td></tr>';
+							$html .= '<tr><th style="text-align:right;border:1px solid '.$colorBorde.';background-color:'.$colorFondo.';">ICBPER</th><td style="text-align:right;border:1px solid '.$colorBorde.';">'.$simbolo.' '.number_format((double)$compra["icbper"],2).'</td></tr>';
+							$html .= '<tr><th style="text-align:right;border:1px solid '.$colorBorde.';background-color:'.$colorFondo.';">Flete / gastos</th><td style="text-align:right;border:1px solid '.$colorBorde.';">'.$simbolo.' '.number_format((double)$compra["flete"] + (double)$compra["gastos"],2).'</td></tr>';
+							$html .= '<tr style="background-color:'.$colorPrimarioOscuro.';color:#FFFFFF;"><th style="text-align:right;border:1px solid '.$colorPrimarioOscuro.';font-size:10px;">TOTAL COMPRA</th><td style="text-align:right;border:1px solid '.$colorPrimarioOscuro.';font-size:11px;"><b>'.$simbolo.' '.number_format((double)$compra["importe"],2).'</b></td></tr>';
+						$html .= '</table>';
+					$html .= '</td>';
+				$html .= '</tr>';
+			$html .= '</table>';
+
+			$this->pdf_imprimir($html, "DETALLE DE COMPRA", "compra_".$compra["seriecomprobante"]."_".$compra["nrocomprobante"].".pdf");
+		}else{
+			$this->load->view("phuyu/505");
+		}
 	}
 
 
