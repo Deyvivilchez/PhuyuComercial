@@ -476,6 +476,7 @@ class Programacionsunat extends Sunat {
 				from kardex.kardex kardex
 				inner join sunat.kardexsunat kardexs on kardex.codkardex=kardexs.codkardex
 				where kardexs.fechacreado<=? and kardex.codmovimientotipo=20 and kardex.codcomprobantetipo=12
+					and upper(kardex.seriecomprobante) like 'B%'
 					and kardex.codkardex not in (select codkardex from sunat.kardexsunatdetalle where fecharesumen<=?)
 					".$sucursal,
 				[$fecha, $fecha]
@@ -516,6 +517,7 @@ class Programacionsunat extends Sunat {
 				from kardex.kardex kardex
 				inner join sunat.kardexsunat kardexs on kardex.codkardex=kardexs.codkardex
 				where kardex.fechacomprobante=? and kardex.codmovimientotipo=20 and kardex.codcomprobantetipo=12
+					and upper(kardex.seriecomprobante) like 'B%'
 					and kardex.codkardex not in (select codkardex from sunat.kardexsunatdetalle where fecharesumen<=?)
 					".$sucursal,
 				[$fecharesumen, $fecha]
