@@ -25,6 +25,7 @@ $direccionCliente = $venta['direccion'] ?? '-';
 $cliente = $venta['cliente'] ?? '-';
 $usuario = $_SESSION['phuyu_usuario'] ?? '-';
 $vendedor = $empleado['razonsocial'] ?? '-';
+$mesaRestaurante = trim((string)($mesa_restaurante ?? ''));
 $condicionPago = ((int)($venta['condicionpago'] ?? 0) === 1)
     ? 'CONTADO'
     : 'CRÉDITO' . (!empty($credito['nrodias']) ? ': ' . $credito['nrodias'] . ' días' : '');
@@ -529,6 +530,9 @@ $condicionPago = ((int)($venta['condicionpago'] ?? 0) === 1)
                             <div class="doc-row"><strong>Fecha vencimiento:</strong> <?= texto_doc(fecha_doc($fechavencimiento ?? '')) ?></div>
                             <div class="doc-row"><strong>Condición:</strong> <?= texto_doc($condicionPago) ?></div>
                             <div class="doc-row"><strong>Moneda:</strong> SOLES</div>
+                            <?php if ($mesaRestaurante !== ''): ?>
+                            <div class="doc-row"><strong>Mesa:</strong> <?= texto_doc($mesaRestaurante) ?></div>
+                            <?php endif; ?>
                         </div>
                     </td>
                 </tr>
@@ -581,7 +585,10 @@ $condicionPago = ((int)($venta['condicionpago'] ?? 0) === 1)
                         <?php foreach ($detalle as $i => $item): ?>
                             <tr>
                                 <td class="text-center"><?= str_pad((string)($i + 1), 2, '0', STR_PAD_LEFT) ?></td>
-                                <td><?= texto_doc(($item['producto'] ?? '') . ' ' . ($item['descripcion'] ?? '')) ?></td>
+                                <td><?= texto_doc(trim(
+                                    ($item['producto'] ?? '') .
+                                    ($mesaRestaurante === '' ? ' ' . ($item['descripcion'] ?? '') : '')
+                                )) ?></td>
                                 <td><?= texto_doc($item['unidad'] ?? '-') ?></td>
                                 <td class="text-right"><?= numero_doc($item['cantidad'] ?? 0) ?></td>
                                 <td class="text-right">S/ <?= numero_doc($item['preciounitario'] ?? 0) ?></td>

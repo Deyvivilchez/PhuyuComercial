@@ -104,6 +104,40 @@
     white-space: nowrap;
   }
 
+  #phuyu_ventas .phuyu-comprobante-wrap {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  #phuyu_ventas .phuyu-mesa-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border: 1px solid #d8c5ff;
+    border-radius: 999px;
+    background: #f5f0ff;
+    color: #6d28d9;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  #phuyu_ventas .phuyu-mesa-badge i {
+    font-size: 11px;
+  }
+
+  #phuyu_ventas .phuyu-cliente-truncado {
+    display: block;
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   #phuyu_ventas .phuyu-download-btn {
     border-radius: 999px;
     font-weight: 700;
@@ -305,9 +339,15 @@
                 <td class="fw-bold text-muted">{{dato.codkardex}}</td>
 
                 <td>
-                  <span class="fw-semibold">
-                    {{dato.abreviatura}}: ({{dato.seriecomprobante}} - {{dato.nrocomprobante}})
-                  </span>
+                  <div class="phuyu-comprobante-wrap">
+                    <span class="fw-semibold">
+                      {{dato.abreviatura}}: ({{dato.seriecomprobante}} - {{dato.nrocomprobante}})
+                    </span>
+                    <span v-if="dato.mesa_restaurante" class="phuyu-mesa-badge" title="Código de mesa">
+                      <i class="bi bi-grid-3x3-gap-fill"></i>
+                      {{dato.mesa_restaurante}}
+                    </span>
+                  </div>
                   <span v-if="dato.referencia" class="badge bg-secondary-subtle text-secondary border border-secondary-subtle mt-1 d-inline-flex align-items-center gap-1">
                     <i class="bi bi-receipt"></i>
                     Pedido: {{dato.referencia}}
@@ -315,7 +355,11 @@
                 </td>
 
                 <td>{{dato.documento}}</td>
-                <td class="fw-semibold text-dark">{{dato.cliente}}</td>
+                <td class="fw-semibold text-dark">
+                  <span class="phuyu-cliente-truncado" :title="phuyu_cliente_nombre(dato)">
+                    {{phuyu_cliente_nombre(dato)}}
+                  </span>
+                </td>
 
                 <td>
                   {{dato.fechacomprobante}}<br>

@@ -17,4 +17,4 @@
 # CodeIgniter
 /application/logs/
 /application/cache/
-/vendor/*
+# /vendor/*

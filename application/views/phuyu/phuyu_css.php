@@ -1151,6 +1151,44 @@
             body.vertical-sidebar-enable .app-menu {
                 transform: translateX(0);
                 visibility: visible;
+                width: var(--vz-vertical-menu-width, 250px) !important;
+            }
+
+            body.vertical-sidebar-enable .app-menu .navbar-brand-box {
+                width: var(--vz-vertical-menu-width, 250px) !important;
+            }
+
+            body.vertical-sidebar-enable .app-menu .navbar-brand-box .logo-sm {
+                display: none !important;
+            }
+
+            body.vertical-sidebar-enable .app-menu .navbar-brand-box .logo-lg {
+                display: inline-block !important;
+            }
+
+            body.vertical-sidebar-enable .app-menu .navbar-nav .nav-link span,
+            body.vertical-sidebar-enable .app-menu .navbar-nav .menu-title span {
+                display: inline-block !important;
+            }
+
+            body.vertical-sidebar-enable .app-menu .navbar-nav .nav-link i {
+                margin-right: .665rem;
+            }
+
+            body.vertical-sidebar-enable .app-menu .navbar-nav .nav-link::after {
+                display: block !important;
+            }
+
+            body.vertical-sidebar-enable .app-menu .navbar-nav .menu-dropdown {
+                position: static !important;
+                left: auto !important;
+                width: auto !important;
+                box-shadow: none !important;
+            }
+
+            body.vertical-sidebar-enable .app-menu .navbar-nav .menu-dropdown.show {
+                display: block !important;
+                height: auto !important;
             }
         }
 
@@ -1169,9 +1207,66 @@
             }
         }
 
-        /* Ensure hover toggle button is visible in compact sidebar state */
-        html[data-sidebar-size="sm"] .btn-vertical-sm-hover {
-            display: inline-block !important;
+        #vertical-hover,
+        .btn-vertical-sm-hover {
+            display: none !important;
+        }
+
+        @media (min-width: 992px) {
+            html[data-sidebar-size="sm"] .app-menu,
+            html[data-sidebar-size="sm"] .app-menu #scrollbar,
+            html[data-sidebar-size="sm"] .app-menu #navbar-nav,
+            html[data-sidebar-size="sm"] .app-menu #scrollbar .container-fluid,
+            html[data-sidebar-size="sm"] .app-menu .simplebar-mask,
+            html[data-sidebar-size="sm"] .app-menu .simplebar-offset,
+            html[data-sidebar-size="sm"] .app-menu .simplebar-content-wrapper {
+                overflow: visible !important;
+            }
+
+            html[data-sidebar-size="sm"] .navbar-menu .navbar-nav .nav-item:hover,
+            html[data-sidebar-size="sm"] .navbar-menu .navbar-nav .nav-item.phuyu-compact-open {
+                position: relative;
+                z-index: 1008;
+            }
+
+            html[data-sidebar-size="sm"] .navbar-menu .navbar-nav .nav-item.phuyu-compact-open > a.menu-link {
+                position: relative;
+                width: calc(200px + var(--vz-vertical-menu-width-sm));
+                transition: none;
+                background: var(--vz-vertical-menu-bg);
+            }
+
+            html[data-sidebar-size="sm"] .navbar-menu .navbar-nav .nav-item.phuyu-compact-open > a.menu-link span,
+            html[data-sidebar-size="sm"] .navbar-menu .navbar-nav .nav-item.phuyu-compact-open .nav-link span {
+                display: inline-block;
+            }
+
+            html[data-sidebar-size="sm"] .navbar-menu .navbar-nav .nav-item.phuyu-compact-open > a.menu-link span {
+                padding-left: 25px;
+            }
+
+            html[data-sidebar-size="sm"] .navbar-menu .navbar-nav .nav-item.phuyu-compact-open > a.menu-link::after {
+                display: block !important;
+                transform: rotate(90deg);
+                color: #fff;
+            }
+
+            html[data-sidebar-size="sm"] .navbar-menu .navbar-nav .nav-item.phuyu-compact-open > .menu-dropdown {
+                display: block !important;
+                left: var(--vz-vertical-menu-width-sm);
+                position: absolute;
+                width: 200px;
+                height: auto !important;
+                padding: .5rem 0;
+                border-radius: 0 0 3px 3px;
+                background: var(--vz-vertical-menu-bg);
+                box-shadow: var(--vz-vertical-menu-dropdown-box-shadow);
+                z-index: 1009;
+            }
+
+            html[data-sidebar-size="sm"] .navbar-menu .navbar-nav .nav-item.phuyu-compact-open > a.menu-link .icon-dual {
+                fill: rgba(255, 255, 255, .16);
+            }
         }
     </style>
 </head>
