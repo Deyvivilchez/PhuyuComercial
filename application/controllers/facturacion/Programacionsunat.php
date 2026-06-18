@@ -18,9 +18,9 @@ class Programacionsunat extends Sunat {
 	}
 
 	public function datos(){
-		$historial_limite = min(100, max(10, (int)$this->input->get("historial_limite")));
+		$historial_limite = min(100, max(10, (int)$this->input->get("historial_limite") ?: 10));
 		$historial_offset = max(0, (int)$this->input->get("historial_offset"));
-		$cola_limite = min(100, max(10, (int)$this->input->get("cola_limite")));
+		$cola_limite = min(100, max(10, (int)$this->input->get("cola_limite") ?: 10));
 		$cola_offset = max(0, (int)$this->input->get("cola_offset"));
 		$historial_total = $this->Programacion_sunat_model->historial_total();
 		$cola_total = $this->Programacion_sunat_model->cola_total();
@@ -83,6 +83,39 @@ class Programacionsunat extends Sunat {
 		}
 		$estado = $this->Programacion_sunat_model->eliminar($codprogramacion);
 		$this->salida_json(["estado" => $estado, "mensaje" => $estado ? "Programacion desactivada" : "No se pudo desactivar"]);
+	}
+
+	public function limpiar_historial(){
+		if (!$this->input->is_ajax_request() || !isset($_SESSION["phuyu_codusuario"])) {
+			$this->salida_json(["estado" => 0, "mensaje" => "Sesion no valida"]);
+			return;
+		}
+
+		$datos = json_decode(file_get_contents("php://input"));
+		$dias = isset($datos->dias) ? (int)$datos->dias : 30;
+		$dias = max(1, min(365, $dias));
+		$todo = isset($datos->modo) && $datos->modo === "todo";
+		$resultado = $this->Programacion_sunat_model->limpiar_historial($dias, $todo);
+		if ((int)$resultado["estado"] !== 1) {
+			$this->salida_json([
+				"estado" => 0,
+				"codigo" => "LIMPIEZA_ERROR",
+				"mensaje" => "No se pudo limpiar el historial SUNAT",
+				"detalle" => "La base de datos no confirmo la limpieza. No se eliminaron registros.",
+				"accion_recomendada" => "Revise permisos o errores de base de datos e intente nuevamente."
+			]);
+			return;
+		}
+
+		$this->salida_json([
+			"estado" => 1,
+			"codigo" => "LIMPIEZA_OK",
+			"mensaje" => "Historial SUNAT limpiado correctamente",
+			"detalle" => $todo
+				? "Se eliminaron ".$resultado["historial_eliminado"]." ejecuciones del historial y ".$resultado["cola_eliminada"]." registros de cola cerrados. Se conservo toda cola pendiente, procesando o con error."
+				: "Se eliminaron ".$resultado["historial_eliminado"]." ejecuciones antiguas y ".$resultado["cola_eliminada"]." registros de cola cerrados. Se conservaron los ultimos ".$dias." dias y toda cola pendiente, procesando o con error.",
+			"accion_recomendada" => "No requiere accion."
+		]);
 	}
 
 	public function ejecutar_manual($codprogramacion){

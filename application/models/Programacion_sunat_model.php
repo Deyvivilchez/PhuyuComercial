@@ -123,7 +123,7 @@ class Programacion_sunat_model extends CI_Model {
 		]) ? 1 : 0;
 	}
 
-	public function historial($limite = 20, $offset = 0){
+	public function historial($limite = 10, $offset = 0){
 		return $this->db->query(
 			"select h.*, p.descripcion as programacion
 			from sunat.programacion_cpe_historial h
@@ -142,7 +142,7 @@ class Programacion_sunat_model extends CI_Model {
 		return (int)$total["total"];
 	}
 
-	public function cola($limite = 20, $offset = 0){
+	public function cola($limite = 10, $offset = 0){
 		return $this->db->query(
 			"select *
 			from sunat.programacion_cpe_cola
@@ -160,6 +160,53 @@ class Programacion_sunat_model extends CI_Model {
 			where estado in ('pendiente','procesando','error')"
 		)->row_array();
 		return (int)$total["total"];
+	}
+
+	public function limpiar_historial($dias = 30, $todo = false){
+		$dias = max(1, (int)$dias);
+		$this->db->trans_begin();
+
+		if ($todo) {
+			$historial = $this->db->query("delete from sunat.programacion_cpe_historial");
+		} else {
+			$historial = $this->db->query(
+				"delete from sunat.programacion_cpe_historial
+				where inicio < now() - (?::text || ' days')::interval",
+				[$dias]
+			);
+		}
+		$historial_eliminado = $this->db->affected_rows();
+
+		if ($todo) {
+			$cola = $this->db->query(
+				"delete from sunat.programacion_cpe_cola
+				where estado in ('enviado','descartado')"
+			);
+		} else {
+			$cola = $this->db->query(
+				"delete from sunat.programacion_cpe_cola
+				where estado in ('enviado','descartado')
+					and actualizado_en < now() - (?::text || ' days')::interval",
+				[$dias]
+			);
+		}
+		$cola_eliminada = $this->db->affected_rows();
+
+		if ($this->db->trans_status() === FALSE || !$historial || !$cola) {
+			$this->db->trans_rollback();
+			return [
+				"estado" => 0,
+				"historial_eliminado" => 0,
+				"cola_eliminada" => 0
+			];
+		}
+
+		$this->db->trans_commit();
+		return [
+			"estado" => 1,
+			"historial_eliminado" => (int)$historial_eliminado,
+			"cola_eliminada" => (int)$cola_eliminada
+		];
 	}
 
 	public function programaciones_vencidas($hora = null){
