@@ -71,6 +71,9 @@ class Limpieza extends CI_Controller {
 			$codhabitacion = (int)($this->request->codhabitacion ?? 0);
 			$codresponsable = (int)($this->request->codresponsable ?? 0);
 			$estadoOrden = (int)($this->request->estado_orden ?? 0);
+			$limit = 12;
+			$pagina = max(1, (int)($this->request->pagina ?? 1));
+			$offset = ($pagina * $limit) - $limit;
 
 			$where = "";
 			$params = [(int)$_SESSION["phuyu_codsucursal"], $desde, $hasta];
@@ -78,8 +81,19 @@ class Limpieza extends CI_Controller {
 			if ($codresponsable > 0) { $where .= " and lh.codresponsable=?"; $params[] = $codresponsable; }
 			if ($estadoOrden > 0) { $where .= " and coalesce(lh.estado_orden,1)=?"; $params[] = $estadoOrden; }
 
+			$total = $this->db->query(
+				"select count(*) as total
+				from hotel.limpieza_habitaciones lh
+				inner join hotel.habitaciones h on(h.codhabitacion=lh.codhabitacion)
+				where h.codsucursal=? and lh.estado=1 and lh.fecha>=? and lh.fecha<=?".$where,
+				$params
+			)->row_array();
+
+			$paramsLista = $params;
+			$paramsLista[] = $offset;
+			$paramsLista[] = $limit;
 			$lista = $this->db->query(
-				"select lh.*, h.numero, coalesce(a.descripcion, h.piso) as ambiente, s.descripcion as sucursal,
+				"select lh.*, coalesce(lh.estado_orden, 1) as estado_orden, h.numero, coalesce(a.descripcion, h.piso) as ambiente, s.descripcion as sucursal,
 					coalesce(pr.razonsocial, '') as responsable,
 					coalesce(pu.razonsocial, u.usuario) as usuario
 				from hotel.limpieza_habitaciones lh
@@ -90,18 +104,32 @@ class Limpieza extends CI_Controller {
 				left join seguridad.usuarios u on(u.codusuario=lh.codusuario)
 				left join public.personas pu on(pu.codpersona=u.codempleado)
 				where h.codsucursal=? and lh.estado=1 and lh.fecha>=? and lh.fecha<=?".$where."
-				order by lh.codlimpieza desc",
-				$params
+				order by lh.codlimpieza desc
+				offset ? limit ?",
+				$paramsLista
 			)->result_array();
 
 			foreach ($lista as $key => $item) {
+				$estadoOrden = (int)($item["estado_orden"] ?? 1);
 				$lista[$key]["numero_orden"] = str_pad((string)$item["codlimpieza"], 6, "0", STR_PAD_LEFT);
 				$lista[$key]["tipo_limpieza_texto"] = $this->texto_tipo($item["tipo_limpieza"] ?? "normal");
-				$lista[$key]["estado_orden_texto"] = $this->texto_estado($item["estado_orden"] ?? 1);
+				$lista[$key]["estado_orden"] = $estadoOrden;
+				$lista[$key]["estado_orden_texto"] = $this->texto_estado($estadoOrden);
 				$lista[$key]["checklist_items"] = json_decode($item["checklist"] ?? "[]", true) ?: [];
 			}
 
-			echo json_encode($lista);
+			$paginas = floor((int)$total["total"] / $limit);
+			if (((int)$total["total"] % $limit) != 0) { $paginas++; }
+			echo json_encode([
+				"lista" => $lista,
+				"paginacion" => [
+					"total" => (int)$total["total"],
+					"actual" => $pagina,
+					"ultima" => max(1, (int)$paginas),
+					"desde" => $offset,
+					"hasta" => min($offset + $limit, (int)$total["total"])
+				]
+			]);
 		}
 	}
 

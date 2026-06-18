@@ -7,6 +7,35 @@ use RobRichards\XMLSecLibs\XMLSecurityKey;
 
 class Sunat extends CI_Controller
 {
+    protected function phuyu_normalizar_error_sunat($mensaje, $respuesta = "", $operacion = "")
+    {
+        $texto = trim((string)$mensaje);
+        $respuesta = trim((string)$respuesta);
+        $base = $respuesta !== "" ? $respuesta : $texto;
+
+        $faultcode = "";
+        $faultstring = "";
+        if ($base !== "" && preg_match('/<faultcode[^>]*>(.*?)<\/faultcode>/is', $base, $m)) {
+            $faultcode = trim(strip_tags($m[1]));
+        }
+        if ($base !== "" && preg_match('/<faultstring[^>]*>(.*?)<\/faultstring>/is', $base, $m)) {
+            $faultstring = trim(html_entity_decode(strip_tags($m[1]), ENT_QUOTES, "UTF-8"));
+        }
+
+        if ($faultstring !== "") {
+            if (strpos($faultcode, "0140") !== false) {
+                return "SUNAT ya tiene este resumen en proceso. Espere 15 minutos y vuelva a consultar/enviar. Detalle SUNAT: " . $faultstring;
+            }
+            return "SUNAT rechazo la solicitud" . ($faultcode !== "" ? " (" . $faultcode . ")" : "") . ": " . $faultstring;
+        }
+
+        if (stripos($texto, "Bad Request") !== false) {
+            return "SUNAT devolvio Bad Request. Normalmente significa que el resumen ya fue recibido y esta en proceso. Espere 15 minutos y vuelva a consultar o enviar; no lo regenere todavia.";
+        }
+
+        return $texto !== "" ? $texto : "SUNAT no devolvio una respuesta interpretable para " . $operacion . ".";
+    }
+
 
     function phuyu_firmarXML($carpeta_phuyu, $phuyu)
     {
@@ -242,8 +271,10 @@ class Sunat extends CI_Controller
 
         // 1: CREAMOS EL ARCHIVO ZIP CON EL XML DEL COMPROBANTE // 
         $this->load->library("zip");
+        $this->zip->clear_data();
         $this->zip->read_file($carpeta_phuyu . "/" . $archivo_phuyu . ".xml");
         $this->zip->archive($carpeta_phuyu . "/" . $archivo_phuyu . ".zip");
+        $this->zip->clear_data();
         chmod($carpeta_phuyu . "/" . $archivo_phuyu . ".zip", 0777);
         $webservice = $this->db->query("select * from public.webservice")->result_array();
         // NOTA: campo->sunatose = 0: SERVICIO SUNAT, campo->sunatose = 1: SERVICIO OSE //
@@ -566,8 +597,10 @@ class Sunat extends CI_Controller
         // 1: CREAMOS EL ARCHIVO ZIP CON EL XML DEL COMPROBANTE //
 
         $this->load->library("zip");
+        $this->zip->clear_data();
         $this->zip->read_file($carpeta_phuyu . "/" . $archivo_phuyu . ".xml");
         $this->zip->archive($carpeta_phuyu . "/" . $archivo_phuyu . ".zip");
+        $this->zip->clear_data();
         chmod($carpeta_phuyu . "/" . $archivo_phuyu . ".zip", 0777);
 
         $webservice = $this->db->query("select * from public.webservice")->result_array();
@@ -1474,7 +1507,8 @@ class Sunat extends CI_Controller
             $client->__call("$callFunction", array(), array());
             return array("error" => "no", "mensaje" => $client->__getLastResponse());
         } catch (Exception $e) {
-            return array("error" => "si", "mensaje" => $client->__getLastResponse());
+            $respuesta = isset($client) ? trim((string)$client->__getLastResponse()) : "";
+            return array("error" => "si", "mensaje" => $this->phuyu_normalizar_error_sunat($e->getMessage(), $respuesta, $callFunction));
         }
     }
 

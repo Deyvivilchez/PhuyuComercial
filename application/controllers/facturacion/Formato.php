@@ -133,6 +133,37 @@ class Formato extends CI_Controller
         return !empty($venta['codsucursal']) ? (int)$venta['codsucursal'] : 0;
     }
 
+    private function phuyu_mesa_restaurante($codkardex)
+    {
+        $tablas = $this->db->query("
+            SELECT
+                to_regclass('kardex.kardexpedido') AS kardexpedido,
+                to_regclass('restaurante.mesaspedido') AS mesaspedido
+        ")->row_array();
+
+        if (empty($tablas['kardexpedido']) || empty($tablas['mesaspedido'])) {
+            return '';
+        }
+
+        $mesa = $this->db->query("
+            SELECT string_agg(DISTINCT mp.nromesa::text, ' - ') AS numero
+            FROM restaurante.mesaspedido mp
+            WHERE mp.codpedido IN (
+                SELECT p.codpedido
+                FROM kardex.pedidos p
+                WHERE p.codkardex = " . (int)$codkardex . "
+
+                UNION
+
+                SELECT kp.codpedido
+                FROM kardex.kardexpedido kp
+                WHERE kp.codkardex = " . (int)$codkardex . "
+            )
+        ")->row_array();
+
+        return trim((string)($mesa['numero'] ?? ''));
+    }
+
     public function formato_guia($codguiar)
     {
         $estilo = 'border-left:1px solid #000; border-right:1px solid #000;';
@@ -1144,6 +1175,7 @@ class Formato extends CI_Controller
         'fechavencimiento' => $fechavencimiento,
         'total_texto'      => $total_texto,
         'qr_src'           => $qr_src,
+        'mesa_restaurante' => $this->phuyu_mesa_restaurante($codkardex),
     ];
 
     $html = $this->load->view('reportes/ventas/a4comprobante', $data, true);
@@ -1154,6 +1186,7 @@ class Formato extends CI_Controller
     if (!is_dir($tempDir)) {
         mkdir($tempDir, 0777, true);
     }
+    $fontDir = FCPATH . 'vendor/dompdf/dompdf/lib/fonts';
 
     $options = new \Dompdf\Options();
     $options->set('isHtml5ParserEnabled', true);
@@ -1161,7 +1194,7 @@ class Formato extends CI_Controller
     $options->set('defaultFont', 'DejaVu Sans');
     $options->set('chroot', FCPATH);
     $options->set('tempDir', $tempDir);
-    $options->set('fontDir', $tempDir);
+    $options->set('fontDir', $fontDir);
     $options->set('fontCache', $tempDir);
     $options->set('dpi', 96);
 
@@ -1908,6 +1941,7 @@ class Formato extends CI_Controller
         'publicidad' => $publicidad,
         'fechavencimiento' => $fechavencimiento,
         'total_texto' => $total_texto,
+        'mesa_restaurante' => $this->phuyu_mesa_restaurante($codkardex),
     ];
 
     $html = $this->load->view('reportes/ventas/a5venta', $data, true);
@@ -1918,6 +1952,7 @@ class Formato extends CI_Controller
     if (!is_dir($tempDir)) {
         mkdir($tempDir, 0777, true);
     }
+    $fontDir = FCPATH . 'vendor/dompdf/dompdf/lib/fonts';
 
     $options = new \Dompdf\Options();
     $options->set('isHtml5ParserEnabled', true);
@@ -1925,7 +1960,7 @@ class Formato extends CI_Controller
     $options->set('defaultFont', 'DejaVu Sans');
     $options->set('chroot', FCPATH);
     $options->set('tempDir', $tempDir);
-    $options->set('fontDir', $tempDir);
+    $options->set('fontDir', $fontDir);
     $options->set('fontCache', $tempDir);
     $options->set('dpi', 96);
 
@@ -2160,6 +2195,7 @@ class Formato extends CI_Controller
             'detallemovimiento' => $detallemovimiento,
             'efectivo' => $efectivo,
             'logoEmpresa' => $_SESSION['phuyu_logo'] ?? '',
+            'mesa_restaurante' => $this->phuyu_mesa_restaurante($codkardex),
         ];
 
         $this->load->view('facturacion/formato/ticket_Phuyu', $data);
@@ -2803,6 +2839,7 @@ class Formato extends CI_Controller
         if (!is_dir($tempDir)) {
             mkdir($tempDir, 0777, true);
         }
+        $fontDir = FCPATH . 'vendor/dompdf/dompdf/lib/fonts';
 
         $options = new \Dompdf\Options();
         $options->set('isHtml5ParserEnabled', true);
@@ -2810,7 +2847,7 @@ class Formato extends CI_Controller
         $options->set('defaultFont', 'DejaVu Sans');
         $options->set('chroot', FCPATH);
         $options->set('tempDir', $tempDir);
-        $options->set('fontDir', $tempDir);
+        $options->set('fontDir', $fontDir);
         $options->set('fontCache', $tempDir);
         $options->set('dpi', 96);
 

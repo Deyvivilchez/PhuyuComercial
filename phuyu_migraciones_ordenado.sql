@@ -1438,5 +1438,80 @@ BEGIN
 END $$;
 
 -- ============================================================
+-- 16. SINCRONIZAR SECUENCIAS CRITICAS
+-- ============================================================
+-- Evita errores por secuencias atrasadas despues de restaurar/importar
+-- datos con ids explicitos. Solo adelanta secuencias si estan por debajo
+-- del maximo real; no elimina datos ni reduce secuencias avanzadas.
+-- ============================================================
+
+DO $$
+DECLARE
+    v_registro RECORD;
+    v_secuencia TEXT;
+    v_max_id BIGINT;
+    v_ultimo_valor BIGINT;
+BEGIN
+    FOR v_registro IN
+        SELECT *
+        FROM (
+            VALUES
+                ('kardex', 'kardex', 'codkardex'),
+                ('kardex', 'kardexalmacen', 'codkardexalmacen'),
+                ('kardex', 'creditos', 'codcredito'),
+                ('kardex', 'creditospedidos', 'codcreditopedido'),
+                ('kardex', 'creditosproformas', 'codcreditoproforma'),
+                ('kardex', 'pedidos', 'codpedido'),
+                ('kardex', 'proformas', 'codproforma'),
+                ('caja', 'movimientos', 'codmovimiento'),
+                ('caja', 'controldiario', 'codcontroldiario'),
+                ('caja', 'comprobantetipos', 'codcomprobantetipo'),
+                ('caja', 'conceptos', 'codconcepto'),
+                ('caja', 'cajas', 'codcaja'),
+                ('almacen', 'productos', 'codproducto'),
+                ('seguridad', 'modulos', 'codmodulo')
+        ) AS secuencias(esquema, tabla, columna)
+    LOOP
+        IF to_regclass(format('%I.%I', v_registro.esquema, v_registro.tabla)) IS NULL THEN
+            RAISE WARNING 'No existe tabla %.%, no se verifica secuencia',
+                v_registro.esquema,
+                v_registro.tabla;
+            CONTINUE;
+        END IF;
+
+        v_secuencia := pg_get_serial_sequence(
+            format('%I.%I', v_registro.esquema, v_registro.tabla),
+            v_registro.columna
+        );
+
+        IF v_secuencia IS NULL THEN
+            RAISE WARNING 'No existe secuencia serial para %.%.%',
+                v_registro.esquema,
+                v_registro.tabla,
+                v_registro.columna;
+            CONTINUE;
+        END IF;
+
+        EXECUTE format(
+            'SELECT COALESCE(MAX(%I), 0) FROM %I.%I',
+            v_registro.columna,
+            v_registro.esquema,
+            v_registro.tabla
+        )
+        INTO v_max_id;
+
+        EXECUTE format('SELECT last_value FROM %s', v_secuencia)
+        INTO v_ultimo_valor;
+
+        IF v_ultimo_valor <= v_max_id THEN
+            PERFORM setval(v_secuencia, v_max_id + 1, false);
+            RAISE NOTICE 'Secuencia % sincronizada a %',
+                v_secuencia,
+                v_max_id + 1;
+        END IF;
+    END LOOP;
+END $$;
+
+-- ============================================================
 -- FIN MIGRACIONES
 -- ============================================================

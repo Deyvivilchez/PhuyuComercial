@@ -319,7 +319,6 @@ public function exportar_excel_detallado()
 {
     $desde           = $this->input->get('desde');
     $hasta           = $this->input->get('hasta');
-    $codcontroldiario = $_SESSION["phuyu_codcontroldiario"];
     $codcaja          = $_SESSION['phuyu_codcaja'];
 
     if (empty($desde) || empty($hasta)) {
@@ -341,16 +340,18 @@ public function exportar_excel_detallado()
             md.importeentregado   AS importe_entregado,
             md.vuelto             AS vuelto,
             ROUND(m.importe, 2)   AS total_movimiento,
-			CONCAT(k.seriecomprobante,'-',k.nrocomprobante) AS comprobante_referencia
+			CASE
+				WHEN k.codkardex IS NULL THEN COALESCE(NULLIF(CONCAT(m.seriecomprobante_ref,'-',m.nrocomprobante_ref), '-'), '')
+				ELSE CONCAT(k.seriecomprobante,'-',k.nrocomprobante)
+			END AS comprobante_referencia
         FROM caja.movimientosdetalle AS md
         JOIN caja.movimientos AS m       ON m.codmovimiento = md.codmovimiento
         JOIN public.personas AS p        ON p.codpersona = m.codpersona
         JOIN caja.conceptos AS c         ON c.codconcepto = m.codconcepto
         JOIN caja.tipopagos AS tp        ON tp.codtipopago = md.codtipopago
-		JOIN kardex.kardex AS k        ON k.codkardex = m.codkardex
+		LEFT JOIN kardex.kardex AS k        ON k.codkardex = m.codkardex
         WHERE m.fechamovimiento BETWEEN {$this->db->escape($desde)} AND {$this->db->escape($hasta)}
         AND m.codcaja = {$this->db->escape($codcaja)}
-        AND m.codcontroldiario = {$this->db->escape($codcontroldiario)}
         AND m.estado = 1
         AND m.condicionpago = 1
         AND tp.estado = 1
@@ -361,7 +362,7 @@ public function exportar_excel_detallado()
     $data['desde'] = $this->input->get('desde');
     $data['hasta'] = $this->input->get('hasta');
 
-    $this->load->view('reportes/excel_movimientos_detallado', $data ,$desde, $hasta);
+    $this->load->view('reportes/excel_movimientos_detallado', $data);
 }
 
 
@@ -369,7 +370,6 @@ public function exportar_pdf_detallado()
 {
     $desde = $this->input->get('desde');
     $hasta = $this->input->get('hasta');
-    $codcontroldiario = $_SESSION["phuyu_codcontroldiario"];
     $codcaja = $_SESSION['phuyu_codcaja'];
 	$nombreEmpresa =  $_SESSION["phuyu_empresa"] ;
 	$logoEmpresa = $_SESSION["phuyu_logo"] ;
@@ -393,16 +393,18 @@ public function exportar_pdf_detallado()
             md.importeentregado   AS importe_entregado,
             md.vuelto             AS vuelto,
             ROUND(m.importe, 2)   AS total_movimiento,
-            CONCAT(k.seriecomprobante,'-',k.nrocomprobante) AS comprobante_referencia
+            CASE
+                WHEN k.codkardex IS NULL THEN COALESCE(NULLIF(CONCAT(m.seriecomprobante_ref,'-',m.nrocomprobante_ref), '-'), '')
+                ELSE CONCAT(k.seriecomprobante,'-',k.nrocomprobante)
+            END AS comprobante_referencia
         FROM caja.movimientosdetalle AS md
         JOIN caja.movimientos AS m       ON m.codmovimiento = md.codmovimiento
         JOIN public.personas AS p        ON p.codpersona = m.codpersona
         JOIN caja.conceptos AS c         ON c.codconcepto = m.codconcepto
         JOIN caja.tipopagos AS tp        ON tp.codtipopago = md.codtipopago
-        JOIN kardex.kardex AS k          ON k.codkardex = m.codkardex
+        LEFT JOIN kardex.kardex AS k          ON k.codkardex = m.codkardex
         WHERE m.fechamovimiento BETWEEN {$this->db->escape($desde)} AND {$this->db->escape($hasta)}
         AND m.codcaja = {$this->db->escape($codcaja)}
-        AND m.codcontroldiario = {$this->db->escape($codcontroldiario)}
         AND m.estado = 1
         AND m.condicionpago = 1
         AND tp.estado = 1
@@ -425,7 +427,6 @@ public function exportar_pdf_detallado_02()
 {
    $desde = $this->input->get('desde');
     $hasta = $this->input->get('hasta');
-    $codcontroldiario = $_SESSION["phuyu_codcontroldiario"];
     $codcaja = $_SESSION['phuyu_codcaja'];
 	$nombreEmpresa =  $_SESSION["phuyu_empresa"] ;
 	$logoEmpresa = $_SESSION["phuyu_logo"] ;
@@ -449,16 +450,18 @@ public function exportar_pdf_detallado_02()
             md.importeentregado   AS importe_entregado,
             md.vuelto             AS vuelto,
             ROUND(m.importe, 2)   AS total_movimiento,
-            CONCAT(k.seriecomprobante,'-',k.nrocomprobante) AS comprobante_referencia
+            CASE
+                WHEN k.codkardex IS NULL THEN COALESCE(NULLIF(CONCAT(m.seriecomprobante_ref,'-',m.nrocomprobante_ref), '-'), '')
+                ELSE CONCAT(k.seriecomprobante,'-',k.nrocomprobante)
+            END AS comprobante_referencia
         FROM caja.movimientosdetalle AS md
         JOIN caja.movimientos AS m       ON m.codmovimiento = md.codmovimiento
         JOIN public.personas AS p        ON p.codpersona = m.codpersona
         JOIN caja.conceptos AS c         ON c.codconcepto = m.codconcepto
         JOIN caja.tipopagos AS tp        ON tp.codtipopago = md.codtipopago
-        JOIN kardex.kardex AS k          ON k.codkardex = m.codkardex
+        LEFT JOIN kardex.kardex AS k          ON k.codkardex = m.codkardex
         WHERE m.fechamovimiento BETWEEN {$this->db->escape($desde)} AND {$this->db->escape($hasta)}
         AND m.codcaja = {$this->db->escape($codcaja)}
-        AND m.codcontroldiario = {$this->db->escape($codcontroldiario)}
         AND m.estado = 1
         AND m.condicionpago = 1
         AND tp.estado = 1

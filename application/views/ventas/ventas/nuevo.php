@@ -223,6 +223,139 @@
       gap: .35rem;
     }
   }
+
+  #modal_series_rapidas .modal-dialog {
+    max-width: 760px;
+  }
+
+  #modal_series_rapidas .modal-content {
+    overflow: hidden;
+    border: 0;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, .22);
+  }
+
+  #modal_series_rapidas .modal-header {
+    padding: .75rem 1rem;
+    background: linear-gradient(135deg, #2996d6, #3da9e6) !important;
+  }
+
+  #modal_series_rapidas .modal-title {
+    display: flex;
+    align-items: center;
+    font-size: 1rem;
+  }
+
+  #modal_series_rapidas .modal-body {
+    padding: 1rem;
+  }
+
+  #modal_series_rapidas .phuyu-series-search {
+    min-height: 42px;
+    border-radius: .65rem;
+    border-color: rgba(64, 81, 137, .18);
+  }
+
+  #modal_series_rapidas .phuyu-series-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .65rem;
+    max-height: min(55vh, 390px);
+    padding: .1rem .15rem .15rem;
+    overflow-y: auto;
+  }
+
+  #modal_series_rapidas .phuyu-serie-option {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    width: 100%;
+    min-height: 68px;
+    padding: .7rem .8rem;
+    border: 1px solid rgba(64, 81, 137, .12);
+    border-radius: .7rem;
+    background: #fff;
+    color: #273142;
+    text-align: left;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, .06);
+    transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease, background .15s ease;
+  }
+
+  #modal_series_rapidas .phuyu-serie-option:hover,
+  #modal_series_rapidas .phuyu-serie-option:focus-visible {
+    transform: translateY(-1px);
+    border-color: rgba(10, 179, 156, .5);
+    background: #f3fffc;
+    box-shadow: 0 7px 18px rgba(10, 179, 156, .13);
+    outline: none;
+  }
+
+  #modal_series_rapidas .phuyu-serie-icon {
+    display: inline-flex;
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(10, 179, 156, .12);
+    color: #0a9b88;
+    font-size: 1rem;
+  }
+
+  #modal_series_rapidas .phuyu-serie-info {
+    min-width: 0;
+  }
+
+  #modal_series_rapidas .phuyu-serie-code {
+    display: block;
+    overflow-wrap: anywhere;
+    font-size: .86rem;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  #modal_series_rapidas .phuyu-serie-status {
+    display: block;
+    margin-top: .18rem;
+    color: #0a9b88;
+    font-size: .66rem;
+    font-weight: 800;
+    letter-spacing: .04em;
+  }
+
+  @media (max-width: 767.98px) {
+    #modal_series_rapidas .modal-dialog {
+      max-width: none;
+      margin: .75rem;
+    }
+
+    #modal_series_rapidas .phuyu-series-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      max-height: 58vh;
+    }
+  }
+
+  @media (max-width: 479.98px) {
+    #modal_series_rapidas .modal-dialog {
+      margin: .5rem;
+    }
+
+    #modal_series_rapidas .modal-header,
+    #modal_series_rapidas .modal-body {
+      padding: .75rem;
+    }
+
+    #modal_series_rapidas .phuyu-series-list {
+      grid-template-columns: 1fr;
+      gap: .5rem;
+      max-height: 62vh;
+    }
+
+    #modal_series_rapidas .phuyu-serie-option {
+      min-height: 58px;
+      padding: .6rem .7rem;
+    }
+  }
 </style>
 
 <div id="phuyu_operacion" class="phuyu-venta-form phuyu-velzon-form phuyu-ventas-velzon">
@@ -617,17 +750,15 @@
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
         </div>
         <div class="modal-body">
-          <input type="text" class="form-control form-control-sm mb-3" v-model.trim="serie_rapida_buscar" placeholder="Buscar serie...">
-          <div class="row g-3" v-if="series_rapidas_filtradas.length > 0">
-            <div class="col-md-4 col-sm-6" v-for="serieRapida in series_rapidas_filtradas" :key="serieRapida.id_serie">
-              <button type="button" class="card text-center border-0 shadow-sm rounded-3 w-100 h-100" v-on:click="phuyu_seleccionar_serie_rapida(serieRapida)">
-                <span class="card-body p-3">
-                  <span class="d-block fw-bold mb-1">{{ serieRapida.serie_codigo }}</span>
-                  <small class="text-success">DISPONIBLE</small>
-                  <i class="bi bi-check-circle-fill text-success fs-4 d-block mt-2"></i>
-                </span>
-              </button>
-            </div>
+          <input type="text" class="form-control phuyu-series-search mb-3" v-model.trim="serie_rapida_buscar" placeholder="Buscar serie..." autocomplete="off">
+          <div class="phuyu-series-list" v-if="series_rapidas_filtradas.length > 0">
+            <button type="button" class="phuyu-serie-option" v-for="serieRapida in series_rapidas_filtradas" :key="serieRapida.id_serie" v-on:click="phuyu_seleccionar_serie_rapida(serieRapida)">
+              <span class="phuyu-serie-icon"><i class="bi bi-check-lg"></i></span>
+              <span class="phuyu-serie-info">
+                <span class="phuyu-serie-code">{{ serieRapida.serie_codigo }}</span>
+                <small class="phuyu-serie-status">DISPONIBLE</small>
+              </span>
+            </button>
           </div>
           <div class="text-center text-muted py-4" v-else>
             No hay series disponibles para este producto.
@@ -817,7 +948,7 @@
 </div>
 
 <!-- Scripts: se mantienen exactamente igual -->
-<script src="<?php echo base_url(); ?>phuyu/phuyu_ventas/nuevo.js"></script>
+<script src="<?php echo base_url(); ?>phuyu/phuyu_ventas/nuevo.js?v=<?php echo filemtime(FCPATH . 'phuyu/phuyu_ventas/nuevo.js'); ?>"></script>
 <script src="<?php echo base_url(); ?>phuyu/phuyu_personas_2.js"></script>
 <script>
   var pantalla = jQuery(document).height();

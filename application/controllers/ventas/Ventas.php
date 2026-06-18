@@ -135,6 +135,37 @@ class Ventas extends CI_Controller
         return 'data:image/' . $mime . ';base64,' . base64_encode(file_get_contents($path));
     }
 
+    private function phuyu_mesa_restaurante($codkardex)
+    {
+        $tablas = $this->db->query("
+            SELECT
+                to_regclass('kardex.kardexpedido') AS kardexpedido,
+                to_regclass('restaurante.mesaspedido') AS mesaspedido
+        ")->row_array();
+
+        if (empty($tablas['kardexpedido']) || empty($tablas['mesaspedido'])) {
+            return '';
+        }
+
+        $mesa = $this->db->query("
+            SELECT string_agg(DISTINCT mp.nromesa::text, ' - ') AS numero
+            FROM restaurante.mesaspedido mp
+            WHERE mp.codpedido IN (
+                SELECT p.codpedido
+                FROM kardex.pedidos p
+                WHERE p.codkardex = " . (int)$codkardex . "
+
+                UNION
+
+                SELECT kp.codpedido
+                FROM kardex.kardexpedido kp
+                WHERE kp.codkardex = " . (int)$codkardex . "
+            )
+        ")->row_array();
+
+        return trim((string)($mesa['numero'] ?? ''));
+    }
+
     private function phuyu_whatsapp_datos_pdf($codkardex, $formato)
     {
         $codkardex = (int)$codkardex;
@@ -378,6 +409,7 @@ class Ventas extends CI_Controller
                 'detallemovimiento' => $detallemovimiento,
                 'efectivo' => !empty($detallemovimiento) ? 1 : 0,
                 'logoEmpresa' => $_SESSION['phuyu_logo'] ?? '',
+                'mesa_restaurante' => $this->phuyu_mesa_restaurante($codkardex),
             ],
         ];
     }
@@ -731,7 +763,14 @@ class Ventas extends CI_Controller
             }
             $lista = $this->db
                 ->query(
-                    'select kardex.hora,personas.documento,personas.telefono,kardex.cliente,kardex.codkardex, kardex.codcomprobantetipo, kardex.seriecomprobante,kardex.condicionpago, kardex.nrocomprobante, kardex.fechacomprobante,round(kardex.importe,2) as importe,kardex.estado, comprobantes.descripcion as tipo,comprobantes.abreviatura from kardex.kardex as kardex inner join public.personas as personas on (kardex.codpersona=personas.codpersona) inner join caja.comprobantetipos as comprobantes on(kardex.codcomprobantetipo=comprobantes.codcomprobantetipo) where ' .
+                    "select kardex.hora,personas.documento,personas.telefono,kardex.cliente,kardex.codkardex, kardex.codcomprobantetipo, kardex.seriecomprobante,kardex.condicionpago, kardex.nrocomprobante, kardex.fechacomprobante,round(kardex.importe,2) as importe,kardex.estado, comprobantes.descripcion as tipo,comprobantes.abreviatura,
+                    (
+                        select string_agg(distinct mp.nromesa::text, ' - ')
+                        from kardex.pedidos p
+                        inner join restaurante.mesaspedido mp on mp.codpedido=p.codpedido
+                        where p.codkardex=kardex.codkardex
+                    ) as mesa_restaurante
+                    from kardex.kardex as kardex inner join public.personas as personas on (kardex.codpersona=personas.codpersona) inner join caja.comprobantetipos as comprobantes on(kardex.codcomprobantetipo=comprobantes.codcomprobantetipo) where " .
                         $fechas .
                         " (UPPER(personas.documento) like UPPER('%" .
                         $this->request->buscar .
@@ -1171,29 +1210,6 @@ class Ventas extends CI_Controller
                     ? $this->request->campos->codpersona
                     : $this->request->codpersonapedido;
 
-                $personaComprobante = $this->db->query(
-                    'select codpersona, documento, coddocumentotipo from public.personas where codpersona=' . (int)$this->request->campos->codpersona . ' and estado=1 limit 1'
-                )->row_array();
-                $codComprobante = (int)$this->request->campos->codcomprobantetipo;
-                $esFactura = in_array($codComprobante, [10, 25], true);
-                $esBoleta = in_array($codComprobante, [12, 26], true);
-
-                if ($esFactura && (empty($personaComprobante) || (int)$personaComprobante['coddocumentotipo'] != 4 || strlen(trim($personaComprobante['documento'])) != 11)) {
-                    echo json_encode([
-                        'estado' => 0,
-                        'informacion' => 'Para emitir factura debe seleccionar un cliente con RUC de 11 digitos.'
-                    ]);
-                    return;
-                }
-
-                if ($esBoleta && !empty($personaComprobante) && (int)$personaComprobante['coddocumentotipo'] == 4) {
-                    echo json_encode([
-                        'estado' => 0,
-                        'informacion' => 'No puede emitir boleta a un cliente con RUC. Use factura o nota de venta.'
-                    ]);
-                    return;
-                }
-
                 // VALIDAMOS SI ES BOLETA Y EL IMPORTE SEA MENOR A 700
                 if ($this->request->campos->codpersona == 2 && $this->request->campos->codcomprobantetipo == 12) {
                     if ($this->request->totales->importe >= 700) {
@@ -1437,29 +1453,6 @@ class Ventas extends CI_Controller
                 $this->request->campos->codpersona = $this->request->codpersonapedido == 0
                     ? $this->request->campos->codpersona
                     : $this->request->codpersonapedido;
-
-                $personaComprobante = $this->db->query(
-                    'select codpersona, documento, coddocumentotipo from public.personas where codpersona=' . (int)$this->request->campos->codpersona . ' and estado=1 limit 1'
-                )->row_array();
-                $codComprobante = (int)$this->request->campos->codcomprobantetipo;
-                $esFactura = in_array($codComprobante, [10, 25], true);
-                $esBoleta = in_array($codComprobante, [12, 26], true);
-
-                if ($esFactura && (empty($personaComprobante) || (int)$personaComprobante['coddocumentotipo'] != 4 || strlen(trim($personaComprobante['documento'])) != 11)) {
-                    echo json_encode([
-                        'estado' => 0,
-                        'informacion' => 'Para emitir factura debe seleccionar un cliente con RUC de 11 digitos.'
-                    ]);
-                    return;
-                }
-
-                if ($esBoleta && !empty($personaComprobante) && (int)$personaComprobante['coddocumentotipo'] == 4) {
-                    echo json_encode([
-                        'estado' => 0,
-                        'informacion' => 'No puede emitir boleta a un cliente con RUC. Use factura o nota de venta.'
-                    ]);
-                    return;
-                }
 
                 // VALIDAMOS SI ES BOLETA Y EL IMPORTE SEA MENOR A 700
                 if ($this->request->campos->codpersona == 2 && $this->request->campos->codcomprobantetipo == 12) {

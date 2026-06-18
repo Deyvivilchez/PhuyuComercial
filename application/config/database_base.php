@@ -28,26 +28,3 @@ $db['default'] = array(
 	'failover' => array(),
 	'save_queries' => (ENVIRONMENT !== 'production')
 );
-
-// $db['default'] = array(
-// 	'dsn'	=> '',
-// 	'hostname' => 'localhost',
-// 	'port' => '5432',
-// 	'username' => 'phuyu',
-// 	'password' => 'sistemas*2025',
-// 	'database' => 'laezquina',
-// 	'dbdriver' => 'postgre',
-// 	'dbprefix' => '',
-// 	'pconnect' => FALSE,
-// 	'db_debug' => (ENVIRONMENT !== 'production'),
-// 	'cache_on' => FALSE,
-// 	'cachedir' => '',
-// 	'char_set' => 'utf8',
-// 	'dbcollat' => 'utf8_general_ci',
-// 	'swap_pre' => '',
-// 	'encrypt' => FALSE,
-// 	'compress' => FALSE,
-// 	'stricton' => FALSE,
-// 	'failover' => array(),
-// 	'save_queries' => TRUE
-// );

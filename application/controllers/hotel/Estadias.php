@@ -310,8 +310,46 @@ class Estadias extends CI_Controller {
 				if ((int)($info["estadia"]["codreserva"] ?? 0) > 0) {
 					$this->phuyu_model->phuyu_editar("hotel.reservas", ["situacion"], [4], "codreserva", (int)$info["estadia"]["codreserva"]);
 				}
+				$destinoHabitacion = (int)($this->request->destino_habitacion ?? 4);
+				$checklistLimpieza = json_encode([
+					"Cambio de sabanas",
+					"Cambio de toallas",
+					"Limpieza de bano",
+					"Limpieza de ducha",
+					"Barrido/trapeado de piso",
+					"Reposicion de papel higienico",
+					"Reposicion de jabon/shampoo",
+					"Retiro de basura",
+					"Desinfeccion general"
+				]);
 				foreach ($info["habitaciones"] as $habitacion) {
-					$this->phuyu_model->phuyu_editar("hotel.habitaciones", ["situacion"], [(int)($this->request->destino_habitacion ?? 4)], "codhabitacion", (int)$habitacion["codhabitacion"]);
+					$codhabitacion = (int)$habitacion["codhabitacion"];
+					$this->phuyu_model->phuyu_editar("hotel.habitaciones", ["situacion"], [$destinoHabitacion], "codhabitacion", $codhabitacion);
+					if ($destinoHabitacion === 4) {
+						$ordenActiva = $this->db->query(
+							"select codlimpieza
+							from hotel.limpieza_habitaciones
+							where codhabitacion=? and estado=1 and coalesce(estado_orden,1) in (1,2)
+							order by codlimpieza desc
+							limit 1",
+							[$codhabitacion]
+						)->row_array();
+						if (empty($ordenActiva)) {
+							$this->phuyu_model->phuyu_guardar(
+								"hotel.limpieza_habitaciones",
+								["codhabitacion","codusuario","codresponsable","observacion","tipo_limpieza","checklist","estado_orden"],
+								[
+									$codhabitacion,
+									(int)$_SESSION["phuyu_codusuario"],
+									0,
+									"Limpieza normal generada por check-out de estadia ".(int)$info["estadia"]["codestadia"],
+									"normal",
+									$checklistLimpieza,
+									1
+								]
+							);
+						}
+					}
 				}
 				if ($this->db->trans_status() === FALSE || $estado != 1) {
 					$this->db->trans_rollback();

@@ -126,11 +126,8 @@ var phuyu_datos = new Vue({
 				if (data.body=="e") {
 					phuyu_sistema.phuyu_alerta("SESION DEL USUARIO TERMINADA","DEBE INICIAR SESION NUEVAMENTE","error");
 				}else{
-					if (data.body.estado==1) {
-						phuyu_sistema.phuyu_noti("ATENCION USUARIO:",data.body.mensaje,"success");
-					}else{
-						phuyu_sistema.phuyu_noti("ATENCION USUARIO:",data.body.mensaje,"error");
-					}
+					var alerta = (data.body.estado==1) ? "success" : "error";
+					phuyu_sistema.phuyu_noti("ATENCION USUARIO:",data.body.mensaje,alerta);
 					phuyu_sistema.phuyu_fin(); this.phuyu_resumenes();
 				}
 			}, function(){
@@ -145,7 +142,7 @@ var phuyu_datos = new Vue({
 				if (data.body=="e") {
 					phuyu_sistema.phuyu_alerta("SESION DEL USUARIO TERMINADA","DEBE INICIAR SESION NUEVAMENTE","error");
 				}else{
-					var alerta = (data.body.estado==1 || data.body.estado==2) ? "success" : "error";
+					var alerta = (data.body.estado==1) ? "success" : "error";
 					phuyu_sistema.phuyu_noti("ATENCION USUARIO:",data.body.mensaje,alerta); 
 					$("#"+periodo).removeAttr("disabled"); phuyu_sistema.phuyu_fin(); this.phuyu_resumenes();
 				}

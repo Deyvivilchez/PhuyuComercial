@@ -23,8 +23,27 @@ class Programacionsunat extends Sunat {
 			"sucursales" => $this->Programacion_sunat_model->sucursales(),
 			"configuraciones" => $this->Programacion_sunat_model->configuraciones(),
 			"historial" => $this->Programacion_sunat_model->historial(),
-			"cola" => $this->Programacion_sunat_model->cola()
+			"cola" => $this->Programacion_sunat_model->cola(),
+			"cron" => $this->cron_base_estado()
 		]);
+	}
+
+	public function cron_base(){
+		if (!$this->input->is_ajax_request() || !isset($_SESSION["phuyu_codusuario"])) {
+			$this->salida_json(["estado" => 0, "mensaje" => "Sesion no valida"]);
+			return;
+		}
+
+		$this->salida_json($this->cron_base_estado());
+	}
+
+	public function crear_cron_base(){
+		if (!$this->input->is_ajax_request() || !isset($_SESSION["phuyu_codusuario"])) {
+			$this->salida_json(["estado" => 0, "mensaje" => "Sesion no valida"]);
+			return;
+		}
+
+		$this->salida_json($this->guardar_cron_base());
 	}
 
 	public function guardar(){
@@ -92,6 +111,124 @@ class Programacionsunat extends Sunat {
 			return;
 		}
 		$this->salida_json(["estado" => 1, "resultados" => $resultados]);
+	}
+
+	private function cron_base_estado(){
+		try {
+			$info = $this->cron_base_info();
+			$archivo_detectado = $this->cron_base_buscar_archivo($info);
+			$existe = $archivo_detectado !== "";
+			if ($existe) {
+				$info["archivo"] = $archivo_detectado;
+			}
+
+			return [
+				"estado" => 1,
+				"existe" => $existe ? 1 : 0,
+				"mensaje" => $existe ? "Cron base encontrado" : "Cron base no encontrado",
+				"proyecto" => $info["proyecto"],
+				"ruta" => $info["ruta"],
+				"archivo" => $info["archivo"],
+				"comando" => $info["comando"]
+			];
+		} catch (Throwable $e) {
+			return ["estado" => 0, "existe" => 0, "mensaje" => $e->getMessage()];
+		}
+	}
+
+	private function guardar_cron_base(){
+		try {
+			$info = $this->cron_base_info();
+			$archivo_detectado = $this->cron_base_buscar_archivo($info);
+			if ($archivo_detectado !== "") {
+				$info["archivo"] = $archivo_detectado;
+			}
+			$contenido = "# Cron base para Programacion de envios CPE / SUNAT\n";
+			$contenido .= "# Proyecto: ".$info["proyecto"]."\n";
+			$contenido .= "# Ejecuta cada minuto el despachador interno de tareas programadas.\n";
+			$contenido .= $info["comando"]."\n";
+
+			if (file_put_contents($info["archivo"], $contenido, LOCK_EX) === false || !chmod($info["archivo"], 0644)) {
+				$this->cron_base_instalar_con_sudo($info["proyecto"]);
+			}
+
+			$respuesta = $this->cron_base_estado();
+			$respuesta["mensaje"] = "Cron base creado o actualizado correctamente";
+			return $respuesta;
+		} catch (Throwable $e) {
+			return ["estado" => 0, "existe" => 0, "mensaje" => $e->getMessage()];
+		}
+	}
+
+	private function cron_base_info(){
+		$ruta = realpath(FCPATH);
+		if ($ruta === false || !is_file($ruta.DIRECTORY_SEPARATOR."index.php")) {
+			throw new Exception("No se pudo detectar la ruta real del index.php del proyecto.");
+		}
+
+		$ruta = rtrim($ruta, DIRECTORY_SEPARATOR);
+		$proyecto = strtolower(basename($ruta));
+		if ($proyecto === "" || !preg_match('/^[a-z0-9.-]+$/', $proyecto)) {
+			throw new Exception("No se pudo detectar un nombre de proyecto valido.");
+		}
+
+		$nombre_archivo = preg_replace('/[^a-z0-9_-]+/', '-', $proyecto);
+		$archivo = "/etc/cron.d/phuyu-".$nombre_archivo."-programacion-sunat";
+		$comando = "* * * * * www-data cd ".$ruta." && /usr/bin/php7.4 index.php facturacion/programacionsunat/cron >/dev/null 2>&1";
+
+		return [
+			"proyecto" => $proyecto,
+			"ruta" => $ruta,
+			"archivo" => $archivo,
+			"comando" => $comando
+		];
+	}
+
+	private function cron_base_buscar_archivo($info){
+		if (file_exists($info["archivo"])) {
+			return $info["archivo"];
+		}
+
+		$archivos = glob("/etc/cron.d/*");
+		if (!is_array($archivos)) {
+			return "";
+		}
+
+		foreach ($archivos as $archivo) {
+			if (!is_readable($archivo) || is_dir($archivo)) {
+				continue;
+			}
+
+			$contenido = file_get_contents($archivo);
+			if ($contenido !== false && strpos($contenido, $info["ruta"]) !== false && strpos($contenido, "facturacion/programacionsunat/cron") !== false) {
+				return $archivo;
+			}
+		}
+
+		return "";
+	}
+
+	private function cron_base_instalar_con_sudo($proyecto){
+		if (!function_exists("exec")) {
+			throw new Exception("No se pudo escribir el cron base y exec() no esta disponible para usar el instalador seguro.");
+		}
+
+		if (!preg_match('/^[a-z0-9.-]+$/', $proyecto)) {
+			throw new Exception("Nombre de proyecto no permitido para instalar cron.");
+		}
+
+		$instalador = "/usr/local/sbin/phuyu-cron-sunat-installer";
+		if (!is_executable($instalador)) {
+			throw new Exception("No se pudo escribir el cron base. Falta instalar el helper seguro: ".$instalador);
+		}
+
+		$salida = [];
+		$codigo = 1;
+		exec("/usr/bin/sudo -n ".escapeshellarg($instalador)." ".escapeshellarg($proyecto)." 2>&1", $salida, $codigo);
+
+		if ($codigo !== 0) {
+			throw new Exception("No se pudo instalar el cron base: ".implode(" ", $salida));
+		}
 	}
 
 	private function ejecutar_programacion($programacion, $origen){
@@ -339,6 +476,7 @@ class Programacionsunat extends Sunat {
 				from kardex.kardex kardex
 				inner join sunat.kardexsunat kardexs on kardex.codkardex=kardexs.codkardex
 				where kardexs.fechacreado<=? and kardex.codmovimientotipo=20 and kardex.codcomprobantetipo=12
+					and upper(kardex.seriecomprobante) like 'B%'
 					and kardex.codkardex not in (select codkardex from sunat.kardexsunatdetalle where fecharesumen<=?)
 					".$sucursal,
 				[$fecha, $fecha]
@@ -379,6 +517,7 @@ class Programacionsunat extends Sunat {
 				from kardex.kardex kardex
 				inner join sunat.kardexsunat kardexs on kardex.codkardex=kardexs.codkardex
 				where kardex.fechacomprobante=? and kardex.codmovimientotipo=20 and kardex.codcomprobantetipo=12
+					and upper(kardex.seriecomprobante) like 'B%'
 					and kardex.codkardex not in (select codkardex from sunat.kardexsunatdetalle where fecharesumen<=?)
 					".$sucursal,
 				[$fecharesumen, $fecha]

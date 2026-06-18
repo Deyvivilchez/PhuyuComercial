@@ -1,29 +1,29 @@
 <style>
+	#phuyu_operacion.phuyu-almacen-movimiento {
+		color: #444;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu_body {
+		padding: 32px 20px;
+	}
+
 	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-mov-card {
-		border: 1px solid rgba(64, 81, 137, .10);
-		border-radius: .9rem;
-		box-shadow: 0 10px 28px rgba(15, 23, 42, .06);
+		background: #fff;
+		border: 1px solid #dedede;
+		border-radius: 14px;
+		box-shadow: 0 8px 22px rgba(33, 37, 41, .05);
 	}
 
 	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-form-header {
-		display: flex;
-		align-items: center;
-		gap: .75rem;
-		padding-bottom: 1rem;
-		margin-bottom: 1rem;
-		border-bottom: 1px solid rgba(64, 81, 137, .10);
+		margin-bottom: 18px;
 	}
 
-	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-form-icon {
-		width: 44px;
-		height: 44px;
-		border-radius: 12px;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		background: rgba(10, 179, 156, .12);
-		color: #0ab39c;
-		font-size: 1.35rem;
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-form-header h5 {
+		color: #4a4a4a;
+		font-size: 15px;
+		font-weight: 800;
+		letter-spacing: .01em;
+		text-transform: uppercase;
 	}
 
 	#phuyu_operacion.phuyu-almacen-movimiento label,
@@ -31,23 +31,146 @@
 		font-size: .74rem;
 		font-weight: 800;
 		text-transform: uppercase;
-		letter-spacing: .03em;
-		color: #495057;
-		margin-bottom: .4rem;
+		letter-spacing: .01em;
+		color: #4f4f4f;
+		margin-bottom: 5px;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-main-grid,
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-ref-grid {
+		display: grid;
+		gap: 10px 22px;
+		margin-left: 0;
+		margin-right: 0;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-main-grid {
+		grid-template-columns: minmax(0, 2.4fr) minmax(0, 2.4fr) minmax(0, 1.55fr) minmax(0, .75fr) minmax(0, .75fr) minmax(0, 1.55fr);
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-ref-grid {
+		grid-template-columns: minmax(0, 2.4fr) minmax(0, .75fr) minmax(0, 1.55fr) minmax(0, 3.25fr) minmax(0, 1.35fr);
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-main-grid > [class*="col-"],
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-ref-grid > [class*="col-"] {
+		max-width: none;
+		min-width: 0;
+		padding-left: 0;
+		padding-right: 0;
+		width: auto;
 	}
 
 	#phuyu_operacion.phuyu-almacen-movimiento .form-control,
 	#phuyu_operacion.phuyu-almacen-movimiento .form-select,
 	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-input,
 	#phuyu_operacion.phuyu-almacen-movimiento .select2-container .select2-selection {
-		min-height: 40px;
-		border-color: rgba(64, 81, 137, .16);
-		border-radius: .375rem;
+		min-height: 36px;
+		border-color: #cfcfcf;
+		border-radius: 9px;
+		box-shadow: none;
+		color: #4a4a4a;
+		font-size: 12px;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .form-control:focus,
+	#phuyu_operacion.phuyu-almacen-movimiento .form-select:focus,
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-input:focus {
+		border-color: #2fa84f;
+		box-shadow: 0 0 0 .14rem rgba(47, 168, 79, .12);
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .form-control[readonly],
+	#phuyu_operacion.phuyu-almacen-movimiento .form-select[readonly] {
+		background: #eeeeee;
+		color: #444;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-quick-product {
+		background: #f7f9fc;
+		border: 1px solid #dde5ef;
+		border-radius: 10px;
+		margin: 10px 0 8px;
+		padding: 10px 12px 14px;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-product-select2.select2-container {
+		width: 100% !important;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-product-select2 .select2-selection--single {
+		align-items: center !important;
+		background: #fbfcfe !important;
+		border: 1px solid #cfd8e3 !important;
+		border-radius: 9px !important;
+		display: flex !important;
+		min-height: 36px !important;
+		transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-product-select2.select2-container--open .select2-selection--single,
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-product-select2.select2-container--focus .select2-selection--single {
+		background: #fff !important;
+		border-color: #2fa84f !important;
+		box-shadow: 0 0 0 .14rem rgba(47, 168, 79, .12) !important;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-product-select2 .select2-selection__rendered {
+		color: #4a4a4a !important;
+		font-size: 12px !important;
+		line-height: 36px !important;
+		padding-left: .75rem !important;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-product-select2 .select2-selection__arrow {
+		height: 36px !important;
+	}
+
+	#phuyu_operacion .select2-dropdown {
+		border-color: #cfd8e3;
+		border-radius: 10px;
+		box-shadow: 0 14px 32px rgba(33, 37, 41, .12);
+		overflow: hidden;
+	}
+
+	#phuyu_operacion .select2-results__option {
+		padding: 7px 9px;
+	}
+
+	#phuyu_operacion .select2-results__option--highlighted[aria-selected] {
+		background: #eefaf1;
+		color: #245b2d;
+	}
+
+	.phuyu-product-result {
+		align-items: center;
+		display: flex;
+		justify-content: space-between;
+		gap: 10px;
+	}
+
+	.phuyu-product-result-name {
+		color: #333;
+		font-size: 12.5px;
+		font-weight: 800;
+	}
+
+	.phuyu-product-result-meta {
+		color: #777;
+		font-size: 11px;
+	}
+
+	.phuyu-product-result-price {
+		color: #2f8f3b;
+		font-size: 12px;
+		font-weight: 900;
+		white-space: nowrap;
 	}
 
 	#phuyu_operacion.phuyu-almacen-movimiento .table-responsive {
-		border: 1px solid rgba(64, 81, 137, .10);
-		border-radius: .75rem;
+		background: #fff;
+		border: 0;
+		border-radius: 0;
 		overflow: auto;
 	}
 
@@ -57,20 +180,51 @@
 
 	#phuyu_operacion.phuyu-almacen-movimiento .table thead th {
 		background: #f8fafc;
-		color: #495057;
-		font-size: .74rem;
+		color: #444;
+		font-size: 11px;
 		font-weight: 800;
 		text-transform: uppercase;
 		white-space: nowrap;
-		border-bottom: 1px solid rgba(64, 81, 137, .12);
-		padding: .65rem;
+		border: 1px solid #cfd6dd;
+		padding: 6px;
 	}
 
 	#phuyu_operacion.phuyu-almacen-movimiento .table tbody td,
 	#phuyu_operacion.phuyu-almacen-movimiento .table tfoot td {
-		font-size: .86rem;
+		border: 1px solid #cfd6dd;
+		font-size: 12px;
 		vertical-align: middle;
-		padding: .55rem;
+		padding: 6px;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .table tbody tr:hover {
+		background: #f8fbff;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-products-table {
+		margin-top: 8px;
+		min-height: 66px;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-products-table .form-control,
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-products-table .form-select {
+		min-height: 32px;
+		font-size: 12px;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-total-label {
+		background: #fff;
+		color: #4f4f4f;
+		font-weight: 800;
+		text-align: right;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-total-amount {
+		background: #fff;
+		color: #f00;
+		font-size: 14px !important;
+		font-weight: 900;
+		text-align: right;
 	}
 
 	#phuyu_operacion.phuyu-almacen-movimiento .btn-block {
@@ -83,13 +237,63 @@
 		--vz-btn-font-size: .75rem;
 	}
 
+	#phuyu_operacion.phuyu-almacen-movimiento .btn {
+		border-radius: 9px;
+		font-weight: 700;
+		min-height: 36px;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-product-button {
+		background: #3c9c35;
+		border-color: #3c9c35;
+		min-height: 36px;
+	}
+
 	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-form-actions {
 		display: flex;
 		justify-content: flex-end;
-		gap: .65rem;
-		padding-top: 1rem;
-		margin-top: 1rem;
-		border-top: 1px solid rgba(64, 81, 137, .10);
+		gap: 4px;
+		margin-top: 46px;
+		padding-top: 0;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-form-actions .btn-primary {
+		background: #23a8df;
+		border-color: #23a8df;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-form-actions .btn-light {
+		background: #d32133;
+		border-color: #d32133;
+		color: #fff;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .modal-content {
+		border: 0;
+		border-radius: 10px;
+		box-shadow: 0 18px 45px rgba(15, 23, 42, .16);
+		overflow: hidden;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .modal-header {
+		background: linear-gradient(135deg, #0ab39c, #299cdb) !important;
+		border-bottom: 0 !important;
+	}
+
+	@media (max-width: 767.98px) {
+		#phuyu_operacion.phuyu-almacen-movimiento .phuyu-main-grid,
+		#phuyu_operacion.phuyu-almacen-movimiento .phuyu-ref-grid {
+			grid-template-columns: 1fr;
+		}
+
+		#phuyu_operacion.phuyu-almacen-movimiento .phuyu-form-actions {
+			flex-direction: column-reverse;
+			margin-top: 18px;
+		}
+
+		#phuyu_operacion.phuyu-almacen-movimiento .phuyu-form-actions .btn {
+			width: 100%;
+		}
 	}
 </style>
 <div id="phuyu_operacion" class="phuyu-almacen-movimiento">
@@ -100,13 +304,9 @@
             <div class="card phuyu-mov-card">
 				<div class="card-body">
 					<div class="phuyu-form-header">
-						<div class="phuyu-form-icon"><i class="bi bi-box-arrow-in-down"></i></div>
-						<div>
-							<div class="text-muted small text-uppercase fw-semibold">Almacen</div>
-							<h5 class="mb-0 fw-bold">Registro nuevo ingreso almacen</h5>
-						</div>
+						<h5 class="mb-0">Registro nuevo ingreso almacen</h5>
 					</div>
-		        	<div class="row mb-2">
+		        	<div class="phuyu-main-grid mb-2">
 		        		<div class="col-md-3">
 		        			<div class="w-100">
 						    	<label>PERSONA RESPONSABLE</label>
@@ -161,7 +361,8 @@
 					    	<input type="date" class="form-control" name="fechakardex" id="fechakardex" value="<?php echo date('Y-m-d');?>" autocomplete="off" required>
 					    </div>
 					</div>
-					<div class="row mb-2" v-if="campos.codmovimientotipo==11">
+					<div v-if="campos.codmovimientotipo==11">
+					<div class="row g-3">
 						<div class="col-md-4"><h5>LISTA DE PRESTAMOS OTORGADOS DEL CLIENTE <b class="text-danger">{{campos.cliente}}</b></h5></div>
 						<div class="col-md-8">	
 							<div class="row form-group table-responsive scroll-phuyu-view" style="height:calc(100vh - 550px);padding:0px; overflow:auto;">
@@ -201,7 +402,8 @@
 							</div>
 						</div>
 					</div>
-				    <div class="row mb-2">
+					</div>
+				    <div class="phuyu-ref-grid mb-2">
 				    	<div class="col-md-3 col-xs-12">
 					    	<label>COMPROBANTE REFERENCIA</label>
 					    	<select class="form-select" name="codcomprobantetipo_ref" v-model="campos.codcomprobantetipo_ref">
@@ -227,13 +429,17 @@
 					    	<input class="form-control" name="descripcion" v-model="campos.descripcion" required autocomplete="off">
 					    </div>
 						    <div class="col-md-2 d-flex align-items-end">
-								<button type="button" class="btn btn-success w-100" v-on:click="phuyu_item()">
+								<button type="button" class="btn btn-success w-100 phuyu-product-button" v-on:click="phuyu_item()">
 								<i class="bi bi-search me-1"></i> Productos
 							</button>
 					    </div>
 				    </div>
-				    <div class="row form-group table-responsive">
-						<table class="table table-bordered table-striped" style="font-size: 11px">
+					<div class="phuyu-quick-product">
+						<label>BUSCAR PRODUCTO DIRECTO</label>
+						<select id="producto_rapido_select" class="form-select" style="width: 100%;"></select>
+					</div>
+				    <div class="table-responsive phuyu-products-table">
+						<table class="table table-hover align-middle" style="font-size: 11px">
 							<thead>
 								<tr><th width="7%">-</th>
 									<th width="55%">PRODUCTO</th>
@@ -290,8 +496,8 @@
 							</tbody>
 							<tfoot>
 								<tr>
-									<td colspan="4" style="font-size: 14px;" align="right"><b>Total Ingreso</b></td>
-									<td align="right" style="font-size: 14px;color:red"><b>S/. {{totales.importe}}</b></td>
+									<td colspan="5" class="phuyu-total-label">Total Ingreso</td>
+									<td class="phuyu-total-amount">S/. {{totales.importe}}</td>
 									<td></td>
 								</tr>
 							</tfoot>
@@ -405,7 +611,7 @@
 
 </div>
 
-<script src="<?php echo base_url();?>phuyu/phuyu_almacen/nuevoingreso.js"> </script>
+<script src="<?php echo base_url();?>phuyu/phuyu_almacen/nuevoingreso.js?v=<?php echo filemtime(FCPATH . 'phuyu/phuyu_almacen/nuevoingreso.js'); ?>"> </script>
 <script src="<?php echo base_url();?>phuyu/phuyu_personas_2.js"> </script>
 <script>
 	if (typeof AcornIcons !== 'undefined') {

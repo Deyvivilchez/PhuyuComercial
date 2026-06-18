@@ -1,21 +1,12 @@
-# IGNORAMOS LOS CAMBIOS A LA CARPETA DE FACTURACION ELECTRONICA SUNAT #
-# /sunat
+# Ignorar la carpeta de facturación electrónica SUNAT por completo
+/sunat/
+
+# Logos e imágenes propias de cada cliente/empresa
+/public/img/empresa/
+
 # Archivos de configuración sensibles
 /application/config/config.php
 /application/config/database.php
-/sunat/certificados/
-/sunat/comprobantes/
-/sunat/resumenes/
-/sunat/webphuyu/
-
-# O si quieres ser más específico:
-/sunat/*
-/sunat/certificados/
-/sunat/comprobantes/
-/sunat/log/
-/sunat/resumenes/
-/sunat/webphuyu/
-/sunat/xml/
 
 # Otros archivos sensibles comunes
 .env
@@ -23,11 +14,7 @@
 *.pem
 *.crt
 
-
-
 # CodeIgniter
 /application/logs/
 /application/cache/
-/application/config/database.php
-/application/config/config.php
-/vendor/*
+# /vendor/*

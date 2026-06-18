@@ -133,6 +133,40 @@
 			<div class="col-12 col-xl-7">
 				<div class="card phuyu-card mb-3">
 					<div class="card-header d-flex justify-content-between align-items-center">
+						<h5 class="card-title mb-0">Cron base SUNAT</h5>
+						<button type="button" class="btn btn-sm btn-light" v-on:click="verificarCron">
+							<i class="ri-refresh-line"></i>
+						</button>
+					</div>
+					<div class="card-body">
+						<div class="d-flex flex-column flex-md-row justify-content-between gap-3">
+							<div>
+								<span class="badge" v-bind:class="cron.existe == 1 ? 'bg-success' : 'bg-warning text-dark'">
+									{{cron.mensaje || 'Verificando cron base...'}}
+								</span>
+								<div class="mt-2 small text-muted" v-if="cron.proyecto">
+									<div><b>Proyecto:</b> {{cron.proyecto}}</div>
+									<div><b>Ruta:</b> {{cron.ruta}}</div>
+									<div><b>Archivo:</b> {{cron.archivo}}</div>
+								</div>
+								<div class="mt-2 small text-muted" v-if="cron.comando">
+									<b>Comando:</b> {{cron.comando}}
+								</div>
+							</div>
+							<div class="d-flex align-items-start gap-2">
+								<button type="button" class="btn btn-primary" v-if="cron.existe != 1" v-on:click="crearCron">
+									<i class="ri-add-line"></i> Crear cron base
+								</button>
+								<button type="button" class="btn btn-outline-primary" v-if="cron.existe == 1" v-on:click="crearCron">
+									<i class="ri-loop-right-line"></i> Recrear cron base
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="card phuyu-card mb-3">
+					<div class="card-header d-flex justify-content-between align-items-center">
 						<h5 class="card-title mb-0">Programaciones</h5>
 						<button type="button" class="btn btn-sm btn-light" v-on:click="cargar">
 							<i class="ri-refresh-line"></i>

@@ -271,7 +271,7 @@ class Programacion_sunat_model extends CI_Model {
 	public function marcar_resultado_cola($cola, $respuesta, $max_intentos){
 		$estado_respuesta = isset($respuesta["estado"]) ? (int)$respuesta["estado"] : 0;
 		$intentos = (int)$cola["intentos"] + 1;
-		$aceptado = in_array($estado_respuesta, [1, 2], true);
+		$aceptado = ($estado_respuesta === 1);
 		$estado = $aceptado ? "enviado" : ($intentos >= (int)$max_intentos ? "error" : "pendiente");
 		$siguiente = $aceptado ? null : date("Y-m-d H:i:s", strtotime("+10 minutes"));
 
