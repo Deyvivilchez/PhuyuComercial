@@ -220,13 +220,29 @@
 
 				<div class="card phuyu-card">
 					<div class="card-header">
-						<ul class="nav nav-tabs card-header-tabs">
-							<li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#historial" type="button">Historial</button></li>
-							<li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#cola" type="button">Cola</button></li>
-						</ul>
+						<div class="d-flex flex-column flex-md-row justify-content-between gap-2">
+							<ul class="nav nav-tabs card-header-tabs">
+								<li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#historial" type="button">Historial</button></li>
+								<li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#cola" type="button">Cola</button></li>
+							</ul>
+							<button type="button" class="btn btn-sm btn-outline-danger" v-on:click="limpiarHistorial">
+								<i class="ri-delete-bin-6-line"></i> Limpiar historial
+							</button>
+						</div>
 					</div>
 					<div class="card-body tab-content table-responsive">
 						<div class="tab-pane fade show active" id="historial">
+							<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-2">
+								<span class="text-muted small">{{paginacionTexto(historial_paginacion)}}</span>
+								<div class="btn-group btn-group-sm">
+									<button type="button" class="btn btn-light" v-on:click="cambiarPagina('historial', -1)" v-bind:disabled="historial_paginacion.offset <= 0">
+										<i class="ri-arrow-left-s-line"></i> Anterior
+									</button>
+									<button type="button" class="btn btn-light" v-on:click="cambiarPagina('historial', 1)" v-bind:disabled="historial_paginacion.offset + historial_paginacion.limite >= historial_paginacion.total">
+										Siguiente <i class="ri-arrow-right-s-line"></i>
+									</button>
+								</div>
+							</div>
 							<table class="table table-sm table-bordered">
 								<thead><tr><th>Inicio</th><th>Programacion</th><th>Estado</th><th>Procesados</th><th>Respuesta</th></tr></thead>
 								<tbody>
@@ -241,6 +257,17 @@
 							</table>
 						</div>
 						<div class="tab-pane fade" id="cola">
+							<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-2">
+								<span class="text-muted small">{{paginacionTexto(cola_paginacion)}}</span>
+								<div class="btn-group btn-group-sm">
+									<button type="button" class="btn btn-light" v-on:click="cambiarPagina('cola', -1)" v-bind:disabled="cola_paginacion.offset <= 0">
+										<i class="ri-arrow-left-s-line"></i> Anterior
+									</button>
+									<button type="button" class="btn btn-light" v-on:click="cambiarPagina('cola', 1)" v-bind:disabled="cola_paginacion.offset + cola_paginacion.limite >= cola_paginacion.total">
+										Siguiente <i class="ri-arrow-right-s-line"></i>
+									</button>
+								</div>
+							</div>
 							<table class="table table-sm table-bordered">
 								<thead><tr><th>Tipo</th><th>Referencia</th><th>Estado</th><th>Intentos</th><th>Mensaje</th></tr></thead>
 								<tbody>
