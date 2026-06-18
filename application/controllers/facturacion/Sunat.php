@@ -238,6 +238,7 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
         if ($result["error"] == "si") {
             $estado = 0;
             $mensaje = $result["mensaje"];
+            $respuesta_sunat = isset($result["respuesta"]) ? $result["respuesta"] : "";
         } else {
             // 3: DESCARGAMOS EL ARCHIVO RESPUESTA DE SUNAT //
             $archivoresponse = fopen($carpeta_phuyu."/R-".$archivo_phuyu.".xml", "w+");
@@ -549,6 +550,9 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
 
     $data["estado"] = $estado;
     $data["mensaje"] = $mensaje;
+    if (isset($respuesta_sunat) && $respuesta_sunat !== "") {
+        $data["respuesta"] = $respuesta_sunat;
+    }
     return $data;
 }
 
@@ -1032,7 +1036,7 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
         }catch(Exception $e){
             $respuesta = isset($client) ? trim((string)$client->__getLastResponse()) : "";
             $mensaje = $this->phuyu_normalizar_error_sunat($e->getMessage(), $respuesta, $callFunction);
-            return array("error" => "si", "mensaje" => $mensaje);
+            return array("error" => "si", "mensaje" => $mensaje, "respuesta" => $respuesta);
         }
     }
 

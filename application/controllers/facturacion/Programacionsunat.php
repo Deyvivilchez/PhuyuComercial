@@ -591,7 +591,8 @@ class Programacionsunat extends Sunat {
 
 		$credenciales = [$_SESSION["phuyu_ruc"], $empresa[0]["usuariosol"], $empresa[0]["clavesol"], $codresumentipo, $periodo, $nrocorrelativo, (int)$codempresa];
 		if ($resumen[0]["ticket"] != "") {
-			return Sunat::phuyu_consultarTICKET($resumen[0]["nombre_xml"], $resumen[0]["ticket"], $credenciales);
+			$respuesta_ticket = Sunat::phuyu_consultarTICKET($resumen[0]["nombre_xml"], $resumen[0]["ticket"], $credenciales);
+			return $this->normalizar_resumen_ya_presentado($respuesta_ticket, $codresumentipo, $periodo, $nrocorrelativo, (int)$codempresa);
 		}
 
 		$estado = $codresumentipo == 1
@@ -607,6 +608,20 @@ class Programacionsunat extends Sunat {
 		}
 		$respuesta = Sunat::phuyu_enviarSUNAT("sendSummary", $estado["carpeta_phuyu"], $estado["archivo_phuyu"], $credenciales);
 		if ((int)$respuesta["estado"] === 0) {
+			$respuesta_texto = (isset($respuesta["respuesta"]) ? (string)$respuesta["respuesta"] : "")." ".(isset($respuesta["mensaje"]) ? (string)$respuesta["mensaje"] : "");
+			$ticket_recuperado = "";
+			if (preg_match('/ticket:\s*([0-9]+)/i', $respuesta_texto, $m)) {
+				$ticket_recuperado = $m[1];
+				$this->db->where("codresumentipo", $codresumentipo);
+				$this->db->where("periodo", $periodo);
+				$this->db->where("nrocorrelativo", $nrocorrelativo);
+				$this->db->where("codempresa", (int)$codempresa);
+				$this->db->update("sunat.resumenes", [
+					"fechaenvio" => date("Y-m-d"),
+					"ticket" => $ticket_recuperado
+				]);
+			}
+
 			$resumen_actualizado = $this->db->query(
 				"select nombre_xml, ticket, codigorespuesta, descripcion_cdr
 				from sunat.resumenes
@@ -617,11 +632,38 @@ class Programacionsunat extends Sunat {
 			$descripcion = isset($resumen_actualizado["descripcion_cdr"]) ? (string)$resumen_actualizado["descripcion_cdr"] : "";
 			$ya_enviado = isset($resumen_actualizado["codigorespuesta"]) && (string)$resumen_actualizado["codigorespuesta"] === "2223";
 			$ya_enviado = $ya_enviado || stripos($descripcion, "ya fue enviado") !== false || stripos($descripcion, "presentado anteriormente") !== false;
+			$ya_enviado = $ya_enviado || stripos($respuesta_texto, "ya fue enviado") !== false || stripos($respuesta_texto, "presentado anteriormente") !== false;
 			if (!empty($resumen_actualizado["ticket"]) && $ya_enviado) {
-				return Sunat::phuyu_consultarTICKET($resumen_actualizado["nombre_xml"], $resumen_actualizado["ticket"], $credenciales);
+				$respuesta_ticket = Sunat::phuyu_consultarTICKET($resumen_actualizado["nombre_xml"], $resumen_actualizado["ticket"], $credenciales);
+				return $this->normalizar_resumen_ya_presentado($respuesta_ticket, $codresumentipo, $periodo, $nrocorrelativo, (int)$codempresa);
 			}
 		}
 		return $respuesta;
+	}
+
+	private function normalizar_resumen_ya_presentado($respuesta, $codresumentipo, $periodo, $nrocorrelativo, $codempresa){
+		if ((int)$respuesta["estado"] !== 3) {
+			return $respuesta;
+		}
+
+		$resumen = $this->db->query(
+			"select codigorespuesta, descripcion_cdr
+			from sunat.resumenes
+			where codresumentipo=? and periodo=? and nrocorrelativo=? and codempresa=?",
+			[(int)$codresumentipo, $periodo, (int)$nrocorrelativo, (int)$codempresa]
+		)->row_array();
+
+		$descripcion = isset($resumen["descripcion_cdr"]) ? (string)$resumen["descripcion_cdr"] : "";
+		$ya_presentado = isset($resumen["codigorespuesta"]) && (string)$resumen["codigorespuesta"] === "2223";
+		$ya_presentado = $ya_presentado || stripos($descripcion, "ya fue enviado") !== false || stripos($descripcion, "presentado anteriormente") !== false;
+		if (!$ya_presentado) {
+			return $respuesta;
+		}
+
+		return [
+			"estado" => 2,
+			"mensaje" => "Resumen ya presentado anteriormente en SUNAT. ".$descripcion
+		];
 	}
 
 	private function salida_json($data){
