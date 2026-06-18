@@ -303,17 +303,22 @@ class Programacionsunat extends Sunat {
 				$procesados++;
 
 				$ok = in_array((int)$respuesta["estado"], [1, 2], true);
-				if (!$ok) {
+				$mensaje_respuesta = isset($respuesta["mensaje"]) ? (string)$respuesta["mensaje"] : "Sin respuesta";
+				$mensaje_normalizado = strtolower($mensaje_respuesta);
+				$en_proceso_sunat = strpos($mensaje_normalizado, "no hay respuesta de la sunat") !== false
+					|| strpos($mensaje_normalizado, "0098") !== false
+					|| strpos($mensaje_normalizado, "en proceso") !== false;
+				if (!$ok && !$en_proceso_sunat) {
 					$errores++;
-					$ultimo_error = isset($respuesta["mensaje"]) ? (string)$respuesta["mensaje"] : "SUNAT no devolvio detalle del error";
+					$ultimo_error = $mensaje_respuesta;
 				} else {
 					$correctos++;
 				}
 
 				$this->Programacion_sunat_model->log(
 					$codejecucion,
-					$ok ? "info" : "error",
-					isset($respuesta["mensaje"]) ? $respuesta["mensaje"] : "Sin respuesta",
+					($ok || $en_proceso_sunat) ? "info" : "error",
+					$mensaje_respuesta,
 					$cola["tipo"].":".$cola["referencia"]
 				);
 			}
@@ -691,6 +696,9 @@ class Programacionsunat extends Sunat {
 		if (count($resumen) === 0) {
 			return ["estado" => 0, "mensaje" => "Resumen no encontrado"];
 		}
+		if ((int)$resumen[0]["estado"] === 1) {
+			return ["estado" => 1, "mensaje" => !empty($resumen[0]["descripcion_cdr"]) ? $resumen[0]["descripcion_cdr"] : "Resumen ya aceptado por SUNAT"];
+		}
 
 		$empresa = $this->db->query("select *from public.webservice where codempresa=?", [(int)$codempresa])->result_array();
 		if (count($empresa) === 0) {
@@ -698,6 +706,10 @@ class Programacionsunat extends Sunat {
 		}
 
 		$credenciales = [$_SESSION["phuyu_ruc"], $empresa[0]["usuariosol"], $empresa[0]["clavesol"], $codresumentipo, $periodo, $nrocorrelativo, (int)$codempresa];
+		$conciliado = $this->conciliar_resumen_desde_detalle($codresumentipo, $periodo, $nrocorrelativo, (int)$codempresa);
+		if ((int)$conciliado["estado"] === 1) {
+			return $conciliado;
+		}
 		if ($resumen[0]["ticket"] != "") {
 			return Sunat::phuyu_consultarTICKET($resumen[0]["nombre_xml"], $resumen[0]["ticket"], $credenciales);
 		}
@@ -742,12 +754,49 @@ class Programacionsunat extends Sunat {
 			$ya_enviado = $ya_enviado || stripos($respuesta_texto, "ya fue enviado") !== false || stripos($respuesta_texto, "presentado anteriormente") !== false;
 			if (!empty($resumen_actualizado["ticket"]) && $ya_enviado) {
 				return [
-					"estado" => 0,
+					"estado" => 2,
 					"mensaje" => "SUNAT indica que el resumen ya fue presentado. No se reenviara; revise o consulte el ticket original del resumen."
 				];
 			}
 		}
 		return $respuesta;
+	}
+
+	private function conciliar_resumen_desde_detalle($codresumentipo, $periodo, $nrocorrelativo, $codempresa){
+		if ((int)$codresumentipo !== 3) {
+			return ["estado" => 0, "mensaje" => ""];
+		}
+
+		$resumen_detalle = $this->db->query(
+			"select count(*) as total,
+				count(*) filter (where d.estado=1 and ks.estado=1 and ks.codigorespuesta='0') as aceptados,
+				min(coalesce(nullif(d.descripcion_cdr,''), nullif(ks.descripcion_cdr,''))) as descripcion
+			from sunat.kardexsunatdetalle d
+			inner join sunat.kardexsunat ks on ks.codkardex=d.codkardex
+			where d.codresumentipo=? and d.periodo=? and d.nrocorrelativo=? and d.codempresa=?",
+			[(int)$codresumentipo, $periodo, (int)$nrocorrelativo, (int)$codempresa]
+		)->row_array();
+
+		$total = isset($resumen_detalle["total"]) ? (int)$resumen_detalle["total"] : 0;
+		$aceptados = isset($resumen_detalle["aceptados"]) ? (int)$resumen_detalle["aceptados"] : 0;
+		if ($total === 0 || $total !== $aceptados) {
+			return ["estado" => 0, "mensaje" => ""];
+		}
+
+		$mensaje = !empty($resumen_detalle["descripcion"])
+			? (string)$resumen_detalle["descripcion"]
+			: "El Resumen numero ".$_SESSION["phuyu_ruc"]."-RC-".$periodo."-".$nrocorrelativo.", ha sido aceptada";
+		$this->db->where("codresumentipo", (int)$codresumentipo);
+		$this->db->where("periodo", $periodo);
+		$this->db->where("nrocorrelativo", (int)$nrocorrelativo);
+		$this->db->where("codempresa", (int)$codempresa);
+		$this->db->update("sunat.resumenes", [
+			"codigorespuesta" => "0",
+			"descripcion_cdr" => $mensaje,
+			"estado" => 1
+		]);
+
+		return ["estado" => 1, "mensaje" => $mensaje];
 	}
 
 	private function salida_json($data){

@@ -807,9 +807,13 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
             // 4: LEEMOS EL ARCHIVO XML //
             $xml = simplexml_load_file($carpeta_phuyu."/R-".$ticket.".xml"); 
             $response = "";
+            $status_code = "";
             if ($xml !== false) {
                 foreach ($xml->xpath('//content') as $item){
                     $response = (string)$item;
+                }
+                foreach ($xml->xpath('//statusCode') as $item){
+                    $status_code = trim((string)$item);
                 }
             }
 //print_r($response);exit;
@@ -849,7 +853,11 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
                 exit;*/
 
                 // 7: LEEMOS EL CDR Y ACTUALIZAMOS EN LA BASE DE DATOS EN RESUMENES //
-                $xml_respuesta = simplexml_load_file($carpeta_phuyu."/R-".$nombre_xml.'.xml');
+                $archivo_cdr = $carpeta_phuyu."/R-".$nombre_xml.'.xml';
+                if (!is_readable($archivo_cdr)) {
+                    return ["estado" => 0, "mensaje" => "SUNAT devolvio CDR, pero no se encontro el XML esperado: R-".$nombre_xml.".xml"];
+                }
+                $xml_respuesta = simplexml_load_file($archivo_cdr);
                 $responsecode_texto = "";
                 $description_texto = "";
                 if ($xml_respuesta !== false) {
@@ -936,7 +944,12 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
                 }
                 rmdir($carpeta_phuyu);
             }else{
-                $estado = 0; $mensaje = "NO HAY RESPUESTA DE LA SUNAT !!! INTENTALO MAS TARDE";
+                $estado = 0;
+                if ($status_code === "0098") {
+                    $mensaje = "Ticket ".$ticket." en proceso SUNAT (0098). Pendiente consultar CDR; no reenviar XML.";
+                } else {
+                    $mensaje = "NO HAY RESPUESTA DE LA SUNAT !!! INTENTALO MAS TARDE";
+                }
             }
         }
 

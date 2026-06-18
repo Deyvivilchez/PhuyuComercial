@@ -335,17 +335,36 @@ class Programacion_sunat_model extends CI_Model {
 
 	public function marcar_resultado_cola($cola, $respuesta, $max_intentos){
 		$estado_respuesta = isset($respuesta["estado"]) ? (int)$respuesta["estado"] : 0;
-		$intentos = (int)$cola["intentos"] + 1;
+		$mensaje = isset($respuesta["mensaje"]) ? (string)$respuesta["mensaje"] : "";
+		$mensaje_normalizado = strtolower($mensaje);
+		$en_proceso = strpos($mensaje_normalizado, "no hay respuesta de la sunat") !== false
+			|| strpos($mensaje_normalizado, "0098") !== false
+			|| strpos($mensaje_normalizado, "en proceso") !== false;
+		$ya_enviado = strpos($mensaje_normalizado, "ya fue enviado") !== false
+			|| strpos($mensaje_normalizado, "presentado anteriormente") !== false
+			|| strpos($mensaje_normalizado, "ya fue presentado") !== false;
+
 		$aceptado = in_array($estado_respuesta, [1, 2], true);
-		$estado = $aceptado ? "enviado" : ($intentos >= (int)$max_intentos ? "error" : "pendiente");
-		$siguiente = $aceptado ? null : date("Y-m-d H:i:s", strtotime("+10 minutes"));
+		if ($aceptado || $ya_enviado) {
+			$intentos = (int)$cola["intentos"] + 1;
+			$estado = "enviado";
+			$siguiente = null;
+		} elseif ($en_proceso) {
+			$intentos = (int)$cola["intentos"];
+			$estado = "pendiente";
+			$siguiente = date("Y-m-d H:i:s", strtotime("+15 minutes"));
+		} else {
+			$intentos = (int)$cola["intentos"] + 1;
+			$estado = $intentos >= (int)$max_intentos ? "error" : "pendiente";
+			$siguiente = date("Y-m-d H:i:s", strtotime("+10 minutes"));
+		}
 
 		$this->db->where("codcola", (int)$cola["codcola"]);
 		return $this->db->update("sunat.programacion_cpe_cola", [
 			"estado" => $estado,
 			"intentos" => $intentos,
 			"ultimo_estado_sunat" => $estado_respuesta,
-			"ultimo_mensaje" => isset($respuesta["mensaje"]) ? substr((string)$respuesta["mensaje"], 0, 1000) : "",
+			"ultimo_mensaje" => substr($mensaje, 0, 1000),
 			"siguiente_intento" => $siguiente,
 			"actualizado_en" => date("Y-m-d H:i:s")
 		]);
