@@ -239,7 +239,8 @@ class Programacionsunat extends Sunat {
 
 		try {
 			$this->encolar_pendientes($programacion, $codejecucion);
-			$pendientes = $this->Programacion_sunat_model->pendientes_cola($programacion, (int)$programacion["limite_por_ejecucion"]);
+			$forzar_reintento = $origen === "manual";
+			$pendientes = $this->Programacion_sunat_model->pendientes_cola($programacion, (int)$programacion["limite_por_ejecucion"], $forzar_reintento);
 
 			foreach ($pendientes as $cola) {
 				if (!$this->Programacion_sunat_model->marcar_procesando($cola["codcola"])) {
@@ -263,7 +264,9 @@ class Programacionsunat extends Sunat {
 				);
 			}
 
-			$mensaje = "Procesados: ".$procesados.". Errores: ".$errores;
+			$mensaje = $procesados > 0
+				? "Procesados: ".$procesados.". Errores: ".$errores
+				: "No hay pendientes disponibles para procesar";
 			$this->Programacion_sunat_model->finalizar_historial($codejecucion, [
 				"estado" => $errores > 0 ? "parcial" : "ok",
 				"cantidad_procesada" => $procesados,
@@ -602,7 +605,23 @@ class Programacionsunat extends Sunat {
 		if ($firma["estado"] != 1) {
 			return ["estado" => 0, "mensaje" => "No se puede firmar XML de resumen: ".$firma["mensaje"]];
 		}
-		return Sunat::phuyu_enviarSUNAT("sendSummary", $estado["carpeta_phuyu"], $estado["archivo_phuyu"], $credenciales);
+		$respuesta = Sunat::phuyu_enviarSUNAT("sendSummary", $estado["carpeta_phuyu"], $estado["archivo_phuyu"], $credenciales);
+		if ((int)$respuesta["estado"] === 0) {
+			$resumen_actualizado = $this->db->query(
+				"select nombre_xml, ticket, codigorespuesta, descripcion_cdr
+				from sunat.resumenes
+				where codresumentipo=? and periodo=? and nrocorrelativo=? and codempresa=?",
+				[$codresumentipo, $periodo, $nrocorrelativo, (int)$codempresa]
+			)->row_array();
+
+			$descripcion = isset($resumen_actualizado["descripcion_cdr"]) ? (string)$resumen_actualizado["descripcion_cdr"] : "";
+			$ya_enviado = isset($resumen_actualizado["codigorespuesta"]) && (string)$resumen_actualizado["codigorespuesta"] === "2223";
+			$ya_enviado = $ya_enviado || stripos($descripcion, "ya fue enviado") !== false || stripos($descripcion, "presentado anteriormente") !== false;
+			if (!empty($resumen_actualizado["ticket"]) && $ya_enviado) {
+				return Sunat::phuyu_consultarTICKET($resumen_actualizado["nombre_xml"], $resumen_actualizado["ticket"], $credenciales);
+			}
+		}
+		return $respuesta;
 	}
 
 	private function salida_json($data){

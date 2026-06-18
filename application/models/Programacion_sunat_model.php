@@ -238,13 +238,14 @@ class Programacion_sunat_model extends CI_Model {
 		return (int)$this->db->insert_id("sunat.programacion_cpe_cola_codcola_seq");
 	}
 
-	public function pendientes_cola($programacion, $limite){
+	public function pendientes_cola($programacion, $limite, $forzar_reintento = false){
 		$params = [(int)$programacion["codempresa"], (int)$limite];
 		$where_sucursal = "";
 		if (!empty($programacion["codsucursal"])) {
 			$where_sucursal = " and (codsucursal is null or codsucursal=?)";
 			array_splice($params, 1, 0, [(int)$programacion["codsucursal"]]);
 		}
+		$where_intento = $forzar_reintento ? "" : "and (siguiente_intento is null or siguiente_intento<=now())";
 
 		return $this->db->query(
 			"select *
@@ -252,7 +253,7 @@ class Programacion_sunat_model extends CI_Model {
 			where codempresa=?
 				".$where_sucursal."
 				and estado in ('pendiente','error')
-				and (siguiente_intento is null or siguiente_intento<=now())
+				".$where_intento."
 			order by prioridad desc, siguiente_intento asc nulls first, codcola asc
 			limit ?",
 			$params
@@ -271,7 +272,7 @@ class Programacion_sunat_model extends CI_Model {
 	public function marcar_resultado_cola($cola, $respuesta, $max_intentos){
 		$estado_respuesta = isset($respuesta["estado"]) ? (int)$respuesta["estado"] : 0;
 		$intentos = (int)$cola["intentos"] + 1;
-		$aceptado = ($estado_respuesta === 1);
+		$aceptado = in_array($estado_respuesta, [1, 2], true);
 		$estado = $aceptado ? "enviado" : ($intentos >= (int)$max_intentos ? "error" : "pendiente");
 		$siguiente = $aceptado ? null : date("Y-m-d H:i:s", strtotime("+10 minutes"));
 
