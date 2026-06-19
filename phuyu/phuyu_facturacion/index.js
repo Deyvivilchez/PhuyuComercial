@@ -1,12 +1,27 @@
 var phuyu_datos = new Vue({
 	el: "#phuyu_datos",
 	data: {
-		sunat: {tipo:"01",serie:"",nrocomprobante:"", fdesde:"", fhasta:""}, sunatrecepcion:[],
+		sunat: {tipo:"01",serie:"",nrocomprobante:"", fechaemision:"", importe:"", tipo_periodo:"todos", fdesde:"", fhasta:""}, sunatrecepcion:[], sunat_ultima_consulta_auto: "",
+		sunatpaginacion: {"total":0, "actual":1, "ultima":1, "limite":10, "desde":0, "hasta":0},
 		resumen: {codresumentipo:"", periodo:"", nrocorrelativo:0},
 		facturas:[], facturas_anuladas:[], resumenes_boletas:[], resumenes_info:[], facturas_datos: [], boletas_datos: [],
 		tipo_reporte: "", comprobantes_lista: [], resumenes_lista: [], guias:[], notas_creditos:[]
 	},
 	methods: {
+		phuyu_pintar_datos_sunat: function(datos){
+			if (datos.tipo) {
+				this.sunat.tipo = datos.tipo;
+				$("#sunat_tipo").val(datos.tipo).trigger("change");
+			}
+			if (datos.fechaemision) {
+				this.sunat.fechaemision = datos.fechaemision;
+				$("#sunat_fechaemision").val(datos.fechaemision);
+			}
+			if (datos.importe) {
+				this.sunat.importe = datos.importe;
+				$("#sunat_importe").val(datos.importe);
+			}
+		},
 		phuyu_comprobantes: function(){
 			phuyu_sistema.phuyu_inicio();
 			this.$http.get(url+phuyu_controller+"/comprobantes").then(function(data){
@@ -255,12 +270,73 @@ var phuyu_datos = new Vue({
 			});
 		},
 
-		phuyu_consultasunat: function(){
+		phuyu_consultasunat: function(automatico){
+			this.sunat.serie = this.sunat.serie.toUpperCase();
+			var tipo_anterior = this.sunat.tipo;
+			if (this.sunat.serie.charAt(0)=="B" && (this.sunat.tipo=="01" || this.sunat.tipo=="03")) {
+				this.sunat.tipo = "03";
+			}
+			if (this.sunat.serie.charAt(0)=="F" && (this.sunat.tipo=="01" || this.sunat.tipo=="03")) {
+				this.sunat.tipo = "01";
+			}
+			if (tipo_anterior!=this.sunat.tipo) {
+				var tipo_texto = this.sunat.tipo=="03" ? "Boleta electronica" : "Factura electronica";
+				phuyu_sistema.phuyu_noti("Tipo de comprobante corregido", "La serie "+this.sunat.serie+" corresponde a "+tipo_texto+".", "warning");
+			}
+			if (automatico===true) {
+				var clave_auto = this.sunat.tipo+"-"+this.sunat.serie+"-"+this.sunat.nrocomprobante+"-"+this.sunat.fechaemision+"-"+this.sunat.importe;
+				if (this.sunat_ultima_consulta_auto==clave_auto) {
+					return;
+				}
+				this.sunat_ultima_consulta_auto = clave_auto;
+			}
 			phuyu_sistema.phuyu_inicio_guardar("CONSULTANDO COMPROBANTES EN SUNAT . . .");
 			this.$http.post(url+phuyu_controller+"/phuyu_consultasunat",this.sunat).then(function(data){
-				$("#sunat_respuesta").empty().html(data.body.mensaje); phuyu_sistema.phuyu_fin();
+				this.phuyu_pintar_datos_sunat(data.body);
+				var respuesta = data.body.mensaje || "Sin respuesta de SUNAT";
+				if (data.body.detalle) {
+					respuesta += " | " + data.body.detalle;
+				}
+				$("#sunat_respuesta").empty().html(respuesta); phuyu_sistema.phuyu_fin();
 			}, function(){
 				phuyu_sistema.phuyu_fin();
+			});
+		},
+		phuyu_buscar_comprobante_sunat: function(){
+			var serie = this.sunat.serie.toUpperCase();
+			this.sunat.serie = serie;
+			var tipo_anterior = this.sunat.tipo;
+			if (serie.charAt(0)=="B" && (this.sunat.tipo=="01" || this.sunat.tipo=="03")) {
+				this.sunat.tipo = "03";
+			}
+			if (serie.charAt(0)=="F" && (this.sunat.tipo=="01" || this.sunat.tipo=="03")) {
+				this.sunat.tipo = "01";
+			}
+			if (tipo_anterior!=this.sunat.tipo) {
+				var tipo_texto = this.sunat.tipo=="03" ? "Boleta electronica" : "Factura electronica";
+				phuyu_sistema.phuyu_noti("Tipo de comprobante corregido", "La serie "+serie+" corresponde a "+tipo_texto+".", "warning");
+			}
+			if (this.sunat.serie.length<4 || this.sunat.nrocomprobante=="") {
+				return;
+			}
+			this.$http.post(url+phuyu_controller+"/phuyu_buscar_comprobante_sunat",this.sunat).then(function(data){
+				if (data.body.estado==1) {
+					var tipo_actual = this.sunat.tipo;
+					this.phuyu_pintar_datos_sunat(data.body);
+					if (serie.charAt(0)=="B" && (this.sunat.tipo=="01" || this.sunat.tipo=="03")) {
+						this.sunat.tipo = "03";
+						$("#sunat_tipo").val("03").trigger("change");
+					}
+					if (serie.charAt(0)=="F" && (this.sunat.tipo=="01" || this.sunat.tipo=="03")) {
+						this.sunat.tipo = "01";
+						$("#sunat_tipo").val("01").trigger("change");
+					}
+					if (tipo_actual!=this.sunat.tipo) {
+						var tipo_base_texto = this.sunat.tipo=="03" ? "Boleta electronica" : (this.sunat.tipo=="07" ? "Nota de credito electronica" : "Factura electronica");
+						phuyu_sistema.phuyu_noti("Tipo de comprobante corregido", "Segun el sistema, este comprobante corresponde a "+tipo_base_texto+".", "warning");
+					}
+					$("#sunat_respuesta").empty().html("Datos encontrados en el sistema: "+data.body.fechaemision+" | S/ "+data.body.importe+". Presiona Consultar este CPE para validar en SUNAT.");
+				}
 			});
 		},
 
@@ -290,10 +366,40 @@ var phuyu_datos = new Vue({
 		},
 
 		sunat_recepcion: function(){
+			this.sunat_recepcion_pagina(1);
+		},
+		sunat_recepcion_pagina: function(pagina){
+			pagina = parseInt(pagina);
+			if (pagina < 1) {
+				pagina = 1;
+			}
+			if (this.sunatpaginacion.ultima && pagina > this.sunatpaginacion.ultima) {
+				pagina = this.sunatpaginacion.ultima;
+			}
 			phuyu_sistema.phuyu_inicio_guardar("CONSULTANDO COMPROBANTES EN SUNAT . . .");
 			this.sunat.fdesde = $("#fecha_desde").val(); this.sunat.fhasta = $("#fecha_hasta").val();
+			this.sunat.tipo_periodo = $("#sunat_tipo_periodo").val();
+			this.sunat.pagina = pagina;
+			this.sunat.limite = this.sunatpaginacion.limite;
 			this.$http.post(url+phuyu_controller+"/phuyu_bloquesunat",this.sunat).then(function(data){
-				this.sunatrecepcion = data.body; $("#phuyu_infosunat").modal("show"); phuyu_sistema.phuyu_fin();
+				var lista = data.body.lista || [];
+				for (var i = 0; i < lista.length; i++) {
+					if (!lista[i].descripcion) {
+						lista[i].descripcion = "SIN RESPUESTA DE SUNAT";
+					}
+					if (!lista[i].mensaje_sunat) {
+						lista[i].mensaje_sunat = lista[i].descripcion;
+					}
+					if (!lista[i].nivel_sunat) {
+						lista[i].nivel_sunat = "warning";
+					}
+					if (lista[i].estado_sunat_directo==null) {
+						lista[i].estado_sunat_directo = 0;
+					}
+				}
+				this.sunatrecepcion = lista;
+				this.sunatpaginacion = data.body.paginacion || this.sunatpaginacion;
+				$("#phuyu_infosunat").modal("show"); phuyu_sistema.phuyu_fin();
 			}, function(){
 				phuyu_sistema.phuyu_fin();
 			});

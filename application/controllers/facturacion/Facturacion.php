@@ -537,26 +537,140 @@ class Facturacion extends Sunat {
 		}
 	}
 
+	function phuyu_cookie_consulta_libre_sunat(){
+		if (!function_exists("curl_init")) {
+			return "";
+		}
+		$cookie = tempnam(sys_get_temp_dir(), "sunat_cpe_");
+		if ($cookie===false || $cookie=="") {
+			return "";
+		}
+		$inicio = curl_init("https://ww1.sunat.gob.pe/ol-ti-itconsultaunificadalibre/consultaUnificadaLibre/consulta");
+		curl_setopt($inicio, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($inicio, CURLOPT_TIMEOUT, 20);
+		curl_setopt($inicio, CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt($inicio, CURLOPT_COOKIEJAR, $cookie);
+		curl_setopt($inicio, CURLOPT_COOKIEFILE, $cookie);
+		curl_setopt($inicio, CURLOPT_USERAGENT, "Mozilla/5.0");
+		curl_exec($inicio);
+		curl_close($inicio);
+		return $cookie;
+	}
+
+	function phuyu_consulta_libre_sunat($tipo, $serie, $numero, $fecha, $importe, $codDocRecep = "", $numDocRecep = "", $cookie_sunat = ""){
+		$estados_cp = ["-" => "-", "0" => "NO EXISTE", "1" => "ACEPTADO", "2" => "ANULADO", "3" => "AUTORIZADO", "4" => "NO AUTORIZADO"];
+		$estados_ruc = ["-" => "-", "00" => "ACTIVO", "01" => "BAJA PROVISIONAL", "02" => "BAJA PROV. POR OFICIO", "03" => "SUSPENSION TEMPORAL", "10" => "BAJA DEFINITIVA", "11" => "BAJA DE OFICIO", "12" => "BAJA MULT.INSCR. Y OTROS", "20" => "NUM. INTERNO IDENTIF.", "21" => "OTROS OBLIGADOS", "22" => "INHABILITADO-VENT.UNICA", "30" => "ANULACION - ERROR SUNAT"];
+		$condiciones = ["-" => "-", "00" => "HABIDO", "01" => "NO HALLADO SE MUDO DE DOMICILIO", "02" => "NO HALLADO FALLECIO", "03" => "NO HALLADO NO EXISTE DOMICILIO", "04" => "NO HALLADO CERRADO", "05" => "NO HALLADO NRO.PUERTA NO EXISTE", "06" => "NO HALLADO DESTINATARIO DESCONOCIDO", "07" => "NO HALLADO RECHAZADO", "08" => "NO HALLADO OTROS MOTIVOS", "09" => "PENDIENTE"];
+		$fecha_sunat = date("d/m/Y", strtotime($fecha));
+		$numero_sunat = str_pad((string)$numero, 8, "0", STR_PAD_LEFT);
+		$token = substr(md5(uniqid(mt_rand(), true)).md5(uniqid(mt_rand(), true)), 0, 52);
+		$post = [
+			"numRuc" => $_SESSION["phuyu_ruc"],
+			"codComp" => $tipo,
+			"numeroSerie" => strtoupper($serie),
+			"numero" => $numero_sunat,
+			"codDocRecep" => $codDocRecep,
+			"numDocRecep" => $numDocRecep,
+			"fechaEmision" => $fecha_sunat,
+			"monto" => number_format((double)$importe, 2, ".", ""),
+			"token" => $token
+		];
+
+		if (!function_exists("curl_init")) {
+			return ["estado" => 0, "nivel" => "danger", "mensaje" => "No se pudo consultar SUNAT", "detalle" => "PHP no tiene cURL activo para conectar con la consulta publica."];
+		}
+
+		$curl = curl_init("https://ww1.sunat.gob.pe/ol-ti-itconsultaunificadalibre/consultaUnificadaLibre/consultaIndividual");
+		curl_setopt($curl, CURLOPT_POST, true);
+		curl_setopt($curl, CURLOPT_POSTFIELDS, $post);
+		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($curl, CURLOPT_TIMEOUT, 30);
+		curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt($curl, CURLOPT_USERAGENT, "Mozilla/5.0");
+		$respuesta = curl_exec($curl);
+		$error = curl_error($curl);
+		curl_close($curl);
+
+		if ($respuesta === false || $respuesta === "") {
+			return ["estado" => 0, "nivel" => "warning", "mensaje" => "SUNAT sin respuesta", "detalle" => $error !== "" ? $error : "El portal publico no devolvio informacion."];
+		}
+
+		$respuesta = trim($respuesta);
+		$data = json_decode($respuesta, true);
+		if (is_string($data)) {
+			$data = json_decode($data, true);
+		}
+		if (!is_array($data)) {
+			return ["estado" => 0, "nivel" => "warning", "mensaje" => "Respuesta temporal no valida", "detalle" => "SUNAT no devolvio el formato esperado. No significa que el comprobante este rechazado; vuelva a intentar en unos minutos."];
+		}
+		if (isset($data["rpta"]) && $data["rpta"]=="1" && isset($data["data"])) {
+			$info = $data["data"];
+			$estado_cp = isset($estados_cp[$info["estadoCp"]]) ? $estados_cp[$info["estadoCp"]] : $info["estadoCp"];
+			$estado_ruc = isset($estados_ruc[$info["estadoRuc"]]) ? $estados_ruc[$info["estadoRuc"]] : $info["estadoRuc"];
+			$condicion = isset($condiciones[$info["condDomiRuc"]]) ? $condiciones[$info["condDomiRuc"]] : $info["condDomiRuc"];
+			$nivel = $info["estadoCp"]=="1" ? "success" : ($info["estadoCp"]=="0" ? "danger" : "warning");
+			return ["estado" => $info["estadoCp"]=="1" ? 1 : 0, "nivel" => $nivel, "mensaje" => $estado_cp, "detalle" => "RUC: ".$estado_ruc." | DOMICILIO: ".$condicion, "estado_cp" => $estado_cp, "estado_ruc" => $estado_ruc, "condicion" => $condicion];
+		}
+		if (isset($data["rpta"]) && $data["rpta"]=="3") {
+			return ["estado" => 0, "nivel" => "danger", "mensaje" => "No existe en SUNAT", "detalle" => "SUNAT no encontro el comprobante con los datos consultados."];
+		}
+		return ["estado" => 0, "nivel" => "warning", "mensaje" => "SUNAT no pudo procesar", "detalle" => isset($data["data"]) ? $data["data"] : "Intente nuevamente en unos minutos."];
+	}
+
+	function phuyu_datos_comprobante_sunat($tipo, $serie, $numero){
+		$codtipo = $tipo=="03" ? 12 : ($tipo=="07" ? 14 : ($tipo=="08" ? 15 : 10));
+		$numero = (string)$numero;
+		$numero_sin_ceros = ltrim($numero, "0");
+		if ($numero_sin_ceros=="") {
+			$numero_sin_ceros = "0";
+		}
+		$numero_padded = str_pad($numero_sin_ceros, 8, "0", STR_PAD_LEFT);
+		$where_numero = "(nrocomprobante=".$this->db->escape($numero)." or nrocomprobante=".$this->db->escape($numero_sin_ceros)." or nrocomprobante=".$this->db->escape($numero_padded)." or ltrim(nrocomprobante::text, '0')=".$this->db->escape($numero_sin_ceros).")";
+		$exacto = $this->db->query("select codcomprobantetipo, case when codcomprobantetipo=14 then '07' when codcomprobantetipo=15 then '08' when codcomprobantetipo=12 then '03' when upper(seriecomprobante) like 'B%' then '03' else '01' end as tiposunat, fechacomprobante, round(importe,2) as importe from kardex.kardex where upper(seriecomprobante)=".$this->db->escape(strtoupper($serie))." and ".$where_numero." and codcomprobantetipo=".$codtipo." order by codkardex desc limit 1")->result_array();
+		if (count($exacto)>0) {
+			return $exacto;
+		}
+		return $this->db->query("select codcomprobantetipo, case when codcomprobantetipo=14 then '07' when codcomprobantetipo=15 then '08' when codcomprobantetipo=12 then '03' when upper(seriecomprobante) like 'B%' then '03' else '01' end as tiposunat, fechacomprobante, round(importe,2) as importe from kardex.kardex where upper(seriecomprobante)=".$this->db->escape(strtoupper($serie))." and ".$where_numero." and codcomprobantetipo in (10,12,14,15) order by codkardex desc limit 1")->result_array();
+	}
+
+	function phuyu_buscar_comprobante_sunat(){
+		if ($this->input->is_ajax_request()) {
+			$this->request = json_decode(file_get_contents('php://input'));
+			$local = $this->phuyu_datos_comprobante_sunat($this->request->tipo, $this->request->serie, $this->request->nrocomprobante);
+			if (count($local)==0) {
+				echo json_encode(["estado" => 0, "mensaje" => "Comprobante no encontrado en el sistema"]);
+				return;
+			}
+			echo json_encode([
+				"estado" => 1,
+				"tipo" => $local[0]["tiposunat"],
+				"fechaemision" => date("Y-m-d", strtotime($local[0]["fechacomprobante"])),
+				"importe" => number_format((double)$local[0]["importe"], 2, ".", "")
+			]);
+		}
+	}
+
 	function phuyu_consultasunat(){
 		if ($this->input->is_ajax_request()) {
 			$this->request = json_decode(file_get_contents('php://input'));
-			$empresa = $this->db->query("select *from public.webservice")->result_array();
-			if ($this->request->tipo=="09") {
-				$envio = "guia";
-			}elseif ($this->request->tipo=="20") {
-				$envio = "retencion";
-			}else{
-				$envio = "electronico";
+			$fecha = isset($this->request->fechaemision) ? $this->request->fechaemision : "";
+			$importe = isset($this->request->importe) ? $this->request->importe : "";
+			if ($fecha=="" || $importe=="") {
+				$local = $this->phuyu_datos_comprobante_sunat($this->request->tipo, $this->request->serie, $this->request->nrocomprobante);
+				if (count($local)>0) {
+					$this->request->tipo = $local[0]["tiposunat"];
+					$fecha = $local[0]["fechacomprobante"];
+					$importe = $local[0]["importe"];
+				}
 			}
-
-			$informacion = [$this->request->tipo, strtoupper($this->request->serie), $this->request->nrocomprobante];
-			$credenciales = [$_SESSION["phuyu_ruc"],$empresa[0]["usuariosol"],$empresa[0]["clavesol"]];
-			$xml = $_SESSION["phuyu_ruc"].'-'.$this->request->tipo.'-'.strtoupper($this->request->serie).'-'.$this->request->nrocomprobante;
-            $estado = Sunat::phuyu_consultarSUNAT($informacion, $credenciales, $envio,$xml);
-
-			$mensaje = $estado["mensaje"]; $estado = $estado["estado"];
-
-			$data["estado"] = $estado; $data["mensaje"] = $mensaje;
+			if ($fecha=="" || $importe=="") {
+				echo json_encode(["estado" => 0, "mensaje" => "Para consultar directo en SUNAT falta fecha de emision e importe total. Si el comprobante esta registrado localmente, revise serie y numero."]);
+				return;
+			}
+			$data = $this->phuyu_consulta_libre_sunat($this->request->tipo, $this->request->serie, $this->request->nrocomprobante, $fecha, $importe);
+			$data["tipo"] = $this->request->tipo;
+			$data["fechaemision"] = date("Y-m-d", strtotime($fecha));
+			$data["importe"] = number_format((double)$importe, 2, ".", "");
 			echo json_encode($data);
 		}
 	}
@@ -565,21 +679,57 @@ class Facturacion extends Sunat {
 		if ($this->input->is_ajax_request()) {
 			$this->request = json_decode(file_get_contents('php://input'));
 
-			$empresa = $this->db->query("select *from public.webservice")->result_array();
-			$lista = $this->db->query("select personas.documento, kardex.cliente, kardex.codkardex, kardex.seriecomprobante, kardex.nrocomprobante,kardex.fechacomprobante,round(kardex.importe,2) as importe,kardexs.estado from kardex.kardex as kardex inner join sunat.kardexsunat as kardexs on(kardex.codkardex=kardexs.codkardex) inner join public.personas as personas on (kardex.codpersona=personas.codpersona) where kardex.fechacomprobante>='".$this->request->fdesde."' and kardex.fechacomprobante<='".$this->request->fhasta."' and kardex.codmovimientotipo=20 and kardex.codcomprobantetipo=10 order by kardex.codkardex asc")->result_array();
-			foreach ($lista as $key => $value) {
-				$informacion = ["01", $value["seriecomprobante"], $value["nrocomprobante"]];
-				$credenciales = [$_SESSION["phuyu_ruc"],$empresa[0]["usuariosol"],$empresa[0]["clavesol"]];
-	            $estado = Sunat::phuyu_consultarSUNAT($informacion, $credenciales, "electronico");
-	            
-	            if ((int)$estado["estado"]==0) {
-	            	$sunat = $estado["mensaje"];
-	            }else{
-	            	$sunat = explode("statusMessage", $estado["mensaje"]); $sunat = $sunat[1];
-	            }
-				$lista[$key]["descripcion"] = $sunat;
+			$pagina = isset($this->request->pagina) ? (int)$this->request->pagina : 1;
+			$limite = isset($this->request->limite) ? (int)$this->request->limite : 10;
+			if ($pagina < 1) {
+				$pagina = 1;
 			}
-			echo json_encode($lista);
+			if ($limite < 1 || $limite > 50) {
+				$limite = 10;
+			}
+			$offset = ($pagina * $limite) - $limite;
+			$tipo_periodo = isset($this->request->tipo_periodo) ? $this->request->tipo_periodo : "todos";
+			$where_tipo_periodo = "ct.oficial in ('01','03','07','08')";
+			if ($tipo_periodo=="facturas") {
+				$where_tipo_periodo = "ct.oficial='01'";
+			}
+			if ($tipo_periodo=="boletas") {
+				$where_tipo_periodo = "ct.oficial='03'";
+			}
+			if ($tipo_periodo=="notas_credito") {
+				$where_tipo_periodo = "ct.oficial='07'";
+			}
+			if ($tipo_periodo=="notas_debito") {
+				$where_tipo_periodo = "ct.oficial='08'";
+			}
+
+			$total = $this->db->query("select count(*) as total from kardex.kardex as kardex inner join caja.comprobantetipos as ct on(kardex.codcomprobantetipo=ct.codcomprobantetipo) where kardex.fechacomprobante>='".$this->request->fdesde."' and kardex.fechacomprobante<='".$this->request->fhasta."' and kardex.codmovimientotipo in (8,20) and ".$where_tipo_periodo)->result_array();
+			$lista = $this->db->query("select personas.documento, kardex.cliente, kardex.codkardex, kardex.codcomprobantetipo, ct.oficial as tipo_sunat, ct.descripcion as tipocomprobante, kardex.seriecomprobante, kardex.nrocomprobante,kardex.fechacomprobante,round(kardex.importe,2) as importe,coalesce(kardexs.estado,0) as estado from kardex.kardex as kardex inner join caja.comprobantetipos as ct on(kardex.codcomprobantetipo=ct.codcomprobantetipo) left join sunat.kardexsunat as kardexs on(kardex.codkardex=kardexs.codkardex) inner join public.personas as personas on (kardex.codpersona=personas.codpersona) where kardex.fechacomprobante>='".$this->request->fdesde."' and kardex.fechacomprobante<='".$this->request->fhasta."' and kardex.codmovimientotipo in (8,20) and ".$where_tipo_periodo." order by kardex.codkardex asc offset ".$offset." limit ".$limite)->result_array();
+			foreach ($lista as $key => $value) {
+				$tipo_sunat = $value["tipo_sunat"];
+				$estado = $this->phuyu_consulta_libre_sunat($tipo_sunat, $value["seriecomprobante"], $value["nrocomprobante"], $value["fechacomprobante"], $value["importe"]);
+				$mensaje_sunat = (isset($estado["mensaje"]) && trim($estado["mensaje"])!="") ? $estado["mensaje"] : "Sin respuesta de SUNAT";
+				$detalle_sunat = isset($estado["detalle"]) ? $estado["detalle"] : "";
+				$lista[$key]["descripcion"] = $detalle_sunat!="" ? $mensaje_sunat." | ".$detalle_sunat : $mensaje_sunat;
+				$lista[$key]["mensaje_sunat"] = $mensaje_sunat;
+				$lista[$key]["detalle_sunat"] = $detalle_sunat;
+				$lista[$key]["nivel_sunat"] = isset($estado["nivel"]) ? $estado["nivel"] : "warning";
+				$lista[$key]["estado_sunat_directo"] = isset($estado["estado"]) ? $estado["estado"] : 0;
+				usleep(250000);
+			}
+			$total_registros = (int)$total[0]["total"];
+			$ultima = $total_registros > 0 ? (int)ceil($total_registros / $limite) : 1;
+			echo json_encode([
+				"lista" => $lista,
+				"paginacion" => [
+					"total" => $total_registros,
+					"actual" => $pagina,
+					"ultima" => $ultima,
+					"limite" => $limite,
+					"desde" => $offset + 1,
+					"hasta" => min($offset + $limite, $total_registros)
+				]
+			]);
 		}
 	}
 

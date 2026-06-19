@@ -100,7 +100,8 @@ class Ventas extends CI_Controller {
 
 				$lista = $this->db->query("select distinct(kd.codproducto) as codproducto,p.descripcion,p.codigo from kardex.kardex as k inner join kardex.kardexdetalle as kd on(k.codkardex=kd.codkardex) inner join almacen.productos as p on(kd.codproducto=p.codproducto) where k.codmovimientotipo=20 ".$filtro." and k.fechacomprobante>='".$this->request->fechadesde."' and k.fechacomprobante<='".$this->request->fechahasta."' and k.estado=1 ".$filtro." order by p.descripcion")->result_array();
 
-				$this->load->view("reportes/ventas/masvendidosxls",compact("vendedor_texto","lista"));
+				$empresa = $this->db->query("select *from public.personas where codpersona=1")->result_array();
+				$this->load->view("reportes/ventas/masvendidosxls",compact("empresa","vendedor_texto","lista"));
 			}
 		}
 	}
@@ -221,7 +222,8 @@ class Ventas extends CI_Controller {
 				$lista = $this->db->query("select personas.documento,kardex.cliente,personas.coddocumentotipo, kardex.codkardex, kardex.codcomprobantetipo, kardex.seriecomprobante, kardex.estado, kardex.condicionpago,kardex.nrocomprobante, kardex.fechacomprobante,kardex.valorventa,kardex.igv, kardex.importe,kardex.estado,comprobantes.abreviatura as tipo from kardex.kardex as kardex inner join public.personas as personas on (kardex.codpersona=personas.codpersona) inner join public.empleados as empleados on (kardex.codempleado = empleados.codpersona) inner join caja.comprobantetipos as comprobantes on(kardex.codcomprobantetipo=comprobantes.codcomprobantetipo) where kardex.codmovimientotipo=20 ".$almacen." and kardex.codsucursal=".$this->request->codsucursal." and kardex.fechacomprobante>='".$this->request->fechadesde."' and kardex.fechacomprobante<='".$this->request->fechahasta."' and kardex.estado=".$this->request->estado." ".$filtro." and empleados.codcargo=4 order by kardex.fechacomprobante, kardex.codcomprobantetipo, kardex.seriecomprobante, kardex.nrocomprobante")->result_array();
 				$fechadesde= $this->request->fechadesde; $fechahasta = $this->request->fechahasta;
 				
-				$this->load->view("reportes/ventas/ventasvendedorxls",compact("vendedor_texto","lista","tipos"));
+				$empresa = $this->db->query("select *from public.personas where codpersona=1")->result_array();
+				$this->load->view("reportes/ventas/ventasvendedorxls",compact("empresa","vendedor_texto","lista","tipos"));
 			}
 		}
 	}
@@ -329,7 +331,8 @@ class Ventas extends CI_Controller {
 				}
 				$fecha = 'LISTA DE VENTA DESDE '.$this->request->fechadesde.' HASTA '.$this->request->fechahasta;
 				
-				$this->load->view("reportes/ventas/ventasclientesxls",compact("fecha","socios","tipos","almacen"));
+				$empresa = $this->db->query("select *from public.personas where codpersona=1")->result_array();
+				$this->load->view("reportes/ventas/ventasclientesxls",compact("empresa","fecha","socios","tipos","almacen"));
 			}
 		}
 	}
@@ -514,7 +517,7 @@ class Ventas extends CI_Controller {
 
 			$valorventatotal = 0; $igvtotal=0; $icbpertotal=0;$totalgeneral=0;
 
-			$lista = $this->db->query("select personas.documento,kardex.cliente,kardex.codkardex, kardex.codcomprobantetipo, kardex.seriecomprobante,kardex.condicionpago, kardex.nrocomprobante, kardex.fechacomprobante,round(kardex.valorventa,2) AS valorventa,round(kardex.igv,2) AS IGV, kardex.descglobal, round(kardex.icbper,2) AS icbper,round(kardex.importe,2) AS importe,kardex.condicionpago, comprobantes.descripcion as tipo from kardex.kardex as kardex inner join public.personas as personas on (kardex.codpersona=personas.codpersona) inner join caja.comprobantetipos as comprobantes on(kardex.codcomprobantetipo=comprobantes.codcomprobantetipo) where kardex.fechacomprobante>='".$this->request->datos->fechadesde."' and kardex.fechacomprobante<='".$this->request->datos->fechahasta."' and ".$comprobantes." and kardex.codmovimientotipo=20 ".$almacen." ".$sucursales." and kardex.estado=1 order by kardex.codcomprobantetipo, kardex.seriecomprobante, kardex.nrocomprobante")->result_array();
+			$lista = $this->db->query("select personas.documento,kardex.cliente,kardex.codkardex, kardex.codcomprobantetipo, kardex.seriecomprobante,kardex.condicionpago, kardex.nrocomprobante, kardex.fechacomprobante,round(kardex.valorventa,2) AS valorventa,round(kardex.igv,2) AS IGV, kardex.descglobal, round(kardex.icbper,2) AS icbper,round(kardex.importe,2) AS importe,kardex.condicionpago, comprobantes.descripcion as tipo,sunat.estado as estadosunat,sunat.codigorespuesta as codigosunat,sunat.descripcion_cdr as respuestasunat from kardex.kardex as kardex inner join public.personas as personas on (kardex.codpersona=personas.codpersona) inner join caja.comprobantetipos as comprobantes on(kardex.codcomprobantetipo=comprobantes.codcomprobantetipo) left join sunat.kardexsunat as sunat on(kardex.codkardex=sunat.codkardex) where kardex.fechacomprobante>='".$this->request->datos->fechadesde."' and kardex.fechacomprobante<='".$this->request->datos->fechahasta."' and ".$comprobantes." and kardex.codmovimientotipo=20 ".$almacen." ".$sucursales." and kardex.estado=1 order by kardex.codcomprobantetipo, kardex.seriecomprobante, kardex.nrocomprobante")->result_array();
 
 			foreach ($lista as $key => $value) {
 				$valorventatotal = $valorventatotal + (double)$value["valorventa"];
@@ -893,7 +896,7 @@ class Ventas extends CI_Controller {
 					$sucursal = ' AND kardex.codsucursal='.$this->request->codsucursal;
 				}
 
-				$lista = $this->db->query("select personas.documento,personas.razonsocial,personas.coddocumentotipo, kardex.codkardex,kardex.codkardex_ref, kardex.codcomprobantetipo, kardex.seriecomprobante, kardex.condicionpago, kardex.nrocomprobante, kardex.fechacomprobante,kardex.valorventa,kardex.igv, kardex.icbper,kardex.importe,kardex.estado,comprobantes.abreviatura as tipo,comprobantes.oficial,tipodocumento.oficial as tipodocumento,kardex.codmovimientotipo from kardex.kardex as kardex inner join public.personas as personas on (kardex.codpersona=personas.codpersona) inner join public.documentotipos as tipodocumento on (personas.coddocumentotipo=tipodocumento.coddocumentotipo) inner join caja.comprobantetipos as comprobantes on(kardex.codcomprobantetipo=comprobantes.codcomprobantetipo) where kardex.fechacomprobante>='".$this->request->fechadesde."' and kardex.fechacomprobante<='".$this->request->fechahasta."' and ".$comprobantes." and (kardex.codmovimientotipo=20 or kardex.codmovimientotipo=8) ".$almacen." ".$sucursal." order by kardex.fechacomprobante, kardex.codcomprobantetipo, kardex.seriecomprobante, kardex.nrocomprobante")->result_array();
+				$lista = $this->db->query("select personas.documento,personas.razonsocial,personas.coddocumentotipo, kardex.codkardex,kardex.codkardex_ref, kardex.codcomprobantetipo, kardex.seriecomprobante, kardex.condicionpago, kardex.nrocomprobante, kardex.fechacomprobante,kardex.valorventa,kardex.igv, kardex.icbper,kardex.importe,kardex.estado,comprobantes.abreviatura as tipo,comprobantes.oficial,tipodocumento.oficial as tipodocumento,kardex.codmovimientotipo,sunat.estado as estadosunat,sunat.codigorespuesta as codigosunat,sunat.descripcion_cdr as respuestasunat from kardex.kardex as kardex inner join public.personas as personas on (kardex.codpersona=personas.codpersona) inner join public.documentotipos as tipodocumento on (personas.coddocumentotipo=tipodocumento.coddocumentotipo) inner join caja.comprobantetipos as comprobantes on(kardex.codcomprobantetipo=comprobantes.codcomprobantetipo) left join sunat.kardexsunat as sunat on(kardex.codkardex=sunat.codkardex) where kardex.fechacomprobante>='".$this->request->fechadesde."' and kardex.fechacomprobante<='".$this->request->fechahasta."' and ".$comprobantes." and (kardex.codmovimientotipo=20 or kardex.codmovimientotipo=8) ".$almacen." ".$sucursal." order by kardex.fechacomprobante, kardex.codcomprobantetipo, kardex.seriecomprobante, kardex.nrocomprobante")->result_array();
 				foreach ($lista as $k => $v) {
 					if($v["codmovimientotipo"]==8){
 						$comprobante_ref = $this->db->query("select k.*, comprobantes.oficial as tipo from kardex.kardex as k inner join caja.comprobantetipos as comprobantes on(k.codcomprobantetipo=comprobantes.codcomprobantetipo) where k.codkardex=".$v["codkardex_ref"])->result_array();

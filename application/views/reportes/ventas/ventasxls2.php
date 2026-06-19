@@ -1,6 +1,33 @@
 <?php
+if (!function_exists('phuyu_nombre_archivo_empresa')) {
+    function phuyu_nombre_archivo_empresa($tipo, $empresaDatos = array())
+    {
+        $empresaInfo = isset($empresaDatos[0]) ? $empresaDatos[0] : array();
+        $empresa = '';
+
+        if (!empty($empresaInfo["razonsocial"])) {
+            $empresa = $empresaInfo["razonsocial"];
+        } elseif (!empty($empresaInfo["nombrecomercial"])) {
+            $empresa = $empresaInfo["nombrecomercial"];
+        } elseif (!empty($empresaInfo["documento"])) {
+            $empresa = $empresaInfo["documento"];
+        } elseif (!empty($_SESSION["phuyu_empresa"])) {
+            $empresa = $_SESSION["phuyu_empresa"];
+        } else {
+            $empresa = "Negocio";
+        }
+
+        $empresaAscii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $empresa);
+        $empresa = $empresaAscii !== false ? $empresaAscii : $empresa;
+        $empresa = preg_replace('/[^A-Za-z0-9]+/', '_', $empresa);
+        $empresa = trim($empresa, '_');
+
+        return ($empresa !== '' ? $empresa : 'Negocio') . '_' . $tipo . '_' . date('Y-m-d') . '.xls';
+    }
+}
+
 header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-header('Content-Disposition: attachment;filename="ReporteVentas' . date('Y-m-d') . '.xls"');
+header('Content-Disposition: attachment;filename="' . phuyu_nombre_archivo_empresa('ReporteVentasGeneral', isset($empresa) ? $empresa : array()) . '"');
 header('Cache-Control: max-age=0');
 ?>
 
