@@ -112,8 +112,8 @@ class Programacionsunat extends Sunat {
 			"codigo" => "LIMPIEZA_OK",
 			"mensaje" => "Historial SUNAT limpiado correctamente",
 			"detalle" => $todo
-				? "Se eliminaron ".$resultado["historial_eliminado"]." ejecuciones del historial y ".$resultado["cola_eliminada"]." registros de cola cerrados. Se conservo toda cola pendiente, procesando o con error."
-				: "Se eliminaron ".$resultado["historial_eliminado"]." ejecuciones antiguas y ".$resultado["cola_eliminada"]." registros de cola cerrados. Se conservaron los ultimos ".$dias." dias y toda cola pendiente, procesando o con error.",
+				? "Se eliminaron ".$resultado["historial_eliminado"]." ejecuciones del historial, ".$resultado["cola_eliminada"]." registros de cola cerrados y ".$resultado["cola_obsoleta"]." errores obsoletos de resumen. Se conservo toda cola pendiente, procesando o con error real."
+				: "Se eliminaron ".$resultado["historial_eliminado"]." ejecuciones antiguas, ".$resultado["cola_eliminada"]." registros de cola cerrados y ".$resultado["cola_obsoleta"]." errores obsoletos de resumen. Se conservaron los ultimos ".$dias." dias y toda cola pendiente, procesando o con error real.",
 			"accion_recomendada" => "No requiere accion."
 		]);
 	}

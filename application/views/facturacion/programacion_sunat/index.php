@@ -226,7 +226,7 @@
 								<li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#cola" type="button">Cola</button></li>
 							</ul>
 							<button type="button" class="btn btn-sm btn-outline-danger" v-on:click="limpiarHistorial">
-								<i class="ri-delete-bin-6-line"></i> Limpiar historial
+								<i class="ri-delete-bin-6-line"></i> Limpiar historial y cola
 							</button>
 						</div>
 					</div>
