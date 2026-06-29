@@ -201,8 +201,7 @@ $icbperSunat = $_SESSION['phuyu_icbper'] ?? 0;
 
 	#phuyu_restaurante {
 		height: 330px !important;
-		overflow-x: hidden !important;
-		overflow-y: auto !important;
+		overflow: hidden !important;
 		padding: .85rem !important;
 	}
 

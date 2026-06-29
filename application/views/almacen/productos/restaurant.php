@@ -4,8 +4,15 @@
 		border: 1px solid #e9ebec;
 		border-radius: 8px;
 		box-shadow: 0 1px 2px rgba(56, 65, 74, 0.08);
+		flex: 0 0 auto;
 		margin-bottom: 12px;
 		padding: 12px;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar {
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+		min-height: 0;
 	}
 	#phuyu_buscar.phuyu-restobar-buscar .form-control {
 		border: 1px solid #d9e2ef;
@@ -44,6 +51,49 @@
 		margin-top: 4px;
 		padding: 2px 7px;
 	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-product-title {
+		font-size: 10px;
+		font-weight: 700;
+		height: 30px;
+		line-height: 1.2;
+		margin: 0 0 3px;
+		overflow: hidden;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-product-unit {
+		background: rgba(64, 81, 137, .10);
+		border-radius: 999px;
+		color: #405189;
+		display: inline-block;
+		font-size: 9px;
+		font-weight: 700;
+		line-height: 1;
+		margin-bottom: 3px;
+		padding: 3px 6px;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-products-scroll {
+		flex: 1 1 auto;
+		max-height: 285px;
+		min-height: 0;
+		overflow-x: hidden;
+		overflow-y: auto;
+		padding-right: 6px;
+		scrollbar-color: #cbd5e1 #f3f6f9;
+		scrollbar-width: thin;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-products-scroll::-webkit-scrollbar {
+		width: 6px;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-products-scroll::-webkit-scrollbar-track {
+		background: #f3f6f9;
+		border-radius: 999px;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-products-scroll::-webkit-scrollbar-thumb {
+		background: #cbd5e1;
+		border-radius: 999px;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-products-scroll::-webkit-scrollbar-thumb:hover {
+		background: #9ca3af;
+	}
 	#phuyu_buscar.phuyu-restobar-buscar .phuyu-stock-ok {
 		background: rgba(10, 179, 156, .14);
 		color: #087f6f;
@@ -74,20 +124,23 @@
 	<div class="phuyu_cargando" v-if="cargando">
 		<div class="spinner-border text-primary" role="status"></div> <h5>CARGANDO DATOS</h5>
 	</div>
-	<div class="row" v-if="!cargando">
-		<div class="col-md-4" v-for="dato in productos" v-on:click="phuyu_seleccionado(dato)">
-			<div class="phuyu-product-card" v-bind:class="phuyu_sin_stock(dato) ? 'sin-stock' : ''">
-			<div v-bind:style="{background: dato.background}" v-bind:title="dato.mostrarstock">
-				<div style="padding:4px;text-align:center;">
-					<p style="height:30px;font-weight:bold;font-size:10px;">{{dato.descripcion.substring(0,30)}} - {{dato.marca}}</p>
-					<b style="font-size:20px;">S/. {{dato.precio}}</b>
-					<div v-if="dato.controlstock == 1">
-						<span class="phuyu-stock-badge" v-bind:class="phuyu_sin_stock(dato) ? 'phuyu-stock-error' : 'phuyu-stock-ok'">
-							{{ dato.mostrarstock || 'STOCK: 0' }}
-						</span>
+	<div class="phuyu-products-scroll" v-if="!cargando">
+		<div class="row">
+			<div class="col-md-4" v-for="dato in productos" v-on:click="phuyu_seleccionado(dato)">
+				<div class="phuyu-product-card" v-bind:class="phuyu_sin_stock(dato) ? 'sin-stock' : ''">
+				<div v-bind:style="{background: dato.background}" v-bind:title="dato.mostrarstock">
+					<div style="padding:4px;text-align:center;">
+						<p class="phuyu-product-title">{{dato.descripcion.substring(0,34)}} - {{dato.marca}}</p>
+						<span class="phuyu-product-unit">{{dato.unidad}}</span><br>
+						<b style="font-size:20px;">S/. {{dato.precio}}</b>
+						<div v-if="dato.controlstock == 1">
+							<span class="phuyu-stock-badge" v-bind:class="phuyu_sin_stock(dato) ? 'phuyu-stock-error' : 'phuyu-stock-ok'">
+								{{ dato.mostrarstock || 'STOCK: 0' }}
+							</span>
+						</div>
 					</div>
 				</div>
-			</div>
+				</div>
 			</div>
 		</div>
 	</div>

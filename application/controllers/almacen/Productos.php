@@ -1092,7 +1092,7 @@ class Productos extends CI_Controller
                 ->query(
                     "select p.codproducto,p.codigo,p.descripcion,p.controlstock,p.afectoigvcompra,p.afectoigvventa,
    p.codigo, p.calcular, p.foto,
-   u.codunidad,u.descripcion as unidad,round(pu.stockactualconvertido,3) as stock,
+   u.codunidad,u.descripcion as unidad,round(pu.stockactualconvertido,2) as stock,
     (select coalesce(sum(pd.cantidad),0)
     from kardex.pedidos as pedi inner join kardex.pedidosdetalle as pd on(pedi.codpedido=pd.codpedido)
     where pedi.estado=1 and pu.codproducto=pd.codproducto and pu.codunidad=pd.codunidad) as comprometido, m.descripcion as marca,l.background,l.color
@@ -1109,7 +1109,13 @@ class Productos extends CI_Controller
                         $this->request->buscar .
                         "%') ) and p.paraventa=1 and p.estado=1 and pu.estado=1 and pu.codalmacen=" .
                         $_SESSION['phuyu_codalmacen'] .
-                        ' order by p.codproducto desc',
+                        ' and pu.codunidad = (
+                            select pun0.codunidad
+                            from almacen.productounidades pun0
+                            where pun0.codproducto = p.codproducto and pun0.estado = 1
+                            order by pun0.factor asc, pun0.codunidad asc
+                            limit 1
+                        ) order by p.codproducto desc',
                 )
                 ->result_array();
 
@@ -1117,8 +1123,8 @@ class Productos extends CI_Controller
                 $factormaximo = $this->db->query('select max(factor) as factor from almacen.productounidades where codproducto=' . $value['codproducto'] . ' and estado=1')->result_array();
 
                 $precio = $this->db->query('select factor,pventapublico,pventamin,pventacredito,pventaxmayor, preciocosto,pventaadicional from almacen.productounidades where codproducto=' . $value['codproducto'] . ' and codunidad=' . $value['codunidad'] . ' and estado=1')->result_array();
-                $lista[$key]['mostrarstock'] = 'STOCK: ' . round($value['stock'] - $value['comprometido'], 3);
-                $lista[$key]['stockdisponible'] = round($value['stock'] - $value['comprometido'], 3);
+                $lista[$key]['mostrarstock'] = 'STOCK: ' . round($value['stock'] - $value['comprometido'], 2);
+                $lista[$key]['stockdisponible'] = round($value['stock'] - $value['comprometido'], 2);
                 if (count($precio) == 0) {
                     $lista[$key]['factor'] = 0;
                     $lista[$key]['factormaximo'] = 0;
@@ -1167,7 +1173,7 @@ class Productos extends CI_Controller
         p.controlstock, p.afectoigvcompra, p.afectoigvventa,
         p.calcular, p.foto,
         u.codunidad, u.descripcion AS unidad,
-        ROUND(pu.stockactualconvertido,3) AS stock,
+        ROUND(pu.stockactualconvertido,2) AS stock,
         m.descripcion AS marca, l.background, l.color,
         (
             SELECT COALESCE(SUM(pd.cantidad),0)
@@ -1209,6 +1215,18 @@ class Productos extends CI_Controller
         $this->db->where('p.estado', 1);
         $this->db->where('pu.estado', 1);
         $this->db->where('pu.codalmacen', $codalmacen);
+        $this->db->where(
+            'pu.codunidad = (
+                SELECT pun0.codunidad
+                FROM almacen.productounidades AS pun0
+                WHERE pun0.codproducto = p.codproducto
+                  AND pun0.estado = 1
+                ORDER BY pun0.factor ASC, pun0.codunidad ASC
+                LIMIT 1
+            )',
+            null,
+            false,
+        );
 
         $this->db->order_by('p.codproducto', 'desc');
 
@@ -1223,7 +1241,7 @@ class Productos extends CI_Controller
         foreach ($lista as $k => $row) {
             $stock = (float) $row['stock'];
             $comprometido = (float) $row['comprometido'];
-            $disponible = round($stock - $comprometido, 3);
+            $disponible = round($stock - $comprometido, 2);
 
             $lista[$k]['mostrarstock'] = 'STOCK: ' . $disponible;
             $lista[$k]['stockdisponible'] = $disponible;

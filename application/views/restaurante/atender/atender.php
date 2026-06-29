@@ -110,6 +110,47 @@
         font-weight: 700;
     }
 
+    .producto-meta {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .producto-unidad {
+        background: rgba(13, 110, 253, .10);
+        border-radius: 999px;
+        color: #0d6efd;
+        display: inline-block;
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1;
+        padding: 3px 6px;
+    }
+
+    .contenedor-scroll {
+        scrollbar-color: #cbd5e1 #f3f6f9;
+        scrollbar-width: thin;
+    }
+
+    .contenedor-scroll::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .contenedor-scroll::-webkit-scrollbar-track {
+        background: #f3f6f9;
+        border-radius: 999px;
+    }
+
+    .contenedor-scroll::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 999px;
+    }
+
+    .contenedor-scroll::-webkit-scrollbar-thumb:hover {
+        background: #9ca3af;
+    }
+
     .agotado {
         opacity: .55;
         filter: grayscale(.2);
@@ -351,11 +392,14 @@
                 </div>
                 <div class="contenedor-scroll" style="height: 500px; overflow-y: auto;">
                     <div class="row">
-                        <div v-for="p in productosVisibles" :key="p.codproducto" class="col-6 col-md-4 mb-3">
+                        <div v-for="p in productosVisibles" :key="p.codproducto + '-' + p.codunidad" class="col-6 col-md-4 mb-3">
                             <div class="producto" :style="p.stockdisponible <= 0 ? { opacity: '0.7', border: '1px solid red' } : {}">
                                 <div>
                                     <h6 class="mb-0">{{ p . descripcion || 'SIN NOMBRE' }}</h6>
-                                    <div class="text-muted small">{{ p . marca || 'GENÉRICO' }}</div>
+                                    <div class="text-muted small producto-meta">
+                                        <span class="producto-unidad">{{ p . unidad || 'SIN UNIDAD' }}</span>
+                                        <span>{{ p . marca || 'GENÉRICO' }}</span>
+                                    </div>
                                     <div class="text-sm"
                                         :style="{ color: p.stockdisponible <= 0 ? 'red' : '#6c757d', fontWeight: p
                                                 .stockdisponible <= 0 ? 'bold' : 'normal' }">
