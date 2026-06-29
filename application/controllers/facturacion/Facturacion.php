@@ -706,6 +706,15 @@ class Facturacion extends Sunat {
 			$total = $this->db->query("select count(*) as total from kardex.kardex as kardex inner join caja.comprobantetipos as ct on(kardex.codcomprobantetipo=ct.codcomprobantetipo) where kardex.fechacomprobante>='".$this->request->fdesde."' and kardex.fechacomprobante<='".$this->request->fhasta."' and kardex.codmovimientotipo in (8,20) and ".$where_tipo_periodo)->result_array();
 			$lista = $this->db->query("select personas.documento, kardex.cliente, kardex.codkardex, kardex.codcomprobantetipo, ct.oficial as tipo_sunat, ct.descripcion as tipocomprobante, kardex.seriecomprobante, kardex.nrocomprobante,kardex.fechacomprobante,round(kardex.importe,2) as importe,coalesce(kardexs.estado,0) as estado from kardex.kardex as kardex inner join caja.comprobantetipos as ct on(kardex.codcomprobantetipo=ct.codcomprobantetipo) left join sunat.kardexsunat as kardexs on(kardex.codkardex=kardexs.codkardex) inner join public.personas as personas on (kardex.codpersona=personas.codpersona) where kardex.fechacomprobante>='".$this->request->fdesde."' and kardex.fechacomprobante<='".$this->request->fhasta."' and kardex.codmovimientotipo in (8,20) and ".$where_tipo_periodo." order by kardex.codkardex asc offset ".$offset." limit ".$limite)->result_array();
 			foreach ($lista as $key => $value) {
+				if (in_array((int)$value["estado"], [1, 2], true)) {
+					$mensaje_sunat = (int)$value["estado"] === 1 ? "ACEPTADO" : "ACEPTADO CON OBSERVACIONES";
+					$lista[$key]["descripcion"] = $mensaje_sunat . " | Estado local SUNAT confirmado por CDR/resumen.";
+					$lista[$key]["mensaje_sunat"] = $mensaje_sunat;
+					$lista[$key]["detalle_sunat"] = "Estado local SUNAT confirmado por CDR/resumen.";
+					$lista[$key]["nivel_sunat"] = "success";
+					$lista[$key]["estado_sunat_directo"] = 1;
+					continue;
+				}
 				$tipo_sunat = $value["tipo_sunat"];
 				$estado = $this->phuyu_consulta_libre_sunat($tipo_sunat, $value["seriecomprobante"], $value["nrocomprobante"], $value["fechacomprobante"], $value["importe"]);
 				$mensaje_sunat = (isset($estado["mensaje"]) && trim($estado["mensaje"])!="") ? $estado["mensaje"] : "Sin respuesta de SUNAT";

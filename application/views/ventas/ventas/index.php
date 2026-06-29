@@ -569,4 +569,4 @@
   }
 </script>
 
-<script src="<?php echo base_url();?>phuyu/phuyu_ventas/index.js"></script>
+<script src="<?php echo base_url();?>phuyu/phuyu_ventas/index.js?v=<?php echo filemtime(FCPATH . 'phuyu/phuyu_ventas/index.js'); ?>"></script>

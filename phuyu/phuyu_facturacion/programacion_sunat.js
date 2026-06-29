@@ -172,8 +172,8 @@ var phuyu_datos = new Vue({
 		},
 		limpiarHistorial: function(){
 			swal({
-				title: "Limpiar historial SUNAT",
-				text: "Se eliminara todo el historial de ejecuciones y las colas cerradas. No se tocaran pendientes, procesando ni errores activos.",
+				title: "Limpiar historial y cola SUNAT",
+				text: "Se eliminara el historial de ejecuciones, la cola cerrada y errores obsoletos de resumen ya cubiertos por un resumen aceptado. No se tocaran pendientes, procesando ni errores reales activos.",
 				icon: "warning",
 				buttons: ["Cancelar", "Limpiar"],
 				dangerMode: true
