@@ -1784,7 +1784,11 @@
 
                     if (producto.controlstock == 1 && nuevaCantidad > producto.stockdisponible) {
                         nuevaCantidad = producto.stockdisponible;
-                        alert(`Stock máximo disponible: ${producto.stockdisponible}`);
+                        phuyu_sistema.phuyu_alerta(
+                            "STOCK INSUFICIENTE",
+                            producto.producto + "\nDisponible: " + producto.stockdisponible + " UND\nSolicitado: " + (parseInt(producto.cantidad) || 0) + " UND",
+                            "error"
+                        );
                     }
 
                     if (nuevaCantidad < 1) {
@@ -2030,8 +2034,11 @@
                     // Validar stock si controla stock
                     if (producto.controlstock == 1 && (!producto.stockdisponible || producto
                             .stockdisponible <= 0)) {
-                        //  alert('No hay stock disponible');
-                        phuyu_sistema.phuyu_alerta("No hay stock disponibl", "", "error");
+                        phuyu_sistema.phuyu_alerta(
+                            "STOCK INSUFICIENTE",
+                            producto.descripcion + "\nDisponible: 0 UND",
+                            "error"
+                        );
                         return;
                     }
                     var existe_item = [];
@@ -2155,7 +2162,11 @@
 
                     // Validar stock si controla stock
                     if (p.controlstock == 1 && (!p.stockdisponible || p.stockdisponible <= 0)) {
-                        alert('No hay stock disponible');
+                        phuyu_sistema.phuyu_alerta(
+                            "STOCK INSUFICIENTE",
+                            p.descripcion + "\nDisponible: 0 UND",
+                            "error"
+                        );
                         return;
                     }
 
@@ -2185,7 +2196,7 @@
                         return false;
                     }
 
-                    if (this.campos.codmesa == "") {
+                    if (parseInt(this.campos.codmesa || 0) <= 0) {
                         phuyu_sistema.phuyu_noti("DEBE SELECCIONAR LA MESA DEL PEDIDO PARA PODER REGISTRAR", "", "error");
                         return false;
                     }
@@ -2231,7 +2242,7 @@
                                 //     };
                                 // });
                             } else {
-                                phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR PEDIDO", "ERROR DE RED", "error");
+                                phuyu_sistema.phuyu_alerta(data.body.mensaje || "ERROR AL REGISTRAR PEDIDO", "ERROR DE RED", "error");
                             }
                         }
                         phuyu_sistema.phuyu_fin();

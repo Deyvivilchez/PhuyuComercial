@@ -59,16 +59,15 @@
 		margin: 0 0 3px;
 		overflow: hidden;
 	}
-	#phuyu_buscar.phuyu-restobar-buscar .phuyu-product-unit {
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-product-unit-mini {
 		background: rgba(64, 81, 137, .10);
 		border-radius: 999px;
 		color: #405189;
-		display: inline-block;
-		font-size: 9px;
-		font-weight: 700;
+		flex: 0 0 auto;
+		font-size: 8px;
+		font-weight: 800;
 		line-height: 1;
-		margin-bottom: 3px;
-		padding: 3px 6px;
+		padding: 2px 4px;
 	}
 	#phuyu_buscar.phuyu-restobar-buscar .phuyu-products-scroll {
 		flex: 1 1 auto;
@@ -131,12 +130,14 @@
 				<div v-bind:style="{background: dato.background}" v-bind:title="dato.mostrarstock">
 					<div style="padding:4px;text-align:center;">
 						<p class="phuyu-product-title">{{dato.descripcion.substring(0,34)}} - {{dato.marca}}</p>
-						<span class="phuyu-product-unit">{{dato.unidad}}</span><br>
 						<b style="font-size:20px;">S/. {{dato.precio}}</b>
 						<div v-if="dato.controlstock == 1">
 							<span class="phuyu-stock-badge" v-bind:class="phuyu_sin_stock(dato) ? 'phuyu-stock-error' : 'phuyu-stock-ok'">
 								{{ dato.mostrarstock || 'STOCK: 0' }}
 							</span>
+						</div>
+						<div>
+							<span class="phuyu-product-unit-mini">{{ dato.unidad && dato.unidad.indexOf('UNIDAD') === 0 ? 'UND' : dato.unidad }}</span>
 						</div>
 					</div>
 				</div>

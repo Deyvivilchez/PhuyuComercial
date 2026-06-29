@@ -157,9 +157,19 @@ var phuyu_operacion = new Vue({
 			return parseFloat(producto.stock) || 0;
 		},
 		phuyu_alerta_stock: function(producto, stock){
-			phuyu_sistema.phuyu_noti(
-				"STOCK DISPONIBLE: " + Number(stock).toFixed(3),
-				(producto.descripcion || producto.producto || "PRODUCTO") + " CONTROLA STOCK",
+			var nombre = producto.descripcion || producto.producto || "PRODUCTO";
+			var stockTexto = Number(stock || 0).toFixed(0);
+			phuyu_sistema.phuyu_alerta(
+				"STOCK INSUFICIENTE",
+				nombre + "\nDisponible: " + stockTexto + " UND",
+				"error"
+			);
+		},
+		phuyu_alerta_stock_excedido: function(producto, stock, solicitado){
+			var nombre = producto.descripcion || producto.producto || "PRODUCTO";
+			phuyu_sistema.phuyu_alerta(
+				"STOCK INSUFICIENTE",
+				nombre + "\nDisponible: " + Number(stock || 0).toFixed(0) + " UND\nSolicitado: " + Number(solicitado || 0).toFixed(0) + " UND",
 				"error"
 			);
 		},
@@ -178,6 +188,11 @@ var phuyu_operacion = new Vue({
 			return cantidad;
 		},
 		phuyu_additem: function(producto, precio){
+			if (parseInt(this.campos.codmesa || 0) <= 0) {
+				phuyu_sistema.phuyu_noti("SELECCIONE UNA MESA", "ANTES DE AGREGAR PRODUCTOS AL PEDIDO","error");
+				return false;
+			}
+
 			producto.control = this.phuyu_controla_stock(producto) ? 1 : 0;
 
 			if (producto.control==1 && this.phuyu_stock_item(producto) <= 0) {
@@ -196,8 +211,9 @@ var phuyu_operacion = new Vue({
 					var nueva_cantidad = parseFloat(item.cantidad) + 1;
 					var stock_item = parseFloat(item.stock) || this.phuyu_stock_item(producto);
 
-					if (parseInt(this.stockalmacen) === 1 && parseInt(item.control) === 1 && (this.phuyu_cantidad_producto_detalle(item, item) + nueva_cantidad) > stock_item) {
-						this.phuyu_alerta_stock(item, stock_item);
+					var cantidad_total = this.phuyu_cantidad_producto_detalle(item, item) + nueva_cantidad;
+					if (parseInt(this.stockalmacen) === 1 && parseInt(item.control) === 1 && cantidad_total > stock_item) {
+						this.phuyu_alerta_stock_excedido(item, stock_item, cantidad_total);
 						return false;
 					}
 
@@ -227,8 +243,9 @@ var phuyu_operacion = new Vue({
 				producto.control = this.phuyu_controla_stock(producto) ? 1 : 0;
 				var stock_disponible = this.phuyu_stock_item(producto);
 
-				if (producto.control==1 && (this.phuyu_cantidad_producto_detalle(producto) + 1) > stock_disponible) {
-					this.phuyu_alerta_stock(producto, stock_disponible);
+				var solicitado = this.phuyu_cantidad_producto_detalle(producto) + 1;
+				if (producto.control==1 && solicitado > stock_disponible) {
+					this.phuyu_alerta_stock_excedido(producto, stock_disponible, solicitado);
 					return false;
 				}
 
@@ -291,7 +308,7 @@ var phuyu_operacion = new Vue({
 				phuyu_sistema.phuyu_noti("ESTIMADO USUARIO SU CAJA NO ESTA APERTURADA", "NO PUEDE REALIZAR VENTAS","error"); return false;
 			}
 
-			if(this.campos.codmesa==""){
+			if(parseInt(this.campos.codmesa || 0) <= 0){
 				phuyu_sistema.phuyu_noti("DEBE SELECCIONAR LA MESA DEL PEDIDO PARA PODER REGISTRAR","","error"); return false;
 			}
 
@@ -327,7 +344,7 @@ var phuyu_operacion = new Vue({
 
 						// });
 					}else{
-						phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR PEDIDO","ERROR DE RED","error");
+						phuyu_sistema.phuyu_alerta(data.body.mensaje || "ERROR AL REGISTRAR PEDIDO","ERROR DE RED","error");
 					}
 				}
 				phuyu_sistema.phuyu_fin(); 

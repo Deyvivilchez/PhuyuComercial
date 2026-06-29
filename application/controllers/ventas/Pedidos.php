@@ -725,6 +725,12 @@ class Pedidos extends CI_Controller {
 			if (!isset($_SESSION["phuyu_codusuario"])) {echo json_encode("e");return;}
 
 			$this->request = json_decode(file_get_contents('php://input'));
+			$codmesaRequest = (int)($this->request->campos->codmesa ?? 0);
+			if ($codmesaRequest <= 0) {
+				echo json_encode(["estado" => 0, "mensaje" => "Debe seleccionar una mesa antes de registrar el pedido"]);
+				return;
+			}
+
 			$this->db->trans_begin();
 
 			// --- suma total de detalle (seguro para objetos o arrays) ---
@@ -785,8 +791,9 @@ class Pedidos extends CI_Controller {
 
 			foreach ($this->request->detalle ?? [] as $key => $value) {
 				$detalleItem = is_object($value) ? $value : (object)$value;
+				$detalleItem->item = isset($detalleItem->item) ? (int)$detalleItem->item : 0;
 
-				if ((int)$detalleItem->item === 0) {
+				if ($detalleItem->item === 0) {
 					$item++;
 					$detalleItem->item = $item;
 				}
@@ -854,13 +861,13 @@ class Pedidos extends CI_Controller {
 			// si era pedidonuevo, insertar en mesaspedido
 			if ((int)$this->request->campos->pedidonuevo == 1) {
 				$campos_m = ["codpedido","codmesa","nromesa"];
-				$valores_m = [(int)$codpedido, (int)($this->request->campos->codmesa ?? 0), $this->request->campos->mesa ?? ''];
+				$valores_m = [(int)$codpedido, $codmesaRequest, $this->request->campos->mesa ?? ''];
 				$this->phuyu_model->phuyu_guardar("restaurante.mesaspedido", $campos_m, $valores_m);
 			}
 
 			// actualizar situacion de mesa
 			$campos_s = ["situacion"]; $valores_s = [2];
-			$this->phuyu_model->phuyu_editar("restaurante.mesas", $campos_s, $valores_s, "codmesa", $this->request->campos->codmesa);
+			$this->phuyu_model->phuyu_editar("restaurante.mesas", $campos_s, $valores_s, "codmesa", $codmesaRequest);
 
 			// transacción
 			if ($this->db->trans_status() === FALSE){
