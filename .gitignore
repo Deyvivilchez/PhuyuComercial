@@ -1,20 +1,28 @@
-# Ignorar la carpeta de facturación electrónica SUNAT por completo
-/sunat/
-
-# Logos e imágenes propias de cada cliente/empresa
-/public/img/empresa/
-
-# Archivos de configuración sensibles
+# ==========================
+# Configuración sensible
+# ==========================
 /application/config/config.php
 /application/config/database.php
-
-# Otros archivos sensibles comunes
 .env
 *.key
 *.pem
 *.crt
 
+# ==========================
+# Facturación electrónica (SUNAT)
+# ==========================
+/sunat/
+
+# ==========================
+# Logos e imágenes propias de cada empresa
+# ==========================
+/public/img/empresa/
+
+# ==========================
 # CodeIgniter
+# ==========================
 /application/logs/
 /application/cache/
-# /vendor/*
+
+# Dependencias (solo si NO se versionan)
+ /vendor/

@@ -23,6 +23,12 @@ class Precobranza extends CI_Controller {
 		if ($this->input->is_ajax_request()) {
 			$this->request = json_decode(file_get_contents('php://input'));
 			$limit = 10; $offset = $this->request->pagina * $limit - $limit;
+			$filtro = "";
+			if (!empty($this->request->filtro->codempleado)) {
+				$filtro .= " AND pr.codempleado = ".(int)$this->request->filtro->codempleado;
+			}
+			$desde = $this->db->escape($this->request->filtro->desde);
+			$hasta = $this->db->escape($this->request->filtro->hasta);
 
 			$lista = $this->db->query("SELECT pr.codmovimiento, codcontroldiario, codcaja, codconcepto, codpersona, 
 				   codusuario, usuario, tipomovimiento, codcomprobantetipo, seriecomprobante, 
@@ -32,15 +38,15 @@ class Precobranza extends CI_Controller {
 				   tipocambio, importemoneda, cobrado, cc.comprobantereferencia
 				FROM caja.v_precobranzas pr
 				JOIN caja.v_comprobantexcredito cc ON pr.codmovimiento = cc.codmovimiento 
-				WHERE codcaja = ".$_SESSION["phuyu_codcaja"]." AND fechamovimiento >= '".$this->request->filtro->desde."' and fechamovimiento <= '".$this->request->filtro->hasta."' order by codempleado,fechamovimiento ASC")->result_array();
-			$cobranzat = 0; $t = 0;
-			foreach ($lista as $key => $value) {
-				$t = $t + $value["importe"];
-			}
-			$cobranzat = number_format($t,2,".","");
+				WHERE pr.codcaja = ".$_SESSION["phuyu_codcaja"]." AND pr.fechamovimiento >= ".$desde." and pr.fechamovimiento <= ".$hasta.$filtro."
+				order by pr.codempleado, pr.fechamovimiento ASC offset ".$offset." limit ".$limit)->result_array();
+			$cobranza = $this->db->query("select round(COALESCE(sum(pr.importe),0),2) as total FROM caja.v_precobranzas pr
+				JOIN caja.v_comprobantexcredito cc ON pr.codmovimiento = cc.codmovimiento 
+				WHERE pr.codcaja = ".$_SESSION["phuyu_codcaja"]." AND pr.fechamovimiento >= ".$desde." and pr.fechamovimiento <= ".$hasta.$filtro)->result_array();
+			$cobranzat = number_format($cobranza[0]["total"],2,".","");
 			$total = $this->db->query("select count(*) as total FROM caja.v_precobranzas pr
 				JOIN caja.v_comprobantexcredito cc ON pr.codmovimiento = cc.codmovimiento 
-				WHERE codcaja = ".$_SESSION["phuyu_codcaja"]." AND fechamovimiento >= '".$this->request->filtro->desde."' and fechamovimiento <= '".$this->request->filtro->hasta."'")->result_array();
+				WHERE pr.codcaja = ".$_SESSION["phuyu_codcaja"]." AND pr.fechamovimiento >= ".$desde." and pr.fechamovimiento <= ".$hasta.$filtro)->result_array();
 
 			$paginas = floor($total[0]["total"] / $limit);
 			if ( ($total[0]["total"] % $limit)!=0 ) {
@@ -64,6 +70,7 @@ class Precobranza extends CI_Controller {
 		if ($this->input->is_ajax_request()) {
 			$this->request = json_decode(file_get_contents('php://input'));
 			$this->db->trans_begin();
+			$estado = 1;
 
 			if (isset($this->request->cobrado)) {
 				foreach ($this->request->cobrado as $key => $value) {
@@ -71,7 +78,7 @@ class Precobranza extends CI_Controller {
 						"cobrado" => 1
 					);
 
-					$this->db->where("codmovimiento", $value);
+					$this->db->where("codmovimiento", (int)$value);
 					$estado = $this->db->update("caja.movimientos", $data);
 					
 				}

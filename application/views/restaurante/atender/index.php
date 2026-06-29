@@ -722,7 +722,7 @@ $icbperSunat = $_SESSION['phuyu_icbper'] ?? 0;
 									<div class="payment-box h-100">
 										<h6 class="fw-bold mb-3"><i class="bi bi-cash-stack me-1"></i> Pago en efectivo</h6>
 										<label class="form-label">S/. monto recibido</label>
-										<input type="number" step="0.01" class="form-control number phuyu-money-success" min="0" required v-model="pagos.monto_efectivo" placeholder="S/. 0.00" v-on:keyup="phuyu_vuelto()">
+										<input type="number" step="0.01" class="form-control number phuyu-money-success" min="0" required v-model="pagos.monto_efectivo" placeholder="S/. 0.00" v-on:keyup="phuyu_vuelto()" v-on:change="phuyu_vuelto()">
 										<label class="form-label mt-2">Vuelto</label>
 										<input type="number" step="0.01" class="form-control phuyu-money-error" readonly v-model="pagos.vuelto_efectivo">
 									</div>
@@ -740,7 +740,7 @@ $icbperSunat = $_SESSION['phuyu_icbper'] ?? 0;
 											} ?>
 										</select>
 										<label class="form-label mt-2">S/. monto</label>
-										<input type="number" step="0.01" class="form-control number phuyu-money-success" min="0.01" id="monto_tarjeta" v-model="pagos.monto_tarjeta" placeholder="S/. 0.00" readonly>
+										<input type="number" step="0.01" class="form-control number phuyu-money-success" min="0.01" id="monto_tarjeta" v-model="pagos.monto_tarjeta" placeholder="S/. 0.00" v-on:keyup="phuyu_recalcular_pago()" v-on:change="phuyu_recalcular_pago()" readonly>
 										<label class="form-label mt-2">Nro voucher</label>
 										<input type="text" class="form-control phuyu-money-default" id="nrovoucher" v-model.trim="pagos.nrovoucher" autocomplete="off" readonly>
 									</div>

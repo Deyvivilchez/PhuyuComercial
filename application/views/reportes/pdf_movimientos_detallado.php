@@ -48,6 +48,48 @@
             </div>
         </div>
 
+        <?php
+            $resumenTotalPago = 0;
+            $resumenTotalEntregado = 0;
+            $resumenTotalVuelto = 0;
+            $resumenTotalMovimiento = 0;
+
+            foreach ($movimientos as $movimientoResumen) {
+                $resumenTotalPago += (double)$movimientoResumen['importe_pago'];
+                $resumenTotalEntregado += (double)$movimientoResumen['importe_entregado'];
+                $resumenTotalVuelto += (double)$movimientoResumen['vuelto'];
+                $resumenTotalMovimiento += (double)$movimientoResumen['importe_pago'];
+            }
+        ?>
+
+        <!-- RESUMEN SUPERIOR -->
+        <div style="margin: 0 0 18px 0;">
+            <table style="width: 100%; border-collapse: separate; border-spacing: 8px 0; font-size: 8pt;">
+                <tr>
+                    <td style="background: #ffffff; border-left: 5px solid #2c3e50; border-radius: 8px; padding: 10px 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.10);">
+                        <div style="color: #7f8c8d; font-size: 6.5pt; font-weight: 700; text-transform: uppercase;">Registros</div>
+                        <div style="color: #2c3e50; font-size: 13pt; font-weight: 800;"><?php echo count($movimientos); ?></div>
+                    </td>
+                    <td style="background: #ffffff; border-left: 5px solid #00b894; border-radius: 8px; padding: 10px 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.10);">
+                        <div style="color: #7f8c8d; font-size: 6.5pt; font-weight: 700; text-transform: uppercase;">Total pagado</div>
+                        <div style="color: #00a085; font-size: 13pt; font-weight: 800;">S/ <?php echo number_format($resumenTotalPago, 2); ?></div>
+                    </td>
+                    <td style="background: #ffffff; border-left: 5px solid #0984e3; border-radius: 8px; padding: 10px 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.10);">
+                        <div style="color: #7f8c8d; font-size: 6.5pt; font-weight: 700; text-transform: uppercase;">Entregado</div>
+                        <div style="color: #086cc3; font-size: 13pt; font-weight: 800;">S/ <?php echo number_format($resumenTotalEntregado, 2); ?></div>
+                    </td>
+                    <td style="background: #ffffff; border-left: 5px solid #e17055; border-radius: 8px; padding: 10px 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.10);">
+                        <div style="color: #7f8c8d; font-size: 6.5pt; font-weight: 700; text-transform: uppercase;">Vuelto</div>
+                        <div style="color: #d35400; font-size: 13pt; font-weight: 800;">S/ <?php echo number_format($resumenTotalVuelto, 2); ?></div>
+                    </td>
+                    <td style="background: #ffffff; border-left: 5px solid #6c5ce7; border-radius: 8px; padding: 10px 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.10);">
+                        <div style="color: #7f8c8d; font-size: 6.5pt; font-weight: 700; text-transform: uppercase;">Total</div>
+                        <div style="color: #6c5ce7; font-size: 13pt; font-weight: 800;">S/ <?php echo number_format($resumenTotalMovimiento, 2); ?></div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
         <!-- TABLA ELEGANTE -->
         <div
             style="margin: 20px 0; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.15); background: white;">
@@ -60,7 +102,7 @@
                         </th>
                         <th
                             style="color: #ffffff; font-weight: 600; padding: 12px 6px; border: none; text-align: center; text-transform: uppercase; letter-spacing: 0.8px; font-size: 7pt; position: relative; width: 60px;">
-                            Fecha
+                            Fecha / Hora
                         </th>
                         <th
                             style="color: #ffffff; font-weight: 600; padding: 12px 6px; border: none; text-align: center; text-transform: uppercase; letter-spacing: 0.8px; font-size: 7pt; position: relative; width: 80px;">
@@ -121,7 +163,8 @@
                     
                         echo "<tr style='transition: all 0.3s ease;'>";
                         echo "<td style='padding: 8px 6px; border-bottom: 1px solid #ecf0f1; vertical-align: middle; text-align: center;'><strong>{$i}</strong></td>";
-                        echo "<td style='padding: 8px 6px; border-bottom: 1px solid #ecf0f1; vertical-align: middle; text-align: center;'>{$m['fechamovimiento']}</td>";
+                        $horaMovimiento = !empty($m['horamovimiento']) ? $m['horamovimiento'] : '--:--:--';
+                        echo "<td style='padding: 8px 6px; border-bottom: 1px solid #ecf0f1; vertical-align: middle; text-align: center;'><strong>{$m['fechamovimiento']}</strong><br><span style='font-size: 6.5pt; color: #7f8c8d;'>{$horaMovimiento}</span></td>";
                         echo "<td style='padding: 8px 6px; border-bottom: 1px solid #ecf0f1; vertical-align: middle; text-align: center;'><span style='font-family: \"SF Mono\", monospace; font-weight: 700; color: #2c3e50; letter-spacing: 0.5px; background: #f8f9fa; padding: 3px 6px; border-radius: 4px; border: 1px solid #e9ecef;'>{$m['seriecomprobante']}-{$m['nrocomprobante']}</span></td>";
                         echo "<td style='padding: 8px 6px; border-bottom: 1px solid #ecf0f1; vertical-align: middle; text-align: left; font-weight: 600; color: #34495e;'>{$m['comprobante_referencia']}</td>";
                         echo "<td style='padding: 8px 6px; border-bottom: 1px solid #ecf0f1; vertical-align: middle; text-align: left; font-weight: 600; color: #34495e;'>{$m['razonsocial']}</td>";
