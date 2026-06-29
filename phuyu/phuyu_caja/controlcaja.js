@@ -1,10 +1,42 @@
 var phuyu_datos = new Vue({
 	el: "#phuyu_datos",
-	data: {estado:0,cargando: true},
+	data: {
+        estado:0,
+        cargando: true,
+        detalle_tipopago: {
+            cargando: false,
+            codtipopago: 0,
+            tipopago: "",
+            lista: [],
+            totales: {ingresos: 0, egresos: 0, neto: 0}
+        }
+    },
 	methods: {
 		phuyu_controlcaja: function(){
 			phuyu_sistema.phuyu_fin();
 		},
+        moneda: function(valor){
+            var numero = parseFloat(valor || 0);
+            return numero.toFixed(2);
+        },
+        ver_tipopago: function(codtipopago, tipopago){
+            this.detalle_tipopago.cargando = true;
+            this.detalle_tipopago.codtipopago = codtipopago;
+            this.detalle_tipopago.tipopago = tipopago;
+            this.detalle_tipopago.lista = [];
+            this.detalle_tipopago.totales = {ingresos: 0, egresos: 0, neto: 0};
+            $("#modal_tipopago_detalle").modal("show");
+
+            this.$http.post(url+phuyu_controller+"/detalle_tipopago/"+codtipopago).then(function(data){
+                this.detalle_tipopago.tipopago = data.body.tipopago || tipopago;
+                this.detalle_tipopago.lista = data.body.lista || [];
+                this.detalle_tipopago.totales = data.body.totales || {ingresos: 0, egresos: 0, neto: 0};
+                this.detalle_tipopago.cargando = false;
+            }, function(){
+                this.detalle_tipopago.cargando = false;
+                phuyu_sistema.phuyu_alerta("OCURRIO UN ERROR", "NO SE PUEDE CARGAR EL DETALLE","error");
+            });
+        },
 		phuyu_aperturar: function(){
             var saldar_automaticamente = $("#saldarautomaticamente").val()
 

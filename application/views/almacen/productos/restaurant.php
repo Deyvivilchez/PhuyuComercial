@@ -22,9 +22,35 @@
 		padding: 4px;
 		transition: box-shadow .2s ease, transform .2s ease;
 	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-product-card.sin-stock {
+		border-color: #f06548;
+		box-shadow: inset 0 0 0 1px rgba(240, 101, 72, .28);
+		cursor: not-allowed;
+		opacity: .78;
+	}
 	#phuyu_buscar.phuyu-restobar-buscar .phuyu-product-card:hover {
 		box-shadow: 0 8px 18px rgba(15, 23, 42, 0.1);
 		transform: translateY(-1px);
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-product-card.sin-stock:hover {
+		box-shadow: inset 0 0 0 1px rgba(240, 101, 72, .28);
+		transform: none;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-stock-badge {
+		border-radius: 999px;
+		display: inline-block;
+		font-size: 10px;
+		font-weight: 700;
+		margin-top: 4px;
+		padding: 2px 7px;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-stock-ok {
+		background: rgba(10, 179, 156, .14);
+		color: #087f6f;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-stock-error {
+		background: rgba(240, 101, 72, .16);
+		color: #d84b2a;
 	}
 	#phuyu_buscar.phuyu-restobar-buscar .modal-content {
 		border: 0;
@@ -50,11 +76,16 @@
 	</div>
 	<div class="row" v-if="!cargando">
 		<div class="col-md-4" v-for="dato in productos" v-on:click="phuyu_seleccionado(dato)">
-			<div class="phuyu-product-card">
+			<div class="phuyu-product-card" v-bind:class="phuyu_sin_stock(dato) ? 'sin-stock' : ''">
 			<div v-bind:style="{background: dato.background}" v-bind:title="dato.mostrarstock">
 				<div style="padding:4px;text-align:center;">
 					<p style="height:30px;font-weight:bold;font-size:10px;">{{dato.descripcion.substring(0,30)}} - {{dato.marca}}</p>
 					<b style="font-size:20px;">S/. {{dato.precio}}</b>
+					<div v-if="dato.controlstock == 1">
+						<span class="phuyu-stock-badge" v-bind:class="phuyu_sin_stock(dato) ? 'phuyu-stock-error' : 'phuyu-stock-ok'">
+							{{ dato.mostrarstock || 'STOCK: 0' }}
+						</span>
+					</div>
 				</div>
 			</div>
 			</div>
@@ -151,7 +182,18 @@
 				this.phuyu_productos();
 			},
 
+			phuyu_sin_stock: function(producto){
+				return parseInt(phuyu_operacion.stockalmacen) === 1 && parseInt(producto.controlstock) === 1 && (parseFloat(producto.stockdisponible) || 0) <= 0;
+			},
 			phuyu_seleccionado: function(producto){
+				if (this.phuyu_sin_stock(producto)) {
+					phuyu_sistema.phuyu_alerta(
+						"No hay stock disponible",
+						producto.descripcion + " | " + (producto.mostrarstock || "STOCK: 0"),
+						"error"
+					);
+					return false;
+				}
 				phuyu_operacion.phuyu_additem(producto, producto.precio);
 			},
 			phuyu_masprecios:function(producto){

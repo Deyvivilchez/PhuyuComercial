@@ -5,7 +5,7 @@ var phuyu_datos = new Vue({
 		campos_t:{"codmovimiento":"","codpersona":"","codcaja":0,"codtipopago":0,"importe":0,"codcomprobantetipo":0,
 		"seriecomprobante":"","nrocomprobante":"","fechadocbanco":"","nrodocbanco":""},
 		paginacion: {"total":0, "actual":1, "ultima":0, "desde":0, "hasta":0}, offset: 3,
-		fecha_desde: "", fecha_hasta: "",
+		fecha_desde: "", fecha_hasta: "", codtipopago: 0, tipomovimiento: 0,
 	},
 	computed: {
 		phuyu_actual: function(){
@@ -77,7 +77,14 @@ var phuyu_datos = new Vue({
 
 		phuyu_datos: function(){
 			this.cargando = true; this.registro = 0;
-			this.$http.post(url+phuyu_controller+"/lista",{"buscar":this.buscar, "pagina":this.paginacion.actual}).then(function(data){
+			this.$http.post(url+phuyu_controller+"/lista",{
+				"buscar":this.buscar,
+				"pagina":this.paginacion.actual,
+				"fecha_desde":this.fecha_desde,
+				"fecha_hasta":this.fecha_hasta,
+				"codtipopago":this.codtipopago,
+				"tipomovimiento":this.tipomovimiento
+			}).then(function(data){
 				this.datos = data.body.lista; this.paginacion = data.body.paginacion;
 				this.cargando = false; phuyu_sistema.phuyu_fin();
 			},function(){
