@@ -549,7 +549,23 @@ class Pedidos extends CI_Controller {
 				$estado = 0;
 				$info = $this->db->query("select valorventa,descglobal,igv,importe, codempleado, codcomprobantetipo from kardex.pedidos where codpedido=".$pedido[0]["codpedido"])->result_array();
 
-				$detalle = $this->db->query("select kd.codproducto,p.descripcion as producto,kd.codunidad,u.descripcion as unidad,kd.item,round(kd.cantidad) as cantidad, (select stockactual from almacen.productoubicacion where kd.codproducto=codproducto and kd.codunidad=codunidad and codalmacen=".$_SESSION["phuyu_codalmacen"].") as stock,p.controlstock as control,
+				$detalle = $this->db->query("select kd.codproducto,p.descripcion as producto,kd.codunidad,u.descripcion as unidad,kd.item,round(kd.cantidad) as cantidad, (select stockactualconvertido from almacen.productoubicacion where kd.codproducto=codproducto and kd.codunidad=codunidad and codalmacen=".$_SESSION["phuyu_codalmacen"].") as stock,
+					(
+						coalesce((select stockactualconvertido from almacen.productoubicacion where kd.codproducto=codproducto and kd.codunidad=codunidad and codalmacen=".$_SESSION["phuyu_codalmacen"]."),0)
+						-
+						coalesce((
+							select sum(pd.cantidad)
+							from kardex.pedidos pedi
+							inner join restaurante.mesaspedido mp on mp.codpedido=pedi.codpedido and mp.estado=1
+							inner join kardex.pedidosdetalle pd on pedi.codpedido=pd.codpedido
+							where pedi.estado=1
+								and pd.estado=1
+								and pedi.codpedido<>".$pedido[0]["codpedido"]."
+								and pd.codproducto=kd.codproducto
+								and pd.codunidad=kd.codunidad
+						),0)
+					) as stockdisponible,
+					p.controlstock as control,p.controlstock as controlstock,
 					kd.preciounitario as preciobruto, 0 as descuento, 0 as porcdescuento, kd.preciounitario as preciosinigv, 20 as codafectacionigv, 0 as conicbper, 0 as icbper, 0 as igv, kd.valorventa,
 					round(kd.preciounitario,3) as precio,kd.preciorefunitario, p.calcular, round(kd.subtotal,3) as subtotal, kd.descripcion, 
 					(select round(coalesce(sum(cantidad),0)) from restaurante.atendidos where codpedido=".$pedido[0]["codpedido"]." and kd.codproducto=codproducto and kd.codunidad=codunidad and kd.item=item) as atendido 
@@ -729,6 +745,75 @@ class Pedidos extends CI_Controller {
 			if ($codmesaRequest <= 0) {
 				echo json_encode(["estado" => 0, "mensaje" => "Debe seleccionar una mesa antes de registrar el pedido"]);
 				return;
+			}
+
+			$codpedidoActual = ((int)($this->request->campos->pedidonuevo ?? 1) === 1) ? 0 : (int)($this->request->campos->codpedido ?? 0);
+			$detalleAgrupado = [];
+			foreach ($this->request->detalle ?? [] as $value) {
+				$detalleItem = is_object($value) ? $value : (object)$value;
+				$codproducto = (int)($detalleItem->codproducto ?? 0);
+				$codunidad = (int)($detalleItem->codunidad ?? 0);
+				$cantidad = (double)($detalleItem->cantidad ?? 0);
+				if ($codproducto <= 0 || $codunidad <= 0) {
+					continue;
+				}
+
+				$key = $codproducto."|".$codunidad;
+				if (!isset($detalleAgrupado[$key])) {
+					$detalleAgrupado[$key] = [
+						"codproducto" => $codproducto,
+						"codunidad" => $codunidad,
+						"cantidad" => 0,
+						"producto" => $detalleItem->producto ?? $detalleItem->descripcion ?? "PRODUCTO",
+					];
+				}
+				$detalleAgrupado[$key]["cantidad"] += $cantidad;
+			}
+
+			foreach ($detalleAgrupado as $itemValidar) {
+				$stockInfo = $this->db->query(
+					"select p.descripcion, p.controlstock,
+						coalesce((
+							select pu.stockactualconvertido
+							from almacen.productoubicacion pu
+							where pu.codalmacen=? and pu.codproducto=? and pu.codunidad=? and pu.estado=1
+							limit 1
+						),0) as stock,
+						coalesce((
+							select sum(pd.cantidad)
+							from kardex.pedidos pedi
+							inner join restaurante.mesaspedido mp on mp.codpedido=pedi.codpedido and mp.estado=1
+							inner join kardex.pedidosdetalle pd on pd.codpedido=pedi.codpedido and pd.estado=1
+							where pedi.estado=1
+								and pedi.codpedido<>?
+								and pd.codproducto=?
+								and pd.codunidad=?
+						),0) as comprometido
+					from almacen.productos p
+					where p.codproducto=?
+					limit 1",
+					[
+						(int)($_SESSION["phuyu_codalmacen"] ?? 0),
+						$itemValidar["codproducto"],
+						$itemValidar["codunidad"],
+						$codpedidoActual,
+						$itemValidar["codproducto"],
+						$itemValidar["codunidad"],
+						$itemValidar["codproducto"],
+					]
+				)->row_array();
+
+				if (!empty($stockInfo) && (int)$stockInfo["controlstock"] === 1) {
+					$maximo = round((double)$stockInfo["stock"] - (double)$stockInfo["comprometido"], 3);
+					$solicitado = round((double)$itemValidar["cantidad"], 3);
+					if ($solicitado > $maximo) {
+						echo json_encode([
+							"estado" => 0,
+							"mensaje" => "STOCK INSUFICIENTE\n".$stockInfo["descripcion"]."\nDisponible: ".$maximo." UND\nSolicitado: ".$solicitado." UND",
+						]);
+						return;
+					}
+				}
 			}
 
 			$this->db->trans_begin();

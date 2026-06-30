@@ -413,10 +413,10 @@
                                 </div>
                                 <div class="d-flex align-items-center justify-content-between mt-2">
                                     <span class="precio">S/. {{ (p . precio || 0) . toFixed(2) }}</span>
-                                    <button class="btn btn-sm" :class="(p.controlstock == 1 && p.stockdisponible <= 0) ? 'btn-secondary' :
-                                        'btn-primary'" :disabled="p.controlstock == 1 && p.stockdisponible <= 0"
+                                    <button class="btn btn-sm" :class="!puedeAgregarProducto(p) ? 'btn-secondary' :
+                                        'btn-primary'" :disabled="!puedeAgregarProducto(p)"
                                         @click="agregar(p,p.precio)">
-                                        <i :class="(p.controlstock == 1 && p.stockdisponible <= 0) ? 'bi bi-dash-circle' :
+                                        <i :class="!puedeAgregarProducto(p) ? 'bi bi-dash-circle' :
                                             'bi bi-plus-circle'"></i>
                                     </button>
                                 </div>
@@ -538,8 +538,8 @@
                                 </button>
 
                                 <!-- Stock info -->
-                                <span v-if="producto.controlstock == 1" class="text-muted small">
-                                    Stock: {{ producto . stockdisponible }}
+                                <span v-if="controlaStock(producto)" class="text-muted small">
+                                    Stock: {{ stockDisponiblePedido(producto) }}
                                 </span>
                             </div>
 
@@ -550,12 +550,13 @@
                                         <i class="bi bi-dash"></i>
                                     </button>
                                     <input type="number" v-model.number="producto.cantidad"
+                                        @focus="guardarCantidadAnterior(producto)"
                                         @change="validarCantidad(producto, index)"
                                         class="form-control form-control-sm" style="width: 60px; text-align: center"
                                         min="1"
-                                        :max="producto.controlstock == 1 ? producto.stockdisponible : null">
+                                        :max="controlaStock(producto) ? stockDisponiblePedido(producto) : null">
                                     <button class="btn btn-outline-secondary btn-sm" @click="inc(index)"
-                                        :disabled="producto.controlstock == 1 && producto.cantidad >= producto.stockdisponible">
+                                        :disabled="controlaStock(producto) && producto.cantidad >= stockDisponiblePedido(producto)">
                                         <i class="bi bi-plus"></i>
                                     </button>
                                 </div>
@@ -1428,11 +1429,15 @@
                         }, 300);
                         return false;
 
-                    }
+	                    }
 
-                    this.$http.post(url + "ventas/pedidos/guardar_pedido", {
-                        "campos": this.campos,
-                        "detalle": this.items,
+	                    if (!this.validarStockPedido()) {
+	                        return false;
+	                    }
+
+	                    this.$http.post(url + "ventas/pedidos/guardar_pedido", {
+	                        "campos": this.campos,
+	                        "detalle": this.items,
                         "totales": this.totales
                     }).then(function(data) {
                         if (data.body == "e") {
@@ -1779,25 +1784,132 @@
                     myOffcanvas.show()
                     // data-bs-target="#pedidoCanvas"
                 },
+                controlaStock(producto) {
+                    return Number(this.stockalmacen) === 1 && Number(producto.controlstock || producto.control || 0) === 1;
+                },
+                stockMaximoItem(producto) {
+                    if (!this.controlaStock(producto)) return null;
+
+                    var disponible = Number(producto.stockdisponible);
+                    if (!isNaN(disponible) && disponible >= 0) return disponible;
+
+                    var stock = Number(producto.stock);
+                    return isNaN(stock) ? 0 : Math.max(0, stock);
+                },
+                stockProductoListado(producto) {
+                    var disponible = Number(producto.stockdisponible);
+                    if (!isNaN(disponible)) return disponible;
+
+                    var stock = Number(producto.stock);
+                    return isNaN(stock) ? 0 : Math.max(0, stock);
+                },
+                productoListadoPorItem(producto) {
+                    return (this.productos || []).find(function(item) {
+                        return item.codproducto == producto.codproducto && item.codunidad == producto.codunidad;
+                    });
+                },
+                stockDisponiblePedido(producto) {
+                    var productoListado = this.productoListadoPorItem(producto);
+                    if (productoListado) {
+                        return this.maximoCantidadPedido(productoListado);
+                    }
+
+                    return this.stockMaximoItem(producto);
+                },
+                maximoCantidadPedido(producto) {
+                    var productoListado = this.productoListadoPorItem(producto) || producto;
+
+                    if (productoListado.stock_maximo_pedido === undefined) {
+                        productoListado.stock_maximo_pedido = this.cantidadEnPedido(productoListado) + this.stockProductoListado(productoListado);
+                    }
+
+                    return Math.max(0, Number(productoListado.stock_maximo_pedido) || 0);
+                },
+                cantidadEnPedido(producto, omitir) {
+                    return this.items.reduce(function(total, item) {
+                        if (item === omitir) return total;
+                        if (item.codproducto == producto.codproducto && item.codunidad == producto.codunidad) {
+                            return total + (parseFloat(item.cantidad) || 0);
+                        }
+                        return total;
+                    }, 0);
+                },
+                puedeAgregarProducto(producto) {
+                    if (!this.controlaStock(producto)) return true;
+
+                    var existente = this.items.find(function(item) {
+                        return item.codproducto == producto.codproducto && item.codunidad == producto.codunidad;
+                    });
+                    var maximo = this.maximoCantidadPedido(producto);
+                    var solicitado = this.cantidadEnPedido(producto, existente) + (existente ? (parseFloat(existente.cantidad) || 0) + 1 : 1);
+
+                    return solicitado <= maximo;
+                },
+                alertaStockInsuficiente(producto, solicitado, stockDisponible) {
+                    var maximo = stockDisponible !== undefined ? stockDisponible : this.stockMaximoItem(producto);
+                    phuyu_sistema.phuyu_alerta(
+                        "STOCK INSUFICIENTE",
+                        (producto.producto || producto.descripcion) + "\nDisponible: " + maximo + " UND\nSolicitado: " + solicitado + " UND",
+                        "error"
+                    );
+                },
+                guardarCantidadAnterior(producto) {
+                    producto.cantidad_anterior = parseFloat(producto.cantidad) || 1;
+                    this.maximoCantidadPedido(producto);
+                },
+                recalcularItem(producto) {
+                    producto.subtotal = Number(((parseFloat(producto.cantidad) || 0) * (parseFloat(producto.precio) || 0)).toFixed(2));
+                    producto.valorventa = producto.subtotal;
+                    producto.subtotal_tem = producto.subtotal;
+                    this.totales.valorventa = Number(this.items.reduce(function(total, item) {
+                        return total + (parseFloat(item.subtotal) || 0);
+                    }, 0).toFixed(2));
+                    this.totales.importe = this.totales.valorventa;
+                },
+                cantidadActual(producto) {
+                    return parseFloat(producto.cantidad) || 1;
+                },
+                fijarCantidadItem(producto, cantidad) {
+                    producto.cantidad = cantidad;
+                    producto.cantidad_anterior = cantidad;
+                    this.recalcularItem(producto);
+                },
                 validarCantidad(producto, index) {
                     let nuevaCantidad = parseInt(producto.cantidad) || 1;
+                    var productoListado = this.productoListadoPorItem(producto);
+                    if (productoListado && productoListado.stock_maximo_pedido === undefined) {
+                        var anterior = parseFloat(producto.cantidad_anterior) || nuevaCantidad;
+                        productoListado.stock_maximo_pedido = this.cantidadEnPedido(producto, producto) + anterior + this.stockProductoListado(productoListado);
+                    }
+                    var maximo = this.stockDisponiblePedido(producto);
 
-                    if (producto.controlstock == 1 && nuevaCantidad > producto.stockdisponible) {
-                        nuevaCantidad = producto.stockdisponible;
-                        phuyu_sistema.phuyu_alerta(
-                            "STOCK INSUFICIENTE",
-                            producto.producto + "\nDisponible: " + producto.stockdisponible + " UND\nSolicitado: " + (parseInt(producto.cantidad) || 0) + " UND",
-                            "error"
-                        );
+                    if (this.controlaStock(producto) && nuevaCantidad > maximo) {
+                        this.alertaStockInsuficiente(producto, nuevaCantidad, maximo);
+                        var anterior = parseFloat(producto.cantidad_anterior) || 1;
+                        nuevaCantidad = anterior <= maximo ? anterior : maximo;
                     }
 
                     if (nuevaCantidad < 1) {
                         nuevaCantidad = 1;
                     }
 
-                    producto.cantidad = nuevaCantidad;
+                    this.fijarCantidadItem(producto, nuevaCantidad);
+                },
+                validarStockPedido() {
+                    for (var i = 0; i < this.items.length; i++) {
+                        var item = this.items[i];
+                        if (!this.controlaStock(item)) continue;
 
-                    this.actualizarStockVisual(producto);
+                        var maximo = this.stockDisponiblePedido(item);
+                        var cantidad = parseFloat(item.cantidad) || 0;
+
+                        if (cantidad > maximo) {
+                            this.alertaStockInsuficiente(item, cantidad, maximo);
+                            return false;
+                        }
+                    }
+
+                    return true;
                 },
                 configurarScroll() {
                     // Esperar a que Vue renderice el DOM
@@ -2023,40 +2135,33 @@
 
                 // Carrito / pedido
                 agregar(producto, precio) {
-                    //let p = producto;
-
                     if (!this.mesaSeleccionada) {
-                        //alert('Por favor, selecciona una mesa primero');
                         phuyu_sistema.phuyu_alerta("Debe selecionar una mesa", "", "error");
                         return;
                     }
 
-                    // Validar stock si controla stock
-                    if (producto.controlstock == 1 && (!producto.stockdisponible || producto
-                            .stockdisponible <= 0)) {
-                        phuyu_sistema.phuyu_alerta(
-                            "STOCK INSUFICIENTE",
-                            producto.descripcion + "\nDisponible: 0 UND",
-                            "error"
-                        );
+                    if (this.controlaStock(producto) && !this.puedeAgregarProducto(producto)) {
+                        this.alertaStockInsuficiente(producto, this.cantidadEnPedido(producto) + 1, this.maximoCantidadPedido(producto));
                         return;
                     }
+
                     var existe_item = [];
                     if ($("#itemrepetir").val() == 0) {
-                        var existe_item = this.items.filter(function(p) {
-                            if (p.codproducto == producto.codproducto && p.codunidad == producto
-                                .codunidad) {
-                                p.cantidad = parseFloat(p.cantidad) + 1;
-                                return p;
-                            };
+                        existe_item = this.items.filter(function(p) {
+                            return p.codproducto == producto.codproducto && p.codunidad == producto.codunidad;
                         });
-                        // Actualizar stock localmente si controla stock
-                        if (producto.controlstock == 1 && producto.stockdisponible > 0) {
-                            producto.stockdisponible--;
-                            producto.mostrarstock = "STOCK: " + producto.stockdisponible;
-                        }
 
+                        if (existe_item.length > 0) {
+                            var itemExistente = existe_item[0];
+                            var cantidadAnterior = this.cantidadActual(itemExistente);
+                            itemExistente.stock = producto.stock;
+                            itemExistente.stockdisponible = producto.stockdisponible;
+                            itemExistente.controlstock = producto.controlstock;
+                            itemExistente.control = producto.controlstock;
+                            this.fijarCantidadItem(itemExistente, cantidadAnterior + 1);
+                        }
                     }
+
                     if (existe_item.length == 0 || $("#itemrepetir").val() == 1) {
                         producto.preciosinigv = producto.precio;
                         producto.precio = precio;
@@ -2096,6 +2201,8 @@
                             unidad: producto.unidad,
                             cantidad: 1,
                             stock: producto.stock,
+                            stockdisponible: producto.stockdisponible,
+                            controlstock: producto.controlstock,
                             control: producto.control,
                             preciobruto: producto.preciosinigv,
                             preciosinigv: producto.preciosinigv,
@@ -2118,14 +2225,7 @@
                         });
                         let text = "Se Agregó " + producto.descripcion + " al pedido";
                         phuyu_sistema.phuyu_noti(text, "", "success");
-                        // Actualizar stock localmente si controla stock
-                        if (producto.controlstock == 1 && producto.stockdisponible > 0) {
-                            producto.stockdisponible--;
-                            producto.mostrarstock = "STOCK: " + producto.stockdisponible;
-                        }
-                        //this.phuyu_calcular(producto,1);
-                    } else {
-                        //this.phuyu_calcular(existe_item[0],3);
+                        this.recalcularItem(this.items[this.items.length - 1]);
                     }
                 },
                 phuyu_calcular: function(producto, tipo) {
@@ -2205,12 +2305,16 @@
                     //     phuyu_sistema.phuyu_noti("REGISTRAR UN PRODUCTO EN EL DETALLE", "REGISTRAR ITEM PARA EL PEDIDO", "error");
                     //     return false;
                     // }
-                    if (this.items.length == 0) {
-                        phuyu_sistema.phuyu_noti("REGISTRAR UN PRODUCTO EN EL DETALLE", "REGISTRAR ITEM PARA EL PEDIDO", "error");
-                        return false;
-                    }
+	                    if (this.items.length == 0) {
+	                        phuyu_sistema.phuyu_noti("REGISTRAR UN PRODUCTO EN EL DETALLE", "REGISTRAR ITEM PARA EL PEDIDO", "error");
+	                        return false;
+	                    }
 
-                    this.estado = 1;
+	                    if (!this.validarStockPedido()) {
+	                        return false;
+	                    }
+
+	                    this.estado = 1;
 
                     phuyu_sistema.phuyu_inicio_guardar("GUARDANDO PEDIDO . . .");
                     this.$http.post(url + "ventas/pedidos/guardar_pedido", {
@@ -2345,13 +2449,29 @@
                     this.estado == 0
                 },
                 inc(i) {
-                    this.items[i].cantidad++
+                    var item = this.items[i];
+                    var cantidadAnterior = this.cantidadActual(item);
+                    var nuevaCantidad = cantidadAnterior + 1;
+                    var maximo = this.stockDisponiblePedido(item);
+
+                    if (this.controlaStock(item) && nuevaCantidad > maximo) {
+                        this.alertaStockInsuficiente(item, nuevaCantidad, maximo);
+                        this.fijarCantidadItem(item, cantidadAnterior);
+                        return;
+                    }
+
+                    this.fijarCantidadItem(item, nuevaCantidad);
                 },
                 dec(i) {
-                    this.items[i].cantidad = Math.max(1, this.items[i].cantidad - 1)
+                    var item = this.items[i];
+                    this.fijarCantidadItem(item, Math.max(1, this.cantidadActual(item) - 1));
                 },
                 delItem(i) {
-                    this.items.splice(i, 1)
+                    this.items.splice(i, 1);
+                    this.totales.valorventa = Number(this.items.reduce(function(total, item) {
+                        return total + (parseFloat(item.subtotal) || 0);
+                    }, 0).toFixed(2));
+                    this.totales.importe = this.totales.valorventa;
                 },
                 guardar() {
                     this.phuyu_guardar_pedido();

@@ -1178,8 +1178,10 @@ class Productos extends CI_Controller
         (
             SELECT COALESCE(SUM(pd.cantidad),0)
             FROM kardex.pedidos AS pedi
+            INNER JOIN restaurante.mesaspedido AS mp ON (mp.codpedido = pedi.codpedido AND mp.estado = 1)
             INNER JOIN kardex.pedidosdetalle AS pd ON (pedi.codpedido = pd.codpedido)
             WHERE pedi.estado = 1
+              AND pd.estado = 1
               AND pu.codproducto = pd.codproducto
               AND pu.codunidad = pd.codunidad
         ) AS comprometido,
