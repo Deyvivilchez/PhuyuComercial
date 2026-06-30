@@ -1,3 +1,15 @@
+<?php
+	$phuyu_tiene_panel = isset($_SESSION["phuyu_codsucursal"]);
+	$phuyu_inicio_url = $phuyu_tiene_panel ? base_url('phuyu/w/') : base_url();
+	$phuyu_inicio_texto = $phuyu_tiene_panel ? 'Volver al panel' : 'Iniciar de nuevo';
+	$phuyu_subtitulo = $phuyu_tiene_panel
+		? 'La ruta que intentaste abrir no existe o fue movida.'
+		: 'Tu sesion no esta lista o la ruta ya no esta disponible.';
+	$phuyu_descripcion = $phuyu_tiene_panel
+		? 'Puedes volver al panel principal o usar uno de los accesos rapidos disponibles.'
+		: 'Si el sistema se cerro de golpe, vuelve al inicio para seleccionar sucursal e ingresar otra vez.';
+?>
+
 <style>
 	:root {
 		--ph-404-primary: #405189;
@@ -401,21 +413,22 @@
 
 			<div class="ph-404-kicker">Error 404</div>
 			<h1 class="ph-404-title">Pagina no encontrada</h1>
-			<h2 class="ph-404-subtitle">La ruta que intentaste abrir no existe o fue movida.</h2>
+			<h2 class="ph-404-subtitle"><?php echo $phuyu_subtitulo; ?></h2>
 			<p class="ph-404-text">
-				No pasa nada, puedes volver al inicio del sistema o entrar directo a uno de los modulos principales.
+				<?php echo $phuyu_descripcion; ?>
 			</p>
 
 			<div class="ph-404-actions">
-				<a href="<?php echo base_url('phuyu/w/'); ?>" class="ph-404-btn ph-404-btn-primary" data-force-nav>
-					<span>Inicio</span>
+				<a href="<?php echo $phuyu_inicio_url; ?>" class="ph-404-btn ph-404-btn-primary" data-force-nav>
+					<span><?php echo $phuyu_inicio_texto; ?></span>
 				</a>
-				<button type="button" class="ph-404-btn ph-404-btn-light" id="backButton">
+				<a href="<?php echo $phuyu_inicio_url; ?>" class="ph-404-btn ph-404-btn-light" id="backButton" data-safe-home="<?php echo $phuyu_inicio_url; ?>">
 					<span>Volver atras</span>
-				</button>
+				</a>
 			</div>
 
 			<div class="ph-404-links" aria-label="Accesos rapidos">
+				<?php if ($phuyu_tiene_panel) { ?>
 				<a href="<?php echo base_url('phuyu/w/administracion/dashboard'); ?>" class="ph-404-link" data-force-nav>
 					<span class="ph-404-link-icon">A</span>
 					<span>
@@ -437,12 +450,35 @@
 						<span>Productos y stock</span>
 					</span>
 				</a>
+				<?php } else { ?>
+				<a href="<?php echo base_url(); ?>" class="ph-404-link" data-force-nav>
+					<span class="ph-404-link-icon">I</span>
+					<span>
+						<strong>Inicio</strong>
+						<span>Volver a ingresar</span>
+					</span>
+				</a>
+				<a href="<?php echo base_url(); ?>" class="ph-404-link" data-force-nav>
+					<span class="ph-404-link-icon">S</span>
+					<span>
+						<strong>Sucursal</strong>
+						<span>Seleccionar acceso</span>
+					</span>
+				</a>
+				<a href="<?php echo base_url(); ?>" class="ph-404-link" data-force-nav>
+					<span class="ph-404-link-icon">P</span>
+					<span>
+						<strong>Panel</strong>
+						<span>Reabrir sistema</span>
+					</span>
+				</a>
+				<?php } ?>
 			</div>
 
 			<div class="ph-404-footer">
 				<span>&copy; <?php echo date('Y'); ?> Phuyu System</span>
 				<span>|</span>
-				<a href="<?php echo base_url('phuyu/w/'); ?>" data-force-nav>Ir al panel</a>
+				<a href="<?php echo $phuyu_inicio_url; ?>" data-force-nav><?php echo $phuyu_inicio_texto; ?></a>
 			</div>
 		</div>
 
@@ -451,8 +487,8 @@
 				<img src="<?php echo base_url('public/img1/404.png'); ?>" alt="">
 			</div>
 			<div class="ph-404-note">
-				<strong>Ruta no disponible</strong>
-				<span>Si llegaste desde un menu, revisa permisos o que el modulo siga activo.</span>
+				<strong><?php echo $phuyu_tiene_panel ? 'Ruta no disponible' : 'Sesion interrumpida'; ?></strong>
+				<span><?php echo $phuyu_tiene_panel ? 'Si llegaste desde un menu, revisa permisos o que el modulo siga activo.' : 'Vuelve al inicio para reconstruir tu acceso al sistema.'; ?></span>
 			</div>
 		</aside>
 	</section>
@@ -460,24 +496,39 @@
 
 <script>
 	(function() {
+		function phuyuGoTo(href) {
+			if (!href) {
+				return;
+			}
+			if (window.top && window.top !== window.self) {
+				window.top.location.href = href;
+				return;
+			}
+			window.location.href = href;
+		}
+
 		document.querySelectorAll("[data-force-nav]").forEach(function(el) {
 			el.addEventListener("click", function(event) {
 				var href = el.getAttribute("href");
 				if (href) {
 					event.preventDefault();
-					window.location.href = href;
+					phuyuGoTo(href);
 				}
 			});
 		});
 
 		var backBtn = document.getElementById("backButton");
 		if (backBtn) {
-			backBtn.addEventListener("click", function() {
-				if (window.history.length > 1) {
+			backBtn.addEventListener("click", function(event) {
+				var safeHome = backBtn.getAttribute("data-safe-home") || "<?php echo $phuyu_inicio_url; ?>";
+				var referrer = document.referrer || "";
+				if (window.history.length > 1 && referrer && referrer !== window.location.href) {
+					event.preventDefault();
 					window.history.back();
 					return;
 				}
-				window.location.href = "<?php echo base_url('phuyu/w/'); ?>";
+				event.preventDefault();
+				phuyuGoTo(safeHome);
 			});
 		}
 	})();

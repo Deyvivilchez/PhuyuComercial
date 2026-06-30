@@ -11,7 +11,8 @@ class Movimientos extends CI_Controller {
 			if (isset($_SESSION["phuyu_usuario"])) {
 				$caja = $this->Caja_model->phuyu_estadocaja();
 				$transferencias = $this->db->query("select count(*) as cantidad from caja.movimientos where codcaja_ref=".$_SESSION["phuyu_codcaja"]." and transferido=0 and estado=1")->result_array();
-				$this->load->view("caja/movimientos/index",compact("transferencias"));
+				$tipopagos = $this->db->query("select codtipopago, descripcion from caja.tipopagos where estado=1 order by descripcion")->result_array();
+				$this->load->view("caja/movimientos/index",compact("transferencias","tipopagos"));
 			}else{
 				$this->load->view("phuyu/505");
 			}
@@ -23,9 +24,70 @@ class Movimientos extends CI_Controller {
 	public function lista(){
 		if ($this->input->is_ajax_request()) {
 			$this->request = json_decode(file_get_contents('php://input'));
-			$limit = 10; $offset = $this->request->pagina * $limit - $limit;
+			$limit = 10;
+			$pagina = isset($this->request->pagina) ? max(1, (int)$this->request->pagina) : 1;
+			$offset = $pagina * $limit - $limit;
+			$codcontroldiario = isset($_SESSION["phuyu_codcontroldiario"]) ? (int)$_SESSION["phuyu_codcontroldiario"] : 0;
+			$buscar = isset($this->request->buscar) ? $this->db->escape_like_str(trim($this->request->buscar)) : "";
+			$fecha_desde = isset($this->request->fecha_desde) ? trim($this->request->fecha_desde) : "";
+			$fecha_hasta = isset($this->request->fecha_hasta) ? trim($this->request->fecha_hasta) : "";
+			$codtipopago = isset($this->request->codtipopago) ? (int)$this->request->codtipopago : 0;
+			$tipomovimiento = isset($this->request->tipomovimiento) ? (int)$this->request->tipomovimiento : 0;
+			$filtro_fecha = "";
+			$filtro_tipopago = "";
+			$filtro_tipomovimiento = "";
 
-			$lista = $this->db->query("select movimientos.*, round(movimientos.importe,2) as importe_r, personas.razonsocial,conceptos.descripcion as concepto from caja.movimientos as movimientos inner join public.personas as personas on(movimientos.codpersona=personas.codpersona) inner join caja.conceptos as conceptos on(movimientos.codconcepto=conceptos.codconcepto) where movimientos.codcontroldiario=".$_SESSION["phuyu_codcontroldiario"]." and (UPPER(movimientos.seriecomprobante) like UPPER('%".$this->request->buscar."%') or UPPER(conceptos.descripcion) like UPPER('%".$this->request->buscar."%') or UPPER(personas.razonsocial) like UPPER('%".$this->request->buscar."%') ) and movimientos.condicionpago=1 and movimientos.estado=1 order by movimientos.codmovimiento desc offset ".$offset." limit ".$limit)->result_array();
+			if ($fecha_desde !== "" && $fecha_hasta !== "" && $fecha_desde > $fecha_hasta) {
+				$fecha_temp = $fecha_desde;
+				$fecha_desde = $fecha_hasta;
+				$fecha_hasta = $fecha_temp;
+			}
+
+			if ($fecha_desde !== "") {
+				$filtro_fecha .= " and movimientos.fechamovimiento >= ".$this->db->escape($fecha_desde);
+			}
+
+			if ($fecha_hasta !== "") {
+				$filtro_fecha .= " and movimientos.fechamovimiento <= ".$this->db->escape($fecha_hasta);
+			}
+
+			if ($codtipopago > 0) {
+				$filtro_tipopago = " and exists (
+					select 1
+					from caja.movimientosdetalle md_filtro
+					where md_filtro.codmovimiento=movimientos.codmovimiento
+					  and md_filtro.codtipopago=".$codtipopago."
+				)";
+			}
+
+			if ($tipomovimiento === 1 || $tipomovimiento === 2) {
+				$filtro_tipomovimiento = " and movimientos.tipomovimiento=".$tipomovimiento;
+			}
+
+			$where = " where movimientos.codcontroldiario=".$codcontroldiario."
+				and (
+					UPPER(movimientos.seriecomprobante) like UPPER('%".$buscar."%')
+					or UPPER(conceptos.descripcion) like UPPER('%".$buscar."%')
+					or UPPER(personas.razonsocial) like UPPER('%".$buscar."%')
+					or UPPER(COALESCE(pagos.tipopago, '')) like UPPER('%".$buscar."%')
+				)
+				".$filtro_fecha."
+				".$filtro_tipopago."
+				".$filtro_tipomovimiento."
+				and movimientos.condicionpago=1
+				and movimientos.estado=1";
+			$join_pagos = "
+				left join (
+					select
+						md.codmovimiento,
+						string_agg(distinct tp.descripcion, ', ' order by tp.descripcion) as tipopago
+					from caja.movimientosdetalle md
+					inner join caja.tipopagos tp on(md.codtipopago=tp.codtipopago)
+					group by md.codmovimiento
+				) pagos on(pagos.codmovimiento=movimientos.codmovimiento)
+			";
+
+			$lista = $this->db->query("select movimientos.*, round(movimientos.importe,2) as importe_r, personas.razonsocial,conceptos.descripcion as concepto, COALESCE(pagos.tipopago, '-') as tipopago from caja.movimientos as movimientos inner join public.personas as personas on(movimientos.codpersona=personas.codpersona) inner join caja.conceptos as conceptos on(movimientos.codconcepto=conceptos.codconcepto) ".$join_pagos." ".$where." order by movimientos.codmovimiento desc offset ".$offset." limit ".$limit)->result_array();
 			foreach ($lista as $key => $value) {
 				if ($value["codkardex"]==0) {
 					$creditos = $this->db->query("select codmovimiento from kardex.creditos where codmovimiento=".$value["codmovimiento"])->result_array();
@@ -41,7 +103,7 @@ class Movimientos extends CI_Controller {
 				}
 			}
 
-			$total = $this->db->query("select count(*) as total from caja.movimientos as movimientos inner join public.personas as personas on(movimientos.codpersona=personas.codpersona) inner join caja.conceptos as conceptos on(movimientos.codconcepto=conceptos.codconcepto) where movimientos.codcontroldiario=".$_SESSION["phuyu_codcontroldiario"]." and (UPPER(movimientos.seriecomprobante) like UPPER('%".$this->request->buscar."%') or UPPER(conceptos.descripcion) like UPPER('%".$this->request->buscar."%') or UPPER(personas.razonsocial) like UPPER('%".$this->request->buscar."%') ) and movimientos.condicionpago=1 and movimientos.estado=1")->result_array();
+			$total = $this->db->query("select count(*) as total from caja.movimientos as movimientos inner join public.personas as personas on(movimientos.codpersona=personas.codpersona) inner join caja.conceptos as conceptos on(movimientos.codconcepto=conceptos.codconcepto) ".$join_pagos." ".$where)->result_array();
 
 			$paginas = floor($total[0]["total"] / $limit);
 			if ( ($total[0]["total"] % $limit)!=0 ) {
@@ -50,7 +112,7 @@ class Movimientos extends CI_Controller {
 
 			$paginacion = array();
 			$paginacion["total"] = $total[0]["total"];
-			$paginacion["actual"] = $this->request->pagina;
+			$paginacion["actual"] = $pagina;
 			$paginacion["ultima"] = $paginas;
 			$paginacion["desde"] = $offset;
 			$paginacion["hasta"] = $offset + $limit;
@@ -193,7 +255,9 @@ class Movimientos extends CI_Controller {
 			];
 
 			if($this->request->codregistro=="") {
-				$codmovimiento = $this->phuyu_model->phuyu_guardar("caja.movimientos", $campos, $valores, "true");
+				$campos_insert = array_merge($campos, ["horamovimiento"]);
+				$valores_insert = array_merge($valores, [date("H:i:s")]);
+				$codmovimiento = $this->phuyu_model->phuyu_guardar("caja.movimientos", $campos_insert, $valores_insert, "true");
 				$estado = $this->Caja_model->phuyu_correlativo($codmovimiento,$this->request->codcomprobantetipo,$this->request->seriecomprobante);
 
 				$valores_1 = [(int)$codmovimiento,(int)$this->request->codtipopago,(int)$_SESSION["phuyu_codcontroldiario"],(int)$_SESSION["phuyu_codcaja"],$this->request->fechadocbanco,$this->request->nrodocbanco,(double)$this->request->importe,(double)$this->request->importe];
@@ -269,7 +333,7 @@ class Movimientos extends CI_Controller {
 			$comprobante_ingresos = 1;
 			$series = $this->db->query("select seriecomprobante from caja.comprobantes where codcomprobantetipo=".$comprobante_ingresos." and codsucursal=".$_SESSION["phuyu_codsucursal"]." and codcaja=".$_SESSION["phuyu_codcaja"]." and estado=1")->result_array();
 
-			$campos = ["codmovimiento_ref","codcontroldiario","codcaja","codconcepto","codpersona","codusuario","codcomprobantetipo","seriecomprobante","tipomovimiento","codcomprobantetipo_ref","seriecomprobante_ref","nrocomprobante_ref","importe","referencia","codcaja_ref","transferido"];
+			$campos = ["codmovimiento_ref","codcontroldiario","codcaja","codconcepto","codpersona","codusuario","codcomprobantetipo","seriecomprobante","tipomovimiento","codcomprobantetipo_ref","seriecomprobante_ref","nrocomprobante_ref","importe","referencia","codcaja_ref","transferido","horamovimiento"];
 
 			$valores = [
 				(int)$this->request->campos->codmovimiento,
@@ -284,7 +348,7 @@ class Movimientos extends CI_Controller {
 				$this->request->campos->nrocomprobante,
 				(double)$this->request->campos->importe,
 				$this->request->referencia,
-				(int)$this->request->campos->codcaja,1
+				(int)$this->request->campos->codcaja,1,date("H:i:s")
 			];
 			$codmovimiento = $this->phuyu_model->phuyu_guardar("caja.movimientos", $campos, $valores, "true");
 			$estado = $this->Caja_model->phuyu_correlativo($codmovimiento,$comprobante_ingresos,$series[0]["seriecomprobante"]);
@@ -319,7 +383,6 @@ public function exportar_excel_detallado()
 {
     $desde           = $this->input->get('desde');
     $hasta           = $this->input->get('hasta');
-    $codcontroldiario = $_SESSION["phuyu_codcontroldiario"];
     $codcaja          = $_SESSION['phuyu_codcaja'];
 
     if (empty($desde) || empty($hasta)) {
@@ -331,6 +394,10 @@ public function exportar_excel_detallado()
         SELECT 
             m.codmovimiento,
             m.fechamovimiento,
+            COALESCE(
+                TO_CHAR(m.horamovimiento, 'HH24:MI:SS'),
+                SPLIT_PART(k.hora::text, '.', 1)
+            ) AS horamovimiento,
             m.seriecomprobante,
             m.nrocomprobante,
             m.codkardex,
@@ -341,16 +408,18 @@ public function exportar_excel_detallado()
             md.importeentregado   AS importe_entregado,
             md.vuelto             AS vuelto,
             ROUND(m.importe, 2)   AS total_movimiento,
-			CONCAT(k.seriecomprobante,'-',k.nrocomprobante) AS comprobante_referencia
+			CASE
+				WHEN k.codkardex IS NULL THEN COALESCE(NULLIF(CONCAT(m.seriecomprobante_ref,'-',m.nrocomprobante_ref), '-'), '')
+				ELSE CONCAT(k.seriecomprobante,'-',k.nrocomprobante)
+			END AS comprobante_referencia
         FROM caja.movimientosdetalle AS md
         JOIN caja.movimientos AS m       ON m.codmovimiento = md.codmovimiento
         JOIN public.personas AS p        ON p.codpersona = m.codpersona
         JOIN caja.conceptos AS c         ON c.codconcepto = m.codconcepto
         JOIN caja.tipopagos AS tp        ON tp.codtipopago = md.codtipopago
-		JOIN kardex.kardex AS k        ON k.codkardex = m.codkardex
+		LEFT JOIN kardex.kardex AS k        ON k.codkardex = m.codkardex
         WHERE m.fechamovimiento BETWEEN {$this->db->escape($desde)} AND {$this->db->escape($hasta)}
         AND m.codcaja = {$this->db->escape($codcaja)}
-        AND m.codcontroldiario = {$this->db->escape($codcontroldiario)}
         AND m.estado = 1
         AND m.condicionpago = 1
         AND tp.estado = 1
@@ -361,7 +430,7 @@ public function exportar_excel_detallado()
     $data['desde'] = $this->input->get('desde');
     $data['hasta'] = $this->input->get('hasta');
 
-    $this->load->view('reportes/excel_movimientos_detallado', $data ,$desde, $hasta);
+    $this->load->view('reportes/excel_movimientos_detallado', $data);
 }
 
 
@@ -369,7 +438,6 @@ public function exportar_pdf_detallado()
 {
     $desde = $this->input->get('desde');
     $hasta = $this->input->get('hasta');
-    $codcontroldiario = $_SESSION["phuyu_codcontroldiario"];
     $codcaja = $_SESSION['phuyu_codcaja'];
 	$nombreEmpresa =  $_SESSION["phuyu_empresa"] ;
 	$logoEmpresa = $_SESSION["phuyu_logo"] ;
@@ -383,6 +451,10 @@ public function exportar_pdf_detallado()
         SELECT 
             m.codmovimiento,
             m.fechamovimiento,
+            COALESCE(
+                TO_CHAR(m.horamovimiento, 'HH24:MI:SS'),
+                SPLIT_PART(k.hora::text, '.', 1)
+            ) AS horamovimiento,
             m.seriecomprobante,
             m.nrocomprobante,
             m.codkardex,
@@ -393,16 +465,18 @@ public function exportar_pdf_detallado()
             md.importeentregado   AS importe_entregado,
             md.vuelto             AS vuelto,
             ROUND(m.importe, 2)   AS total_movimiento,
-            CONCAT(k.seriecomprobante,'-',k.nrocomprobante) AS comprobante_referencia
+            CASE
+                WHEN k.codkardex IS NULL THEN COALESCE(NULLIF(CONCAT(m.seriecomprobante_ref,'-',m.nrocomprobante_ref), '-'), '')
+                ELSE CONCAT(k.seriecomprobante,'-',k.nrocomprobante)
+            END AS comprobante_referencia
         FROM caja.movimientosdetalle AS md
         JOIN caja.movimientos AS m       ON m.codmovimiento = md.codmovimiento
         JOIN public.personas AS p        ON p.codpersona = m.codpersona
         JOIN caja.conceptos AS c         ON c.codconcepto = m.codconcepto
         JOIN caja.tipopagos AS tp        ON tp.codtipopago = md.codtipopago
-        JOIN kardex.kardex AS k          ON k.codkardex = m.codkardex
+        LEFT JOIN kardex.kardex AS k          ON k.codkardex = m.codkardex
         WHERE m.fechamovimiento BETWEEN {$this->db->escape($desde)} AND {$this->db->escape($hasta)}
         AND m.codcaja = {$this->db->escape($codcaja)}
-        AND m.codcontroldiario = {$this->db->escape($codcontroldiario)}
         AND m.estado = 1
         AND m.condicionpago = 1
         AND tp.estado = 1
@@ -425,7 +499,6 @@ public function exportar_pdf_detallado_02()
 {
    $desde = $this->input->get('desde');
     $hasta = $this->input->get('hasta');
-    $codcontroldiario = $_SESSION["phuyu_codcontroldiario"];
     $codcaja = $_SESSION['phuyu_codcaja'];
 	$nombreEmpresa =  $_SESSION["phuyu_empresa"] ;
 	$logoEmpresa = $_SESSION["phuyu_logo"] ;
@@ -439,6 +512,10 @@ public function exportar_pdf_detallado_02()
         SELECT 
             m.codmovimiento,
             m.fechamovimiento,
+            COALESCE(
+                TO_CHAR(m.horamovimiento, 'HH24:MI:SS'),
+                SPLIT_PART(k.hora::text, '.', 1)
+            ) AS horamovimiento,
             m.seriecomprobante,
             m.nrocomprobante,
             m.codkardex,
@@ -449,16 +526,18 @@ public function exportar_pdf_detallado_02()
             md.importeentregado   AS importe_entregado,
             md.vuelto             AS vuelto,
             ROUND(m.importe, 2)   AS total_movimiento,
-            CONCAT(k.seriecomprobante,'-',k.nrocomprobante) AS comprobante_referencia
+            CASE
+                WHEN k.codkardex IS NULL THEN COALESCE(NULLIF(CONCAT(m.seriecomprobante_ref,'-',m.nrocomprobante_ref), '-'), '')
+                ELSE CONCAT(k.seriecomprobante,'-',k.nrocomprobante)
+            END AS comprobante_referencia
         FROM caja.movimientosdetalle AS md
         JOIN caja.movimientos AS m       ON m.codmovimiento = md.codmovimiento
         JOIN public.personas AS p        ON p.codpersona = m.codpersona
         JOIN caja.conceptos AS c         ON c.codconcepto = m.codconcepto
         JOIN caja.tipopagos AS tp        ON tp.codtipopago = md.codtipopago
-        JOIN kardex.kardex AS k          ON k.codkardex = m.codkardex
+        LEFT JOIN kardex.kardex AS k          ON k.codkardex = m.codkardex
         WHERE m.fechamovimiento BETWEEN {$this->db->escape($desde)} AND {$this->db->escape($hasta)}
         AND m.codcaja = {$this->db->escape($codcaja)}
-        AND m.codcontroldiario = {$this->db->escape($codcontroldiario)}
         AND m.estado = 1
         AND m.condicionpago = 1
         AND tp.estado = 1

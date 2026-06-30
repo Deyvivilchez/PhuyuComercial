@@ -6,6 +6,8 @@ var phuyu_datos = new Vue({
 		configuraciones: [],
 		historial: [],
 		cola: [],
+		historial_paginacion: {total: 0, limite: 10, offset: 0},
+		cola_paginacion: {total: 0, limite: 10, offset: 0},
 		cron: {},
 		form: {}
 	},
@@ -43,12 +45,20 @@ var phuyu_datos = new Vue({
 		},
 		cargar: function(){
 			phuyu_sistema.phuyu_inicio();
-			this.$http.get(url + phuyu_controller + "/datos").then(function(res){
+			var params = [
+				"historial_limite=" + encodeURIComponent(this.historial_paginacion.limite || 10),
+				"historial_offset=" + encodeURIComponent(this.historial_paginacion.offset || 0),
+				"cola_limite=" + encodeURIComponent(this.cola_paginacion.limite || 10),
+				"cola_offset=" + encodeURIComponent(this.cola_paginacion.offset || 0)
+			].join("&");
+			this.$http.get(url + phuyu_controller + "/datos?" + params).then(function(res){
 				this.empresas = res.body.empresas || [];
 				this.sucursales = res.body.sucursales || [];
 				this.configuraciones = res.body.configuraciones || [];
 				this.historial = res.body.historial || [];
 				this.cola = res.body.cola || [];
+				this.historial_paginacion = res.body.historial_paginacion || this.historial_paginacion;
+				this.cola_paginacion = res.body.cola_paginacion || this.cola_paginacion;
 				this.cron = res.body.cron || {};
 				if (!this.form.descripcion) {
 					this.nuevo();
@@ -58,6 +68,31 @@ var phuyu_datos = new Vue({
 				phuyu_sistema.phuyu_alerta("No se puede cargar la programacion SUNAT", "Error de red", "error");
 				phuyu_sistema.phuyu_fin();
 			});
+		},
+		paginacionTexto: function(paginacion){
+			var total = parseInt(paginacion.total || 0);
+			if (total === 0) {
+				return "Sin registros";
+			}
+			var offset = parseInt(paginacion.offset || 0);
+			var limite = parseInt(paginacion.limite || 10);
+			var desde = offset + 1;
+			var hasta = Math.min(offset + limite, total);
+			return "Mostrando " + desde + " - " + hasta + " de " + total;
+		},
+		cambiarPagina: function(tipo, direccion){
+			var paginacion = tipo === "historial" ? this.historial_paginacion : this.cola_paginacion;
+			var total = parseInt(paginacion.total || 0);
+			var limite = parseInt(paginacion.limite || 10);
+			var offset = parseInt(paginacion.offset || 0) + (direccion * limite);
+			offset = Math.max(0, Math.min(offset, Math.max(0, total - 1)));
+			offset = Math.floor(offset / limite) * limite;
+			if (tipo === "historial") {
+				this.historial_paginacion.offset = offset;
+			} else {
+				this.cola_paginacion.offset = offset;
+			}
+			this.cargar();
 		},
 		agregarHorario: function(){
 			this.form.horarios.push({hora: "08:00", accion: "todo"});
@@ -114,11 +149,51 @@ var phuyu_datos = new Vue({
 		ejecutar: function(item){
 			phuyu_sistema.phuyu_inicio_guardar("Ejecutando envio manual...");
 			this.$http.get(url + phuyu_controller + "/ejecutar_manual/" + item.codprogramacion).then(function(res){
-				phuyu_sistema.phuyu_noti("SUNAT", res.body.mensaje, res.body.estado == 1 ? "success" : "error");
+				var respuesta = res.body || {};
+				var detalle = respuesta.detalle || "";
+				var accion = respuesta.accion_recomendada || "";
+				var texto = detalle;
+				if (accion) {
+					texto += (texto ? "\n\n" : "") + "Accion recomendada: " + accion;
+				}
+				if (respuesta.codigo) {
+					texto += (texto ? "\n\n" : "") + "Codigo interno: " + respuesta.codigo;
+				}
+				swal({
+					title: respuesta.mensaje || "Resultado SUNAT",
+					text: texto || "La ejecucion finalizo sin detalle adicional.",
+					icon: respuesta.estado == 1 ? "success" : "warning"
+				});
 				this.cargar();
 			}, function(){
 				phuyu_sistema.phuyu_alerta("No se puede ejecutar", "Error de red", "error");
 				phuyu_sistema.phuyu_fin();
+			});
+		},
+		limpiarHistorial: function(){
+			swal({
+				title: "Limpiar historial y cola SUNAT",
+				text: "Se eliminara el historial de ejecuciones, la cola cerrada y errores obsoletos de resumen ya cubiertos por un resumen aceptado. No se tocaran pendientes, procesando ni errores reales activos.",
+				icon: "warning",
+				buttons: ["Cancelar", "Limpiar"],
+				dangerMode: true
+			}).then((ok) => {
+				if (!ok) return;
+				phuyu_sistema.phuyu_inicio_guardar("Limpiando historial SUNAT...");
+				this.$http.post(url + phuyu_controller + "/limpiar_historial", {modo: "todo"}).then(function(res){
+					var respuesta = res.body || {};
+					swal({
+						title: respuesta.mensaje || "Limpieza SUNAT",
+						text: (respuesta.detalle || "") + (respuesta.accion_recomendada ? "\n\nAccion recomendada: " + respuesta.accion_recomendada : ""),
+						icon: respuesta.estado == 1 ? "success" : "error"
+					});
+					this.historial_paginacion.offset = 0;
+					this.cola_paginacion.offset = 0;
+					this.cargar();
+				}, function(){
+					phuyu_sistema.phuyu_alerta("No se puede limpiar el historial", "Error de red", "error");
+					phuyu_sistema.phuyu_fin();
+				});
 			});
 		},
 		verificarCron: function(){

@@ -1004,7 +1004,7 @@ var phuyu_operacion = new Vue({
                     calcular: producto.calcular,
                     preciooriginal: producto.preciooriginal,
                     precioventa: producto.precioventa,
-                    descripcion: producto.controlarseries == 1 ? 'SERIE/CODIGO : ' + producto.serie_seleccionada.serie_codigo : producto.descripcion,
+                    descripcion: producto.controlarseries == 1 ? 'SERIE/CODIGO : ' + producto.serie_seleccionada.serie_codigo : "",
                     serie_seleccionada: producto.controlarseries == 1 ? producto.serie_seleccionada : null,
                     phuyu_agregado: true,
                 });
@@ -1078,6 +1078,13 @@ var phuyu_operacion = new Vue({
             this.putunidades = [];
         },
         phuyu_itemdetalle: function(index, producto) {
+            if (
+                producto.controlarseries != 1 &&
+                String(producto.descripcion || "").trim().toUpperCase() ===
+                    String(producto.producto || "").trim().toUpperCase()
+            ) {
+                producto.descripcion = "";
+            }
             this.item = producto;
             $("#modal_itemdetalle").modal('show');
         },
@@ -1817,12 +1824,12 @@ var phuyu_operacion = new Vue({
             }*/
 
             if ($("#formato").val() == 'a4') {
-                window.open(url + "facturacion/formato/a4/" + codkardex, "_blank");
+                window.open(url + "facturacion/formato/a4/" + codkardex, "_blank") || (window.location.href = url + "facturacion/formato/a4/" + codkardex);
             } else {
                 if ($("#formato").val() == 'a5') {
-                    window.open(url + "facturacion/formato/a5/" + codkardex, "_blank");
+                    window.open(url + "facturacion/formato/a5/" + codkardex, "_blank") || (window.location.href = url + "facturacion/formato/a5/" + codkardex);
                 } else {
-                    window.open(url + "facturacion/formato/ticket/" + codkardex, "_blank");
+                    window.open(url + "facturacion/formato/ticket/" + codkardex, "_blank") || (window.location.href = url + "facturacion/formato/ticket/" + codkardex);
                 }
             }
         },

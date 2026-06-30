@@ -123,26 +123,122 @@ class Programacion_sunat_model extends CI_Model {
 		]) ? 1 : 0;
 	}
 
-	public function historial($limite = 80){
+	public function historial($limite = 10, $offset = 0){
 		return $this->db->query(
 			"select h.*, p.descripcion as programacion
 			from sunat.programacion_cpe_historial h
 			left join sunat.programacion_cpe p on p.codprogramacion=h.codprogramacion
 			order by h.codejecucion desc
-			limit ?",
-			[(int)$limite]
+			offset ? limit ?",
+			[(int)$offset, (int)$limite]
 		)->result_array();
 	}
 
-	public function cola($limite = 80){
+	public function historial_total(){
+		$total = $this->db->query(
+			"select count(*) as total
+			from sunat.programacion_cpe_historial"
+		)->row_array();
+		return (int)$total["total"];
+	}
+
+	public function cola($limite = 10, $offset = 0){
 		return $this->db->query(
 			"select *
 			from sunat.programacion_cpe_cola
 			where estado in ('pendiente','procesando','error')
 			order by prioridad desc, siguiente_intento asc nulls first, codcola desc
-			limit ?",
-			[(int)$limite]
+			offset ? limit ?",
+			[(int)$offset, (int)$limite]
 		)->result_array();
+	}
+
+	public function cola_total(){
+		$total = $this->db->query(
+			"select count(*) as total
+			from sunat.programacion_cpe_cola
+			where estado in ('pendiente','procesando','error')"
+		)->row_array();
+		return (int)$total["total"];
+	}
+
+	public function limpiar_historial($dias = 30, $todo = false){
+		$dias = max(1, (int)$dias);
+		$this->db->trans_begin();
+
+		$cola_obsoleta = $this->descartar_cola_resumen_obsoleta();
+
+		if ($todo) {
+			$historial = $this->db->query("delete from sunat.programacion_cpe_historial");
+		} else {
+			$historial = $this->db->query(
+				"delete from sunat.programacion_cpe_historial
+				where inicio < now() - (?::text || ' days')::interval",
+				[$dias]
+			);
+		}
+		$historial_eliminado = $this->db->affected_rows();
+
+		if ($todo) {
+			$cola = $this->db->query(
+				"delete from sunat.programacion_cpe_cola
+				where estado in ('enviado','descartado')"
+			);
+		} else {
+			$cola = $this->db->query(
+				"delete from sunat.programacion_cpe_cola
+				where estado in ('enviado','descartado')
+					and actualizado_en < now() - (?::text || ' days')::interval",
+				[$dias]
+			);
+		}
+		$cola_eliminada = $this->db->affected_rows();
+
+		if ($this->db->trans_status() === FALSE || !$historial || !$cola) {
+			$this->db->trans_rollback();
+			return [
+				"estado" => 0,
+				"historial_eliminado" => 0,
+				"cola_eliminada" => 0,
+				"cola_obsoleta" => 0
+			];
+		}
+
+		$this->db->trans_commit();
+		return [
+			"estado" => 1,
+			"historial_eliminado" => (int)$historial_eliminado,
+			"cola_eliminada" => (int)$cola_eliminada,
+			"cola_obsoleta" => (int)$cola_obsoleta
+		];
+	}
+
+	private function descartar_cola_resumen_obsoleta(){
+		$this->db->query(
+			"update sunat.programacion_cpe_cola c
+			set estado=\$\$descartado\$\$,
+				ultimo_mensaje=\$\$Descartado por limpieza: resumen no encontrado y periodo ya tiene resumen aceptado.\$\$,
+				actualizado_en=now()
+			where c.tipo=\$\$resumen\$\$
+				and c.estado=\$\$error\$\$
+				and coalesce(c.ultimo_mensaje, \$\$\$\$) ilike \$\$%Resumen no encontrado%\$\$
+				and not exists (
+					select 1
+					from sunat.resumenes r
+					where r.codresumentipo=split_part(c.referencia, \$\$|\$\$, 1)::integer
+						and r.periodo=split_part(c.referencia, \$\$|\$\$, 2)
+						and r.nrocorrelativo=split_part(c.referencia, \$\$|\$\$, 3)::integer
+				)
+				and exists (
+					select 1
+					from sunat.resumenes r
+					where r.codresumentipo=split_part(c.referencia, \$\$|\$\$, 1)::integer
+						and r.periodo=split_part(c.referencia, \$\$|\$\$, 2)
+						and r.estado in (1, 2)
+				)"
+		);
+
+		return $this->db->affected_rows();
 	}
 
 	public function programaciones_vencidas($hora = null){
@@ -238,13 +334,14 @@ class Programacion_sunat_model extends CI_Model {
 		return (int)$this->db->insert_id("sunat.programacion_cpe_cola_codcola_seq");
 	}
 
-	public function pendientes_cola($programacion, $limite){
+	public function pendientes_cola($programacion, $limite, $forzar_reintento = false){
 		$params = [(int)$programacion["codempresa"], (int)$limite];
 		$where_sucursal = "";
 		if (!empty($programacion["codsucursal"])) {
 			$where_sucursal = " and (codsucursal is null or codsucursal=?)";
 			array_splice($params, 1, 0, [(int)$programacion["codsucursal"]]);
 		}
+		$where_intento = $forzar_reintento ? "" : "and (siguiente_intento is null or siguiente_intento<=now())";
 
 		return $this->db->query(
 			"select *
@@ -252,7 +349,7 @@ class Programacion_sunat_model extends CI_Model {
 			where codempresa=?
 				".$where_sucursal."
 				and estado in ('pendiente','error')
-				and (siguiente_intento is null or siguiente_intento<=now())
+				".$where_intento."
 			order by prioridad desc, siguiente_intento asc nulls first, codcola asc
 			limit ?",
 			$params
@@ -270,17 +367,36 @@ class Programacion_sunat_model extends CI_Model {
 
 	public function marcar_resultado_cola($cola, $respuesta, $max_intentos){
 		$estado_respuesta = isset($respuesta["estado"]) ? (int)$respuesta["estado"] : 0;
-		$intentos = (int)$cola["intentos"] + 1;
+		$mensaje = isset($respuesta["mensaje"]) ? (string)$respuesta["mensaje"] : "";
+		$mensaje_normalizado = strtolower($mensaje);
+		$en_proceso = strpos($mensaje_normalizado, "no hay respuesta de la sunat") !== false
+			|| strpos($mensaje_normalizado, "0098") !== false
+			|| strpos($mensaje_normalizado, "en proceso") !== false;
+		$ya_enviado = strpos($mensaje_normalizado, "ya fue enviado") !== false
+			|| strpos($mensaje_normalizado, "presentado anteriormente") !== false
+			|| strpos($mensaje_normalizado, "ya fue presentado") !== false;
+
 		$aceptado = in_array($estado_respuesta, [1, 2], true);
-		$estado = $aceptado ? "enviado" : ($intentos >= (int)$max_intentos ? "error" : "pendiente");
-		$siguiente = $aceptado ? null : date("Y-m-d H:i:s", strtotime("+10 minutes"));
+		if ($aceptado || $ya_enviado) {
+			$intentos = (int)$cola["intentos"] + 1;
+			$estado = "enviado";
+			$siguiente = null;
+		} elseif ($en_proceso) {
+			$intentos = (int)$cola["intentos"];
+			$estado = "pendiente";
+			$siguiente = date("Y-m-d H:i:s", strtotime("+15 minutes"));
+		} else {
+			$intentos = (int)$cola["intentos"] + 1;
+			$estado = $intentos >= (int)$max_intentos ? "error" : "pendiente";
+			$siguiente = date("Y-m-d H:i:s", strtotime("+10 minutes"));
+		}
 
 		$this->db->where("codcola", (int)$cola["codcola"]);
 		return $this->db->update("sunat.programacion_cpe_cola", [
 			"estado" => $estado,
 			"intentos" => $intentos,
 			"ultimo_estado_sunat" => $estado_respuesta,
-			"ultimo_mensaje" => isset($respuesta["mensaje"]) ? substr((string)$respuesta["mensaje"], 0, 1000) : "",
+			"ultimo_mensaje" => substr($mensaje, 0, 1000),
 			"siguiente_intento" => $siguiente,
 			"actualizado_en" => date("Y-m-d H:i:s")
 		]);
