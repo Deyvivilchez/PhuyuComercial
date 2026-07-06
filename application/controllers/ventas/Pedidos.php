@@ -1004,6 +1004,108 @@ class Pedidos extends CI_Controller {
 			if (isset( $_SESSION["phuyu_codusuario"]) ) {
 				$this->request = json_decode(file_get_contents('php://input'));
 
+				$codpedidoCobro = (int)($this->request->campos->codpedido ?? 0);
+				if ($codpedidoCobro <= 0) {
+					echo json_encode([
+						"estado" => 0,
+						"mensaje" => "NO SE ENCONTRO EL PEDIDO PARA COBRAR"
+					]);
+					return;
+				}
+
+				$detallePedido = $this->db->query(
+					"select pd.codproducto, pd.codunidad, pd.item, pd.cantidad, pd.preciounitario, pd.subtotal, p.descripcion as producto
+					from kardex.pedidosdetalle pd
+					inner join almacen.productos p on p.codproducto=pd.codproducto
+					where pd.codpedido=? and pd.estado=1
+					order by pd.item",
+					[$codpedidoCobro]
+				)->result_array();
+
+				$detallePedidoIndex = [];
+				foreach ($detallePedido as $itemPedido) {
+					$keyPedido = ((int)$itemPedido["codproducto"])."|".((int)$itemPedido["codunidad"])."|".((int)$itemPedido["item"]);
+					$detallePedidoIndex[$keyPedido] = $itemPedido;
+				}
+
+				$importeDetalle = 0;
+				$valorVentaDetalle = 0;
+				$igvDetalle = 0;
+				foreach ($this->request->detalle ?? [] as $key => $value) {
+					$itemDetalle = is_object($value) ? $value : (object)$value;
+					$keyDetalle = ((int)($itemDetalle->codproducto ?? 0))."|".((int)($itemDetalle->codunidad ?? 0))."|".((int)($itemDetalle->item ?? 0));
+					if (!isset($detallePedidoIndex[$keyDetalle])) {
+						echo json_encode([
+							"estado" => 0,
+							"mensaje" => "EL DETALLE TIENE PRODUCTOS SIN GUARDAR EN EL PEDIDO. GUARDE EL PEDIDO ANTES DE COBRAR."
+						]);
+						return;
+					}
+
+					$cantidad = (double)($itemDetalle->cantidad ?? 0);
+					$precio = (double)($itemDetalle->precio ?? 0);
+					$subtotal = round($cantidad * $precio, 2);
+					$igvItem = round((double)($itemDetalle->igv ?? 0), 2);
+					$valorVentaItem = round($subtotal - $igvItem, 2);
+					$itemPedidoGuardado = $detallePedidoIndex[$keyDetalle];
+
+					if (
+						abs(round($cantidad, 4) - round((double)$itemPedidoGuardado["cantidad"], 4)) > 0.0001 ||
+						abs(round($precio, 4) - round((double)$itemPedidoGuardado["preciounitario"], 4)) > 0.0001 ||
+						abs($subtotal - round((double)$itemPedidoGuardado["subtotal"], 2)) > 0.01
+					) {
+						echo json_encode([
+							"estado" => 0,
+							"mensaje" => "EL DETALLE DEL COBRO NO COINCIDE CON EL PEDIDO GUARDADO. GUARDE EL PEDIDO ANTES DE COBRAR."
+						]);
+						return;
+					}
+
+					$this->request->detalle[$key]->subtotal = $subtotal;
+					$this->request->detalle[$key]->valorventa = $valorVentaItem;
+					$this->request->detalle[$key]->igv = $igvItem;
+
+					$importeDetalle += $subtotal;
+					$valorVentaDetalle += $valorVentaItem;
+					$igvDetalle += $igvItem;
+				}
+
+				if (count($detallePedido) !== count($this->request->detalle ?? [])) {
+					echo json_encode([
+						"estado" => 0,
+						"mensaje" => "EL PEDIDO GUARDADO Y EL DETALLE A COBRAR NO TIENEN LA MISMA CANTIDAD DE ITEMS. GUARDE EL PEDIDO ANTES DE COBRAR."
+					]);
+					return;
+				}
+
+				$importeDetalle = round($importeDetalle, 2);
+				$valorVentaDetalle = round($valorVentaDetalle, 2);
+				$igvDetalle = round($igvDetalle, 2);
+				$totalRequest = round((double)($this->request->totales->importe ?? 0), 2);
+				if (abs($importeDetalle - $totalRequest) > 0.01) {
+					echo json_encode([
+						"estado" => 0,
+						"mensaje" => "TOTAL DEL PEDIDO DESCUADRADO. Detalle: S/. ".number_format($importeDetalle, 2, ".", "")." | Total enviado: S/. ".number_format($totalRequest, 2, ".", "")
+					]);
+					return;
+				}
+
+				if ((int)($this->request->campos->condicionpago ?? 0) == 1) {
+					$efectivo = round((double)($this->request->pagos->monto_efectivo ?? 0) - (double)($this->request->pagos->vuelto_efectivo ?? 0), 2);
+					$tarjeta = ((int)($this->request->pagos->codtipopago_tarjeta ?? 0) > 0) ? round((double)($this->request->pagos->monto_tarjeta ?? 0), 2) : 0;
+					if (round($efectivo + $tarjeta, 2) + 0.01 < $importeDetalle) {
+						echo json_encode([
+							"estado" => 0,
+							"mensaje" => "EL PAGO NO CUBRE EL TOTAL REAL DEL DETALLE. Total: S/. ".number_format($importeDetalle, 2, ".", "")
+						]);
+						return;
+					}
+				}
+
+				$this->request->totales->valorventa = $valorVentaDetalle;
+				$this->request->totales->igv = $igvDetalle;
+				$this->request->totales->importe = $importeDetalle;
+
 				$this->db->trans_begin();
 
 				// REGISTRO KARDEX //

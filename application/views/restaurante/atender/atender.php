@@ -1490,6 +1490,7 @@
                     if ($("#sessioncaja").val() == 0) {
                         phuyu_sistema.phuyu_noti("ESTIMADO USUARIO SU CAJA NO ESTA APERTURADA", "NO PUEDE COBRAR PEDIDO", "error");
                     } else {
+                        this.recalcularTotalesItems();
                         this.campos.codcomprobantetipo = this.campos.codcomprobante;
                         this.phuyu_series();
                         this.pagos.monto_efectivo = this.totales.importe;
@@ -1865,6 +1866,30 @@
                         return total + (parseFloat(item.subtotal) || 0);
                     }, 0).toFixed(2));
                     this.totales.importe = this.totales.valorventa;
+                },
+                recalcularTotalesItems() {
+                    var valorventa = 0;
+                    var igv = 0;
+                    var importe = 0;
+
+                    for (var i = 0; i < this.items.length; i++) {
+                        var item = this.items[i];
+                        var cantidad = parseFloat(item.cantidad) || 0;
+                        var precio = parseFloat(item.precio) || 0;
+
+                        item.subtotal = Number((cantidad * precio).toFixed(2));
+                        item.igv = Number((parseFloat(item.igv) || 0).toFixed(2));
+                        item.valorventa = Number((item.subtotal - item.igv).toFixed(2));
+                        item.subtotal_tem = item.subtotal;
+
+                        valorventa = Number((valorventa + item.valorventa).toFixed(2));
+                        igv = Number((igv + item.igv).toFixed(2));
+                        importe = Number((importe + item.subtotal).toFixed(2));
+                    }
+
+                    this.totales.valorventa = valorventa;
+                    this.totales.igv = igv;
+                    this.totales.importe = importe;
                 },
                 cantidadActual(producto) {
                     return parseFloat(producto.cantidad) || 1;
@@ -2310,13 +2335,14 @@
 	                        return false;
 	                    }
 
-	                    if (!this.validarStockPedido()) {
-	                        return false;
-	                    }
+		                    if (!this.validarStockPedido()) {
+		                        return false;
+		                    }
 
-	                    this.estado = 1;
+		                    this.recalcularTotalesItems();
+		                    this.estado = 1;
 
-                    phuyu_sistema.phuyu_inicio_guardar("GUARDANDO PEDIDO . . .");
+	                    phuyu_sistema.phuyu_inicio_guardar("GUARDANDO PEDIDO . . .");
                     this.$http.post(url + "ventas/pedidos/guardar_pedido", {
                         "campos": this.campos,
                         "detalle": this.items,
@@ -2359,12 +2385,13 @@
                 },
                 phuyu_pagar: function() {
 
-                    if (this.estado == 1) {
-                        return; // ya en proceso
-                    }
+	                    if (this.estado == 1) {
+	                        return; // ya en proceso
+	                    }
 
+	                    this.recalcularTotalesItems();
 
-                    console.log(this.campos);
+	                    console.log(this.campos);
                     console.log(this.codtipodocumento);
                     //return false;
 
@@ -2432,10 +2459,10 @@
                                     }
                                 });
                                 phuyu_sistema.phuyu_noti("VENTA REGISTRADA CORRECTAMENTE", "VENTA REGISTRADA EN EL SISTEMA", "success");
-                            } else {
-                                phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR VENTA", "ERROR DE RED", "error");
-                                this.estado = 0;
-                            }
+	                            } else {
+	                                phuyu_sistema.phuyu_alerta(data.body.mensaje || "ERROR AL REGISTRAR VENTA", "REVISE EL PEDIDO", "error");
+	                                this.estado = 0;
+	                            }
                         }
                         phuyu_sistema.phuyu_fin();
                         phuyu_sistema.phuyu_modulo();

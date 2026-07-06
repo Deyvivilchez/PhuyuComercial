@@ -302,6 +302,28 @@ var phuyu_operacion = new Vue({
 			}
 			this.totales.importe = Number((this.totales.valorventa + this.totales.igv).toFixed(2));
 		},
+		phuyu_recalcular_totales_detalle: function(){
+			var valorventa = 0;
+			var igv = 0;
+			var importe = 0;
+
+			for (var i = 0; i < this.detalle.length; i++) {
+				var item = this.detalle[i];
+				var cantidad = parseFloat(item.cantidad) || 0;
+				var precio = parseFloat(item.precio) || 0;
+				item.subtotal = Number((cantidad * precio).toFixed(2));
+				item.igv = Number((parseFloat(item.igv) || 0).toFixed(2));
+				item.valorventa = Number((item.subtotal - item.igv).toFixed(2));
+
+				valorventa = Number((valorventa + item.valorventa).toFixed(2));
+				igv = Number((igv + item.igv).toFixed(2));
+				importe = Number((importe + item.subtotal).toFixed(2));
+			}
+
+			this.totales.valorventa = valorventa;
+			this.totales.igv = igv;
+			this.totales.importe = importe;
+		},
 
 		phuyu_guardar_pedido: function(){
 			if ($("#sessioncaja").val()==0) {
@@ -316,6 +338,7 @@ var phuyu_operacion = new Vue({
 				phuyu_sistema.phuyu_noti("REGISTRAR UN PRODUCTO EN EL DETALLE", "REGISTRAR ITEM PARA EL PEDIDO","error"); return false;
 			}
 
+			this.phuyu_recalcular_totales_detalle();
 			this.estado = 1; 
 			phuyu_sistema.phuyu_inicio_guardar("GUARDANDO PEDIDO . . .");
 
@@ -489,6 +512,7 @@ var phuyu_operacion = new Vue({
 			if ($("#sessioncaja").val()==0) {
 				phuyu_sistema.phuyu_noti("ESTIMADO USUARIO SU CAJA NO ESTA APERTURADA", "NO PUEDE COBRAR PEDIDO","error"); 
 			}else{
+				this.phuyu_recalcular_totales_detalle();
 				this.campos.codcomprobantetipo = this.campos.codcomprobante; this.phuyu_series();
 				this.pagos.monto_efectivo = this.totales.importe;
 				this.pagos.vuelto_efectivo = 0;
@@ -657,6 +681,7 @@ var phuyu_operacion = new Vue({
 		},
 
 		phuyu_pagar: function(){
+			this.phuyu_recalcular_totales_detalle();
 			if ((this.campos.codcomprobantetipo==10 || this.campos.codcomprobantetipo==25) && this.codtipodocumento!=4) {
 				phuyu_sistema.phuyu_noti("PARA EMITIR UNA FACTURA", "DEBE SELECCIONAR UN CLIENTE CON RUC","error"); return false;
 			}
@@ -714,7 +739,7 @@ var phuyu_operacion = new Vue({
 						});
 						phuyu_sistema.phuyu_noti("VENTA REGISTRADA CORRECTAMENTE","VENTA REGISTRADA EN EL SISTEMA","success");
 					}else{
-						phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR VENTA","ERROR DE RED","error");
+						phuyu_sistema.phuyu_alerta(data.body.mensaje || "ERROR AL REGISTRAR VENTA","REVISE EL PEDIDO","error");
 					}
 				}
 				phuyu_sistema.phuyu_fin(); phuyu_sistema.phuyu_modulo();

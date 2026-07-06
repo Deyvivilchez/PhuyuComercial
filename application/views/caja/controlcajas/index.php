@@ -289,8 +289,14 @@
 												</div>
 											</td>
 											<td>
-												<span v-if="item.referencia">{{ item.referencia }}</span>
-												<span v-if="!item.referencia" class="text-muted">-</span>
+												<div v-if="item.referencia">{{ item.referencia }}</div>
+												<div v-if="!item.referencia" class="text-muted">-</div>
+												<div
+													v-if="item.referencia && item.documento_ref && item.referencia.toUpperCase().trim() == 'INGRESO POR VENTA'"
+													class="small text-primary fw-semibold mt-1"
+												>
+													Comprobante: {{ item.documento_ref }}
+												</div>
 											</td>
 											<td class="text-center">
 												<span class="badge bg-success-subtle text-success border border-success-subtle" v-if="item.tipomovimiento == 1">Ingreso</span>
