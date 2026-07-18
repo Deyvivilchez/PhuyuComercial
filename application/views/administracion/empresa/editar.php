@@ -64,6 +64,24 @@
 						<input type="text" class="form-control" name="clavesol" v-model="campos.clavesol" placeholder="Clave sol" autocomplete="off">
 					</div>
 
+					<div class="col-12">
+						<div class="phuyu-section-title mb-0">API SUNAT - Consulta integrada de validez</div>
+						<div class="form-text">Credenciales generadas en Menú SOL para consultar directamente facturas, boletas y notas.</div>
+					</div>
+					<div class="col-12 col-md-6">
+						<label class="form-label">Client ID API SUNAT</label>
+						<input type="text" class="form-control" name="sunat_api_client_id" v-model.trim="campos.sunat_api_client_id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off">
+					</div>
+					<div class="col-12 col-md-6">
+						<label class="form-label">Client Secret API SUNAT</label>
+						<div class="input-group">
+							<input v-bind:type="mostrar_secret_sunat ? 'text' : 'password'" class="form-control" name="sunat_api_client_secret" v-model="campos.sunat_api_client_secret" placeholder="Clave de la aplicación API SUNAT" autocomplete="new-password">
+							<button type="button" class="btn btn-outline-secondary" v-on:click="mostrar_secret_sunat=!mostrar_secret_sunat" v-bind:title="mostrar_secret_sunat ? 'Ocultar clave' : 'Mostrar clave'">
+								<i class="bi" v-bind:class="mostrar_secret_sunat ? 'bi-eye-slash' : 'bi-eye'"></i>
+							</button>
+						</div>
+					</div>
+
 					<div class="col-12 col-md-6">
 						<label class="form-label">Certificado PFX</label>
 						<input type="file" class="form-control" name="certificado_pfx" accept=".pfx">
@@ -159,6 +177,8 @@
 		ubigeo:"<?php echo $empresa[0]["ubigeo"];?>",
 		usuariosol:"<?php echo $service[0]["usuariosol"];?>",
 		clavesol:"<?php echo $service[0]["clavesol"];?>",
+		sunat_api_client_id:"<?php echo isset($service[0]["sunat_api_client_id"]) ? htmlspecialchars($service[0]["sunat_api_client_id"], ENT_QUOTES, "UTF-8") : "";?>",
+		sunat_api_client_secret:"<?php echo isset($service[0]["sunat_api_client_secret"]) ? htmlspecialchars($service[0]["sunat_api_client_secret"], ENT_QUOTES, "UTF-8") : "";?>",
 		envioemail:"<?php echo $service[0]["envioemail"];?>",
 		claveemail:"<?php echo $service[0]["claveemail"];?>",
 		certificado_clave:"<?php echo $service[0]["certificado_clave"];?>",

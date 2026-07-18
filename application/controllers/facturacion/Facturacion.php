@@ -653,26 +653,19 @@ class Facturacion extends Sunat {
 	function phuyu_consultasunat(){
 		if ($this->input->is_ajax_request()) {
 			$this->request = json_decode(file_get_contents('php://input'));
-			$fecha = isset($this->request->fechaemision) ? $this->request->fechaemision : "";
-			$importe = isset($this->request->importe) ? $this->request->importe : "";
-			if ($fecha=="" || $importe=="") {
-				$local = $this->phuyu_datos_comprobante_sunat($this->request->tipo, $this->request->serie, $this->request->nrocomprobante);
-				if (count($local)>0) {
-					$this->request->tipo = $local[0]["tiposunat"];
-					$fecha = $local[0]["fechacomprobante"];
-					$importe = $local[0]["importe"];
-				}
-			}
-			if ($fecha=="" || $importe=="") {
-				echo json_encode(["estado" => 0, "mensaje" => "Para consultar directo en SUNAT falta fecha de emision e importe total. Si el comprobante esta registrado localmente, revise serie y numero."]);
-				return;
-			}
-			$data = $this->phuyu_consulta_libre_sunat($this->request->tipo, $this->request->serie, $this->request->nrocomprobante, $fecha, $importe);
+			$data = $this->phuyu_consulta_webservice_sunat($this->request->tipo, $this->request->serie, $this->request->nrocomprobante, $this->request->fechaemision, $this->request->importe);
 			$data["tipo"] = $this->request->tipo;
-			$data["fechaemision"] = date("Y-m-d", strtotime($fecha));
-			$data["importe"] = number_format((double)$importe, 2, ".", "");
 			echo json_encode($data);
 		}
+	}
+
+	private function phuyu_consulta_webservice_sunat($tipo, $serie, $numero, $fecha, $importe, $api = null){
+		if ($api===null) {
+			$filas=$this->db->query("select sunat_api_client_id, sunat_api_client_secret from public.webservice where codempresa=".(int)$_SESSION["phuyu_codempresa"]." limit 1")->result_array();
+			$api=count($filas)>0?$filas[0]:[];
+		}
+		$datos=["numRuc"=>$_SESSION["phuyu_ruc"], "codComp"=>$tipo, "numeroSerie"=>strtoupper($serie), "numero"=>(int)$numero, "fechaEmision"=>date("d/m/Y",strtotime($fecha)), "monto"=>(double)$importe];
+		return Sunat::phuyu_consultaIntegradaSUNAT($datos, isset($api["sunat_api_client_id"])?$api["sunat_api_client_id"]:"", isset($api["sunat_api_client_secret"])?$api["sunat_api_client_secret"]:"", $_SESSION["phuyu_ruc"]);
 	}
 
 	function phuyu_bloquesunat(){
@@ -705,18 +698,11 @@ class Facturacion extends Sunat {
 
 			$total = $this->db->query("select count(*) as total from kardex.kardex as kardex inner join caja.comprobantetipos as ct on(kardex.codcomprobantetipo=ct.codcomprobantetipo) where kardex.fechacomprobante>='".$this->request->fdesde."' and kardex.fechacomprobante<='".$this->request->fhasta."' and kardex.codmovimientotipo in (8,20) and ".$where_tipo_periodo)->result_array();
 			$lista = $this->db->query("select personas.documento, kardex.cliente, kardex.codkardex, kardex.codcomprobantetipo, ct.oficial as tipo_sunat, ct.descripcion as tipocomprobante, kardex.seriecomprobante, kardex.nrocomprobante,kardex.fechacomprobante,round(kardex.importe,2) as importe,coalesce(kardexs.estado,0) as estado from kardex.kardex as kardex inner join caja.comprobantetipos as ct on(kardex.codcomprobantetipo=ct.codcomprobantetipo) left join sunat.kardexsunat as kardexs on(kardex.codkardex=kardexs.codkardex) inner join public.personas as personas on (kardex.codpersona=personas.codpersona) where kardex.fechacomprobante>='".$this->request->fdesde."' and kardex.fechacomprobante<='".$this->request->fhasta."' and kardex.codmovimientotipo in (8,20) and ".$where_tipo_periodo." order by kardex.codkardex asc offset ".$offset." limit ".$limite)->result_array();
+			$empresa = $this->db->query("select sunat_api_client_id, sunat_api_client_secret from public.webservice where codempresa=".(int)$_SESSION["phuyu_codempresa"]." limit 1")->result_array();
+			$api = count($empresa)>0 ? $empresa[0] : [];
 			foreach ($lista as $key => $value) {
-				if (in_array((int)$value["estado"], [1, 2], true)) {
-					$mensaje_sunat = (int)$value["estado"] === 1 ? "ACEPTADO" : "ACEPTADO CON OBSERVACIONES";
-					$lista[$key]["descripcion"] = $mensaje_sunat . " | Estado local SUNAT confirmado por CDR/resumen.";
-					$lista[$key]["mensaje_sunat"] = $mensaje_sunat;
-					$lista[$key]["detalle_sunat"] = "Estado local SUNAT confirmado por CDR/resumen.";
-					$lista[$key]["nivel_sunat"] = "success";
-					$lista[$key]["estado_sunat_directo"] = 1;
-					continue;
-				}
 				$tipo_sunat = $value["tipo_sunat"];
-				$estado = $this->phuyu_consulta_libre_sunat($tipo_sunat, $value["seriecomprobante"], $value["nrocomprobante"], $value["fechacomprobante"], $value["importe"]);
+				$estado = $this->phuyu_consulta_webservice_sunat($tipo_sunat, $value["seriecomprobante"], $value["nrocomprobante"], $value["fechacomprobante"], $value["importe"], $api);
 				$mensaje_sunat = (isset($estado["mensaje"]) && trim($estado["mensaje"])!="") ? $estado["mensaje"] : "Sin respuesta de SUNAT";
 				$detalle_sunat = isset($estado["detalle"]) ? $estado["detalle"] : "";
 				$lista[$key]["descripcion"] = $detalle_sunat!="" ? $mensaje_sunat." | ".$detalle_sunat : $mensaje_sunat;
@@ -724,7 +710,6 @@ class Facturacion extends Sunat {
 				$lista[$key]["detalle_sunat"] = $detalle_sunat;
 				$lista[$key]["nivel_sunat"] = isset($estado["nivel"]) ? $estado["nivel"] : "warning";
 				$lista[$key]["estado_sunat_directo"] = isset($estado["estado"]) ? $estado["estado"] : 0;
-				usleep(250000);
 			}
 			$total_registros = (int)$total[0]["total"];
 			$ultima = $total_registros > 0 ? (int)ceil($total_registros / $limite) : 1;

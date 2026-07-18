@@ -1,6 +1,6 @@
 var phuyu_form = new Vue({
 	el: "#phuyu_form",
-	data: {estado: 0, campos: campos},
+	data: {estado: 0, campos: campos, mostrar_secret_sunat: false},
 	methods: {
 		phuyu_guardar: function(){
 			this.estado= 1; const formulario = new FormData($("#formulario")[0]);

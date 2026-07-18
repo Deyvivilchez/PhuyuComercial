@@ -97,9 +97,10 @@ class Empresa extends CI_Controller {
 	            $service = $service."_demo"; $service_guia = $service_guia."_demo"; $service_retencion = $service_retencion."_demo";
 	        }
 
-			$campos = ["usuariosol","clavesol","envioemail","claveemail","certificado_clave","sunatose","serviceweb",$service,$service_guia,$service_retencion];
-			$valores = [$_POST["usuariosol"],$_POST["clavesol"],$_POST["envioemail"],$_POST["claveemail"],$_POST["certificado_clave"],$_POST["sunatose"],$_POST["serviceweb"],$_POST[$service],$_POST[$service_guia],$_POST[$service_retencion]];
+			$campos = ["usuariosol","clavesol","sunat_api_client_id","sunat_api_client_secret","envioemail","claveemail","certificado_clave","sunatose","serviceweb",$service,$service_guia,$service_retencion];
+			$valores = [$_POST["usuariosol"],$_POST["clavesol"],$_POST["sunat_api_client_id"],$_POST["sunat_api_client_secret"],$_POST["envioemail"],$_POST["claveemail"],$_POST["certificado_clave"],$_POST["sunatose"],$_POST["serviceweb"],$_POST[$service],$_POST[$service_guia],$_POST[$service_retencion]];
 			$estado = $this->phuyu_model->phuyu_editar("public.webservice", $campos, $valores,"codempresa",$_POST["codempresa"]);
+			unset($_SESSION["phuyu_sunat_api_token_".(int)$_POST["codempresa"]]);
 
 			if ($_FILES["certificado_pfx"]["name"]!="") {
 				$file = $_FILES["certificado_pfx"]["name"];
@@ -167,9 +168,10 @@ class Empresa extends CI_Controller {
             }
 
             // Segunda actualización
-            $campos = ["usuariosol","clavesol","envioemail","claveemail","certificado_clave","sunatose","serviceweb",$service,$service_guia,$service_retencion];
-            $valores = [$_POST["usuariosol"],$_POST["clavesol"],$_POST["envioemail"],$_POST["claveemail"],$_POST["certificado_clave"],$_POST["sunatose"],$_POST["serviceweb"],$_POST[$service],$_POST[$service_guia],$_POST[$service_retencion]];
+            $campos = ["usuariosol","clavesol","sunat_api_client_id","sunat_api_client_secret","envioemail","claveemail","certificado_clave","sunatose","serviceweb",$service,$service_guia,$service_retencion];
+            $valores = [$_POST["usuariosol"],$_POST["clavesol"],$_POST["sunat_api_client_id"],$_POST["sunat_api_client_secret"],$_POST["envioemail"],$_POST["claveemail"],$_POST["certificado_clave"],$_POST["sunatose"],$_POST["serviceweb"],$_POST[$service],$_POST[$service_guia],$_POST[$service_retencion]];
             $estado = $this->phuyu_model->phuyu_editar("public.webservice", $campos, $valores,"codempresa",$_POST["codempresa"]);
+			unset($_SESSION["phuyu_sunat_api_token_".(int)$_POST["codempresa"]]);
 
             // Procesar certificado si se subió uno
             if (isset($_FILES["certificado_pfx"]) && $_FILES["certificado_pfx"]["name"] != "") {
