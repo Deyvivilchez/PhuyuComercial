@@ -549,7 +549,23 @@ class Pedidos extends CI_Controller {
 				$estado = 0;
 				$info = $this->db->query("select valorventa,descglobal,igv,importe, codempleado, codcomprobantetipo from kardex.pedidos where codpedido=".$pedido[0]["codpedido"])->result_array();
 
-				$detalle = $this->db->query("select kd.codproducto,p.descripcion as producto,kd.codunidad,u.descripcion as unidad,kd.item,round(kd.cantidad) as cantidad, (select stockactual from almacen.productoubicacion where kd.codproducto=codproducto and kd.codunidad=codunidad and codalmacen=".$_SESSION["phuyu_codalmacen"].") as stock,p.controlstock as control,
+				$detalle = $this->db->query("select kd.codproducto,p.descripcion as producto,kd.codunidad,u.descripcion as unidad,kd.item,round(kd.cantidad) as cantidad, (select stockactualconvertido from almacen.productoubicacion where kd.codproducto=codproducto and kd.codunidad=codunidad and codalmacen=".$_SESSION["phuyu_codalmacen"].") as stock,
+					(
+						coalesce((select stockactualconvertido from almacen.productoubicacion where kd.codproducto=codproducto and kd.codunidad=codunidad and codalmacen=".$_SESSION["phuyu_codalmacen"]."),0)
+						-
+						coalesce((
+							select sum(pd.cantidad)
+							from kardex.pedidos pedi
+							inner join restaurante.mesaspedido mp on mp.codpedido=pedi.codpedido and mp.estado=1
+							inner join kardex.pedidosdetalle pd on pedi.codpedido=pd.codpedido
+							where pedi.estado=1
+								and pd.estado=1
+								and pedi.codpedido<>".$pedido[0]["codpedido"]."
+								and pd.codproducto=kd.codproducto
+								and pd.codunidad=kd.codunidad
+						),0)
+					) as stockdisponible,
+					p.controlstock as control,p.controlstock as controlstock,
 					kd.preciounitario as preciobruto, 0 as descuento, 0 as porcdescuento, kd.preciounitario as preciosinigv, 20 as codafectacionigv, 0 as conicbper, 0 as icbper, 0 as igv, kd.valorventa,
 					round(kd.preciounitario,3) as precio,kd.preciorefunitario, p.calcular, round(kd.subtotal,3) as subtotal, kd.descripcion, 
 					(select round(coalesce(sum(cantidad),0)) from restaurante.atendidos where codpedido=".$pedido[0]["codpedido"]." and kd.codproducto=codproducto and kd.codunidad=codunidad and kd.item=item) as atendido 
@@ -725,6 +741,81 @@ class Pedidos extends CI_Controller {
 			if (!isset($_SESSION["phuyu_codusuario"])) {echo json_encode("e");return;}
 
 			$this->request = json_decode(file_get_contents('php://input'));
+			$codmesaRequest = (int)($this->request->campos->codmesa ?? 0);
+			if ($codmesaRequest <= 0) {
+				echo json_encode(["estado" => 0, "mensaje" => "Debe seleccionar una mesa antes de registrar el pedido"]);
+				return;
+			}
+
+			$codpedidoActual = ((int)($this->request->campos->pedidonuevo ?? 1) === 1) ? 0 : (int)($this->request->campos->codpedido ?? 0);
+			$detalleAgrupado = [];
+			foreach ($this->request->detalle ?? [] as $value) {
+				$detalleItem = is_object($value) ? $value : (object)$value;
+				$codproducto = (int)($detalleItem->codproducto ?? 0);
+				$codunidad = (int)($detalleItem->codunidad ?? 0);
+				$cantidad = (double)($detalleItem->cantidad ?? 0);
+				if ($codproducto <= 0 || $codunidad <= 0) {
+					continue;
+				}
+
+				$key = $codproducto."|".$codunidad;
+				if (!isset($detalleAgrupado[$key])) {
+					$detalleAgrupado[$key] = [
+						"codproducto" => $codproducto,
+						"codunidad" => $codunidad,
+						"cantidad" => 0,
+						"producto" => $detalleItem->producto ?? $detalleItem->descripcion ?? "PRODUCTO",
+					];
+				}
+				$detalleAgrupado[$key]["cantidad"] += $cantidad;
+			}
+
+			foreach ($detalleAgrupado as $itemValidar) {
+				$stockInfo = $this->db->query(
+					"select p.descripcion, p.controlstock,
+						coalesce((
+							select pu.stockactualconvertido
+							from almacen.productoubicacion pu
+							where pu.codalmacen=? and pu.codproducto=? and pu.codunidad=? and pu.estado=1
+							limit 1
+						),0) as stock,
+						coalesce((
+							select sum(pd.cantidad)
+							from kardex.pedidos pedi
+							inner join restaurante.mesaspedido mp on mp.codpedido=pedi.codpedido and mp.estado=1
+							inner join kardex.pedidosdetalle pd on pd.codpedido=pedi.codpedido and pd.estado=1
+							where pedi.estado=1
+								and pedi.codpedido<>?
+								and pd.codproducto=?
+								and pd.codunidad=?
+						),0) as comprometido
+					from almacen.productos p
+					where p.codproducto=?
+					limit 1",
+					[
+						(int)($_SESSION["phuyu_codalmacen"] ?? 0),
+						$itemValidar["codproducto"],
+						$itemValidar["codunidad"],
+						$codpedidoActual,
+						$itemValidar["codproducto"],
+						$itemValidar["codunidad"],
+						$itemValidar["codproducto"],
+					]
+				)->row_array();
+
+				if (!empty($stockInfo) && (int)$stockInfo["controlstock"] === 1) {
+					$maximo = round((double)$stockInfo["stock"] - (double)$stockInfo["comprometido"], 3);
+					$solicitado = round((double)$itemValidar["cantidad"], 3);
+					if ($solicitado > $maximo) {
+						echo json_encode([
+							"estado" => 0,
+							"mensaje" => "STOCK INSUFICIENTE\n".$stockInfo["descripcion"]."\nDisponible: ".$maximo." UND\nSolicitado: ".$solicitado." UND",
+						]);
+						return;
+					}
+				}
+			}
+
 			$this->db->trans_begin();
 
 			// --- suma total de detalle (seguro para objetos o arrays) ---
@@ -785,8 +876,9 @@ class Pedidos extends CI_Controller {
 
 			foreach ($this->request->detalle ?? [] as $key => $value) {
 				$detalleItem = is_object($value) ? $value : (object)$value;
+				$detalleItem->item = isset($detalleItem->item) ? (int)$detalleItem->item : 0;
 
-				if ((int)$detalleItem->item === 0) {
+				if ($detalleItem->item === 0) {
 					$item++;
 					$detalleItem->item = $item;
 				}
@@ -854,13 +946,13 @@ class Pedidos extends CI_Controller {
 			// si era pedidonuevo, insertar en mesaspedido
 			if ((int)$this->request->campos->pedidonuevo == 1) {
 				$campos_m = ["codpedido","codmesa","nromesa"];
-				$valores_m = [(int)$codpedido, (int)($this->request->campos->codmesa ?? 0), $this->request->campos->mesa ?? ''];
+				$valores_m = [(int)$codpedido, $codmesaRequest, $this->request->campos->mesa ?? ''];
 				$this->phuyu_model->phuyu_guardar("restaurante.mesaspedido", $campos_m, $valores_m);
 			}
 
 			// actualizar situacion de mesa
 			$campos_s = ["situacion"]; $valores_s = [2];
-			$this->phuyu_model->phuyu_editar("restaurante.mesas", $campos_s, $valores_s, "codmesa", $this->request->campos->codmesa);
+			$this->phuyu_model->phuyu_editar("restaurante.mesas", $campos_s, $valores_s, "codmesa", $codmesaRequest);
 
 			// transacción
 			if ($this->db->trans_status() === FALSE){
@@ -911,6 +1003,108 @@ class Pedidos extends CI_Controller {
 		if ($this->input->is_ajax_request()) {
 			if (isset( $_SESSION["phuyu_codusuario"]) ) {
 				$this->request = json_decode(file_get_contents('php://input'));
+
+				$codpedidoCobro = (int)($this->request->campos->codpedido ?? 0);
+				if ($codpedidoCobro <= 0) {
+					echo json_encode([
+						"estado" => 0,
+						"mensaje" => "NO SE ENCONTRO EL PEDIDO PARA COBRAR"
+					]);
+					return;
+				}
+
+				$detallePedido = $this->db->query(
+					"select pd.codproducto, pd.codunidad, pd.item, pd.cantidad, pd.preciounitario, pd.subtotal, p.descripcion as producto
+					from kardex.pedidosdetalle pd
+					inner join almacen.productos p on p.codproducto=pd.codproducto
+					where pd.codpedido=? and pd.estado=1
+					order by pd.item",
+					[$codpedidoCobro]
+				)->result_array();
+
+				$detallePedidoIndex = [];
+				foreach ($detallePedido as $itemPedido) {
+					$keyPedido = ((int)$itemPedido["codproducto"])."|".((int)$itemPedido["codunidad"])."|".((int)$itemPedido["item"]);
+					$detallePedidoIndex[$keyPedido] = $itemPedido;
+				}
+
+				$importeDetalle = 0;
+				$valorVentaDetalle = 0;
+				$igvDetalle = 0;
+				foreach ($this->request->detalle ?? [] as $key => $value) {
+					$itemDetalle = is_object($value) ? $value : (object)$value;
+					$keyDetalle = ((int)($itemDetalle->codproducto ?? 0))."|".((int)($itemDetalle->codunidad ?? 0))."|".((int)($itemDetalle->item ?? 0));
+					if (!isset($detallePedidoIndex[$keyDetalle])) {
+						echo json_encode([
+							"estado" => 0,
+							"mensaje" => "EL DETALLE TIENE PRODUCTOS SIN GUARDAR EN EL PEDIDO. GUARDE EL PEDIDO ANTES DE COBRAR."
+						]);
+						return;
+					}
+
+					$cantidad = (double)($itemDetalle->cantidad ?? 0);
+					$precio = (double)($itemDetalle->precio ?? 0);
+					$subtotal = round($cantidad * $precio, 2);
+					$igvItem = round((double)($itemDetalle->igv ?? 0), 2);
+					$valorVentaItem = round($subtotal - $igvItem, 2);
+					$itemPedidoGuardado = $detallePedidoIndex[$keyDetalle];
+
+					if (
+						abs(round($cantidad, 4) - round((double)$itemPedidoGuardado["cantidad"], 4)) > 0.0001 ||
+						abs(round($precio, 4) - round((double)$itemPedidoGuardado["preciounitario"], 4)) > 0.0001 ||
+						abs($subtotal - round((double)$itemPedidoGuardado["subtotal"], 2)) > 0.01
+					) {
+						echo json_encode([
+							"estado" => 0,
+							"mensaje" => "EL DETALLE DEL COBRO NO COINCIDE CON EL PEDIDO GUARDADO. GUARDE EL PEDIDO ANTES DE COBRAR."
+						]);
+						return;
+					}
+
+					$this->request->detalle[$key]->subtotal = $subtotal;
+					$this->request->detalle[$key]->valorventa = $valorVentaItem;
+					$this->request->detalle[$key]->igv = $igvItem;
+
+					$importeDetalle += $subtotal;
+					$valorVentaDetalle += $valorVentaItem;
+					$igvDetalle += $igvItem;
+				}
+
+				if (count($detallePedido) !== count($this->request->detalle ?? [])) {
+					echo json_encode([
+						"estado" => 0,
+						"mensaje" => "EL PEDIDO GUARDADO Y EL DETALLE A COBRAR NO TIENEN LA MISMA CANTIDAD DE ITEMS. GUARDE EL PEDIDO ANTES DE COBRAR."
+					]);
+					return;
+				}
+
+				$importeDetalle = round($importeDetalle, 2);
+				$valorVentaDetalle = round($valorVentaDetalle, 2);
+				$igvDetalle = round($igvDetalle, 2);
+				$totalRequest = round((double)($this->request->totales->importe ?? 0), 2);
+				if (abs($importeDetalle - $totalRequest) > 0.01) {
+					echo json_encode([
+						"estado" => 0,
+						"mensaje" => "TOTAL DEL PEDIDO DESCUADRADO. Detalle: S/. ".number_format($importeDetalle, 2, ".", "")." | Total enviado: S/. ".number_format($totalRequest, 2, ".", "")
+					]);
+					return;
+				}
+
+				if ((int)($this->request->campos->condicionpago ?? 0) == 1) {
+					$efectivo = round((double)($this->request->pagos->monto_efectivo ?? 0) - (double)($this->request->pagos->vuelto_efectivo ?? 0), 2);
+					$tarjeta = ((int)($this->request->pagos->codtipopago_tarjeta ?? 0) > 0) ? round((double)($this->request->pagos->monto_tarjeta ?? 0), 2) : 0;
+					if (round($efectivo + $tarjeta, 2) + 0.01 < $importeDetalle) {
+						echo json_encode([
+							"estado" => 0,
+							"mensaje" => "EL PAGO NO CUBRE EL TOTAL REAL DEL DETALLE. Total: S/. ".number_format($importeDetalle, 2, ".", "")
+						]);
+						return;
+					}
+				}
+
+				$this->request->totales->valorventa = $valorVentaDetalle;
+				$this->request->totales->igv = $igvDetalle;
+				$this->request->totales->importe = $importeDetalle;
 
 				$this->db->trans_begin();
 

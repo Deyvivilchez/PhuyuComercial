@@ -174,6 +174,23 @@ BEGIN
 
     ALTER TABLE caja.controldiario
     ADD COLUMN IF NOT EXISTS horacierre TIME WITHOUT TIME ZONE;
+
+    IF to_regclass('caja.movimientos') IS NOT NULL THEN
+        ALTER TABLE caja.movimientos
+        ADD COLUMN IF NOT EXISTS horamovimiento TIME WITHOUT TIME ZONE;
+
+        ALTER TABLE caja.movimientos
+        ALTER COLUMN horamovimiento SET DEFAULT CURRENT_TIME;
+
+        IF to_regclass('kardex.kardex') IS NOT NULL THEN
+            UPDATE caja.movimientos m
+            SET horamovimiento = k.hora
+            FROM kardex.kardex k
+            WHERE m.codkardex = k.codkardex
+              AND m.horamovimiento IS NULL
+              AND k.hora IS NOT NULL;
+        END IF;
+    END IF;
 END $$;
 
 -- ============================================================
@@ -1300,6 +1317,71 @@ SELECT setval(
 
 -- Nota:
 -- Se registra la ruta caja/arqueos porque el wrapper phuyu/w valida
+-- seguridad.modulos antes de cargar el controlador.
+-- ============================================================
+
+-- ============================================================
+-- 13.1 REGISTRO DEL MODULO DE PRE COBRANZA
+-- ============================================================
+
+DO $$
+DECLARE
+    v_codmodulo INTEGER;
+BEGIN
+    SELECT codmodulo
+    INTO v_codmodulo
+    FROM seguridad.modulos
+    WHERE url = 'caja/precobranza'
+    LIMIT 1;
+
+    IF v_codmodulo IS NULL THEN
+        INSERT INTO seguridad.modulos (
+            descripcion, icono, url, codpadre, orden, estado,
+            nuevo, editar, anular, consultar,
+            clavenuevo, clavemodificar, claveanular, claveconsultar, codsistema
+        )
+        VALUES (
+            'Pre cobranza', 'bi bi-wallet2',
+            'caja/precobranza', 4, 7, 1,
+            1, 1, 1, 1,
+            '', '', '', '', 1
+        )
+        RETURNING codmodulo INTO v_codmodulo;
+    ELSE
+        UPDATE seguridad.modulos
+        SET descripcion = 'Pre cobranza',
+            icono = 'bi bi-wallet2',
+            url = 'caja/precobranza',
+            codpadre = 4,
+            orden = 7,
+            estado = 1,
+            nuevo = 1,
+            editar = 1,
+            anular = 1,
+            consultar = 1,
+            codsistema = 1
+        WHERE codmodulo = v_codmodulo;
+    END IF;
+
+    INSERT INTO seguridad.moduloperfiles (codmodulo, codperfil, nuevo, editar, anular)
+    SELECT v_codmodulo, p.codperfil, 1, 1, 1
+    FROM seguridad.perfiles p
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM seguridad.moduloperfiles mp
+        WHERE mp.codmodulo = v_codmodulo
+          AND mp.codperfil = p.codperfil
+    );
+END $$;
+
+SELECT setval(
+    pg_get_serial_sequence('seguridad.modulos', 'codmodulo'),
+    COALESCE((SELECT MAX(codmodulo) FROM seguridad.modulos), 0) + 1,
+    false
+);
+
+-- Nota:
+-- Se registra la ruta caja/precobranza porque el wrapper phuyu/w valida
 -- seguridad.modulos antes de cargar el controlador.
 -- ============================================================
 

@@ -1,21 +1,142 @@
-www-data www-data
-664 archivos
-775 carpetas
+PERMISOS PARA FACTURACION ELECTRONICA PHUYU
+===========================================
 
-sunat/                      www-data:www-data 775
-sunat/certificados/          www-data:www-data 775
-sunat/webphuyu/              www-data:www-data 775
-sunat/resumenes/             www-data:www-data 775
-sunat/resumenes/2026/06/     www-data:www-data 775
-public/img/empresa/          www-data:www-data 775
-application/logs/            www-data:www-data 775
+Objetivo:
+PHP/Apache debe poder escribir XML, ZIP, CDR, QR, certificados, logos,
+logs y cache sin usar permisos 777.
+
+Permisos recomendados:
+
+- Carpetas: 775
+- Archivos: 664
+- Propietario/grupo: el usuario con el que corre PHP/Apache
+
+En Ubuntu/Debian normalmente el usuario es:
+
+www-data:www-data
+
+En algunos servidores puede ser:
+
+nobody:nogroup
 
 
-XML / ZIP / CDR              www-data:www-data 664
-logos empresa                www-data:www-data 664
-certificados .pfx/.pem       www-data:www-data 664
-logs                         www-data:www-data 664
+RUTAS QUE DEBEN EXISTIR
+-----------------------
 
-chown -R www-data:www-data sunat public/img/empresa application/logs
-find sunat public/img/empresa application/logs -type d -exec chmod 775 {} +
-find sunat public/img/empresa application/logs -type f -exec chmod 664 {} +
+sunat/
+sunat/certificados/
+sunat/comprobantes/
+sunat/resumenes/
+sunat/logs/
+sunat/webphuyu/
+application/logs/
+application/cache/
+public/img/empresa/
+
+
+FORMA CORRECTA DE APLICAR EN UN PROYECTO
+----------------------------------------
+
+Entrar a la raiz del proyecto:
+
+cd /var/www/MI_PROYECTO
+
+Crear carpetas necesarias:
+
+sudo mkdir -p sunat/certificados sunat/comprobantes sunat/resumenes sunat/logs sunat/webphuyu application/logs application/cache public/img/empresa
+
+Aplicar propietario para Apache/PHP en Ubuntu:
+
+sudo chown -R www-data:www-data sunat application/logs application/cache public/img/empresa
+
+Aplicar permisos a carpetas:
+
+sudo find sunat application/logs application/cache public/img/empresa -type d -exec chmod 775 {} \;
+
+Aplicar permisos a archivos:
+
+sudo find sunat application/logs application/cache public/img/empresa -type f -exec chmod 664 {} \;
+
+Mantener grupo heredado para logos de empresa:
+
+sudo chmod 2775 public/img/empresa
+
+
+SI EL SERVIDOR USA nobody:nogroup
+---------------------------------
+
+Usar esta linea en lugar del chown con www-data:
+
+sudo chown -R nobody:nogroup sunat application/logs application/cache public/img/empresa
+
+Los comandos de chmod son los mismos.
+
+
+VERIFICAR PERMISOS
+------------------
+
+Ejecutar:
+
+stat -c '%A %a %U:%G %n' \
+sunat \
+sunat/certificados \
+sunat/comprobantes \
+sunat/resumenes \
+sunat/logs \
+sunat/webphuyu \
+application/logs \
+application/cache \
+public/img/empresa
+
+Debe verse parecido a:
+
+drwxrwxr-x 775 www-data:www-data sunat
+drwxrwxr-x 775 www-data:www-data sunat/certificados
+drwxrwxr-x 775 www-data:www-data sunat/comprobantes
+drwxrwxr-x 775 www-data:www-data sunat/resumenes
+drwxrwxr-x 775 www-data:www-data sunat/logs
+drwxrwxr-x 775 www-data:www-data sunat/webphuyu
+drwxrwxr-x 775 www-data:www-data application/logs
+drwxrwxr-x 775 www-data:www-data application/cache
+drwxrwsr-x 2775 www-data:www-data public/img/empresa
+
+
+PROBAR ESCRITURA REAL
+---------------------
+
+Si el usuario es www-data:
+
+sudo -u www-data sh -c 'touch sunat/.perm_test && rm sunat/.perm_test'
+sudo -u www-data sh -c 'touch sunat/webphuyu/.perm_test && rm sunat/webphuyu/.perm_test'
+sudo -u www-data sh -c 'touch sunat/certificados/.perm_test && rm sunat/certificados/.perm_test'
+sudo -u www-data sh -c 'touch application/logs/.perm_test && rm application/logs/.perm_test'
+sudo -u www-data sh -c 'touch application/cache/.perm_test && rm application/cache/.perm_test'
+sudo -u www-data sh -c 'touch public/img/empresa/.perm_test && rm public/img/empresa/.perm_test'
+
+Si el usuario es nobody:
+
+sudo -u nobody sh -c 'touch sunat/.perm_test && rm sunat/.perm_test'
+sudo -u nobody sh -c 'touch sunat/webphuyu/.perm_test && rm sunat/webphuyu/.perm_test'
+sudo -u nobody sh -c 'touch public/img/empresa/.perm_test && rm public/img/empresa/.perm_test'
+
+
+NOTAS IMPORTANTES
+-----------------
+
+- Evitar 777 en produccion.
+- Usar 777 solo como prueba temporal y volver a 775/664.
+- XML, ZIP, CDR, PNG, PFX y PEM deben quedar como archivos 664.
+- Las carpetas donde se generan XML/ZIP/CDR deben quedar 775.
+- public/img/empresa usa 2775 para que los nuevos archivos hereden el grupo.
+- Si la facturacion falla al crear XML, ZIP, QR, certificado o logo, revisar primero propietario y escritura en estas rutas.
+
+
+COMANDO RAPIDO PARA COPIAR Y PEGAR
+----------------------------------
+
+cd /var/www/MI_PROYECTO
+sudo mkdir -p sunat/certificados sunat/comprobantes sunat/resumenes sunat/logs sunat/webphuyu application/logs application/cache public/img/empresa
+sudo chown -R www-data:www-data sunat application/logs application/cache public/img/empresa
+sudo find sunat application/logs application/cache public/img/empresa -type d -exec chmod 775 {} \;
+sudo find sunat application/logs application/cache public/img/empresa -type f -exec chmod 664 {} \;
+sudo chmod 2775 public/img/empresa

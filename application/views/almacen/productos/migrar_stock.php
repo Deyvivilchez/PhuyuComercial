@@ -109,6 +109,29 @@
 		font-weight: 700;
 		padding: 9px 13px;
 	}
+	#phuyu_form.stock-migrador-wrap .mode-options {
+		display: grid;
+		gap: 10px;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+	#phuyu_form.stock-migrador-wrap .mode-option {
+		align-items: flex-start;
+		background: #fbfdff;
+		border: 1px solid #dbe3ef;
+		border-radius: 14px;
+		cursor: pointer;
+		display: flex;
+		gap: 10px;
+		min-height: 74px;
+		padding: 12px;
+	}
+	#phuyu_form.stock-migrador-wrap .mode-option input {
+		margin-top: 3px;
+	}
+	#phuyu_form.stock-migrador-wrap .mode-option strong {
+		display: block;
+		font-size: 13px;
+	}
 	#phuyu_form.stock-migrador-wrap .actions {
 		display: flex;
 		flex-wrap: wrap;
@@ -122,6 +145,107 @@
 		color: #9a3412;
 		line-height: 1.5;
 		padding: 16px 18px;
+	}
+	#phuyu_form.stock-migrador-wrap .confirm-backdrop {
+		align-items: center;
+		background: rgba(15, 23, 42, .52);
+		display: flex;
+		inset: 0;
+		justify-content: center;
+		padding: 24px;
+		position: fixed;
+		z-index: 9999;
+	}
+	#phuyu_form.stock-migrador-wrap .confirm-dialog {
+		background: #fff;
+		border: 1px solid #e5e7eb;
+		border-radius: 18px;
+		box-shadow: 0 28px 70px rgba(15, 23, 42, .24);
+		max-width: 460px;
+		overflow: hidden;
+		width: 100%;
+	}
+	#phuyu_form.stock-migrador-wrap .confirm-head {
+		align-items: center;
+		display: flex;
+		gap: 12px;
+		padding: 20px 22px 12px;
+	}
+	#phuyu_form.stock-migrador-wrap .confirm-icon {
+		align-items: center;
+		background: #fff7ed;
+		border: 1px solid #fed7aa;
+		border-radius: 14px;
+		color: #c2410c;
+		display: flex;
+		font-size: 22px;
+		font-weight: 900;
+		height: 44px;
+		justify-content: center;
+		width: 44px;
+	}
+	#phuyu_form.stock-migrador-wrap .confirm-icon.danger {
+		background: #fef2f2;
+		border-color: #fecaca;
+		color: #b91c1c;
+	}
+	#phuyu_form.stock-migrador-wrap .confirm-icon.dark {
+		background: #f8fafc;
+		border-color: #cbd5e1;
+		color: #0f172a;
+	}
+	#phuyu_form.stock-migrador-wrap .confirm-title {
+		font-size: 18px;
+		font-weight: 800;
+		margin: 0;
+	}
+	#phuyu_form.stock-migrador-wrap .confirm-body {
+		color: #4b5563;
+		line-height: 1.5;
+		padding: 0 22px 18px;
+	}
+	#phuyu_form.stock-migrador-wrap .confirm-body strong {
+		color: #111827;
+		display: block;
+		margin-bottom: 6px;
+	}
+	#phuyu_form.stock-migrador-wrap .confirm-scope {
+		background: #f8fafc;
+		border: 1px solid #e5e7eb;
+		border-radius: 14px;
+		margin-top: 14px;
+		padding: 12px;
+	}
+	#phuyu_form.stock-migrador-wrap .confirm-scope label {
+		color: #374151;
+		font-size: 13px;
+		font-weight: 700;
+		margin-bottom: 8px;
+	}
+	#phuyu_form.stock-migrador-wrap .line-list {
+		display: grid;
+		gap: 8px;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		margin-top: 10px;
+		max-height: 190px;
+		overflow: auto;
+	}
+	#phuyu_form.stock-migrador-wrap .line-option {
+		align-items: center;
+		background: #fff;
+		border: 1px solid #e5e7eb;
+		border-radius: 10px;
+		display: flex;
+		gap: 8px;
+		padding: 8px;
+	}
+	#phuyu_form.stock-migrador-wrap .confirm-actions {
+		background: #f8fafc;
+		border-top: 1px solid #e5e7eb;
+		display: flex;
+		gap: 10px;
+		justify-content: flex-end;
+		padding: 14px 18px;
 	}
 	#phuyu_form.stock-migrador-wrap .mapping-item,
 	#phuyu_form.stock-migrador-wrap .summary-item {
@@ -211,6 +335,7 @@
 		#phuyu_form.stock-migrador-wrap .migrador-grid,
 		#phuyu_form.stock-migrador-wrap .subgrid,
 		#phuyu_form.stock-migrador-wrap .two-col,
+		#phuyu_form.stock-migrador-wrap .mode-options,
 		#phuyu_form.stock-migrador-wrap .mapping-grid,
 		#phuyu_form.stock-migrador-wrap .summary-grid {
 			grid-template-columns: 1fr;
@@ -222,8 +347,7 @@
 	<div class="hero">
 		<h1>Migrar / actualizar stock</h1>
 		<p>
-			Carga tu Excel, elige el almacen destino, detecta columnas, revisa una vista previa y luego suma cantidades al stock existente.
-			No reemplaza stock: si el stock actual es -5 y el Excel trae 8, el stock final sera 3.
+			Carga tu Excel, elige el almacen destino, detecta columnas, revisa una vista previa y aplica la cantidad como suma o como reemplazo del stock actual.
 		</p>
 	</div>
 
@@ -232,7 +356,7 @@
 			<div class="migrador-card">
 				<div class="section-title">
 					<h2>Configuracion de migracion</h2>
-					<span class="tag">Stock incremental</span>
+					<span class="tag">{{ campos.modo_stock == 'reemplazar' ? 'Reemplazar stock' : 'Sumar stock' }}</span>
 				</div>
 
 				<div class="subgrid">
@@ -250,7 +374,27 @@
 								{{ almacen.descripcion }}{{ almacen.sucursal ? ' - ' + almacen.sucursal : '' }}
 							</option>
 						</select>
-						<small>El stock se sumara solo en este almacen.</small>
+						<small>El stock se actualizara solo en este almacen.</small>
+					</div>
+
+					<div class="field">
+						<label>Modo de actualizacion</label>
+						<div class="mode-options">
+							<label class="mode-option">
+								<input type="radio" value="sumar" v-model="campos.modo_stock" v-on:change="np_cambio_crear_productos_migrarstock()">
+								<span>
+									<strong>Sumar</strong>
+									<small>Agrega la cantidad del Excel al stock actual.</small>
+								</span>
+							</label>
+							<label class="mode-option">
+								<input type="radio" value="reemplazar" v-model="campos.modo_stock" v-on:change="np_cambio_crear_productos_migrarstock()">
+								<span>
+									<strong>Reemplazar</strong>
+									<small>Deja como stock final la cantidad del Excel.</small>
+								</span>
+							</label>
+						</div>
 					</div>
 
 					<div class="field">
@@ -264,7 +408,21 @@
 								<input class="form-check-input" type="checkbox" id="crear_productos" v-model="campos.crear_productos" v-on:change="np_cambio_crear_productos_migrarstock()">
 								<label class="form-check-label" for="crear_productos">Crear productos no encontrados</label>
 							</div>
+							<div class="form-check form-switch">
+								<input class="form-check-input" type="checkbox" id="reemplazar_nombre" v-model="campos.reemplazar_nombre" v-on:change="np_cambio_crear_productos_migrarstock()">
+								<label class="form-check-label" for="reemplazar_nombre">Reemplazar nombre del producto</label>
+							</div>
 						</div>
+					</div>
+
+					<div class="field">
+						<label>Productos no seleccionados</label>
+						<select class="form-select" v-model="campos.limpieza_almacen">
+							<option value="conservar">Conservar como estan</option>
+							<option value="cero">Poner stock en 0</option>
+							<option value="inactivar">Poner stock en 0 e inhabilitar en este almacen</option>
+						</select>
+						<small>Solo afecta el almacen destino. No desactiva el producto maestro ni otros almacenes.</small>
 					</div>
 				</div>
 
@@ -276,6 +434,12 @@
 				</div>
 
 				<div class="actions">
+					<button type="button" class="btn btn-dark" v-on:click="np_preparar_catalogo_migrarstock()" v-bind:disabled="estado==1">
+						Preparar catalogo
+					</button>
+					<button type="button" class="btn btn-outline-danger" v-on:click="np_poner_almacen_cero_migrarstock()" v-bind:disabled="estado==1 || !campos.codalmacen">
+						Poner almacen en 0
+					</button>
 					<button type="button" class="btn btn-light" v-on:click="np_autodetectar_migrarstock()" v-bind:disabled="!campos.columnas.length">
 						Autodetectar columnas
 					</button>
@@ -283,7 +447,7 @@
 						Validar / Previsualizar
 					</button>
 					<button type="button" class="btn btn-warning" v-on:click="np_procesar_migrarstock()" v-bind:disabled="estado==1 || np_filas_migrarstock_seleccionadas()==0">
-						Migrar stock seleccionado
+						Aplicar stock seleccionado
 					</button>
 					<button type="button" class="btn btn-outline-primary" v-on:click="np_toggle_migrarstock_todos()" v-bind:disabled="!campos.preview.length">
 						{{ campos.seleccionar_todo ? 'Quitar seleccion' : 'Seleccionar todo' }}
@@ -308,7 +472,7 @@
 				<div class="two-col">
 					<div>
 						<strong>Campos clave</strong>
-						<p class="muted mb-0">Codigo/SKU y cantidad/stock a sumar.</p>
+						<p class="muted mb-0">Codigo/SKU y cantidad de stock.</p>
 					</div>
 					<div>
 						<strong>Opcionales</strong>
@@ -318,7 +482,10 @@
 
 				<div class="alert-soft mt-3">
 					El sistema intenta reconocer cabeceras como <strong>codigo</strong>, <strong>SKU</strong>,
-					<strong>cantidad</strong>, <strong>stock</strong> o <strong>cantidad a sumar</strong>.
+					<strong>cantidad</strong>, <strong>stock</strong>, <strong>stock inicial</strong> o <strong>inventario</strong>.
+				</div>
+				<div class="alert-soft mt-3">
+					<strong>Preparar catalogo</strong> asigna GENERAL/GENERAL/GENERICO a los productos, habilita la linea GENERAL para las sucursales activas y consolida duplicados por codigo de barra.
 				</div>
 			</div>
 		</div>
@@ -411,7 +578,7 @@
 						{{ campos.seleccionar_todo ? 'Quitar seleccion' : 'Seleccionar todo' }}
 					</button>
 					<button type="button" class="btn btn-primary" v-bind:disabled="estado==1 || np_filas_migrarstock_seleccionadas()==0" v-on:click="np_procesar_migrarstock()">
-						Migrar stock seleccionado
+						Aplicar stock seleccionado
 					</button>
 				</div>
 			</div>
@@ -427,7 +594,7 @@
 							<th>Operacion</th>
 							<th>Unidad</th>
 							<th class="text-end">Stock actual</th>
-							<th class="text-end">Cantidad a sumar</th>
+							<th class="text-end">Cantidad Excel</th>
 							<th class="text-end">Stock final</th>
 							<th>Estado</th>
 						</tr>
@@ -458,11 +625,47 @@
 			</div>
 		</div>
 	</div>
+
+	<div class="confirm-backdrop" v-if="confirmacion.visible">
+		<div class="confirm-dialog">
+			<div class="confirm-head">
+				<div class="confirm-icon" v-bind:class="confirmacion.tipo">!</div>
+				<h3 class="confirm-title">{{ confirmacion.titulo }}</h3>
+			</div>
+			<div class="confirm-body">
+				<strong>{{ confirmacion.mensaje }}</strong>
+				<div>{{ confirmacion.detalle }}</div>
+				<div class="confirm-scope" v-if="confirmacion.accion == 'poner_almacen_cero'">
+					<label>Alcance por linea</label>
+					<select class="form-select" v-model="confirmacion.alcance_lineas">
+						<option value="todos">Todas las lineas</option>
+						<option value="solo">Solo lineas seleccionadas</option>
+						<option value="excepto">Todas excepto las seleccionadas</option>
+					</select>
+					<div class="line-list" v-if="confirmacion.alcance_lineas != 'todos'">
+						<label class="line-option" v-for="linea in lineas">
+							<input type="checkbox" v-bind:value="String(linea.codlinea)" v-model="confirmacion.lineas">
+							<span>{{ linea.descripcion }}</span>
+						</label>
+					</div>
+				</div>
+			</div>
+			<div class="confirm-actions">
+				<button type="button" class="btn btn-light" v-on:click="np_cerrar_confirmacion_migrarstock()">
+					Cancelar
+				</button>
+				<button type="button" class="btn" v-bind:class="confirmacion.tipo == 'danger' ? 'btn-danger' : (confirmacion.tipo == 'dark' ? 'btn-dark' : 'btn-warning')" v-on:click="np_ejecutar_confirmacion_migrarstock()">
+					{{ confirmacion.confirmar }}
+				</button>
+			</div>
+		</div>
+	</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script>
 	var almacenesMigrarStock = <?php echo json_encode($almacenes); ?>;
+	var lineasMigrarStock = <?php echo json_encode($lineas); ?>;
 	var campos = {
 		filas: [],
 		columnas: [],
@@ -472,6 +675,9 @@
 		limite_excel: 80,
 		ignorar_stock_cero: false,
 		crear_productos: false,
+		reemplazar_nombre: false,
+		limpieza_almacen: "conservar",
+		modo_stock: "sumar",
 		codalmacen: "<?php echo (int) $codalmacenActual; ?>",
 		mapeo: {
 			codigo: '',

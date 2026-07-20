@@ -201,8 +201,7 @@ $icbperSunat = $_SESSION['phuyu_icbper'] ?? 0;
 
 	#phuyu_restaurante {
 		height: 330px !important;
-		overflow-x: hidden !important;
-		overflow-y: auto !important;
+		overflow: hidden !important;
 		padding: .85rem !important;
 	}
 
@@ -261,19 +260,19 @@ $icbperSunat = $_SESSION['phuyu_icbper'] ?? 0;
 
 	.pedido-toolbar {
 		display: grid;
-		gap: .6rem;
-		grid-template-columns: 1.1fr 42px 1.1fr .9fr;
+		gap: .5rem;
+		grid-template-columns: minmax(150px, 1fr) 42px minmax(170px, 1fr) minmax(140px, .8fr);
 	}
 
 	.detalle {
-		min-height: 210px;
+		min-height: 90px;
 		overflow: auto;
 	}
 
 	.detalle .table {
 		font-size: .78rem;
 		margin-bottom: 0;
-		min-width: 920px;
+		min-width: 720px;
 	}
 
 	.detalle .table thead th {
@@ -291,6 +290,28 @@ $icbperSunat = $_SESSION['phuyu_icbper'] ?? 0;
 		font-size: .78rem;
 		min-height: 30px;
 		padding: .2rem .4rem;
+	}
+
+	.detalle .number {
+		min-width: 70px;
+	}
+
+	.detalle-producto {
+		max-width: 220px;
+		white-space: normal;
+	}
+
+	.detalle-unidad-mini {
+		background: rgba(64, 81, 137, .10);
+		border-radius: 999px;
+		color: #405189;
+		display: inline-block;
+		font-size: .62rem;
+		font-weight: 800;
+		line-height: 1;
+		margin-left: .25rem;
+		padding: .15rem .32rem;
+		vertical-align: middle;
 	}
 
 	.total-pill {
@@ -570,7 +591,6 @@ $icbperSunat = $_SESSION['phuyu_icbper'] ?? 0;
 										<th width="52"><i class="bi bi-sticky"></i></th>
 										<th width="140"><i class="bi bi-flag me-1"></i>Estado</th>
 										<th>Producto</th>
-										<th width="110">Unidad</th>
 										<th width="105">Cantidad</th>
 										<th width="105">Precio</th>
 										<th width="110">Subtotal</th>
@@ -592,8 +612,11 @@ $icbperSunat = $_SESSION['phuyu_icbper'] ?? 0;
 												<i class="bi bi-check2-circle me-1"></i>Atendido {{ dato.atendido }}
 											</span>
 										</td>
-										<td class="fw-semibold">{{ dato.producto }}</td>
-										<td><input type="hidden" v-model="dato.codunidad">{{ dato.unidad }}</td>
+										<td class="fw-semibold detalle-producto">
+											<input type="hidden" v-model="dato.codunidad">
+											{{ dato.producto }}
+											<span class="detalle-unidad-mini">{{ dato.unidad && dato.unidad.indexOf('UNIDAD') === 0 ? 'UND' : dato.unidad }}</span>
+										</td>
 										<td>
 											<input type="number" step="0.0001" class="form-control number" v-if="dato.control==1" v-model.number="dato.cantidad" v-on:keyup="phuyu_calcular(dato)" min="0.0001" required>
 											<input type="number" step="0.0001" class="form-control number" v-if="dato.control==0" v-model.number="dato.cantidad" v-on:keyup="phuyu_calcular(dato)" min="0.0001" required>
@@ -722,7 +745,7 @@ $icbperSunat = $_SESSION['phuyu_icbper'] ?? 0;
 									<div class="payment-box h-100">
 										<h6 class="fw-bold mb-3"><i class="bi bi-cash-stack me-1"></i> Pago en efectivo</h6>
 										<label class="form-label">S/. monto recibido</label>
-										<input type="number" step="0.01" class="form-control number phuyu-money-success" min="0" required v-model="pagos.monto_efectivo" placeholder="S/. 0.00" v-on:keyup="phuyu_vuelto()">
+										<input type="number" step="0.01" class="form-control number phuyu-money-success" min="0" required v-model="pagos.monto_efectivo" placeholder="S/. 0.00" v-on:keyup="phuyu_vuelto()" v-on:change="phuyu_vuelto()">
 										<label class="form-label mt-2">Vuelto</label>
 										<input type="number" step="0.01" class="form-control phuyu-money-error" readonly v-model="pagos.vuelto_efectivo">
 									</div>
@@ -740,7 +763,7 @@ $icbperSunat = $_SESSION['phuyu_icbper'] ?? 0;
 											} ?>
 										</select>
 										<label class="form-label mt-2">S/. monto</label>
-										<input type="number" step="0.01" class="form-control number phuyu-money-success" min="0.01" id="monto_tarjeta" v-model="pagos.monto_tarjeta" placeholder="S/. 0.00" readonly>
+										<input type="number" step="0.01" class="form-control number phuyu-money-success" min="0.01" id="monto_tarjeta" v-model="pagos.monto_tarjeta" placeholder="S/. 0.00" v-on:keyup="phuyu_recalcular_pago()" v-on:change="phuyu_recalcular_pago()" readonly>
 										<label class="form-label mt-2">Nro voucher</label>
 										<input type="text" class="form-control phuyu-money-default" id="nrovoucher" v-model.trim="pagos.nrovoucher" autocomplete="off" readonly>
 									</div>
@@ -907,5 +930,5 @@ $icbperSunat = $_SESSION['phuyu_icbper'] ?? 0;
 	$("#reportes_modal").css({
 		height: pantalla - 65
 	});
-	$(".detalle").css("height", Math.max(210, pantalla - 540));
+	$(".detalle").css("max-height", Math.max(210, pantalla - 540));
 </script>

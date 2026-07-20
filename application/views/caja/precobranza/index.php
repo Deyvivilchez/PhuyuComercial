@@ -6,6 +6,12 @@
 		<div>
 			<div class="text-muted small text-uppercase fw-semibold">Tesoreria</div>
 			<h4 class="mb-0 fw-bold">Pre cobranzas</h4>
+			<nav aria-label="breadcrumb">
+				<ol class="breadcrumb mb-0 mt-1">
+					<li class="breadcrumb-item"><a href="<?php echo base_url();?>phuyu/w/caja/controlcajas">Control de caja</a></li>
+					<li class="breadcrumb-item active" aria-current="page">Pre cobranzas</li>
+				</ol>
+			</nav>
 		</div>
 	</div>
 
@@ -13,6 +19,12 @@
 		<input type="hidden" id="phuyu_opcion" value="1">
 		<div class="card phuyu-card">
 			<div class="card-body">
+				<div class="phuyu-actions mb-3">
+					<a href="<?php echo base_url();?>phuyu/w/caja/controlcajas" class="btn btn-light">
+						<i class="bi bi-arrow-left me-1"></i> Volver a caja
+					</a>
+				</div>
+
 				<div class="row g-3 align-items-end mb-3">
 					<div class="col-12 col-md-4">
 						<label class="form-label">Cobradores</label>

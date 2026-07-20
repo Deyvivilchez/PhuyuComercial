@@ -488,7 +488,7 @@
 									<span class="phuyu-sunat-panel-icon"><i class="bi bi-search"></i></span>
 									<div>
 										<h5 class="phuyu-sunat-panel-title">Consulta individual de CPE</h5>
-										<p class="phuyu-sunat-panel-subtitle">Consulta directo en SUNAT con la validacion publica por tipo, serie, numero, fecha e importe.</p>
+										<p class="phuyu-sunat-panel-subtitle">Consulta directamente el estado oficial del CPE mediante el webservice de SUNAT.</p>
 									</div>
 								</div>
 								<div class="phuyu-sunat-panel-body">
@@ -533,7 +533,7 @@
 									<span class="phuyu-sunat-panel-icon"><i class="bi bi-calendar-range"></i></span>
 									<div>
 										<h5 class="phuyu-sunat-panel-title">Verificar comprobantes del periodo en SUNAT</h5>
-										<p class="phuyu-sunat-panel-subtitle">Elige un rango, el sistema toma los comprobantes electronicos de la base de datos y los valida directamente en SUNAT al presionar consultar.</p>
+										<p class="phuyu-sunat-panel-subtitle">Elige un rango y valida cada comprobante directamente en el webservice de SUNAT. No se usa el estado interno.</p>
 									</div>
 								</div>
 								<div class="phuyu-sunat-panel-body">

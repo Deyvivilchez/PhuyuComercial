@@ -1824,12 +1824,12 @@ var phuyu_operacion = new Vue({
             }*/
 
             if ($("#formato").val() == 'a4') {
-                window.open(url + "facturacion/formato/a4/" + codkardex, "_blank");
+                window.open(url + "facturacion/formato/a4/" + codkardex, "_blank") || (window.location.href = url + "facturacion/formato/a4/" + codkardex);
             } else {
                 if ($("#formato").val() == 'a5') {
-                    window.open(url + "facturacion/formato/a5/" + codkardex, "_blank");
+                    window.open(url + "facturacion/formato/a5/" + codkardex, "_blank") || (window.location.href = url + "facturacion/formato/a5/" + codkardex);
                 } else {
-                    window.open(url + "facturacion/formato/ticket/" + codkardex, "_blank");
+                    window.open(url + "facturacion/formato/ticket/" + codkardex, "_blank") || (window.location.href = url + "facturacion/formato/ticket/" + codkardex);
                 }
             }
         },

@@ -6,6 +6,49 @@ use RobRichards\XMLSecLibs\XMLSecurityKey;
 
 class Sunat extends CI_Controller {
 
+    function phuyu_consultaIntegradaSUNAT($datos, $client_id, $client_secret, $ruc_consultante){
+        if (!function_exists("curl_init") || trim($client_id)==="" || trim($client_secret)==="") {
+            return ["estado" => 0, "nivel" => "danger", "mensaje" => "FALTAN CREDENCIALES API SUNAT", "detalle" => "Configure el Client ID y Client Secret de Consulta Integrada."];
+        }
+        $clave_sesion = "phuyu_sunat_api_token_".(int)$_SESSION["phuyu_codempresa"];
+        $token = isset($_SESSION[$clave_sesion]) ? $_SESSION[$clave_sesion] : null;
+        if (!is_array($token) || empty($token["access_token"]) || empty($token["vence"]) || (int)$token["vence"]<=time()+60) {
+            $curl = curl_init("https://api-seguridad.sunat.gob.pe/v1/clientesextranet/".rawurlencode($client_id)."/oauth2/token/");
+            curl_setopt($curl, CURLOPT_POST, true);
+            curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query(["grant_type"=>"client_credentials", "scope"=>"https://api.sunat.gob.pe/v1/contribuyente/contribuyentes", "client_id"=>$client_id, "client_secret"=>$client_secret]));
+            curl_setopt($curl, CURLOPT_HTTPHEADER, ["Content-Type: application/x-www-form-urlencoded"]);
+            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true); curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 10); curl_setopt($curl, CURLOPT_TIMEOUT, 30);
+            $respuesta_token = curl_exec($curl); $error_token = curl_error($curl); $http_token = curl_getinfo($curl, CURLINFO_HTTP_CODE); curl_close($curl);
+            $token_data = json_decode((string)$respuesta_token, true);
+            if ($http_token<200 || $http_token>=300 || !is_array($token_data) || empty($token_data["access_token"])) {
+                $detalle = is_array($token_data) && !empty($token_data["error_description"]) ? $token_data["error_description"] : ($error_token!=="" ? $error_token : "SUNAT rechazo las credenciales API.");
+                return ["estado"=>0, "nivel"=>"danger", "mensaje"=>"NO SE PUDO OBTENER TOKEN SUNAT", "detalle"=>$detalle];
+            }
+            $token = ["access_token"=>$token_data["access_token"], "vence"=>time()+max(60, (int)(isset($token_data["expires_in"]) ? $token_data["expires_in"] : 3600))];
+            $_SESSION[$clave_sesion] = $token;
+        }
+        $curl = curl_init("https://api.sunat.gob.pe/v1/contribuyente/contribuyentes/".rawurlencode($ruc_consultante)."/validarcomprobante");
+        curl_setopt($curl, CURLOPT_POST, true); curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($datos));
+        curl_setopt($curl, CURLOPT_HTTPHEADER, ["Authorization: Bearer ".$token["access_token"], "Content-Type: application/json", "Accept: application/json"]);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true); curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 10); curl_setopt($curl, CURLOPT_TIMEOUT, 30);
+        $respuesta = curl_exec($curl); $error = curl_error($curl); $http = curl_getinfo($curl, CURLINFO_HTTP_CODE); curl_close($curl);
+        $data = json_decode((string)$respuesta, true);
+        if ($http<200 || $http>=300 || !is_array($data)) {
+            return ["estado"=>0, "nivel"=>"warning", "mensaje"=>"SUNAT NO PUDO PROCESAR LA CONSULTA", "detalle"=>$error!=="" ? $error : (is_array($data) && !empty($data["message"]) ? $data["message"] : "HTTP ".$http)];
+        }
+        if (!empty($data["success"]) && isset($data["data"])) {
+			$info=$data["data"]; $estados=["0"=>"NO EXISTE", "1"=>"ACEPTADO", "2"=>"ANULADO", "3"=>"AUTORIZADO", "4"=>"NO AUTORIZADO"];
+			$estados_ruc=["00"=>"ACTIVO", "01"=>"BAJA PROVISIONAL", "02"=>"BAJA DE OFICIO", "03"=>"SUSPENSION TEMPORAL", "10"=>"BAJA DEFINITIVA", "11"=>"BAJA DE OFICIO", "22"=>"INHABILITADO"];
+			$condiciones=["00"=>"HABIDO", "01"=>"NO HALLADO", "02"=>"NO HALLADO", "03"=>"NO HALLADO", "04"=>"NO HALLADO", "05"=>"NO HALLADO", "06"=>"NO HALLADO", "07"=>"NO HALLADO", "08"=>"NO HALLADO", "09"=>"PENDIENTE"];
+			$codigo=(string)$info["estadoCp"]; $mensaje=isset($estados[$codigo]) ? $estados[$codigo] : "ESTADO ".$codigo;
+			$codigo_ruc=isset($info["estadoRuc"])?(string)$info["estadoRuc"]:""; $codigo_condicion=isset($info["condDomiRuc"])?(string)$info["condDomiRuc"]:"";
+			$estado_ruc=isset($estados_ruc[$codigo_ruc])?$estados_ruc[$codigo_ruc]:$codigo_ruc; $condicion=isset($condiciones[$codigo_condicion])?$condiciones[$codigo_condicion]:$codigo_condicion;
+			$detalle="RUC: ".$estado_ruc." | DOMICILIO: ".$condicion;
+			return ["estado"=>$codigo==="1"?1:0, "nivel"=>$codigo==="1"?"success":($codigo==="0"?"danger":"warning"), "mensaje"=>$mensaje, "detalle"=>$detalle, "estado_cp"=>$mensaje, "estado_ruc"=>$estado_ruc, "condicion"=>$condicion, "observaciones"=>isset($info["observaciones"])?$info["observaciones"]:[]];
+        }
+        return ["estado"=>0, "nivel"=>"warning", "mensaje"=>"SUNAT NO VALIDO EL COMPROBANTE", "detalle"=>!empty($data["message"])?$data["message"]:(!empty($data["errorCode"])?"Codigo: ".$data["errorCode"]:"Sin detalle")];
+    }
+
     protected function phuyu_respuesta_cpe($estado, $mensaje, $alerta = null){
         $data = array("estado" => $estado, "mensaje" => $mensaje);
         if ($alerta !== null) {

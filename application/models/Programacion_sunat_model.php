@@ -166,6 +166,8 @@ class Programacion_sunat_model extends CI_Model {
 		$dias = max(1, (int)$dias);
 		$this->db->trans_begin();
 
+		$cola_obsoleta = $this->descartar_cola_resumen_obsoleta();
+
 		if ($todo) {
 			$historial = $this->db->query("delete from sunat.programacion_cpe_historial");
 		} else {
@@ -197,7 +199,8 @@ class Programacion_sunat_model extends CI_Model {
 			return [
 				"estado" => 0,
 				"historial_eliminado" => 0,
-				"cola_eliminada" => 0
+				"cola_eliminada" => 0,
+				"cola_obsoleta" => 0
 			];
 		}
 
@@ -205,8 +208,37 @@ class Programacion_sunat_model extends CI_Model {
 		return [
 			"estado" => 1,
 			"historial_eliminado" => (int)$historial_eliminado,
-			"cola_eliminada" => (int)$cola_eliminada
+			"cola_eliminada" => (int)$cola_eliminada,
+			"cola_obsoleta" => (int)$cola_obsoleta
 		];
+	}
+
+	private function descartar_cola_resumen_obsoleta(){
+		$this->db->query(
+			"update sunat.programacion_cpe_cola c
+			set estado=\$\$descartado\$\$,
+				ultimo_mensaje=\$\$Descartado por limpieza: resumen no encontrado y periodo ya tiene resumen aceptado.\$\$,
+				actualizado_en=now()
+			where c.tipo=\$\$resumen\$\$
+				and c.estado=\$\$error\$\$
+				and coalesce(c.ultimo_mensaje, \$\$\$\$) ilike \$\$%Resumen no encontrado%\$\$
+				and not exists (
+					select 1
+					from sunat.resumenes r
+					where r.codresumentipo=split_part(c.referencia, \$\$|\$\$, 1)::integer
+						and r.periodo=split_part(c.referencia, \$\$|\$\$, 2)
+						and r.nrocorrelativo=split_part(c.referencia, \$\$|\$\$, 3)::integer
+				)
+				and exists (
+					select 1
+					from sunat.resumenes r
+					where r.codresumentipo=split_part(c.referencia, \$\$|\$\$, 1)::integer
+						and r.periodo=split_part(c.referencia, \$\$|\$\$, 2)
+						and r.estado in (1, 2)
+				)"
+		);
+
+		return $this->db->affected_rows();
 	}
 
 	public function programaciones_vencidas($hora = null){

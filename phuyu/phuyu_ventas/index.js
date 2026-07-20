@@ -158,10 +158,10 @@ var phuyu_ventas = new Vue({
 				phuyu_sistema.phuyu_alerta("DEBE SELECCIONAR UNA VENTA", "PARA IMPRIMIR EN EL SISTEMA LA VENTA !!!","error");
 			}else{
 				if ($("#formato").val()=="ticket") {
-					window.open(url+"facturacion/formato/ticket/"+this.registro,"_blank");
+					window.open(url+"facturacion/formato/ticket/"+this.registro,"_blank") || (window.location.href = url+"facturacion/formato/ticket/"+this.registro);
 				}else{
 					var phuyu_url = url+"facturacion/formato/"+$("#formato").val()+"/"+this.registro;
-					window.open(phuyu_url,"_blank");
+					window.open(phuyu_url,"_blank") || (window.location.href = phuyu_url);
 					//$("#phuyu_pdf").attr("src",phuyu_url); $("#modal_reportes").modal("show");
 				}
 				
@@ -173,7 +173,7 @@ var phuyu_ventas = new Vue({
 						var phuyu_url = url+"facturacion/formato/a5/"+this.registro;
 	            		$("#phuyu_pdf").attr("src",phuyu_url); $("#modal_reportes").modal("show");
 					}else{
-						window.open(url+"facturacion/formato/ticket/"+this.registro,"_blank");
+						window.open(url+"facturacion/formato/ticket/"+this.registro,"_blank") || (window.location.href = url+"facturacion/formato/ticket/"+this.registro);
 					}
 				} */
 			}
@@ -242,7 +242,7 @@ var phuyu_ventas = new Vue({
 		phuyu_docu: function(tipo,codkardex){
 			if(tipo=="pdf"){
 				if ($("#formato").val()=="ticket") {
-					window.open(url+"facturacion/formato/ticket/"+codkardex,"_blank");
+					window.open(url+"facturacion/formato/ticket/"+codkardex,"_blank") || (window.location.href = url+"facturacion/formato/ticket/"+codkardex);
 				}else{
 					var phuyu_url = url+"facturacion/formato/"+$("#formato").val()+"/"+codkardex;
 					$("#phuyu_pdf").attr("src",phuyu_url); $("#modal_reportes").modal("show");
