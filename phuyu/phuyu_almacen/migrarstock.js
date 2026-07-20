@@ -3,10 +3,23 @@ var phuyu_migrarstock = new Vue({
 	data: {
 		estado: 0,
 		campos: campos,
+		confirmacion: {
+			visible: false,
+			titulo: "",
+			mensaje: "",
+			detalle: "",
+			confirmar: "Confirmar",
+			tipo: "warning",
+			accion: "",
+			alcance_lineas: "todos",
+			lineas: [],
+			callback: null
+		},
 		almacenes: typeof almacenesMigrarStock !== "undefined" ? almacenesMigrarStock : [],
+		lineas: typeof lineasMigrarStock !== "undefined" ? lineasMigrarStock : [],
 		camposSistema: [
 			{ key: "codigo", label: "Codigo / SKU", required: true },
-			{ key: "cantidad", label: "Cantidad a sumar", required: true },
+			{ key: "cantidad", label: "Cantidad", required: true },
 			{ key: "descripcion", label: "Descripcion / nombre", required: false },
 			{ key: "unidad", label: "Unidad / codunidad", required: false },
 			{ key: "codigo_barra", label: "Codigo de barra", required: false },
@@ -32,6 +45,117 @@ var phuyu_migrarstock = new Vue({
 	methods: {
 		np_formato_migrarstock: function(){
 			window.open(url+"almacen/migrarstock/formato", "_blank");
+		},
+		np_confirmar_accion_migrarstock: function(opciones){
+			this.confirmacion.titulo = opciones.titulo || "Confirmar accion";
+			this.confirmacion.mensaje = opciones.mensaje || "";
+			this.confirmacion.detalle = opciones.detalle || "";
+			this.confirmacion.confirmar = opciones.confirmar || "Confirmar";
+			this.confirmacion.tipo = opciones.tipo || "warning";
+			this.confirmacion.accion = opciones.accion || "";
+			this.confirmacion.alcance_lineas = "todos";
+			this.confirmacion.lineas = [];
+			this.confirmacion.callback = opciones.callback || null;
+			this.confirmacion.visible = true;
+		},
+		np_cerrar_confirmacion_migrarstock: function(){
+			this.confirmacion.visible = false;
+			this.confirmacion.callback = null;
+		},
+		np_ejecutar_confirmacion_migrarstock: function(){
+			if (
+				this.confirmacion.accion === "poner_almacen_cero" &&
+				this.confirmacion.alcance_lineas !== "todos" &&
+				(!this.confirmacion.lineas || this.confirmacion.lineas.length == 0)
+			) {
+				phuyu_sistema.phuyu_alerta("Seleccione lineas", "Debe seleccionar al menos una linea para este alcance", "error");
+				return;
+			}
+			var callback = this.confirmacion.callback;
+			this.np_cerrar_confirmacion_migrarstock();
+			if (typeof callback === "function") {
+				callback();
+			}
+		},
+		np_preparar_catalogo_migrarstock: function(){
+			var self = this;
+			this.np_confirmar_accion_migrarstock({
+				titulo: "Preparar catalogo",
+				mensaje: "Se normalizaran todos los productos a GENERAL / GENERAL / GENERICO.",
+				detalle: "Tambien se habilitara la linea GENERAL para las sucursales activas y se consolidaran duplicados activos por codigo de barra.",
+				confirmar: "Preparar catalogo",
+				tipo: "dark",
+				callback: function(){
+					self.np_ejecutar_preparar_catalogo_migrarstock();
+				}
+			});
+		},
+		np_ejecutar_preparar_catalogo_migrarstock: function(){
+
+			this.estado = 1;
+			phuyu_sistema.phuyu_inicio_guardar("Preparando catalogo...");
+
+			var self = this;
+			this.$http.post(url+"almacen/migrarstock/preparar_catalogo", {}).then(function(response){
+				if (response.body.estado == 1) {
+					phuyu_sistema.phuyu_alerta("Catalogo preparado", response.body.mensaje || "Preparacion realizada correctamente", "success");
+					self.campos.preview = [];
+					self.campos.resumen = null;
+				} else {
+					phuyu_sistema.phuyu_alerta("No se pudo preparar catalogo", response.body.mensaje || "Revise e intente nuevamente", "error");
+				}
+				self.estado = 0;
+				phuyu_sistema.phuyu_fin();
+			}, function(){
+				phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS", "ERROR DE RED", "error");
+				self.estado = 0;
+				phuyu_sistema.phuyu_fin();
+			});
+		},
+		np_poner_almacen_cero_migrarstock: function(){
+			if (!this.campos.codalmacen) {
+				phuyu_sistema.phuyu_alerta("Seleccione almacen", "Debe elegir el almacen que desea poner en cero", "error");
+				return;
+			}
+
+			var self = this;
+			this.np_confirmar_accion_migrarstock({
+				titulo: "Poner almacen en 0",
+				mensaje: "Se pondra en cero todo el stock de " + this.np_nombre_almacen_migrarstock() + ".",
+				detalle: "No se tocaran otros almacenes ni se inactivaran productos del catalogo.",
+				confirmar: "Poner en 0",
+				tipo: "danger",
+				accion: "poner_almacen_cero",
+				callback: function(){
+					self.np_ejecutar_poner_almacen_cero_migrarstock();
+				}
+			});
+		},
+		np_ejecutar_poner_almacen_cero_migrarstock: function(){
+
+			this.estado = 1;
+			phuyu_sistema.phuyu_inicio_guardar("Poniendo almacen en cero...");
+
+			var self = this;
+			this.$http.post(url+"almacen/migrarstock/poner_almacen_cero", {
+				codalmacen: this.campos.codalmacen,
+				alcance_lineas: this.confirmacion.alcance_lineas,
+				lineas: this.confirmacion.lineas
+			}).then(function(response){
+				if (response.body.estado == 1) {
+					phuyu_sistema.phuyu_alerta("Almacen en cero", response.body.mensaje || "Stock limpiado correctamente", "success");
+					self.campos.preview = [];
+					self.campos.resumen = null;
+				} else {
+					phuyu_sistema.phuyu_alerta("No se pudo poner en cero", response.body.mensaje || "Revise e intente nuevamente", "error");
+				}
+				self.estado = 0;
+				phuyu_sistema.phuyu_fin();
+			}, function(){
+				phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS", "ERROR DE RED", "error");
+				self.estado = 0;
+				phuyu_sistema.phuyu_fin();
+			});
 		},
 		np_leer_archivo_migrarstock: function(event){
 			var file = event.target.files[0];
@@ -168,7 +292,7 @@ var phuyu_migrarstock = new Vue({
 				return;
 			}
 			if (!this.campos.mapeo.codigo || !this.campos.mapeo.cantidad) {
-				phuyu_sistema.phuyu_alerta("Mapeo incompleto", "Seleccione en el mapeo las columnas Codigo / SKU y Cantidad a sumar", "error");
+				phuyu_sistema.phuyu_alerta("Mapeo incompleto", "Seleccione en el mapeo las columnas Codigo / SKU y Cantidad", "error");
 				return;
 			}
 			if (this.campos.crear_productos && !this.campos.mapeo.descripcion) {
@@ -189,7 +313,9 @@ var phuyu_migrarstock = new Vue({
 				mapeo: this.campos.mapeo,
 				codalmacen: this.campos.codalmacen,
 				ignorar_stock_cero: this.campos.ignorar_stock_cero,
-				crear_productos: this.campos.crear_productos
+				crear_productos: this.campos.crear_productos,
+				reemplazar_nombre: this.campos.reemplazar_nombre,
+				modo_stock: this.campos.modo_stock
 			}).then(function(response){
 				if (response.body.estado == 1) {
 					self.campos.preview = response.body.preview || [];
@@ -265,13 +391,13 @@ var phuyu_migrarstock = new Vue({
 		},
 		np_estado_mapeo_migrarstock: function(){
 			if (!this.campos.mapeo.codigo && !this.campos.mapeo.cantidad) {
-				return "Seleccione Codigo / SKU y Cantidad a sumar";
+				return "Seleccione Codigo / SKU y Cantidad";
 			}
 			if (!this.campos.mapeo.codigo) {
 				return "Falta asignar Codigo / SKU";
 			}
 			if (!this.campos.mapeo.cantidad) {
-				return "Falta asignar Cantidad a sumar";
+				return "Falta asignar Cantidad";
 			}
 			if (this.campos.crear_productos && !this.campos.mapeo.descripcion) {
 				return "Para crear faltantes falta asignar Descripcion / nombre";
@@ -319,7 +445,25 @@ var phuyu_migrarstock = new Vue({
 				phuyu_sistema.phuyu_alerta("Debe seleccionar filas", "No hay filas validas seleccionadas para aplicar", "error");
 				return;
 			}
+			if (this.campos.limpieza_almacen && this.campos.limpieza_almacen !== "conservar") {
+				var accion = this.campos.limpieza_almacen === "inactivar" ? "poner en 0 e inhabilitar" : "poner en 0";
+				var self = this;
+				this.np_confirmar_accion_migrarstock({
+					titulo: "Aplicar stock seleccionado",
+					mensaje: "Se va a " + accion + " los productos no seleccionados.",
+					detalle: "La limpieza se aplicara solo en " + this.np_nombre_almacen_migrarstock() + ". Los otros almacenes no se tocaran.",
+					confirmar: "Aplicar stock",
+					tipo: "warning",
+					callback: function(){
+						self.np_aplicar_stock_migrarstock(filas);
+					}
+				});
+				return;
+			}
 
+			this.np_aplicar_stock_migrarstock(filas);
+		},
+		np_aplicar_stock_migrarstock: function(filas){
 			this.estado = 1;
 			phuyu_sistema.phuyu_inicio_guardar("Aplicando stock seleccionado...");
 
@@ -328,7 +472,10 @@ var phuyu_migrarstock = new Vue({
 				filas: filas,
 				codalmacen: this.campos.codalmacen,
 				ignorar_stock_cero: this.campos.ignorar_stock_cero,
-				crear_productos: this.campos.crear_productos
+				crear_productos: this.campos.crear_productos,
+				reemplazar_nombre: this.campos.reemplazar_nombre,
+				limpieza_almacen: this.campos.limpieza_almacen,
+				modo_stock: this.campos.modo_stock
 			}).then(function(response){
 				if (response.body.estado == 1) {
 					phuyu_sistema.phuyu_alerta("Stock actualizado correctamente !!!", response.body.mensaje || "Actualizacion realizada correctamente", "success");

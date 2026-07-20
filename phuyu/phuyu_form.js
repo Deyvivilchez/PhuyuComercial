@@ -143,6 +143,13 @@ var phuyu_form = new Vue({
 			$(".compose").slideToggle();
 		},
 		np_guardar_cargarproductos: function(){
+			if (!this.campos.codsucursal || !this.campos.codalmacen) {
+				phuyu_sistema.phuyu_alerta("Seleccione destino", "Debe seleccionar la sucursal y el almacén donde se migrará la data.", "error");
+				return false;
+			}
+			if ($("#limpiar_almacen_productos").is(":checked") && !confirm("Se limpiarán los productos activos del almacén seleccionado antes de importar. ¿Desea continuar?")) {
+				return false;
+			}
             this.estado = 1; phuyu_sistema.phuyu_inicio_guardar("Subiendo archivo de productos, espere por favor...");
             const self = this; const formulario = new FormData($("#formulario_cargarproductos")[0]);
             this.$http.post(url+"almacen/productos/cargarproductos", formulario).then(function (response) {
@@ -163,6 +170,22 @@ var phuyu_form = new Vue({
         np_formato_cargarproductos: function(){
             window.open(url+"almacen/productos/formato_cargarproductos", "_blank");
         },
+		np_sucursal_productos: function(){
+			var codsucursal = String(this.campos.codsucursal || "");
+			var primerAlmacen = "";
+			$("#formulario_cargarproductos select[name='codalmacen'] option").each(function(){
+				var optionSucursal = String($(this).data("codsucursal") || "");
+				var visible = $(this).val() === "" || optionSucursal === codsucursal;
+				$(this).toggle(visible);
+				if (visible && $(this).val() !== "" && primerAlmacen === "") {
+					primerAlmacen = $(this).val();
+				}
+			});
+
+			if ($("#formulario_cargarproductos select[name='codalmacen'] option:selected").is(":hidden")) {
+				this.campos.codalmacen = primerAlmacen;
+			}
+		},
         np_formato_stockextra: function(){
             window.open(url+"almacen/productos/formato_stockextra", "_blank");
         },
@@ -210,6 +233,9 @@ var phuyu_form = new Vue({
 		}
 	},
 	mounted: function(){
+		if (this.campos && this.campos.codsucursal && $("#formulario_cargarproductos").length > 0) {
+			this.np_sucursal_productos();
+		}
 		if (phuyu_datos.registro>0) {
 			if (phuyu_controller=="administracion/almacenes") {
 				this.phuyu_editaralmacen();

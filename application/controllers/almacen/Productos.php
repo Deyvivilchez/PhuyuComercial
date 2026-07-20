@@ -35,6 +35,7 @@ class Productos extends CI_Controller
             $this->request = json_decode(file_get_contents('php://input'));
             $limit = 12;
             $offset = $this->request->pagina * $limit - $limit;
+            $codalmacen = isset($_SESSION['phuyu_codalmacen']) ? (int) $_SESSION['phuyu_codalmacen'] : 0;
 
             $lista = $this->db->query("select productos.*, marcas.descripcion as marca 
             from almacen.productos as productos 
@@ -53,13 +54,20 @@ class Productos extends CI_Controller
                 SELECT 1 FROM almacen.productoubicacion pbo
                 WHERE pbo.codproducto = productos.codproducto
                   AND pbo.estado = 1
+                  AND pbo.codalmacen = " . $codalmacen . "
                   AND UPPER(COALESCE(pbo.codigobarra, '')) LIKE UPPER('%" . $this->request->buscar . "%')
              )
-             ) and productos.estado=1 
+             ) and productos.estado=1
+             and exists (
+                select 1 from almacen.productoubicacion pub
+                where pub.codproducto = productos.codproducto
+                  and pub.codalmacen = " . $codalmacen . "
+                  and pub.estado = 1
+             )
              order by productos.descripcion, productos.codproducto asc offset " . $offset . ' limit ' . $limit)->result_array();
 
             foreach ($lista as $key => $value) {
-                $precio = $this->db->query('select pventapublico,codunidad,preciocosto from almacen.productounidades where codproducto=' . $value['codproducto'] . ' order by factor')->result_array();
+                $precio = $this->db->query('select pventapublico,codunidad,preciocosto from almacen.productoubicacion where codproducto=' . $value['codproducto'] . ' and codalmacen=' . $codalmacen . ' and estado=1 order by factor')->result_array();
 
                 if (count($precio) == 0) {
                     $lista[$key]['precio'] = 0.0;
@@ -71,7 +79,7 @@ class Productos extends CI_Controller
                     $lista[$key]['costo'] = number_format(round($precio[0]['preciocosto'], 2), 2);
                 }
 
-                $stock = $this->db->query('select pu.stockactualconvertido,u.descripcion as unidad from almacen.productoubicacion as pu inner join almacen.unidades as u on(pu.codunidad=u.codunidad) where pu.codproducto=' . $value['codproducto'] . ' and pu.codunidad=' . $codunidad . ' and pu.codalmacen=' . $_SESSION['phuyu_codalmacen'] . ' and pu.estado=1')->result_array();
+                $stock = $this->db->query('select pu.stockactualconvertido,u.descripcion as unidad from almacen.productoubicacion as pu inner join almacen.unidades as u on(pu.codunidad=u.codunidad) where pu.codproducto=' . $value['codproducto'] . ' and pu.codunidad=' . $codunidad . ' and pu.codalmacen=' . $codalmacen . ' and pu.estado=1')->result_array();
                 if (count($stock) == 0) {
                     $lista[$key]['stock'] = 0;
                     $lista[$key]['unidad'] = 'SIN UNIDAD';
@@ -81,7 +89,7 @@ class Productos extends CI_Controller
                 }
             }
 
-            $total = $this->db->query("select count(*) as total from almacen.productos as productos inner join almacen.marcas as marcas on(productos.codmarca=marcas.codmarca) where (UPPER(productos.descripcion) like UPPER('%" . $this->request->buscar . "%') or UPPER(productos.codigo) like UPPER('%" . $this->request->buscar . "%') or UPPER(marcas.descripcion) like UPPER('%" . $this->request->buscar . "%') OR EXISTS (SELECT 1 FROM almacen.productounidades pbu WHERE pbu.codproducto = productos.codproducto AND pbu.estado = 1 AND UPPER(COALESCE(pbu.codigobarra, '')) LIKE UPPER('%" . $this->request->buscar . "%')) OR EXISTS (SELECT 1 FROM almacen.productoubicacion pbo WHERE pbo.codproducto = productos.codproducto AND pbo.estado = 1 AND UPPER(COALESCE(pbo.codigobarra, '')) LIKE UPPER('%" . $this->request->buscar . "%')) ) and productos.estado=1")->result_array();
+            $total = $this->db->query("select count(*) as total from almacen.productos as productos inner join almacen.marcas as marcas on(productos.codmarca=marcas.codmarca) where (UPPER(productos.descripcion) like UPPER('%" . $this->request->buscar . "%') or UPPER(productos.codigo) like UPPER('%" . $this->request->buscar . "%') or UPPER(marcas.descripcion) like UPPER('%" . $this->request->buscar . "%') OR EXISTS (SELECT 1 FROM almacen.productounidades pbu WHERE pbu.codproducto = productos.codproducto AND pbu.estado = 1 AND UPPER(COALESCE(pbu.codigobarra, '')) LIKE UPPER('%" . $this->request->buscar . "%')) OR EXISTS (SELECT 1 FROM almacen.productoubicacion pbo WHERE pbo.codproducto = productos.codproducto AND pbo.codalmacen=" . $codalmacen . " AND pbo.estado = 1 AND UPPER(COALESCE(pbo.codigobarra, '')) LIKE UPPER('%" . $this->request->buscar . "%')) ) and productos.estado=1 and exists (select 1 from almacen.productoubicacion pub where pub.codproducto=productos.codproducto and pub.codalmacen=" . $codalmacen . " and pub.estado=1)")->result_array();
 
             $paginas = floor($total[0]['total'] / $limit);
             if ($total[0]['total'] % $limit != 0) {
@@ -168,7 +176,8 @@ class Productos extends CI_Controller
     public function operacion()
     {
         if ($this->input->is_ajax_request() and isset($_SESSION['phuyu_codusuario'])) {
-            $this->load->view('almacen/productos/operacion');
+            $almacenes = $this->almacenes_migracion_productos();
+            $this->load->view('almacen/productos/operacion', compact('almacenes'));
         } else {
             $this->load->view('phuyu/404');
         }
@@ -311,13 +320,23 @@ class Productos extends CI_Controller
 	        $transaccion = false;
 
 	        try {
-	            $filas = $this->leer_archivo_carga_productos($_FILES['archivo']);
+            $destino = $this->resolver_destino_migracion();
+            if (empty($destino)) {
+                echo json_encode(['estado' => 0, 'mensaje' => 'Debe seleccionar una sucursal y un almacen destino validos.']);
+                return;
+            }
+
+            $filas = $this->leer_archivo_carga_productos($_FILES['archivo']);
 
 	            $this->db->trans_begin();
 	            $transaccion = true;
 
+            if ($this->input->post('limpiar_almacen') == '1') {
+                $this->limpiar_productos_almacen((int) $destino['codalmacen']);
+            }
+
             foreach ($filas as $row => $fila) {
-                $resultado = $this->procesar_fila_carga_producto($fila, $row);
+                $resultado = $this->procesar_fila_carga_producto($fila, $row, $destino);
 
                 if ($resultado['estado'] == 1) {
                     $procesados++;
@@ -338,7 +357,7 @@ class Productos extends CI_Controller
 
             $this->db->trans_commit();
 
-            $mensaje = 'Productos procesados: ' . $procesados . '.';
+            $mensaje = 'Productos procesados en ' . $destino['sucursal'] . ' / ' . $destino['almacen'] . ': ' . $procesados . '.';
             if (count($errores) > 0) {
                 $mensaje .= ' Filas omitidas: ' . count($errores) . '. ' . implode(' ', array_slice($errores, 0, 3));
             }
@@ -1449,6 +1468,63 @@ class Productos extends CI_Controller
         }
     }
 
+    private function almacenes_migracion_productos()
+    {
+        return $this->db->query(
+            "select a.codalmacen, a.descripcion as almacen, a.codsucursal, coalesce(s.descripcion, '') as sucursal, coalesce(a.codafectacionigv, 9) as codafectacionigv
+             from almacen.almacenes a
+             left join public.sucursales s on (s.codsucursal = a.codsucursal)
+             where a.estado = 1
+             order by s.descripcion, a.descripcion"
+        )->result_array();
+    }
+
+    private function resolver_destino_migracion()
+    {
+        $codalmacen = (int) $this->input->post('codalmacen');
+        $codsucursal = (int) $this->input->post('codsucursal');
+
+        if ($codalmacen <= 0) {
+            $codalmacen = isset($_SESSION['phuyu_codalmacen']) ? (int) $_SESSION['phuyu_codalmacen'] : 0;
+        }
+
+        $destino = $this->db->query(
+            "select a.codalmacen, a.descripcion as almacen, a.codsucursal, coalesce(s.descripcion, '') as sucursal, coalesce(a.codafectacionigv, 9) as codafectacionigv
+             from almacen.almacenes a
+             left join public.sucursales s on (s.codsucursal = a.codsucursal)
+             where a.estado = 1 and a.codalmacen = ?
+             limit 1",
+            [$codalmacen]
+        )->row_array();
+
+        if (empty($destino)) {
+            return null;
+        }
+
+        if ($codsucursal > 0 && (int) $destino['codsucursal'] !== $codsucursal) {
+            return null;
+        }
+
+        return $destino;
+    }
+
+    private function limpiar_productos_almacen($codalmacen)
+    {
+        if ($codalmacen <= 0) {
+            return;
+        }
+
+        $this->db->where('codalmacen', (int) $codalmacen);
+        $this->db->update('almacen.productoubicacion', [
+            'estado' => 0,
+            'stockactual' => 0,
+            'stockactualreal' => 0,
+            'stockactualconvertido' => 0,
+            'preciostockvalorizado' => 0,
+            'stockproveedor' => 0
+        ]);
+    }
+
     private function leer_archivo_carga_productos($archivo)
     {
         $extension = strtolower(pathinfo($archivo['name'], PATHINFO_EXTENSION));
@@ -1777,8 +1853,16 @@ class Productos extends CI_Controller
         return $columna;
     }
 
-    private function procesar_fila_carga_producto($fila, $row)
+    private function procesar_fila_carga_producto($fila, $row, $destino = null)
     {
+        if ($destino === null) {
+            $destino = [
+                'codalmacen' => isset($_SESSION['phuyu_codalmacen']) ? (int) $_SESSION['phuyu_codalmacen'] : 0,
+                'codsucursal' => isset($_SESSION['phuyu_codsucursal']) ? (int) $_SESSION['phuyu_codsucursal'] : 0,
+                'codafectacionigv' => isset($_SESSION['phuyu_afectacionigv']) ? (int) $_SESSION['phuyu_afectacionigv'] : 9
+            ];
+        }
+
         $codigo = $this->normalizar_texto($this->valor_fila($fila, 'A'));
         $descripcion = $this->normalizar_texto($this->valor_fila($fila, 'B'));
         $familia = $this->valor_fila($fila, 'D');
@@ -1800,7 +1884,7 @@ class Productos extends CI_Controller
         }
 
         $codfamilia = $this->resolver_catalogo('familias', 'codfamilia', $familia, 'GENERAL');
-        $codlinea = $this->resolver_catalogo('lineas', 'codlinea', $linea, 'GENERAL');
+        $codlinea = $this->resolver_catalogo('lineas', 'codlinea', $linea, 'GENERAL', (int) $destino['codsucursal']);
         $codmarca = $this->resolver_catalogo('marcas', 'codmarca', $marca, 'GENERICO');
         $codunidad = $this->resolver_unidad($unidad);
 
@@ -1889,7 +1973,7 @@ class Productos extends CI_Controller
         $dataUnidad = [
             'codproducto' => (int) $codproducto,
             'codunidad' => (int) $codunidad,
-            'codsucursal' => isset($_SESSION['phuyu_codsucursal']) ? (int) $_SESSION['phuyu_codsucursal'] : null,
+            'codsucursal' => (int) $destino['codsucursal'],
             'factor' => (float) $factor,
             'preciocompra' => (float) $precioCompra,
             'preciocosto' => (float) $precioCompra,
@@ -1907,9 +1991,13 @@ class Productos extends CI_Controller
             'codunidad' => (int) $codunidad
         ]);
 
-        $almacenes = $this->db->query('select codalmacen, codsucursal, codafectacionigv from almacen.almacenes where estado=1 order by codalmacen')->result_array();
+        $almacenes = [[
+            'codalmacen' => (int) $destino['codalmacen'],
+            'codsucursal' => (int) $destino['codsucursal'],
+            'codafectacionigv' => (int) $destino['codafectacionigv']
+        ]];
         foreach ($almacenes as $almacen) {
-            $esAlmacenActual = isset($_SESSION['phuyu_codalmacen']) && (int) $_SESSION['phuyu_codalmacen'] == (int) $almacen['codalmacen'];
+            $esAlmacenActual = true;
             $afectacionAlmacen = (int) $almacen['codafectacionigv'] > 0 ? (int) $almacen['codafectacionigv'] : $codAfectacionVenta;
 
             $dataUbicacion = [
@@ -1986,7 +2074,7 @@ class Productos extends CI_Controller
         return ['estado' => 1, 'mensaje' => ''];
     }
 
-    private function resolver_catalogo($tabla, $pk, $valor, $defecto)
+    private function resolver_catalogo($tabla, $pk, $valor, $defecto, $codsucursalLinea = null)
     {
         $texto = $this->normalizar_texto($valor);
 
@@ -1994,7 +2082,7 @@ class Productos extends CI_Controller
             $registro = $this->db->get_where('almacen.' . $tabla, [$pk => (int) $texto, 'estado' => 1])->row_array();
             if (!empty($registro)) {
                 if ($tabla === 'lineas') {
-                    $this->asegurar_linea_sucursal((int) $registro[$pk]);
+                    $this->asegurar_linea_sucursal((int) $registro[$pk], $codsucursalLinea);
                 }
                 return (int) $registro[$pk];
             }
@@ -2007,7 +2095,7 @@ class Productos extends CI_Controller
         $registro = $this->db->query('select ' . $pk . ' from almacen.' . $tabla . ' where estado=1 and upper(trim(descripcion))=? limit 1', [strtoupper($texto)])->row_array();
         if (!empty($registro)) {
             if ($tabla === 'lineas') {
-                $this->asegurar_linea_sucursal((int) $registro[$pk]);
+                $this->asegurar_linea_sucursal((int) $registro[$pk], $codsucursalLinea);
             }
             return (int) $registro[$pk];
         }
@@ -2019,7 +2107,7 @@ class Productos extends CI_Controller
 
         $codigo = $this->ultimo_id_insertado('almacen.' . $tabla, $pk);
         if ($tabla === 'lineas') {
-            $this->asegurar_linea_sucursal($codigo);
+            $this->asegurar_linea_sucursal($codigo, $codsucursalLinea);
         }
 
         return $codigo > 0 ? $codigo : null;
@@ -2081,21 +2169,25 @@ class Productos extends CI_Controller
         return (int) $defecto;
     }
 
-    private function asegurar_linea_sucursal($codlinea)
+    private function asegurar_linea_sucursal($codlinea, $codsucursal = null)
     {
-        if ($codlinea <= 0 || !isset($_SESSION['phuyu_codsucursal'])) {
+        if ($codsucursal === null) {
+            $codsucursal = isset($_SESSION['phuyu_codsucursal']) ? (int) $_SESSION['phuyu_codsucursal'] : 0;
+        }
+
+        if ($codlinea <= 0 || $codsucursal <= 0) {
             return;
         }
 
         $existe = $this->db->get_where('almacen.lineasxsucursales', [
             'codlinea' => (int) $codlinea,
-            'codsucursal' => (int) $_SESSION['phuyu_codsucursal']
+            'codsucursal' => (int) $codsucursal
         ])->row_array();
 
         if (empty($existe)) {
             $this->db->insert('almacen.lineasxsucursales', [
                 'codlinea' => (int) $codlinea,
-                'codsucursal' => (int) $_SESSION['phuyu_codsucursal']
+                'codsucursal' => (int) $codsucursal
             ]);
         }
     }
