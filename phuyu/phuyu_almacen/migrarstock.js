@@ -286,13 +286,45 @@ var phuyu_migrarstock = new Vue({
 			}
 			return false;
 		},
+		np_campo_requerido_migrarstock: function(campo){
+			if (campo.key === "cantidad") {
+				return true;
+			}
+			if (campo.key === "codigo") {
+				return this.campos.buscar_por === "auto" || this.campos.buscar_por === "codigo";
+			}
+			if (campo.key === "codigo_barra") {
+				return this.campos.buscar_por === "barra";
+			}
+			if (campo.key === "descripcion") {
+				return this.campos.buscar_por === "nombre" || this.campos.crear_productos;
+			}
+			return false;
+		},
+		np_cambio_buscar_por_migrarstock: function(){
+			this.campos.preview = [];
+			this.campos.resumen = null;
+			this.campos.seleccionar_todo = true;
+		},
 		np_previsualizar_migrarstock: function(){
 			if (!this.campos.codalmacen) {
 				phuyu_sistema.phuyu_alerta("Seleccione almacen", "Debe elegir el almacen destino para validar el stock", "error");
 				return;
 			}
-			if (!this.campos.mapeo.codigo || !this.campos.mapeo.cantidad) {
-				phuyu_sistema.phuyu_alerta("Mapeo incompleto", "Seleccione en el mapeo las columnas Codigo / SKU y Cantidad", "error");
+			if (!this.campos.mapeo.cantidad) {
+				phuyu_sistema.phuyu_alerta("Mapeo incompleto", "Seleccione en el mapeo la columna Cantidad", "error");
+				return;
+			}
+			if ((this.campos.buscar_por === "auto" || this.campos.buscar_por === "codigo") && !this.campos.mapeo.codigo) {
+				phuyu_sistema.phuyu_alerta("Mapeo incompleto", "Seleccione en el mapeo la columna Codigo / SKU", "error");
+				return;
+			}
+			if (this.campos.buscar_por === "barra" && !this.campos.mapeo.codigo_barra && !this.campos.mapeo.codigo) {
+				phuyu_sistema.phuyu_alerta("Mapeo incompleto", "Seleccione Codigo de barra o Codigo / SKU", "error");
+				return;
+			}
+			if (this.campos.buscar_por === "nombre" && !this.campos.mapeo.descripcion) {
+				phuyu_sistema.phuyu_alerta("Mapeo incompleto", "Seleccione en el mapeo la columna Descripcion / nombre", "error");
 				return;
 			}
 			if (this.campos.crear_productos && !this.campos.mapeo.descripcion) {
@@ -315,6 +347,7 @@ var phuyu_migrarstock = new Vue({
 				ignorar_stock_cero: this.campos.ignorar_stock_cero,
 				crear_productos: this.campos.crear_productos,
 				reemplazar_nombre: this.campos.reemplazar_nombre,
+				buscar_por: this.campos.buscar_por,
 				modo_stock: this.campos.modo_stock
 			}).then(function(response){
 				if (response.body.estado == 1) {
@@ -390,14 +423,17 @@ var phuyu_migrarstock = new Vue({
 			this.campos.limite_excel = Math.min((this.campos.limite_excel || 80) + 80, this.campos.filas.length);
 		},
 		np_estado_mapeo_migrarstock: function(){
-			if (!this.campos.mapeo.codigo && !this.campos.mapeo.cantidad) {
-				return "Seleccione Codigo / SKU y Cantidad";
-			}
-			if (!this.campos.mapeo.codigo) {
-				return "Falta asignar Codigo / SKU";
-			}
 			if (!this.campos.mapeo.cantidad) {
 				return "Falta asignar Cantidad";
+			}
+			if ((this.campos.buscar_por === "auto" || this.campos.buscar_por === "codigo") && !this.campos.mapeo.codigo) {
+				return "Falta asignar Codigo / SKU";
+			}
+			if (this.campos.buscar_por === "barra" && !this.campos.mapeo.codigo_barra && !this.campos.mapeo.codigo) {
+				return "Falta asignar Codigo de barra";
+			}
+			if (this.campos.buscar_por === "nombre" && !this.campos.mapeo.descripcion) {
+				return "Falta asignar Descripcion / nombre";
 			}
 			if (this.campos.crear_productos && !this.campos.mapeo.descripcion) {
 				return "Para crear faltantes falta asignar Descripcion / nombre";
@@ -475,6 +511,7 @@ var phuyu_migrarstock = new Vue({
 				crear_productos: this.campos.crear_productos,
 				reemplazar_nombre: this.campos.reemplazar_nombre,
 				limpieza_almacen: this.campos.limpieza_almacen,
+				buscar_por: this.campos.buscar_por,
 				modo_stock: this.campos.modo_stock
 			}).then(function(response){
 				if (response.body.estado == 1) {

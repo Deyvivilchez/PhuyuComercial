@@ -9,20 +9,32 @@ class Pdf2 extends FPDF {
 
     function pdf_header($titulo, $subtitulo){
         $logo = './public/img/'.$_SESSION['phuyu_logo'];
+        $pageWidth = $this->GetPageWidth() - $this->lMargin - $this->rMargin;
+        $leftWidth = $pageWidth * 0.62;
+        $rightWidth = $pageWidth - $leftWidth;
+
         if(file_exists($logo)){
             $this->Image($logo, 10, 8, 35);
         }
-        $this->SetFont('Arial', 'B', 12);
 
-        $this->Cell(35, 5,"",0,0,'C');
-        $this->Cell(110, 5, utf8_decode(substr($_SESSION["phuyu_empresa"],0,35)),0,0,'L');
+        $this->SetFont('Arial', 'B', 12);
+        $this->Cell($leftWidth, 6, utf8_decode(substr($_SESSION["phuyu_empresa"],0,45)),0,0,'C');
+        $this->SetFont('Arial', 'B', 9);
+        $this->Cell($rightWidth, 6, utf8_decode(substr($_SESSION["phuyu_sucursal"],0,45)),0,1,'C');
+
         $this->SetFont('Arial', 'B', 10);
-        $this->Cell(80, 5, utf8_decode($_SESSION["phuyu_sucursal"]));
-        $this->Ln(8); $this->SetFont('Arial', 'B', 10);
-        $this->Cell(35, 5,"",0,0,'C');
-        $this->Cell(120, 5, utf8_decode($titulo),0,0,'L');
-        $this->Cell(80, 5, utf8_decode($_SESSION["phuyu_caja"]));
-        $this->Ln(5); $this->Cell(0,0.05,"",1,1,'L',1); $this->Ln(5);
+        $this->Cell($leftWidth, 6, utf8_decode($titulo),0,0,'C');
+        $this->SetFont('Arial', 'B', 9);
+        $this->Cell($rightWidth, 6, utf8_decode(substr($_SESSION["phuyu_caja"],0,45)),0,1,'C');
+
+        if ($subtitulo!="") {
+            $this->SetFont('Arial', '', 8);
+            $this->Cell($pageWidth, 5, utf8_decode($subtitulo),0,1,'C');
+        }
+
+        $this->Ln(1);
+        $this->Cell($pageWidth,0.05,"",1,1,'L',1);
+        $this->Ln(4);
     }
 
     function pdf_header_titulo($titulo){

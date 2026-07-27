@@ -47,11 +47,12 @@
 						<button type="button" class="btn btn-danger btn-sm" v-on:click="pdf_compras_detallado()"><i class="bi bi-printer"></i> Detallado PDF</button>
 						<button type="button" class="btn btn-success btn-sm" v-on:click="excel_compras()"><i class="bi bi-file-earmark-excel"></i> Resumen EXCEL</button>
 						<button type="button" class="btn btn-success btn-sm" v-on:click="excel_compras_detallado()"><i class="bi bi-file-earmark-excel"></i> Detallado EXCEL</button>
+						<button type="button" class="btn btn-success btn-sm" v-on:click="excel_productos_compras()"><i class="bi bi-file-earmark-spreadsheet"></i> Productos EXCEL</button>
 					</div>
 				</div>
 				<input type="hidden" id="fecharef" value="<?php echo date("Y-m-d");?>">
 				<div class="row form-group">
-					<div class="col-md-3">
+					<div class="col-md-2">
 						<label>SUCURSALES</label>
 						<select class="form-select" v-model="campos.codsucursal" v-on:change="phuyu_cajas()">
 							<option value="0">TODAS SUCURSALES</option>
@@ -70,6 +71,13 @@
 						</select>
 					</div>
 					<div class="col-md-2">
+						<label>FILTRAR POR</label>
+						<select class="form-select" v-model="campos.tipofecha">
+							<option value="comprobante">FECHA COMPROBANTE</option>
+							<option value="kardex">FECHA KARDEX</option>
+						</select>
+					</div>
+					<div class="col-md-2">
 						<label>DESDE</label>
 						<input type="hidden" id="fechad" value="<?php echo date("Y-m-01");?>">
 						<input type="date" class="form-control" id="fechadesde" v-model="campos.fechadesde" v-on:blur="phuyu_fecha()">
@@ -84,9 +92,9 @@
 						<input type="checkbox" class="form-check-input" style="height:20px;width:20px;" title="ACTIVAR" v-model="campos.estado">
 					</div>
 
-					<div class="col-md-2" style="margin-top: 1.2rem">
+					<div class="col-md-1" style="margin-top: 1.2rem">
 						<button type="button" class="btn btn-primary w-100 phuyu-report-search" v-on:click="ver_consulta()">
-							<i class="bi bi-search me-1"></i> Consultar
+							<i class="bi bi-search"></i>
 						</button>
 					</div>
 				</div>
@@ -100,7 +108,8 @@
 								<th>#</th>
 								<th>DOCUMENTO</th>
 								<th>PROVEEDOR</th>
-								<th>FECHA</th>
+								<th>FECHA COMP.</th>
+								<th>FECHA KARDEX</th>
 								<th>TIPO</th>
 								<th>COMPROBANTE</th>
 								<th>SUBTOTAL</th>
@@ -115,6 +124,7 @@
 									<td>{{dato.documento}}</td>
 									<td>{{dato.cliente}}</td>
 									<td>{{dato.fechacomprobante}}</td>
+									<td>{{dato.fechakardex}}</td>
 									<td>{{dato.tipo}}</td>
 									<td>{{dato.seriecomprobante}}-{{dato.nrocomprobante}}</td>
 									<td>{{dato.valorventa}}</td>
@@ -131,7 +141,7 @@
 									</td>
 								</tr>
 								<tr v-for="(dato1,index1) in totales">
-									<td colspan="6" align="right" style="font-weight: 700;font-size: 12px">TOTALES</td>
+									<td colspan="7" align="right" style="font-weight: 700;font-size: 12px">TOTALES</td>
 									<td style="font-weight: 700;font-size: 12px">{{dato1.valorventatotal}}</td>
 									<td style="font-weight: 700;font-size: 12px">{{dato1.igvtotal}}</td>
 									<td style="font-weight: 700;font-size: 12px">{{dato1.totalgeneral}}</td>
@@ -196,7 +206,7 @@
 	</div>
 </div>
 <script> 
-	var campos = {"codsucursal":<?php echo $_SESSION["phuyu_codsucursal"];?>,"codcaja":<?php echo $_SESSION["phuyu_codcaja"];?>,"fechadesde":$("#fechad").val(),"fechahasta":$("#fechah").val(),"estado":1,"codpersona":0};
+	var campos = {"codsucursal":<?php echo $_SESSION["phuyu_codsucursal"];?>,"codcaja":<?php echo $_SESSION["phuyu_codcaja"];?>,"tipofecha":"comprobante","fechadesde":$("#fechad").val(),"fechahasta":$("#fechah").val(),"estado":1,"codpersona":0};
 	var pantalla = jQuery(document).height(); $("#reportes_modal").css({height: pantalla - 65});
 	if (typeof AcornIcons !== 'undefined') {
       new AcornIcons().replace();

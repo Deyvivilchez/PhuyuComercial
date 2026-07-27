@@ -40,8 +40,9 @@ class Controlcajas extends CI_Controller {
 
 					$saldocaja = $this->Caja_model->phuyu_saldocaja_diario($_SESSION["phuyu_codcontroldiario"]); 
 					$saldobanco = $this->Caja_model->phuyu_saldobanco_diario($_SESSION["phuyu_codcontroldiario"]); 
+					$cajas = $this->db->query("select codcaja, descripcion from caja.cajas where codsucursal=".$_SESSION["phuyu_codsucursal"]." and estado=1 order by descripcion")->result_array();
 
-					$this->load->view("caja/controlcajas/index", compact("caja","tipopagos","comprobantes","saldocaja","saldobanco"));
+					$this->load->view("caja/controlcajas/index", compact("caja","tipopagos","comprobantes","saldocaja","saldobanco","cajas"));
 				}
 			}else{
 				$this->load->view("phuyu/505");
@@ -723,7 +724,36 @@ class Controlcajas extends CI_Controller {
 	}
 
 	function actualizar_controldiario(){
-		$control = $this->db->query("select * from caja.controldiario order by codcontroldiario")->result_array();
+		$this->request = json_decode(file_get_contents('php://input'));
+		$desde = isset($this->request->desde) ? $this->request->desde : "";
+		$hasta = isset($this->request->hasta) ? $this->request->hasta : "";
+		$codcaja = isset($this->request->codcaja) ? (int)$this->request->codcaja : 0;
+		if ($codcaja == 0) {
+			$codcaja = isset($_SESSION["phuyu_codcaja"]) ? (int)$_SESSION["phuyu_codcaja"] : 0;
+		}
+
+		if ($desde != "" && $hasta != "") {
+			if ($desde > $hasta || $codcaja == 0) {
+				echo json_encode(["estado" => 0, "mensaje" => "Rango de fechas invalido."]);
+				return;
+			}
+
+			$caja_sucursal = $this->db->query("select codcaja from caja.cajas where codcaja=".$codcaja." and codsucursal=".$_SESSION["phuyu_codsucursal"]." and estado=1")->result_array();
+			if (count($caja_sucursal)==0) {
+				echo json_encode(["estado" => 0, "mensaje" => "La caja seleccionada no pertenece a la sucursal actual."]);
+				return;
+			}
+
+			$control = $this->db->query("select * from caja.controldiario where codcaja=".$codcaja." and fechaapertura>=".$this->db->escape($desde)." and fechaapertura<=".$this->db->escape($hasta)." order by codcontroldiario")->result_array();
+			if (count($control)==0) {
+				echo json_encode(["estado" => 0, "mensaje" => "No se encontraron cajas en el rango seleccionado."]);
+				return;
+			}
+		}else{
+			$control = $this->db->query("select * from caja.controldiario order by codcontroldiario")->result_array();
+		}
+
+		$estado = 1;
 		foreach ($control as $key => $value) {
 			$codcontroldiario = $value["codcontroldiario"];
 
@@ -749,19 +779,6 @@ class Controlcajas extends CI_Controller {
 			$ingresos_banco = $this->db->query("select round(COALESCE(sum(md.importe),0),2) as importe from caja.movimientos as m inner join caja.movimientosdetalle as md on(m.codmovimiento=md.codmovimiento) where m.codcontroldiario=".$codcontroldiario." and m.tipomovimiento=1 and (md.codtipopago<>1 and md.codtipopago<>2) and m.estado=1")->result_array();
 			$egresos_banco = $this->db->query("select round(COALESCE(sum(md.importe),0),2) as importe from caja.movimientos as m inner join caja.movimientosdetalle as md on(m.codmovimiento=md.codmovimiento) where m.codcontroldiario=".$codcontroldiario." and m.tipomovimiento=2 and (md.codtipopago<>1 and md.codtipopago<>3) and m.estado=1")->result_array();
 
-			echo 
-				"CONTROL DE CAJA: ".$value["codcontroldiario"].
-				"<br> SALDO INICIAL CAJA: ".($inicialcaja + $finalcaja).
-				"<br> SALDO FINAL CAJA: ".($ingresos_caja[0]["importe"] - $egresos_caja[0]["importe"]).
-				"<br> TOTAL INGRESOS CAJA: ".($ingresos_caja[0]["importe"]).
-				"<br> TOTAL EGRESOS CAJA: ".($egresos_caja[0]["importe"]).
-
-				"<br> SALDO INICIAL BANCO: ".($inicialbanco + $finalbanco).
-				"<br> SALDO FINAL BANCO: ".($ingresos_banco[0]["importe"] - $egresos_banco[0]["importe"]).
-				"<br> TOTAL INGRESOS BANCO: ".($ingresos_banco[0]["importe"]).
-				"<br> TOTAL EGRESOS BANCO: ".($egresos_banco[0]["importe"]).
-				"<br> <br>";
-
 			$campos = ["saldoinicialcaja","saldofinalcaja","totalingresoscaja","totalegresoscaja","saldoinicialbanco","saldofinalbanco","totalingresosbanco","totalegresosbanco"];
 			$valores = [
 				(double)($inicialcaja + $finalcaja),(double)($ingresos_caja[0]["importe"] - $egresos_caja[0]["importe"]),(double)$ingresos_caja[0]["importe"],(double)$egresos_caja[0]["importe"],
@@ -769,6 +786,12 @@ class Controlcajas extends CI_Controller {
 			];
 			$estado = $this->phuyu_model->phuyu_editar("caja.controldiario", $campos, $valores, "codcontroldiario", $value["codcontroldiario"]);
 
+		}
+
+		if ($desde != "" && $hasta != "") {
+			echo json_encode(["estado" => (int)$estado, "mensaje" => count($control)." control(es) diario(s) recalculado(s)."]);
+		}else{
+			echo $estado;
 		}
 	}
 

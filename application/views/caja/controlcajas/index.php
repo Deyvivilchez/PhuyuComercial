@@ -37,6 +37,9 @@
 					<a href="<?php echo base_url();?>phuyu/w/caja/precobranza" class="btn btn-info">
 						<i class="bi bi-wallet2 me-1"></i> Pre cobranza
 					</a>
+					<button type="button" class="btn btn-dark" v-on:click="abrir_recalcular_saldos()">
+						<i class="bi bi-arrow-repeat me-1"></i> Recalcular saldos
+					</button>
 				</div>
 
 				<?php
@@ -203,9 +206,51 @@
 					</table>
 				</div>
 			</div>
-		</div>
+			</div>
 
-		<div id="modal_reportes" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+			<div id="modal_recalcular_saldos" class="modal fade" tabindex="-1" aria-hidden="true">
+				<div class="modal-dialog">
+					<div class="modal-content border-0 shadow-lg">
+						<div class="modal-header bg-light">
+							<div>
+								<div class="text-muted small text-uppercase fw-semibold">Control diario</div>
+								<h5 class="modal-title mb-0 fw-bold">Recalcular saldos</h5>
+							</div>
+							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+						</div>
+						<div class="modal-body">
+							<div class="mb-3">
+								<label class="form-label fw-semibold">Caja</label>
+								<select class="form-control" id="recalcular_codcaja">
+									<?php foreach ($cajas as $value) { ?>
+										<option value="<?php echo (int)$value["codcaja"];?>" <?php echo ((int)$value["codcaja"] == (int)$_SESSION["phuyu_codcaja"]) ? "selected" : ""; ?>>
+											<?php echo $value["descripcion"];?>
+										</option>
+									<?php } ?>
+								</select>
+							</div>
+							<div class="row g-2">
+								<div class="col-12 col-md-6">
+									<label class="form-label fw-semibold">Desde</label>
+									<input type="date" class="form-control" id="recalcular_desde" value="<?php echo date('Y-m-d');?>">
+								</div>
+								<div class="col-12 col-md-6">
+									<label class="form-label fw-semibold">Hasta</label>
+									<input type="date" class="form-control" id="recalcular_hasta" value="<?php echo date('Y-m-d');?>">
+								</div>
+							</div>
+						</div>
+						<div class="modal-footer">
+							<button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+							<button type="button" class="btn btn-dark" v-on:click="actualizar_controldiario()">
+								<i class="bi bi-arrow-repeat me-1"></i> Recalcular
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div id="modal_reportes" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
 			<div class="modal-dialog modal-fullscreen-xxl-down">
 				<div class="modal-content" align="center" style="border-radius:0px">
 					<div class="modal-header">
