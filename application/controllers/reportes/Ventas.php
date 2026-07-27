@@ -86,9 +86,13 @@ class Ventas extends CI_Controller {
 					$filtro = "and k.codempleado=".$this->request->codvendedor;
 				}
 
+				$sucursal_texto = 'TODAS LAS SUCURSALES ACTIVAS';
+
 				if ($this->request->codsucursal==0) {
 					$filtro .= "";
 				}else{
+					$sucursal = $this->db->query("select descripcion from public.sucursales where codsucursal=".$this->request->codsucursal)->result_array();
+					$sucursal_texto = isset($sucursal[0]["descripcion"]) ? $sucursal[0]["descripcion"] : 'SUCURSAL '.$this->request->codsucursal;
 					$filtro .= "and k.codsucursal=".$this->request->codsucursal." ";
 				}
 
@@ -101,7 +105,9 @@ class Ventas extends CI_Controller {
 				$lista = $this->db->query("select distinct(kd.codproducto) as codproducto,p.descripcion,p.codigo from kardex.kardex as k inner join kardex.kardexdetalle as kd on(k.codkardex=kd.codkardex) inner join almacen.productos as p on(kd.codproducto=p.codproducto) where k.codmovimientotipo=20 ".$filtro." and k.fechacomprobante>='".$this->request->fechadesde."' and k.fechacomprobante<='".$this->request->fechahasta."' and k.estado=1 ".$filtro." order by p.descripcion")->result_array();
 
 				$empresa = $this->db->query("select *from public.personas where codpersona=1")->result_array();
-				$this->load->view("reportes/ventas/masvendidosxls",compact("empresa","vendedor_texto","lista"));
+				$fechadesde = $this->request->fechadesde;
+				$fechahasta = $this->request->fechahasta;
+				$this->load->view("reportes/ventas/masvendidosxls",compact("empresa","vendedor_texto","sucursal_texto","fechadesde","fechahasta","lista","filtro"));
 			}
 		}
 	}

@@ -148,8 +148,57 @@ var phuyu_datos = new Vue({
         pdf_arqueo_excel: function(){
             var phuyu_url = url+phuyu_controller+"/pdf_arqueo_excel/"+$("#estadocaja").val();
             window.open(phuyu_url,"_blank");
+        },
+        abrir_recalcular_saldos: function(){
+            $("#modal_recalcular_saldos").modal("show");
+        },
+        actualizar_controldiario: function(){
+            var codcaja = $("#recalcular_codcaja").val();
+            var desde = $("#recalcular_desde").val();
+            var hasta = $("#recalcular_hasta").val();
+
+            if (codcaja=="" || parseInt(codcaja || 0)==0) {
+                phuyu_sistema.phuyu_alerta("CAJA REQUERIDA", "DEBE SELECCIONAR UNA CAJA","error");
+                return false;
+            }
+
+            if (desde=="" || hasta=="") {
+                phuyu_sistema.phuyu_alerta("FECHAS REQUERIDAS", "DEBE INGRESAR FECHA DESDE Y HASTA","error");
+                return false;
+            }
+
+            if (desde > hasta) {
+                phuyu_sistema.phuyu_alerta("RANGO INVALIDO", "LA FECHA DESDE NO PUEDE SER MAYOR A LA FECHA HASTA","error");
+                return false;
+            }
+
+            swal({
+                title: "RECALCULAR SALDOS DE CAJA ?",
+                text: "SE RECALCULARA LA CAJA SELECCIONADA DESDE "+desde+" HASTA "+hasta+".",
+                icon: "warning",
+                dangerMode: true,
+                buttons: ["CANCELAR", "SI, RECALCULAR"],
+            }).then((willUpdate) => {
+                if (willUpdate){
+                    this.estado = 1;
+                    $("#modal_recalcular_saldos").modal("hide");
+                    phuyu_sistema.phuyu_inicio_guardar("RECALCULANDO SALDOS DE CAJA . . .");
+                    this.$http.post(url+phuyu_controller+"/actualizar_controldiario",{"codcaja":codcaja,"desde":desde,"hasta":hasta}).then(function(data){
+                        if (data.body.estado==1) {
+                            phuyu_sistema.phuyu_alerta("SALDOS RECALCULADOS", data.body.mensaje,"success");
+                            phuyu_sistema.phuyu_modulo();
+                        }else{
+                            phuyu_sistema.phuyu_alerta("OCURRIO UN ERROR", data.body.mensaje,"error");
+                        }
+                        phuyu_sistema.phuyu_fin();
+                    }, function(){
+                        phuyu_sistema.phuyu_alerta("OCURRIO UN ERROR", "NO SE PUDO RECALCULAR LOS SALDOS","error");
+                        phuyu_sistema.phuyu_fin();
+                    });
+                }
+            });
         }
-	},
+		},
 	created: function(){
 		this.phuyu_controlcaja();
 	}

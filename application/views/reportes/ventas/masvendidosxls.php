@@ -31,26 +31,84 @@ header('Content-Disposition: attachment;filename="' . phuyu_nombre_archivo_empre
 header('Cache-Control: max-age=0');
 ?>
 
-<table border="1">
+<style type="text/css">
+    .titulo{
+        color:#ffffff;
+        background:#17365d;
+        font-size:16px;
+        font-weight:700;
+        text-align:center;
+        border:1px solid #17365d;
+    }
+    .subtitulo{
+        color:#1f4e78;
+        background:#d9eaf7;
+        font-size:12px;
+        font-weight:700;
+        text-align:center;
+        border:1px solid #9dc3e6;
+    }
+    .etiqueta{
+        color:#ffffff;
+        background:#4472c4;
+        font-size:11px;
+        font-weight:700;
+        border:1px solid #4472c4;
+    }
+    .dato{
+        color:#1f1f1f;
+        background:#f7fbff;
+        font-size:11px;
+        font-weight:700;
+        border:1px solid #d6e3f3;
+    }
+    .cabecera{
+        color:#ffffff;
+        background:#1f4e78;
+        font-weight:700;
+        text-align:center;
+        border:1px solid #8ea9db;
+    }
+    .detalle{
+        border:1px solid #d9e2f3;
+    }
+    .total{
+        color:#c00000;
+        background:#fff2cc;
+        font-weight:700;
+        border:1px solid #d6b656;
+    }
+</style>
+
+<table border="1" style="font-size:11px">
     <tr>
-        <th colspan="13"> 
-            <b>REPORTE DE PRODUCTOS VENDIDOS <?php echo utf8_decode($_SESSION["phuyu_empresa"]);?></b>
+        <th class="titulo" colspan="13">
+            <?php echo utf8_decode($_SESSION["phuyu_empresa"]);?>
         </th>
     </tr>
     <tr>
-        <th colspan="13">
-            <b style="font-size:9px"><?php echo $vendedor_texto;?></b>
-        </th>
+        <th class="subtitulo" colspan="13"><?php echo utf8_decode('REPORTE DE VENTAS POR PRODUCTOS'); ?></th>
     </tr>
+    <tr>
+        <td class="etiqueta" colspan="2">SUCURSAL</td>
+        <td class="dato" colspan="11"><?php echo utf8_decode(isset($sucursal_texto) ? $sucursal_texto : 'TODAS LAS SUCURSALES ACTIVAS');?></td>
+    </tr>
+    <tr>
+        <td class="etiqueta" colspan="2">RANGO</td>
+        <td class="dato" colspan="4"><?php echo (isset($fechadesde) ? $fechadesde : '').' AL '.(isset($fechahasta) ? $fechahasta : '');?></td>
+        <td class="etiqueta" colspan="2">FILTRO</td>
+        <td class="dato" colspan="5"><?php echo utf8_decode($vendedor_texto);?></td>
+    </tr>
+    <tr><td colspan="13"></td></tr>
 
     <tr>
-        <td>N°</td>
-        <td>CODIGO PRODUCTO</td>
-        <td colspan="7">DESCRIPCION PRODUCTO</td>
-        <td>U.MEDIDA</td>
-        <td>CANTIDAD</td>
-        <td>U.MEDIDAD MIN</td>
-        <td>CANTIDAD</td>
+        <td class="cabecera">N°</td>
+        <td class="cabecera">CODIGO PRODUCTO</td>
+        <td class="cabecera" colspan="7">DESCRIPCION PRODUCTO</td>
+        <td class="cabecera">U.MEDIDA</td>
+        <td class="cabecera">CANTIDAD</td>
+        <td class="cabecera">U.MEDIDA MIN</td>
+        <td class="cabecera">CANTIDAD</td>
     </tr>
     <?php 
         $item = 0; $total = 0; $totalmin = 0;
@@ -64,7 +122,7 @@ header('Cache-Control: max-age=0');
                 $codunidad = $unidades[1]["codunidad"]; $unidad = $unidades[1]["unidad"]; $factor = $unidades[1]["factor"];
             }
 
-            $ventas = $this->db->query("select kd.codproducto,kd.codunidad,kd.cantidad from kardex.kardex as k inner join kardex.kardexdetalle as kd on(k.codkardex=kd.codkardex) where k.codmovimientotipo=20 and kd.codproducto=".$value["codproducto"]." and k.fechacomprobante>='".$this->request->fechadesde."' and k.fechacomprobante<='".$this->request->fechahasta."' and k.estado=".$this->request->estado)->result_array();
+            $ventas = $this->db->query("select kd.codproducto,kd.codunidad,kd.cantidad from kardex.kardex as k inner join kardex.kardexdetalle as kd on(k.codkardex=kd.codkardex) where k.codmovimientotipo=20 and kd.codproducto=".$value["codproducto"]." and k.fechacomprobante>='".$this->request->fechadesde."' and k.fechacomprobante<='".$this->request->fechahasta."' and k.estado=".$this->request->estado." ".(isset($filtro) ? $filtro : ""))->result_array();
             $cantidad = 0;
             foreach ($ventas as $v) {
                 if ($v["codunidad"]==$codunidadmin) {
@@ -84,22 +142,22 @@ header('Cache-Control: max-age=0');
             $total = $total + $cantidad_unidad; $totalmin = $totalmin + $cantidad_unidad_min;
             $item++; ?>                    
             <tr>
-                <td><?php echo $item;?></td>
-                <td><?php echo $value["codigo"];?></td>
-                <td colspan="7"><?php echo utf8_decode($value["descripcion"]);?></td>
-                <td><?php echo $unidad;?></td>
-                <td><?php echo number_format($cantidad_unidad,2);?></td>
-                <td><?php echo $unidadmin;?></td>
-                <td><?php echo number_format($cantidad_unidad_min,2);?></td>
+                <td class="detalle"><?php echo $item;?></td>
+                <td class="detalle"><?php echo $value["codigo"];?></td>
+                <td class="detalle" colspan="7"><?php echo utf8_decode($value["descripcion"]);?></td>
+                <td class="detalle"><?php echo $unidad;?></td>
+                <td class="detalle"><?php echo number_format($cantidad_unidad,2);?></td>
+                <td class="detalle"><?php echo $unidadmin;?></td>
+                <td class="detalle"><?php echo number_format($cantidad_unidad_min,2);?></td>
             </tr>
         <?php 
         }
     ?>
     <tr>
-        <td style="color:#d9534f;text-align:right" colspan="9"> <b>TOTAL VENDIDOS:</td>
-        <td></td>
-        <td style="color:#d9534f"><?php echo number_format($total,2); ?></td>
-        <td></td>
-        <td style="color:#d9534f"><?php echo number_format($totalmin,2);?></td>
+        <td class="total" style="text-align:right" colspan="9">TOTAL VENDIDOS:</td>
+        <td class="total"></td>
+        <td class="total"><?php echo number_format($total,2); ?></td>
+        <td class="total"></td>
+        <td class="total"><?php echo number_format($totalmin,2);?></td>
     </tr>
 </table>

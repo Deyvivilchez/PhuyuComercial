@@ -153,6 +153,7 @@ class Migrarstock extends CI_Controller
         $crearProductos = isset($request->crear_productos) ? (bool) $request->crear_productos : false;
         $reemplazarNombre = isset($request->reemplazar_nombre) ? (bool) $request->reemplazar_nombre : false;
         $soloAplicar = isset($request->solo_aplicar) ? (bool) $request->solo_aplicar : false;
+        $buscarPor = $this->buscar_por_migrar(isset($request->buscar_por) ? $request->buscar_por : 'auto');
         $modoStock = $this->modo_stock_migrar(isset($request->modo_stock) ? $request->modo_stock : 'sumar');
 
         $colCodigo = isset($mapeo->codigo) ? (string) $mapeo->codigo : '';
@@ -172,8 +173,23 @@ class Migrarstock extends CI_Controller
             return;
         }
 
-        if ($colCodigo === '' || $colCantidad === '') {
-            echo json_encode(['estado' => 0, 'mensaje' => 'Debe mapear las columnas obligatorias: codigo y cantidad.']);
+        if ($colCantidad === '') {
+            echo json_encode(['estado' => 0, 'mensaje' => 'Debe mapear la columna obligatoria: cantidad.']);
+            return;
+        }
+
+        if (in_array($buscarPor, ['auto', 'codigo'], true) && $colCodigo === '') {
+            echo json_encode(['estado' => 0, 'mensaje' => 'Debe mapear la columna Codigo / SKU.']);
+            return;
+        }
+
+        if ($buscarPor === 'barra' && $colCodigoBarra === '' && $colCodigo === '') {
+            echo json_encode(['estado' => 0, 'mensaje' => 'Debe mapear Codigo de barra o Codigo / SKU.']);
+            return;
+        }
+
+        if ($buscarPor === 'nombre' && $colDescripcion === '') {
+            echo json_encode(['estado' => 0, 'mensaje' => 'Debe mapear la columna Descripcion / nombre.']);
             return;
         }
 
@@ -217,7 +233,7 @@ class Migrarstock extends CI_Controller
                 continue;
             }
 
-            $resultado = $this->preparar_fila_preview($idx + 2, $codigo, $cantidad, $codunidad, $aplicar, $soloAplicar, $ignorarStockCero, $codalmacen, $crearProductos, $datosNuevo, $modoStock, $reemplazarNombre);
+            $resultado = $this->preparar_fila_preview($idx + 2, $codigo, $cantidad, $codunidad, $aplicar, $soloAplicar, $ignorarStockCero, $codalmacen, $crearProductos, $datosNuevo, $modoStock, $reemplazarNombre, $buscarPor);
             $preview[] = $resultado;
 
             if ($resultado['valido']) {
@@ -262,6 +278,7 @@ class Migrarstock extends CI_Controller
         $crearProductos = isset($request->crear_productos) ? (bool) $request->crear_productos : false;
         $reemplazarNombre = isset($request->reemplazar_nombre) ? (bool) $request->reemplazar_nombre : false;
         $limpiezaAlmacen = $this->limpieza_almacen_migrar(isset($request->limpieza_almacen) ? $request->limpieza_almacen : 'conservar');
+        $buscarPor = $this->buscar_por_migrar(isset($request->buscar_por) ? $request->buscar_por : 'auto');
         $modoStock = $this->modo_stock_migrar(isset($request->modo_stock) ? $request->modo_stock : 'sumar');
         $procesados = 0;
         $ubicacionesProcesadas = [];
@@ -302,7 +319,7 @@ class Migrarstock extends CI_Controller
                     'familia' => isset($fila->familia) ? $this->normalizar_texto($fila->familia) : ''
                 ];
 
-                $resultado = $this->aplicar_stock_producto_excel($codigo, $cantidad, $codunidad, $ignorarStockCero, $row, $codalmacen, $crearProductos, $datosNuevo, $modoStock, $reemplazarNombre);
+                $resultado = $this->aplicar_stock_producto_excel($codigo, $cantidad, $codunidad, $ignorarStockCero, $row, $codalmacen, $crearProductos, $datosNuevo, $modoStock, $reemplazarNombre, $buscarPor);
                 if ($resultado['estado'] == 1) {
                     $procesados++;
                     if (!empty($resultado['codproducto']) && !empty($resultado['codunidad'])) {
@@ -617,9 +634,15 @@ class Migrarstock extends CI_Controller
         return in_array($limpieza, ['cero', 'inactivar'], true) ? $limpieza : 'conservar';
     }
 
-    private function preparar_fila_preview($row, $codigo, $cantidad, $codunidad, $aplicar, $soloAplicar, $ignorarStockCero, $codalmacen, $crearProductos = false, $datosNuevo = [], $modoStock = 'sumar', $reemplazarNombre = false)
+    private function buscar_por_migrar($buscarPor)
+    {
+        return in_array($buscarPor, ['auto', 'codigo', 'barra', 'nombre'], true) ? $buscarPor : 'auto';
+    }
+
+    private function preparar_fila_preview($row, $codigo, $cantidad, $codunidad, $aplicar, $soloAplicar, $ignorarStockCero, $codalmacen, $crearProductos = false, $datosNuevo = [], $modoStock = 'sumar', $reemplazarNombre = false, $buscarPor = 'auto')
     {
         $modoStock = $this->modo_stock_migrar($modoStock);
+        $buscarPor = $this->buscar_por_migrar($buscarPor);
         $base = [
             'fila' => (int) $row,
             'codigo' => $codigo,
@@ -659,7 +682,7 @@ class Migrarstock extends CI_Controller
             return $base;
         }
 
-        $producto = $this->buscar_producto_migrar($codigo, $descripcionNueva, $base['codigo_barra']);
+        $producto = $this->buscar_producto_migrar($codigo, $descripcionNueva, $base['codigo_barra'], $buscarPor);
         if (empty($producto) && !$crearProductos) {
             $base['mensaje'] = 'Producto no existe.';
             return $base;
@@ -760,12 +783,13 @@ class Migrarstock extends CI_Controller
         return $base;
     }
 
-    private function aplicar_stock_producto_excel($codigo, $cantidad, $codunidad, $ignorarStockCero, $row, $codalmacen, $crearProductos = false, $datosNuevo = [], $modoStock = 'sumar', $reemplazarNombre = false)
+    private function aplicar_stock_producto_excel($codigo, $cantidad, $codunidad, $ignorarStockCero, $row, $codalmacen, $crearProductos = false, $datosNuevo = [], $modoStock = 'sumar', $reemplazarNombre = false, $buscarPor = 'auto')
     {
         $modoStock = $this->modo_stock_migrar($modoStock);
+        $buscarPor = $this->buscar_por_migrar($buscarPor);
         $descripcion = isset($datosNuevo['descripcion']) ? $this->normalizar_texto($datosNuevo['descripcion']) : '';
         $codigoBarra = isset($datosNuevo['codigo_barra']) ? $this->normalizar_texto($datosNuevo['codigo_barra']) : '';
-        $producto = $this->buscar_producto_migrar($codigo, $descripcion, $codigoBarra);
+        $producto = $this->buscar_producto_migrar($codigo, $descripcion, $codigoBarra, $buscarPor);
         if (empty($producto)) {
             if (!$crearProductos) {
                 return ['estado' => 0, 'omitido' => 0, 'mensaje' => 'Fila ' . $row . ': no existe producto con codigo ' . $codigo . '.'];
@@ -1219,23 +1243,29 @@ class Migrarstock extends CI_Controller
         return $movidas;
     }
 
-    private function buscar_producto_migrar($codigo, $descripcion = '', $codigoBarra = '')
+    private function buscar_producto_migrar($codigo, $descripcion = '', $codigoBarra = '', $buscarPor = 'auto')
     {
         $codigo = $this->normalizar_texto($codigo);
         $descripcion = $this->normalizar_texto($descripcion);
         $codigoBarra = $this->normalizar_texto($codigoBarra);
+        $buscarPor = $this->buscar_por_migrar($buscarPor);
+
+        if ($buscarPor === 'codigo') {
+            return $this->buscar_producto_por_codigo_migrar($codigo);
+        }
+
+        if ($buscarPor === 'barra') {
+            return $this->buscar_producto_por_barra_migrar($codigoBarra !== '' ? $codigoBarra : $codigo);
+        }
+
+        if ($buscarPor === 'nombre') {
+            return $this->buscar_producto_por_nombre_migrar($descripcion);
+        }
 
         if ($codigo !== '') {
-            $producto = $this->db->get_where('almacen.productos', ['codigo' => $codigo, 'estado' => 1])->row_array();
+            $producto = $this->buscar_producto_por_codigo_migrar($codigo);
             if (!empty($producto)) {
                 return $producto;
-            }
-
-            if (is_numeric($codigo)) {
-                $producto = $this->db->get_where('almacen.productos', ['codproducto' => (int) $codigo, 'estado' => 1])->row_array();
-                if (!empty($producto)) {
-                    return $producto;
-                }
             }
 
             $producto = $this->buscar_producto_por_barra_migrar($codigo);
@@ -1252,10 +1282,29 @@ class Migrarstock extends CI_Controller
         }
 
         if ($descripcion !== '') {
-            $producto = $this->db->query(
-                'select * from almacen.productos where estado=1 and upper(trim(descripcion))=upper(trim(?)) limit 1',
-                [$descripcion]
-            )->row_array();
+            $producto = $this->buscar_producto_por_nombre_migrar($descripcion);
+            if (!empty($producto)) {
+                return $producto;
+            }
+        }
+
+        return [];
+    }
+
+    private function buscar_producto_por_codigo_migrar($codigo)
+    {
+        $codigo = $this->normalizar_texto($codigo);
+        if ($codigo === '') {
+            return [];
+        }
+
+        $producto = $this->db->get_where('almacen.productos', ['codigo' => $codigo, 'estado' => 1])->row_array();
+        if (!empty($producto)) {
+            return $producto;
+        }
+
+        if (is_numeric($codigo)) {
+            $producto = $this->db->get_where('almacen.productos', ['codproducto' => (int) $codigo, 'estado' => 1])->row_array();
             if (!empty($producto)) {
                 return $producto;
             }
@@ -1274,6 +1323,19 @@ class Migrarstock extends CI_Controller
         return $this->db->query(
             'select p.* from almacen.productos p inner join almacen.productounidades u on (p.codproducto=u.codproducto) where p.estado=1 and u.estado=1 and u.codigobarra=? limit 1',
             [$codigoBarra]
+        )->row_array();
+    }
+
+    private function buscar_producto_por_nombre_migrar($descripcion)
+    {
+        $descripcion = $this->normalizar_texto($descripcion);
+        if ($descripcion === '') {
+            return [];
+        }
+
+        return $this->db->query(
+            'select * from almacen.productos where estado=1 and upper(trim(descripcion))=upper(trim(?)) limit 1',
+            [$descripcion]
         )->row_array();
     }
 

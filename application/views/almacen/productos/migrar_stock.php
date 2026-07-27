@@ -378,6 +378,17 @@
 					</div>
 
 					<div class="field">
+						<label>Buscar producto por</label>
+						<select class="form-select" v-model="campos.buscar_por" v-on:change="np_cambio_buscar_por_migrarstock()">
+							<option value="auto">Automatico: codigo, ID, barra o nombre</option>
+							<option value="codigo">Codigo / ID producto</option>
+							<option value="barra">Codigo de barra</option>
+							<option value="nombre">Descripcion / nombre exacto</option>
+						</select>
+						<small>Para accesorios sin codigo de barra usa Descripcion / nombre exacto.</small>
+					</div>
+
+					<div class="field">
 						<label>Modo de actualizacion</label>
 						<div class="mode-options">
 							<label class="mode-option">
@@ -500,7 +511,7 @@
 				<div class="mapping-item" v-for="campo in camposSistema">
 					<label>
 						{{ campo.label }}
-						<span v-if="campo.required" class="required">*</span>
+						<span v-if="np_campo_requerido_migrarstock(campo)" class="required">*</span>
 					</label>
 					<select class="form-select" v-model="campos.mapeo[campo.key]">
 						<option value="">-- No asignar --</option>
@@ -677,6 +688,7 @@
 		crear_productos: false,
 		reemplazar_nombre: false,
 		limpieza_almacen: "conservar",
+		buscar_por: "auto",
 		modo_stock: "sumar",
 		codalmacen: "<?php echo (int) $codalmacenActual; ?>",
 		mapeo: {

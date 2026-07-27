@@ -104,7 +104,7 @@ class Vendedores extends CI_Controller {
 
 				$lista = $this->db->query("select distinct(kd.codproducto) as codproducto,p.descripcion,p.codigo from kardex.kardex as k inner join kardex.kardexdetalle as kd on(k.codkardex=kd.codkardex) inner join almacen.productos as p on(kd.codproducto=p.codproducto) where k.codmovimientotipo=20 ".$filtro." and k.fechacomprobante>='".$this->request->fechadesde."' and k.fechacomprobante<='".$this->request->fechahasta."' and k.estado=1 ".$filtro." order by p.descripcion")->result_array();
 
-				$this->load->view("reportes/ventas/masvendidosxls",compact("vendedor_texto","lista"));
+				$this->load->view("reportes/ventas/masvendidosxls",compact("vendedor_texto","lista","filtro"));
 			}
 		}
 	}

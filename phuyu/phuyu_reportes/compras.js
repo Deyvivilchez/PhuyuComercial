@@ -57,6 +57,10 @@ var phuyu_datos = new Vue({
 			this.phuyu_fecha();
 			window.open(url+phuyu_controller+"/excel_compras?tipo='resumen'&datos="+encodeURIComponent(JSON.stringify(this.campos)),"_blank");
 		},
+		excel_productos_compras: function(){
+			this.phuyu_fecha();
+			window.open(url+phuyu_controller+"/excel_productos_compras?datos="+encodeURIComponent(JSON.stringify(this.campos)),"_blank");
+		},
 		phuyu_comprasproveedorpdf: function(){
 			$("#modal_clientes").modal('hide');
 			this.phuyu_fecha();

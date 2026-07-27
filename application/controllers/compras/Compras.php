@@ -632,6 +632,70 @@ class Compras extends CI_Controller {
 		}
 	}
 
+	function restaurar(){
+		if ($this->input->is_ajax_request()) {
+			$this->request = json_decode(file_get_contents('php://input'));
+			$this->db->trans_begin();
+
+			$kardexalmacen = $this->db->query("select codkardexalmacen from kardex.kardexalmacen where codkardex=".$this->request->codregistro)->result_array();
+
+			$info = $this->db->query("select *from kardex.kardexdetalle where codkardex=".$this->request->codregistro)->result_array();
+			foreach ($info as $key => $value) {
+				$existe = $this->db->query("select *from almacen.productoubicacion where codalmacen=".$_SESSION["phuyu_codalmacen"]." and codproducto=".$value["codproducto"]." and codunidad=".$value["codunidad"])->result_array();
+				$stock = $existe[0]["stockactual"] + $value["cantidad"];
+				$cantidad_recogo = $value["cantidad"] - $value["recogido"];
+
+				$campos = ["stockactual","comprarecogo"]; $valores = [(double)$stock, (double)$existe[0]["comprarecogo"] + $cantidad_recogo];
+				$f = ["codalmacen","codproducto","codunidad"];
+				$v = [(int)$_SESSION["phuyu_codalmacen"],(int)$value["codproducto"],(int)$value["codunidad"]];
+				$estado = $this->phuyu_model->phuyu_editar_1("almacen.productoubicacion", $campos, $valores, $f, $v);
+
+				$stockconvertido = $this->db->query("select *from almacen.productoubicacion where codalmacen=".$_SESSION["phuyu_codalmacen"]." and codproducto=".$value["codproducto"])->result_array();
+
+				$factor = $this->db->query("select *from almacen.productounidades where codproducto=".$value["codproducto"]." and codunidad=".$value["codunidad"])->result_array();
+
+				foreach ($stockconvertido as $k => $val) {
+					$productounidad = $this->db->query("select *from almacen.productounidades where codproducto=".$value["codproducto"]." and codunidad=".$val["codunidad"])->result_array();
+
+					$stockc = ((float)$value["cantidad"]*(float)$factor[0]["factor"])/(float)$productounidad[0]["factor"];
+					$stockc = $val["stockactualconvertido"] + $stockc;
+
+					$stockrecoger = ((double)$cantidad_recogo*(float)$factor[0]["factor"])/(float)$productounidad[0]["factor"];
+
+					$campos = ["stockactualconvertido","comprarecogoconvertido"]; $valores = [(double)$stockc,(double)$val["comprarecogoconvertido"] + (double)$stockrecoger];
+					$f = ["codalmacen","codproducto","codunidad"];
+					$v = [(int)$_SESSION["phuyu_codalmacen"],(int)$value["codproducto"],(int)$val["codunidad"]];
+					$estado = $this->phuyu_model->phuyu_editar_1("almacen.productoubicacion", $campos, $valores, $f, $v);
+				}
+			}
+			$estado = $this->phuyu_model->phuyu_restaurar("kardex.kardex", "codkardex", $this->request->codregistro);
+			$estado = $this->phuyu_model->phuyu_restaurar("kardex.kardexalmacen", "codkardexalmacen", $kardexalmacen[0]["codkardexalmacen"]);
+
+			$estado = $this->phuyu_model->phuyu_eliminar_total("kardex.kardexanulados", "codkardex", $this->request->codregistro);
+			$estado = $this->phuyu_model->phuyu_eliminar_total("kardex.kardexalmacenanulado", "codkardexalmacen", $kardexalmacen[0]["codkardexalmacen"]);
+
+			$movi = $this->db->query("select codmovimiento from caja.movimientos where codkardex=".$this->request->codregistro)->result_array();
+			if(count($movi)>0){
+				$estado = $this->phuyu_model->phuyu_restaurar("caja.movimientos", "codmovimiento", $movi[0]["codmovimiento"]);
+				$campos = ["estado"]; $valores = [1];
+				$f = ["codmovimiento"]; $v = [(int)$movi[0]["codmovimiento"]];
+				$estado = $this->phuyu_model->phuyu_editar_1("caja.movimientosdetalle", $campos, $valores, $f, $v);
+			}
+
+			if ($this->db->trans_status() === FALSE){
+			    $this->db->trans_rollback(); $estado = 0;
+			}else{
+				if ($estado!=1) {
+					$this->db->trans_rollback(); $estado = 0;
+				}
+				$this->db->trans_commit();
+			}
+			echo $estado;
+		}else{
+			$this->load->view("phuyu/404");
+		}
+	}
+
 	function valorizar_precios($codkardex, $fechakardex){
 		if ($this->input->is_ajax_request()) {
 			$detalle = $this->db->query("select *from kardex.kardexdetalle where codkardex=".$codkardex)->result_array();

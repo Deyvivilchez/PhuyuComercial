@@ -6,7 +6,7 @@ header('Cache-Control: max-age=0');
 
 <table border="1">
     <tr>
-        <th colspan="7"> 
+        <th colspan="8"> 
             <b><?php echo utf8_decode($titulo);?></b>
         </th>
     </tr>
@@ -15,17 +15,17 @@ header('Cache-Control: max-age=0');
         <th>N°</th>
         <th>CODIGO</th>
         <th>DESCRIPCION PRODUCTO</th>
-        <th>U.MEDIDA</th>
-        <th>STOCK DISP.</th>
+        <th>UNIDAD</th>
+        <th>STOCK ACTUAL</th>
         <th>V.X.RECOGER</th>
         <th>C.X.RECOGER</th>
-        <th>STOCK FISICO</th>
+        <th>STOCK X UNIDAD</th>
     </tr>
     <?php $item = 0;
         foreach ($lineas as $key => $value) { 
-            if(count($value["lista"])>0){ ?>
+            if($agruparlinea && count($value["lista"])>0){ ?>
                 <tr>
-                    <th colspan="7"> <b>LINEA DE PRODUCTO: <?php echo utf8_decode($value["descripcion"]);?></b> </th>
+                    <th colspan="8"> <b>LINEA DE PRODUCTO: <?php echo utf8_decode($value["descripcion"]);?></b> </th>
                 </tr>
             <?php } ?>
                 
