@@ -133,10 +133,10 @@
 									<td>{{dato.producto}}</td>
 									<td>{{dato.unidad}}</td>
 									<td>
-										<input type="number" step="0.0001" class="form-control number" v-model.number="dato.cantidad" v-on:keyup="phuyu_calcular(dato)" min="0.0001" required>
+										<input type="number" step="0.0001" class="form-control number" v-model.number="dato.cantidad" v-on:input="phuyu_calcular(dato)" min="0.0001" required>
 									</td>
 									<td>
-										<input type="number" step="0.0001" class="form-control number" v-model.number="dato.precio" v-on:keyup="phuyu_calcular(dato)" min="0.0001" required>
+										<input type="number" step="0.0001" class="form-control number" v-model.number="dato.precio" v-on:input="phuyu_calcular(dato)" min="0.0001" required>
 									</td>
 									<td class="text-end">{{dato.igv}}</td>
 									<td class="text-end fw-semibold">{{dato.subtotal}}</td>

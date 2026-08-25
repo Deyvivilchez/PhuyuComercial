@@ -748,6 +748,250 @@ class Productos extends CI_Controller
         }
     }
 
+    public function duplicados()
+    {
+        if (!$this->input->is_ajax_request() || !isset($_SESSION['phuyu_codusuario'])) {
+            $this->load->view('phuyu/404');
+            return;
+        }
+
+        $this->output->set_content_type('application/json', 'utf-8');
+        $request = json_decode(file_get_contents('php://input'));
+        $tipo = isset($request->tipo) ? (string) $request->tipo : 'todos';
+        $lista = [];
+
+        if ($tipo === 'todos' || $tipo === 'barra') {
+            $lista = array_merge($lista, $this->grupos_duplicados_productos('barra'));
+        }
+        if ($tipo === 'todos' || $tipo === 'codigo') {
+            $lista = array_merge($lista, $this->grupos_duplicados_productos('codigo'));
+        }
+        if ($tipo === 'todos' || $tipo === 'descripcion') {
+            $lista = array_merge($lista, $this->grupos_duplicados_productos('descripcion'));
+        }
+
+        echo json_encode(['lista' => $lista]);
+    }
+
+    public function unir_duplicados()
+    {
+        if (!$this->input->is_ajax_request() || !isset($_SESSION['phuyu_codusuario'])) {
+            $this->load->view('phuyu/404');
+            return;
+        }
+
+        $this->output->set_content_type('application/json', 'utf-8');
+        $request = json_decode(file_get_contents('php://input'));
+        $tipo = isset($request->tipo) ? (string) $request->tipo : '';
+        $valor = isset($request->valor) ? $this->normalizar_texto($request->valor) : '';
+
+        if (!in_array($tipo, ['barra', 'codigo', 'descripcion'], true) || $valor === '') {
+            echo json_encode(['estado' => 0, 'mensaje' => 'Debe indicar un grupo duplicado valido.']);
+            return;
+        }
+
+        $productos = $this->productos_duplicados_por_valor($tipo, $valor);
+        if (count($productos) < 2) {
+            echo json_encode(['estado' => 0, 'mensaje' => 'El grupo ya no tiene duplicados activos.']);
+            return;
+        }
+
+        $codproductoMaestro = (int) $productos[0]['codproducto'];
+        $duplicados = 0;
+        $ubicaciones = 0;
+
+        $this->db->trans_begin();
+
+        foreach ($productos as $producto) {
+            $codproductoDuplicado = (int) $producto['codproducto'];
+            if ($codproductoDuplicado === $codproductoMaestro) {
+                continue;
+            }
+
+            $ubicaciones += $this->mover_unidades_duplicado_producto($codproductoMaestro, $codproductoDuplicado);
+            $ubicaciones += $this->mover_ubicaciones_duplicado_producto($codproductoMaestro, $codproductoDuplicado);
+
+            $this->db->where('codproducto', $codproductoDuplicado);
+            $this->db->update('almacen.productounidades', ['estado' => 0]);
+
+            $this->db->where('codproducto', $codproductoDuplicado);
+            $this->db->update('almacen.productoubicacion', [
+                'stockactual' => 0,
+                'stockactualreal' => 0,
+                'stockactualconvertido' => 0,
+                'preciostockvalorizado' => 0,
+                'estado' => 0
+            ]);
+
+            $this->db->where('codproducto', $codproductoDuplicado);
+            $this->db->update('almacen.productos', ['estado' => 0]);
+            $duplicados++;
+        }
+
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            echo json_encode(['estado' => 0, 'mensaje' => 'No se pudo unir los productos duplicados.']);
+            return;
+        }
+
+        $this->db->trans_commit();
+
+        echo json_encode([
+            'estado' => 1,
+            'mensaje' => 'Producto principal #' . $codproductoMaestro . '. Duplicados deshabilitados: ' . $duplicados . '. Ubicaciones movidas o consolidadas: ' . $ubicaciones . '.'
+        ]);
+    }
+
+    private function grupos_duplicados_productos($tipo)
+    {
+        if ($tipo === 'barra') {
+            $grupos = $this->db->query(
+                "select 'barra' as tipo, 'Codigo de barra' as tipo_nombre, trim(pu.codigobarra) as valor, count(distinct p.codproducto) as cantidad
+                 from almacen.productounidades pu
+                 inner join almacen.productos p on (p.codproducto=pu.codproducto)
+                 where p.estado=1 and pu.estado=1 and coalesce(trim(pu.codigobarra),'') <> ''
+                 group by trim(pu.codigobarra)
+                 having count(distinct p.codproducto) > 1
+                 order by cantidad desc, valor
+                 limit 100"
+            )->result_array();
+        } elseif ($tipo === 'codigo') {
+            $grupos = $this->db->query(
+                "select 'codigo' as tipo, 'Codigo interno' as tipo_nombre, trim(p.codigo) as valor, count(*) as cantidad
+                 from almacen.productos p
+                 where p.estado=1 and coalesce(trim(p.codigo),'') <> ''
+                 group by trim(p.codigo)
+                 having count(*) > 1
+                 order by cantidad desc, valor
+                 limit 100"
+            )->result_array();
+        } else {
+            $grupos = $this->db->query(
+                "select 'descripcion' as tipo, 'Descripcion' as tipo_nombre, upper(trim(p.descripcion)) as valor, count(*) as cantidad
+                 from almacen.productos p
+                 where p.estado=1 and coalesce(trim(p.descripcion),'') <> ''
+                 group by upper(trim(p.descripcion))
+                 having count(*) > 1
+                 order by cantidad desc, valor
+                 limit 100"
+            )->result_array();
+        }
+
+        foreach ($grupos as $key => $grupo) {
+            $grupos[$key]['cantidad'] = (int) $grupo['cantidad'];
+            $grupos[$key]['productos'] = $this->productos_duplicados_por_valor($grupo['tipo'], $grupo['valor']);
+        }
+
+        return $grupos;
+    }
+
+    private function productos_duplicados_por_valor($tipo, $valor)
+    {
+        if ($tipo === 'barra') {
+            return $this->db->query(
+                "select p.codproducto, p.codigo, p.descripcion, string_agg(distinct nullif(trim(un.codigobarra), ''), ', ') as codigobarra, coalesce(sum(pu.stockactualconvertido),0) as stock
+                 from almacen.productos p
+                 inner join almacen.productounidades un on (un.codproducto=p.codproducto and un.estado=1)
+                 left join almacen.productoubicacion pu on (pu.codproducto=p.codproducto and pu.estado=1)
+                 where p.estado=1 and trim(un.codigobarra)=?
+                 group by p.codproducto, p.codigo, p.descripcion
+                 order by p.codproducto",
+                [$valor]
+            )->result_array();
+        }
+
+        if ($tipo === 'codigo') {
+            return $this->db->query(
+                "select p.codproducto, p.codigo, p.descripcion, string_agg(distinct nullif(trim(un.codigobarra), ''), ', ') as codigobarra, coalesce(sum(pu.stockactualconvertido),0) as stock
+                 from almacen.productos p
+                 left join almacen.productounidades un on (un.codproducto=p.codproducto and un.estado=1)
+                 left join almacen.productoubicacion pu on (pu.codproducto=p.codproducto and pu.estado=1)
+                 where p.estado=1 and trim(p.codigo)=?
+                 group by p.codproducto, p.codigo, p.descripcion
+                 order by p.codproducto",
+                [$valor]
+            )->result_array();
+        }
+
+        return $this->db->query(
+            "select p.codproducto, p.codigo, p.descripcion, string_agg(distinct nullif(trim(un.codigobarra), ''), ', ') as codigobarra, coalesce(sum(pu.stockactualconvertido),0) as stock
+             from almacen.productos p
+             left join almacen.productounidades un on (un.codproducto=p.codproducto and un.estado=1)
+             left join almacen.productoubicacion pu on (pu.codproducto=p.codproducto and pu.estado=1)
+             where p.estado=1 and upper(trim(p.descripcion))=upper(trim(?))
+             group by p.codproducto, p.codigo, p.descripcion
+             order by p.codproducto",
+            [$valor]
+        )->result_array();
+    }
+
+    private function mover_unidades_duplicado_producto($codproductoMaestro, $codproductoDuplicado)
+    {
+        $unidades = $this->db->get_where('almacen.productounidades', ['codproducto' => (int) $codproductoDuplicado, 'estado' => 1])->result_array();
+        $movidas = 0;
+
+        foreach ($unidades as $unidad) {
+            $existe = $this->db->get_where('almacen.productounidades', [
+                'codproducto' => (int) $codproductoMaestro,
+                'codunidad' => (int) $unidad['codunidad']
+            ])->row_array();
+
+            if (empty($existe)) {
+                $unidad['codproducto'] = (int) $codproductoMaestro;
+                $this->db->insert('almacen.productounidades', $unidad);
+                $movidas++;
+                continue;
+            }
+
+            if (empty($existe['codigobarra']) && !empty($unidad['codigobarra'])) {
+                $this->db->where('codproducto', (int) $codproductoMaestro);
+                $this->db->where('codunidad', (int) $unidad['codunidad']);
+                $this->db->update('almacen.productounidades', [
+                    'codigobarra' => $unidad['codigobarra'],
+                    'estado' => 1
+                ]);
+            }
+        }
+
+        return $movidas;
+    }
+
+    private function mover_ubicaciones_duplicado_producto($codproductoMaestro, $codproductoDuplicado)
+    {
+        $ubicaciones = $this->db->get_where('almacen.productoubicacion', ['codproducto' => (int) $codproductoDuplicado])->result_array();
+        $movidas = 0;
+
+        foreach ($ubicaciones as $ubicacion) {
+            $filtro = [
+                'codalmacen' => (int) $ubicacion['codalmacen'],
+                'codproducto' => (int) $codproductoMaestro,
+                'codunidad' => (int) $ubicacion['codunidad']
+            ];
+            $maestro = $this->db->get_where('almacen.productoubicacion', $filtro)->row_array();
+
+            if (empty($maestro)) {
+                $ubicacion['codproducto'] = (int) $codproductoMaestro;
+                $this->db->insert('almacen.productoubicacion', $ubicacion);
+                $movidas++;
+                continue;
+            }
+
+            foreach ($filtro as $campo => $dato) {
+                $this->db->where($campo, $dato);
+            }
+            $this->db->update('almacen.productoubicacion', [
+                'stockactual' => (float) $maestro['stockactual'] + (float) $ubicacion['stockactual'],
+                'stockactualreal' => (float) $maestro['stockactualreal'] + (float) $ubicacion['stockactualreal'],
+                'stockactualconvertido' => (float) $maestro['stockactualconvertido'] + (float) $ubicacion['stockactualconvertido'],
+                'preciostockvalorizado' => (float) $maestro['preciostockvalorizado'] + (float) $ubicacion['preciostockvalorizado'],
+                'estado' => ((int) $maestro['estado'] === 1 || (int) $ubicacion['estado'] === 1) ? 1 : 0
+            ]);
+            $movidas++;
+        }
+
+        return $movidas;
+    }
+
     // BUSCAR PRODUCTOS EN COMPRAS, EN VENTAS, EN INGRESOS Y EGRESOS ALMACEN //
 
     function buscar($operacion)
