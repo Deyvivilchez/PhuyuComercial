@@ -783,7 +783,7 @@ class Productos extends CI_Controller
         $this->output->set_content_type('application/json', 'utf-8');
         $request = json_decode(file_get_contents('php://input'));
         $tipo = isset($request->tipo) ? (string) $request->tipo : '';
-        $valor = isset($request->valor) ? $this->normalizar_texto($request->valor) : '';
+        $valor = isset($request->valor) ? strtoupper($this->normalizar_texto($request->valor)) : '';
 
         if (!in_array($tipo, ['barra', 'codigo', 'descripcion'], true) || $valor === '') {
             echo json_encode(['estado' => 0, 'mensaje' => 'Debe indicar un grupo duplicado valido.']);
@@ -846,31 +846,31 @@ class Productos extends CI_Controller
     {
         if ($tipo === 'barra') {
             $grupos = $this->db->query(
-                "select 'barra' as tipo, 'Codigo de barra' as tipo_nombre, trim(pu.codigobarra) as valor, count(distinct p.codproducto) as cantidad
+                "select 'barra' as tipo, 'Codigo de barra' as tipo_nombre, upper(trim(pu.codigobarra)) as valor, count(distinct p.codproducto) as cantidad
                  from almacen.productounidades pu
                  inner join almacen.productos p on (p.codproducto=pu.codproducto)
                  where p.estado=1 and pu.estado=1 and coalesce(trim(pu.codigobarra),'') <> ''
-                 group by trim(pu.codigobarra)
+                 group by upper(trim(pu.codigobarra))
                  having count(distinct p.codproducto) > 1
                  order by cantidad desc, valor
                  limit 100"
             )->result_array();
         } elseif ($tipo === 'codigo') {
             $grupos = $this->db->query(
-                "select 'codigo' as tipo, 'Codigo interno' as tipo_nombre, trim(p.codigo) as valor, count(*) as cantidad
+                "select 'codigo' as tipo, 'Codigo interno' as tipo_nombre, upper(trim(p.codigo)) as valor, count(*) as cantidad
                  from almacen.productos p
                  where p.estado=1 and coalesce(trim(p.codigo),'') <> ''
-                 group by trim(p.codigo)
+                 group by upper(trim(p.codigo))
                  having count(*) > 1
                  order by cantidad desc, valor
                  limit 100"
             )->result_array();
         } else {
             $grupos = $this->db->query(
-                "select 'descripcion' as tipo, 'Descripcion' as tipo_nombre, upper(trim(p.descripcion)) as valor, count(*) as cantidad
+                "select 'descripcion' as tipo, 'Descripcion' as tipo_nombre, regexp_replace(upper(trim(p.descripcion)), '\s+', ' ', 'g') as valor, count(*) as cantidad
                  from almacen.productos p
                  where p.estado=1 and coalesce(trim(p.descripcion),'') <> ''
-                 group by upper(trim(p.descripcion))
+                 group by regexp_replace(upper(trim(p.descripcion)), '\s+', ' ', 'g')
                  having count(*) > 1
                  order by cantidad desc, valor
                  limit 100"
@@ -893,7 +893,7 @@ class Productos extends CI_Controller
                  from almacen.productos p
                  inner join almacen.productounidades un on (un.codproducto=p.codproducto and un.estado=1)
                  left join almacen.productoubicacion pu on (pu.codproducto=p.codproducto and pu.estado=1)
-                 where p.estado=1 and trim(un.codigobarra)=?
+                 where p.estado=1 and upper(trim(un.codigobarra))=?
                  group by p.codproducto, p.codigo, p.descripcion
                  order by p.codproducto",
                 [$valor]
@@ -906,7 +906,7 @@ class Productos extends CI_Controller
                  from almacen.productos p
                  left join almacen.productounidades un on (un.codproducto=p.codproducto and un.estado=1)
                  left join almacen.productoubicacion pu on (pu.codproducto=p.codproducto and pu.estado=1)
-                 where p.estado=1 and trim(p.codigo)=?
+                 where p.estado=1 and upper(trim(p.codigo))=?
                  group by p.codproducto, p.codigo, p.descripcion
                  order by p.codproducto",
                 [$valor]
@@ -918,7 +918,7 @@ class Productos extends CI_Controller
              from almacen.productos p
              left join almacen.productounidades un on (un.codproducto=p.codproducto and un.estado=1)
              left join almacen.productoubicacion pu on (pu.codproducto=p.codproducto and pu.estado=1)
-             where p.estado=1 and upper(trim(p.descripcion))=upper(trim(?))
+             where p.estado=1 and regexp_replace(upper(trim(p.descripcion)), '\s+', ' ', 'g')=?
              group by p.codproducto, p.codigo, p.descripcion
              order by p.codproducto",
             [$valor]

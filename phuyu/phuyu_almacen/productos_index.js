@@ -66,12 +66,34 @@ var phuyu_datos = new Vue({
 		},
 		phuyu_duplicados: function () {
 			this.mostrarDuplicados = true;
+			this.$nextTick(function () {
+				var modal = document.getElementById("modal_duplicados_productos");
+				if (modal && typeof bootstrap !== "undefined" && bootstrap.Modal) {
+					bootstrap.Modal.getOrCreateInstance(modal).show();
+				} else if ($("#modal_duplicados_productos").length && $.fn.modal) {
+					$("#modal_duplicados_productos").modal("show");
+				}
+			});
 			this.phuyu_cargar_duplicados();
 		},
 		phuyu_cargar_duplicados: function () {
 			this.cargandoDuplicados = true;
 			this.$http.post(url + "almacen/productos/duplicados", { "tipo": this.tipoDuplicado }).then(function (data) {
-				this.duplicados = data.body.lista || [];
+				var respuesta = data.body;
+				if (typeof respuesta === "string") {
+					try {
+						respuesta = JSON.parse(respuesta);
+					} catch (e) {
+						respuesta = null;
+					}
+				}
+				if (!respuesta || !Array.isArray(respuesta.lista)) {
+					this.duplicados = [];
+					phuyu_sistema.phuyu_alerta("NO SE PUDO LEER DUPLICADOS", "Revise la sesion o la respuesta del servidor.", "error");
+					this.cargandoDuplicados = false;
+					return;
+				}
+				this.duplicados = respuesta.lista;
 				this.cargandoDuplicados = false;
 			}, function () {
 				phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS", "ERROR DE RED", "error");
