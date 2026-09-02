@@ -257,6 +257,7 @@ var phuyu_operacion = new Vue({
 					codafectacionigv: producto.afectacionigv, igv: producto.igv, conicbper: producto.afectoicbper, icbper: producto.icbper,
 					valorventa: producto.valorventa, subtotal:producto.subtotal, subtotal_tem:producto.subtotal, 
 					descripcion:"", calcular: producto.calcular, atendido:0, item:0,
+					afectoigvventa: producto.afectoigvventa, unidades: producto.unidades || [],
 				});
 				this.phuyu_calcular(producto,1);
 		    }else{
@@ -271,6 +272,67 @@ var phuyu_operacion = new Vue({
 		},
 		phuyu_deleteitem: function(index,producto){
 			this.phuyu_calcular(producto,2); this.detalle.splice(index,1);
+		},
+		phuyu_recalcular_item: function(producto){
+			var cantidad = parseFloat(producto.cantidad) || 0;
+			var precio = parseFloat(producto.precio) || 0;
+			var porcentaje = 1;
+
+			producto.subtotal = Number((cantidad * precio).toFixed(2));
+			producto.preciobruto = precio;
+			producto.preciorefunitario = precio;
+			producto.preciosinigv = precio;
+			producto.valorventa = producto.subtotal;
+			producto.igv = 0;
+
+			if (parseInt(producto.afectoigvventa || 0) === 1 || parseInt(producto.codafectacionigv || 0) === 10) {
+				porcentaje = (1 + parseFloat(this.igvsunat || 0)) / 100;
+				producto.codafectacionigv = 10;
+				producto.preciosinigv = Number((precio / porcentaje).toFixed(4));
+				producto.valorventa = Number((cantidad * producto.preciosinigv).toFixed(2));
+				producto.igv = Number((producto.subtotal - producto.valorventa).toFixed(2));
+			}
+
+			producto.icbper = 0;
+			if (parseInt(producto.conicbper || 0) === 1) {
+				producto.icbper = Number((cantidad * parseFloat(this.icbpersunat || 0)).toFixed(2));
+			}
+		},
+		phuyu_cambiar_unidad: function(index, producto){
+			if (parseFloat(producto.atendido || 0) > 0) {
+				phuyu_sistema.phuyu_noti("ITEM YA ATENDIDO", "No se puede cambiar la unidad de un producto atendido", "warning");
+				return false;
+			}
+
+			var unidad = null;
+			var unidades = producto.unidades || [];
+			for (var i = 0; i < unidades.length; i++) {
+				if (parseInt(unidades[i].codunidad) === parseInt(producto.codunidad)) {
+					unidad = unidades[i];
+					break;
+				}
+			}
+
+			if (!unidad) {
+				this.$http.post(url + "almacen/productos/informacion_item", {
+					codproducto: producto.codproducto,
+					codunidad: producto.codunidad
+				}).then(function(data){
+					if (data.body && data.body.length > 0) {
+						producto.stock = parseFloat(data.body[0].stock) || 0;
+						producto.precio = parseFloat(data.body[0].precio) || 0;
+						this.phuyu_recalcular_item(producto);
+						this.phuyu_recalcular_totales_detalle();
+					}
+				});
+				return false;
+			}
+
+			producto.unidad = unidad.unidad;
+			producto.stock = parseFloat(unidad.stock) || 0;
+			producto.precio = parseFloat(unidad.precio) || 0;
+			this.phuyu_recalcular_item(producto);
+			this.phuyu_recalcular_totales_detalle();
 		},
 		phuyu_calcular: function(producto,tipo){
 			if (parseInt(this.stockalmacen) === 1 && parseInt(producto.control) === 1) {
@@ -292,11 +354,7 @@ var phuyu_operacion = new Vue({
 				}else{
 					this.totales.valorventa = Number((this.totales.valorventa - producto.subtotal).toFixed(2));
 
-					if (producto.cantidad=="") {
-						producto.subtotal = 0;
-					}else{
-						producto.subtotal = Number((producto.cantidad * producto.precio).toFixed(2));
-					}
+					this.phuyu_recalcular_item(producto);
 					this.totales.valorventa = Number((this.totales.valorventa + producto.subtotal).toFixed(2));
 				}
 			}
@@ -309,11 +367,7 @@ var phuyu_operacion = new Vue({
 
 			for (var i = 0; i < this.detalle.length; i++) {
 				var item = this.detalle[i];
-				var cantidad = parseFloat(item.cantidad) || 0;
-				var precio = parseFloat(item.precio) || 0;
-				item.subtotal = Number((cantidad * precio).toFixed(2));
-				item.igv = Number((parseFloat(item.igv) || 0).toFixed(2));
-				item.valorventa = Number((item.subtotal - item.igv).toFixed(2));
+				this.phuyu_recalcular_item(item);
 
 				valorventa = Number((valorventa + item.valorventa).toFixed(2));
 				igv = Number((igv + item.igv).toFixed(2));
@@ -594,6 +648,25 @@ var phuyu_operacion = new Vue({
 		phuyu_total_venta: function(){
 			return this.phuyu_redondear_pago(this.totales.importe);
 		},
+		phuyu_resumen_pago: function(){
+			var total = this.phuyu_total_venta();
+			var tarjeta = this.phuyu_numero_pago(this.pagos.codtipopago_tarjeta)==0 ? 0 : this.phuyu_redondear_pago(this.pagos.monto_tarjeta);
+			var efectivo = this.phuyu_redondear_pago(this.pagos.monto_efectivo);
+			var restante = this.phuyu_redondear_pago(total - tarjeta);
+			var vuelto = efectivo > restante ? this.phuyu_redondear_pago(efectivo - restante) : 0;
+			var aplicado = this.phuyu_redondear_pago(tarjeta + efectivo - vuelto);
+			var falta = aplicado < total ? this.phuyu_redondear_pago(total - aplicado) : 0;
+
+			return {
+				total: total,
+				tarjeta: tarjeta,
+				efectivo: efectivo,
+				vuelto: vuelto,
+				aplicado: aplicado,
+				falta: falta,
+				correcto: falta == 0 && aplicado == total
+			};
+		},
 		phuyu_recalcular_pago: function(){
 			var total = this.phuyu_total_venta();
 			var tarjeta = this.phuyu_numero_pago(this.pagos.monto_tarjeta);
@@ -634,6 +707,47 @@ var phuyu_operacion = new Vue({
 			if (efectivo < restante) {
 				this.pagos.vuelto_efectivo = 0;
 			}
+		},
+		phuyu_validar_pago_contado: function(){
+			this.phuyu_vuelto();
+
+			var resumen = this.phuyu_resumen_pago();
+			var usaTarjeta = this.phuyu_numero_pago(this.pagos.codtipopago_tarjeta) > 0;
+
+			if (resumen.total <= 0) {
+				phuyu_sistema.phuyu_noti("TOTAL DE VENTA INVALIDO", "REVISE EL PEDIDO ANTES DE COBRAR", "error");
+				return false;
+			}
+
+			if (usaTarjeta && resumen.tarjeta <= 0) {
+				phuyu_sistema.phuyu_noti("MONTO DE TARJETA INVALIDO", "INGRESE UN MONTO MAYOR A CERO", "error");
+				return false;
+			}
+
+			if (usaTarjeta && String(this.pagos.nrovoucher || "").trim() == "") {
+				phuyu_sistema.phuyu_noti("FALTA NRO VOUCHER", "REGISTRE EL NUMERO DE OPERACION", "error");
+				return false;
+			}
+
+			if (resumen.tarjeta > resumen.total) {
+				phuyu_sistema.phuyu_noti("EL PAGO NO PUEDE SER MAYOR AL TOTAL", "REVISE EL MONTO DE TARJETA", "error");
+				return false;
+			}
+
+			if (resumen.falta > 0) {
+				phuyu_sistema.phuyu_noti("EL IMPORTE DEBE CUBRIR EL TOTAL DE LA VENTA", "FALTAN S/. " + resumen.falta, "error");
+				return false;
+			}
+
+			if (Math.abs(resumen.aplicado - resumen.total) > 0.01) {
+				phuyu_sistema.phuyu_noti("PAGO DESCUADRADO", "EL PAGO APLICADO NO COINCIDE CON EL TOTAL", "error");
+				return false;
+			}
+
+			this.pagos.monto_efectivo = resumen.efectivo;
+			this.pagos.monto_tarjeta = resumen.tarjeta;
+			this.pagos.vuelto_efectivo = resumen.vuelto;
+			return true;
 		},
 
 		phuyu_condicionpago: function(){
@@ -694,21 +808,8 @@ var phuyu_operacion = new Vue({
 			}
 
 			if (this.campos.condicionpago==1) {
-				this.phuyu_vuelto();
-				var total_venta = this.phuyu_total_venta();
-				var pago_tarjeta = this.phuyu_numero_pago(this.pagos.codtipopago_tarjeta)==0 ? 0 : this.phuyu_numero_pago(this.pagos.monto_tarjeta);
-				var efectivo_recibido = this.phuyu_numero_pago(this.pagos.monto_efectivo);
-				var vuelto_efectivo = this.phuyu_numero_pago(this.pagos.vuelto_efectivo);
-				var efectivo_aplicado = this.phuyu_redondear_pago(efectivo_recibido - vuelto_efectivo);
-				var suma_importe = this.phuyu_redondear_pago(efectivo_aplicado + pago_tarjeta);
-
-				if (pago_tarjeta > total_venta) {
-					phuyu_sistema.phuyu_noti("EL PAGO NO PUEDE SER MAYOR AL TOTAL", "REVISE EL MONTO INGRESADO","error"); return false;
-				}
-
-				if (suma_importe < total_venta) {
-					phuyu_sistema.phuyu_noti("EL IMPORTE DEBE CUBRIR EL TOTAL DE LA VENTA","FALTAN S/. "+
-					this.phuyu_redondear_pago(total_venta - suma_importe),"error"); return false;
+				if (!this.phuyu_validar_pago_contado()) {
+					return false;
 				}
 			}else{
 				if (this.campos.codpersona==2) {

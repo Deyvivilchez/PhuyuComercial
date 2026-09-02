@@ -1260,13 +1260,59 @@ var phuyu_operacion = new Vue({
             //console.log(subtotal_tem)
             this.totales.importe = Number((subtotal_tem + this.totales.igv + this.totales.icbper).toFixed(2));
         },
+        phuyu_validar_consistencia_venta: function() {
+            if (!this.detalle || this.detalle.length == 0) {
+                phuyu_sistema.phuyu_noti("REGISTRAR UN PRODUCTO EN EL DETALLE", "REGISTRAR ITEM PARA LA VENTA", "danger");
+                return false;
+            }
+
+            var subtotal = 0;
+            var icbper = 0;
+
+            for (var i = 0; i < this.detalle.length; i++) {
+                var item = this.detalle[i];
+                var cantidad = parseFloat(item.cantidad);
+                var precio = parseFloat(item.precio);
+                var subtotalItem = parseFloat(item.subtotal);
+                var valorventa = parseFloat(item.valorventa);
+                var igv = parseFloat(item.igv || 0);
+
+                if (!isFinite(cantidad) || !isFinite(precio) || !isFinite(subtotalItem) || cantidad <= 0 || precio < 0 || subtotalItem < 0) {
+                    phuyu_sistema.phuyu_alerta("VENTA INCONSISTENTE", "Revise cantidad, precio y subtotal del item " + (i + 1), "error");
+                    return false;
+                }
+
+                var subtotalCalculado = Number((cantidad * precio).toFixed(2));
+                if (Math.abs(Number(subtotalItem.toFixed(2)) - subtotalCalculado) > 0.05) {
+                    phuyu_sistema.phuyu_alerta("VENTA INCONSISTENTE", "El subtotal del item " + (i + 1) + " no coincide con cantidad por precio.", "error");
+                    return false;
+                }
+
+                if (parseInt(item.codafectacionigv || 0) == 10 && Math.abs(Number((valorventa + igv).toFixed(2)) - Number(subtotalItem.toFixed(2))) > 0.05) {
+                    phuyu_sistema.phuyu_alerta("VENTA INCONSISTENTE", "El IGV del item " + (i + 1) + " no coincide con el subtotal.", "error");
+                    return false;
+                }
+
+                subtotal = Number((subtotal + Number(subtotalItem.toFixed(2))).toFixed(2));
+                icbper = Number((icbper + parseFloat(item.icbper || 0)).toFixed(2));
+            }
+
+            var totalDetalle = Number((subtotal + icbper).toFixed(2));
+            var totalVenta = Number(parseFloat(this.totales.importe || 0).toFixed(2));
+            if (!isFinite(totalVenta) || totalVenta <= 0 || Math.abs(totalVenta - totalDetalle) > 0.05) {
+                this.phuyu_totales();
+                phuyu_sistema.phuyu_alerta("TOTAL DE VENTA RECALCULADO", "Se detecto una diferencia en el total. Revise nuevamente antes de cobrar.", "warning");
+                return false;
+            }
+
+            return true;
+        },
 
         /* DATOS GENERALES DE LA VENTA */
 
         phuyu_guardar: function() {
 
-            if (this.detalle.length == 0) {
-                phuyu_sistema.phuyu_noti("REGISTRAR UN PRODUCTO EN EL DETALLE", "REGISTRAR ITEM PARA LA VENTA", "danger");
+            if (!this.phuyu_validar_consistencia_venta()) {
                 return false;
             }
 
@@ -1597,6 +1643,13 @@ var phuyu_operacion = new Vue({
             this.importetotalcredito = Number(totalCredito.toFixed(2)).toFixed(2);
         },
         phuyu_pagar: async function() {
+            if (this.estado == 1) {
+                return false;
+            }
+
+            if (!this.phuyu_validar_consistencia_venta()) {
+                return false;
+            }
 
             if (this.campos.condicionpago == 1) {
                 if (this.pagos.codtipopago_tarjeta == 0) {

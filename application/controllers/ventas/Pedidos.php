@@ -570,6 +570,24 @@ class Pedidos extends CI_Controller {
 					round(kd.preciounitario,3) as precio,kd.preciorefunitario, p.calcular, round(kd.subtotal,3) as subtotal, kd.descripcion, 
 					(select round(coalesce(sum(cantidad),0)) from restaurante.atendidos where codpedido=".$pedido[0]["codpedido"]." and kd.codproducto=codproducto and kd.codunidad=codunidad and kd.item=item) as atendido 
 					from kardex.pedidosdetalle as kd inner join almacen.productos as p on(kd.codproducto=p.codproducto) inner join almacen.unidades as u on(kd.codunidad=u.codunidad) where kd.codpedido=".$pedido[0]["codpedido"]." and kd.estado=1 order by kd.item")->result_array();
+
+				foreach ($detalle as $key => $value) {
+					$detalle[$key]["unidades"] = $this->db->query(
+						"select
+							pu.codunidad,
+							u.descripcion as unidad,
+							round(pu.stockactualconvertido,2) as stock,
+							round(pun.pventapublico,2) as precio,
+							round(pun.factor,4) as factor
+						from almacen.productoubicacion as pu
+						inner join almacen.unidades as u on(u.codunidad=pu.codunidad)
+						inner join almacen.productounidades as pun on(pun.codproducto=pu.codproducto and pun.codunidad=pu.codunidad and pun.estado=1)
+						where pu.codproducto=".(int)$value["codproducto"]."
+						  and pu.codalmacen=".$_SESSION["phuyu_codalmacen"]."
+						  and pu.estado=1
+						order by pun.factor asc, u.descripcion asc"
+					)->result_array();
+				}
 			}else{
 				$pedido = $this->db->query("select (coalesce(max(codpedido),0) + 1) as codpedido from kardex.pedidos")->result_array();
 				$estado = 1; $info = []; $detalle = [];
@@ -1091,12 +1109,34 @@ class Pedidos extends CI_Controller {
 				}
 
 				if ((int)($this->request->campos->condicionpago ?? 0) == 1) {
-					$efectivo = round((double)($this->request->pagos->monto_efectivo ?? 0) - (double)($this->request->pagos->vuelto_efectivo ?? 0), 2);
-					$tarjeta = ((int)($this->request->pagos->codtipopago_tarjeta ?? 0) > 0) ? round((double)($this->request->pagos->monto_tarjeta ?? 0), 2) : 0;
-					if (round($efectivo + $tarjeta, 2) + 0.01 < $importeDetalle) {
+					$efectivoRecibido = round((double)($this->request->pagos->monto_efectivo ?? 0), 2);
+					$vuelto = round((double)($this->request->pagos->vuelto_efectivo ?? 0), 2);
+					$efectivo = round($efectivoRecibido - $vuelto, 2);
+					$codTipoTarjeta = (int)($this->request->pagos->codtipopago_tarjeta ?? 0);
+					$tarjeta = $codTipoTarjeta > 0 ? round((double)($this->request->pagos->monto_tarjeta ?? 0), 2) : 0;
+					$voucher = trim((string)($this->request->pagos->nrovoucher ?? ""));
+					$pagoAplicado = round($efectivo + $tarjeta, 2);
+
+					if ($efectivoRecibido < 0 || $vuelto < 0 || $tarjeta < 0 || $efectivo < 0) {
 						echo json_encode([
 							"estado" => 0,
-							"mensaje" => "EL PAGO NO CUBRE EL TOTAL REAL DEL DETALLE. Total: S/. ".number_format($importeDetalle, 2, ".", "")
+							"mensaje" => "EL PAGO TIENE IMPORTES INVALIDOS"
+						]);
+						return;
+					}
+
+					if ($codTipoTarjeta > 0 && ($tarjeta <= 0 || $voucher === "")) {
+						echo json_encode([
+							"estado" => 0,
+							"mensaje" => "EL PAGO CON TARJETA/CHEQUE REQUIERE MONTO Y NRO DE VOUCHER"
+						]);
+						return;
+					}
+
+					if (abs($pagoAplicado - $importeDetalle) > 0.01) {
+						echo json_encode([
+							"estado" => 0,
+							"mensaje" => "EL PAGO NO COINCIDE CON EL TOTAL REAL. Total: S/. ".number_format($importeDetalle, 2, ".", "")." | Pago aplicado: S/. ".number_format($pagoAplicado, 2, ".", "")
 						]);
 						return;
 					}

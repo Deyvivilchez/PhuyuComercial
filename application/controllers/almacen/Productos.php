@@ -1517,6 +1517,21 @@ class Productos extends CI_Controller
             $lista[$k]['preciomayor'] = round((float) ($row['pventaxmayor'] ?? 0), 2);
             $lista[$k]['preciocosto'] = round((float) ($row['preciocosto'] ?? 0), 2);
             $lista[$k]['precioadicional'] = round((float) ($row['pventaadicional'] ?? 0), 2);
+            $lista[$k]['unidades'] = $this->db->query(
+                "select
+                    pu.codunidad,
+                    u.descripcion as unidad,
+                    round(pu.stockactualconvertido,2) as stock,
+                    round(pun.pventapublico,2) as precio,
+                    round(pun.factor,4) as factor
+                from almacen.productoubicacion as pu
+                inner join almacen.unidades as u on(u.codunidad=pu.codunidad)
+                inner join almacen.productounidades as pun on(pun.codproducto=pu.codproducto and pun.codunidad=pu.codunidad and pun.estado=1)
+                where pu.codproducto=" . (int)$row['codproducto'] . "
+                  and pu.codalmacen=" . $codalmacen . "
+                  and pu.estado=1
+                order by pun.factor asc, u.descripcion asc"
+            )->result_array();
         }
 
         $this->output->set_content_type('application/json')->set_output(json_encode($lista));

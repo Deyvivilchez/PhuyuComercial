@@ -265,14 +265,15 @@ $icbperSunat = $_SESSION['phuyu_icbper'] ?? 0;
 	}
 
 	.detalle {
-		min-height: 90px;
+		min-height: 150px;
 		overflow: auto;
 	}
 
 	.detalle .table {
 		font-size: .78rem;
 		margin-bottom: 0;
-		min-width: 720px;
+		min-width: 850px;
+		table-layout: fixed;
 	}
 
 	.detalle .table thead th {
@@ -286,19 +287,25 @@ $icbperSunat = $_SESSION['phuyu_icbper'] ?? 0;
 		z-index: 2;
 	}
 
-	.detalle .form-control {
+	.detalle .form-control,
+	.detalle .form-select {
 		font-size: .78rem;
 		min-height: 30px;
 		padding: .2rem .4rem;
 	}
 
 	.detalle .number {
-		min-width: 70px;
+		min-width: 82px;
+	}
+
+	.detalle .unidad-select {
+		min-width: 100px;
 	}
 
 	.detalle-producto {
-		max-width: 220px;
+		line-height: 1.25;
 		white-space: normal;
+		word-break: break-word;
 	}
 
 	.detalle-unidad-mini {
@@ -359,6 +366,44 @@ $icbperSunat = $_SESSION['phuyu_icbper'] ?? 0;
 		padding: .9rem;
 	}
 
+	.payment-summary {
+		background: #fff;
+		border: 1px solid var(--phuyu-border);
+		border-radius: 8px;
+		display: grid;
+		gap: .5rem;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		padding: .75rem;
+	}
+
+	.payment-summary-item {
+		border-left: 3px solid rgba(64, 81, 137, .18);
+		padding-left: .55rem;
+	}
+
+	.payment-summary-label {
+		color: #878a99;
+		display: block;
+		font-size: .68rem;
+		font-weight: 700;
+		text-transform: uppercase;
+	}
+
+	.payment-summary-value {
+		color: #2f3a56;
+		display: block;
+		font-size: .95rem;
+		font-weight: 800;
+	}
+
+	.payment-summary-value.ok {
+		color: #0ab39c;
+	}
+
+	.payment-summary-value.bad {
+		color: #f06548;
+	}
+
 	@media (max-width: 1199.98px) {
 		.restobar-panel-body,
 		#phuyu_restaurante {
@@ -368,6 +413,10 @@ $icbperSunat = $_SESSION['phuyu_icbper'] ?? 0;
 		.action-grid,
 		.pedido-toolbar {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.detalle .table {
+			min-width: 900px;
 		}
 	}
 
@@ -380,6 +429,10 @@ $icbperSunat = $_SESSION['phuyu_icbper'] ?? 0;
 		.action-grid,
 		.pedido-toolbar {
 			grid-template-columns: 1fr;
+		}
+
+		.payment-summary {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
 	}
 </style>
@@ -589,11 +642,12 @@ $icbperSunat = $_SESSION['phuyu_icbper'] ?? 0;
 								<thead>
 									<tr>
 										<th width="52"><i class="bi bi-sticky"></i></th>
-										<th width="140"><i class="bi bi-flag me-1"></i>Estado</th>
+										<th width="125"><i class="bi bi-flag me-1"></i>Estado</th>
 										<th>Producto</th>
-										<th width="105">Cantidad</th>
-										<th width="105">Precio</th>
-										<th width="110">Subtotal</th>
+										<th width="112">Unidad</th>
+										<th width="96">Cantidad</th>
+										<th width="96">Precio</th>
+										<th width="104">Subtotal</th>
 										<th width="48" class="text-center"><i class="bi bi-trash3"></i></th>
 									</tr>
 								</thead>
@@ -613,9 +667,15 @@ $icbperSunat = $_SESSION['phuyu_icbper'] ?? 0;
 											</span>
 										</td>
 										<td class="fw-semibold detalle-producto">
-											<input type="hidden" v-model="dato.codunidad">
 											{{ dato.producto }}
-											<span class="detalle-unidad-mini">{{ dato.unidad && dato.unidad.indexOf('UNIDAD') === 0 ? 'UND' : dato.unidad }}</span>
+										</td>
+										<td>
+											<select class="form-select form-select-sm unidad-select" v-if="dato.unidades && dato.unidades.length>0" v-model="dato.codunidad" v-on:change="phuyu_cambiar_unidad(index,dato)" v-bind:disabled="dato.atendido > 0">
+												<option v-for="unidad in dato.unidades" v-bind:value="unidad.codunidad">
+													{{ unidad.unidad && unidad.unidad.indexOf('UNIDAD') === 0 ? 'UND' : unidad.unidad }}
+												</option>
+											</select>
+											<span class="detalle-unidad-mini" v-if="!dato.unidades || dato.unidades.length==0">{{ dato.unidad && dato.unidad.indexOf('UNIDAD') === 0 ? 'UND' : dato.unidad }}</span>
 										</td>
 										<td>
 											<input type="number" step="0.0001" class="form-control number" v-if="dato.control==1" v-model.number="dato.cantidad" v-on:keyup="phuyu_calcular(dato)" min="0.0001" required>
@@ -767,6 +827,24 @@ $icbperSunat = $_SESSION['phuyu_icbper'] ?? 0;
 										<label class="form-label mt-2">Nro voucher</label>
 										<input type="text" class="form-control phuyu-money-default" id="nrovoucher" v-model.trim="pagos.nrovoucher" autocomplete="off" readonly>
 									</div>
+								</div>
+							</div>
+							<div class="payment-summary mt-3">
+								<div class="payment-summary-item">
+									<span class="payment-summary-label">Total</span>
+									<span class="payment-summary-value">S/. {{ phuyu_resumen_pago().total }}</span>
+								</div>
+								<div class="payment-summary-item">
+									<span class="payment-summary-label">Aplicado</span>
+									<span class="payment-summary-value" v-bind:class="phuyu_resumen_pago().correcto ? 'ok' : 'bad'">S/. {{ phuyu_resumen_pago().aplicado }}</span>
+								</div>
+								<div class="payment-summary-item">
+									<span class="payment-summary-label">Falta</span>
+									<span class="payment-summary-value" v-bind:class="phuyu_resumen_pago().falta > 0 ? 'bad' : 'ok'">S/. {{ phuyu_resumen_pago().falta }}</span>
+								</div>
+								<div class="payment-summary-item">
+									<span class="payment-summary-label">Vuelto</span>
+									<span class="payment-summary-value">S/. {{ phuyu_resumen_pago().vuelto }}</span>
 								</div>
 							</div>
 						</div>

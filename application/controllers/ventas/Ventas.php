@@ -16,6 +16,106 @@ class Ventas extends CI_Controller
         echo json_encode($data);
     }
 
+    private function phuyu_numero($valor)
+    {
+        return is_numeric($valor) ? (float)$valor : null;
+    }
+
+    private function phuyu_validar_totales_venta($request)
+    {
+        if (!is_object($request) || !isset($request->campos) || !isset($request->totales)) {
+            return ['estado' => 0, 'informacion' => 'La venta llegó incompleta. Actualice la pantalla y vuelva a intentar.'];
+        }
+
+        if (!isset($request->detalle) || !is_array($request->detalle) || count($request->detalle) === 0) {
+            return ['estado' => 0, 'informacion' => 'Debe registrar al menos un producto en la venta.'];
+        }
+
+        $totales = (object)[
+            'flete' => isset($request->totales->flete) ? (float)$request->totales->flete : 0,
+            'gastos' => isset($request->totales->gastos) ? (float)$request->totales->gastos : 0,
+            'bruto' => 0,
+            'descuentos' => 0,
+            'descglobal' => isset($request->totales->descglobal) ? (float)$request->totales->descglobal : 0,
+            'valorventa' => 0,
+            'igv' => 0,
+            'isc' => isset($request->totales->isc) ? (float)$request->totales->isc : 0,
+            'icbper' => 0,
+            'subtotal' => 0,
+            'importe' => 0,
+            'interes' => isset($request->totales->interes) ? (float)$request->totales->interes : 0,
+        ];
+
+        foreach ($request->detalle as $index => $item) {
+            $cantidad = $this->phuyu_numero($item->cantidad ?? null);
+            $precio = $this->phuyu_numero($item->precio ?? null);
+            $preciobruto = $this->phuyu_numero($item->preciobruto ?? 0);
+            $descuento = $this->phuyu_numero($item->descuento ?? 0);
+            $valorventa = $this->phuyu_numero($item->valorventa ?? null);
+            $igv = $this->phuyu_numero($item->igv ?? 0);
+            $icbper = $this->phuyu_numero($item->icbper ?? 0);
+            $subtotal = $this->phuyu_numero($item->subtotal ?? null);
+            $afectacion = (int)($item->codafectacionigv ?? 0);
+
+            if ($cantidad === null || $precio === null || $valorventa === null || $subtotal === null || $cantidad <= 0 || $precio < 0 || $subtotal < 0) {
+                return ['estado' => 0, 'informacion' => 'La venta tiene cantidades o importes inválidos en el item ' . ($index + 1) . '.'];
+            }
+
+            $subtotalCalculado = round($cantidad * $precio, 2);
+            if (abs(round($subtotal, 2) - $subtotalCalculado) > 0.05) {
+                return ['estado' => 0, 'informacion' => 'El subtotal del item ' . ($index + 1) . ' no coincide con cantidad por precio.'];
+            }
+
+            if ($afectacion === 10 && abs(round($valorventa + $igv, 2) - round($subtotal, 2)) > 0.05) {
+                return ['estado' => 0, 'informacion' => 'El IGV del item ' . ($index + 1) . ' no coincide con el subtotal.'];
+            }
+
+            $totales->bruto = round($totales->bruto + ($cantidad * (float)$preciobruto), 2);
+            $totales->descuentos = round($totales->descuentos + ($cantidad * (float)$descuento), 2);
+            $totales->valorventa = round($totales->valorventa + round($valorventa, 2), 2);
+            $totales->igv = round($totales->igv + round((float)$igv, 2), 2);
+            $totales->icbper = round($totales->icbper + round((float)$icbper, 2), 2);
+            $totales->subtotal = round($totales->subtotal + round($subtotal, 2), 2);
+        }
+
+        $totales->importe = round($totales->subtotal + $totales->icbper, 2);
+        $importeRequest = $this->phuyu_numero($request->totales->importe ?? null);
+
+        if ($importeRequest === null || $totales->importe <= 0 || abs(round($importeRequest, 2) - $totales->importe) > 0.05) {
+            return ['estado' => 0, 'informacion' => 'El total enviado no coincide con el detalle de la venta. Actualice la pantalla y vuelva a cobrar.'];
+        }
+
+        $request->totales = $totales;
+        return ['estado' => 1, 'request' => $request];
+    }
+
+    private function phuyu_validar_pago_venta($request)
+    {
+        if (!isset($request->campos) || !isset($request->pagos)) {
+            return ['estado' => 0, 'informacion' => 'Los datos de pago llegaron incompletos.'];
+        }
+
+        if ((int)$request->campos->condicionpago !== 1) {
+            return ['estado' => 1];
+        }
+
+        $total = round((float)$request->totales->importe, 2);
+        $efectivo = $this->phuyu_numero($request->pagos->monto_efectivo ?? 0);
+        $tarjeta = $this->phuyu_numero($request->pagos->monto_tarjeta ?? 0);
+        $vuelto = $this->phuyu_numero($request->pagos->vuelto_efectivo ?? 0);
+
+        if ($efectivo === null || $tarjeta === null || $vuelto === null || $efectivo < 0 || $tarjeta < 0 || $vuelto < 0) {
+            return ['estado' => 0, 'informacion' => 'El pago tiene importes inválidos.'];
+        }
+
+        $pagado = round($efectivo + $tarjeta - $vuelto, 2);
+        if (abs($pagado - $total) > 0.05) {
+            return ['estado' => 0, 'informacion' => 'El pago no coincide con el total de la venta. Total: S/. ' . number_format($total, 2, '.', '') . '.'];
+        }
+
+        return ['estado' => 1];
+    }
+
     private function phuyu_whatsapp_secret()
     {
         $secret = getenv('WHATSAPP_SHARE_SECRET');
@@ -1189,6 +1289,19 @@ class Ventas extends CI_Controller
             if (isset($_SESSION['phuyu_codusuario'])) {
                 $this->request = json_decode(file_get_contents('php://input'));
 
+                $validacionTotales = $this->phuyu_validar_totales_venta($this->request);
+                if ((int)$validacionTotales['estado'] !== 1) {
+                    echo json_encode($validacionTotales);
+                    return;
+                }
+                $this->request = $validacionTotales['request'];
+
+                $validacionPago = $this->phuyu_validar_pago_venta($this->request);
+                if ((int)$validacionPago['estado'] !== 1) {
+                    echo json_encode($validacionPago);
+                    return;
+                }
+
                 // REVISAMOS SI EL PEDIDO SIGUE ACTIVO
                 if ($this->request->codpedido != 0) {
                     $info = $this->db->query('select *from kardex.pedidos where codpedido=' . (int)$this->request->codpedido)->result_array();
@@ -1431,6 +1544,19 @@ class Ventas extends CI_Controller
         if ($this->input->is_ajax_request()) {
             if (isset($_SESSION['phuyu_codusuario'])) {
                 $this->request = json_decode(file_get_contents('php://input'));
+
+                $validacionTotales = $this->phuyu_validar_totales_venta($this->request);
+                if ((int)$validacionTotales['estado'] !== 1) {
+                    echo json_encode($validacionTotales);
+                    return;
+                }
+                $this->request = $validacionTotales['request'];
+
+                $validacionPago = $this->phuyu_validar_pago_venta($this->request);
+                if ((int)$validacionPago['estado'] !== 1) {
+                    echo json_encode($validacionPago);
+                    return;
+                }
 
                 // REVISAMOS SI EL PEDIDO SIGUE ACTIVO
                 if ($this->request->codpedido != 0) {
