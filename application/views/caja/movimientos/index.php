@@ -30,11 +30,28 @@
         <!-- RANGO DE FECHAS -->
         <div class="col-sm-6 col-md-2">
           <label class="form-label">Desde</label>
-          <input type="date" class="form-control" v-model="fecha_desde">
+          <input type="date" class="form-control" v-model="fecha_desde" @change="phuyu_buscar">
         </div>
         <div class="col-sm-6 col-md-2">
           <label class="form-label">Hasta</label>
-          <input type="date" class="form-control" v-model="fecha_hasta">
+          <input type="date" class="form-control" v-model="fecha_hasta" @change="phuyu_buscar">
+        </div>
+        <div class="col-sm-6 col-md-2">
+          <label class="form-label">Forma pago</label>
+          <select class="form-select" v-model="codtipopago" @change="phuyu_buscar">
+            <option value="0">Todos</option>
+            <?php foreach ($tipopagos as $tipopago): ?>
+              <option value="<?php echo $tipopago['codtipopago']; ?>"><?php echo $tipopago['descripcion']; ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="col-sm-6 col-md-2">
+          <label class="form-label">Movimiento</label>
+          <select class="form-select" v-model="tipomovimiento" @change="phuyu_buscar">
+            <option value="0">Todos</option>
+            <option value="1">Ingresos</option>
+            <option value="2">Egresos</option>
+          </select>
         </div>
 
         <!-- BOTONES DE ACCIÓN -->
@@ -85,6 +102,7 @@
               <th>Concepto</th>
               <th>Razón Social</th>
               <th>Referencia</th>
+              <th>Forma pago</th>
               <th>Tipo</th>
               <th>Importe (S/)</th>
               <th>Sel.</th>
@@ -97,6 +115,7 @@
               <td>{{ dato.concepto }}</td>
               <td>{{ dato.razonsocial }}</td>
               <td>{{ dato.referencia }}</td>
+              <td class="text-center">{{ dato.tipopago }}</td>
               <td class="text-center">
                 <span class="badge bg-danger" v-if="dato.tipomovimiento == 2">Egreso</span>
                 <span class="badge bg-warning text-dark" v-if="dato.tipomovimiento == 1">Ingreso</span>

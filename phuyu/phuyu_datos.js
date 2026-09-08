@@ -66,6 +66,10 @@ var phuyu_datos = new Vue({
 				phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED","error"); phuyu_sistema.phuyu_finloader("phuyu_formulario");
 			});
 		},
+		phuyu_migrar_stock: function(){
+			phuyu_controller = "almacen/migrarstock";
+			phuyu_sistema.phuyu_modulo();
+		},
 		phuyu_seleccionar: function(registro){
 			this.registro = registro;
 		},

@@ -383,7 +383,7 @@
             <!-- CÓDIGO QR -->
             <?php if ($venta[0]["codcomprobantetipo"] == 10 || $venta[0]["codcomprobantetipo"] == 12): ?>
                 <div class="center">
-                    <img src="<?php echo base_url(); ?>sunat/webphuyu/qrcode.png" style="height:60px; max-width: 100%;">
+                    <img src="<?php echo !empty($qrSrc) ? $qrSrc : base_url().'sunat/webphuyu/qrcode.png'; ?>" style="height:60px; max-width: 100%;">
                 </div>
                 <div class="center text-xs my-1">
                     CONSULTA TU COMPROBANTE EN<br>

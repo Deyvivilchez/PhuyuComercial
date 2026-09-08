@@ -76,37 +76,50 @@
 		</div>
 	</div>
 
-	<div id="modal_resumenes" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+	<div id="modal_resumenes" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="modal_resumenes_titulo" aria-hidden="true">
 		<div class="modal-dialog modal-lg">
 			<div class="modal-content">
-				<div class="modal-header modal-phuyu-titulo">
-					<h4 class="modal-title">Informacion del resumen</h4>
-					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+				<div class="modal-header modal-phuyu-titulo align-items-center">
+					<div>
+						<div class="text-white-50 small text-uppercase fw-semibold">SUNAT</div>
+						<h4 class="modal-title mb-0" id="modal_resumenes_titulo">Información del resumen</h4>
+					</div>
+					<button type="button" class="btn-close btn-close-white" v-on:click="phuyu_cerrarresumen()" aria-label="Cerrar"></button>
 				</div>
 
-				<div class="modal-body" style="height:350px;overflow-y:auto;">
-					<table class="table table-bordered" style="font-size: 11px">
-						<thead>
-							<tr>
-								<th>RAZON SOCIAL</th>
-								<th>COMPROBANTE</th>
-								<th>F.COMPROBANTE</th>
-								<th>F.ANULADO</th>
-								<th width="100px">MOTIVO</th>
-								<th>TOTAL</th>
-							</tr>
-						</thead>
-						<tbody>
-							<tr v-for="dato in resumenes_info">
-								<td>{{dato.cliente}}</td>
-								<td>{{dato.seriecomprobante}} - {{dato.nrocomprobante}}</td>
-								<td>{{dato.fechacomprobante}}</td>
-								<td>{{dato.fechaanulacion}}</td>
-								<td>{{dato.motivobaja}}</td>
-								<td>{{dato.importe}}</td>
-							</tr>
-						</tbody>
-					</table>
+				<div class="modal-body p-0">
+					<div class="table-responsive" style="max-height:420px;overflow-y:auto;">
+						<table class="table table-hover table-striped align-middle mb-0" style="font-size: 11px">
+							<thead class="table-light">
+								<tr>
+									<th>RAZÓN SOCIAL</th>
+									<th>COMPROBANTE</th>
+									<th>F. COMPROBANTE</th>
+									<th>F. ANULADO</th>
+									<th width="140px">MOTIVO</th>
+									<th class="text-end">TOTAL</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr v-for="dato in resumenes_info">
+									<td>{{dato.cliente}}</td>
+									<td><span class="fw-semibold">{{dato.seriecomprobante}} - {{dato.nrocomprobante}}</span></td>
+									<td>{{dato.fechacomprobante}}</td>
+									<td>{{dato.fechaanulacion}}</td>
+									<td>{{dato.motivobaja}}</td>
+									<td class="text-end">{{dato.importe}}</td>
+								</tr>
+								<tr v-if="resumenes_info.length==0">
+									<td colspan="6" class="text-center text-muted py-4">Sin comprobantes en este resumen.</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-light" v-on:click="phuyu_cerrarresumen()">
+						<i class="bi bi-x-lg me-1"></i> Cerrar
+					</button>
 				</div>
 			</div>
 		</div>

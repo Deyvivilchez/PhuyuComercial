@@ -20,6 +20,7 @@ $cliente          = $venta['cliente'] ?? '-';
 $documentoCliente = $venta['documento'] ?? '-';
 $direccionCliente = $venta['direccion'] ?? '-';
 $vendedor         = $empleado['razonsocial'] ?? '-';
+$mesaRestaurante  = trim((string)($mesa_restaurante ?? ''));
 $condicionPago    = ((int)($venta['condicionpago'] ?? 0) === 1)
     ? 'CONTADO'
     : 'CRÉDITO' . (!empty($credito['nrodias']) ? ' · ' . $credito['nrodias'] . ' días' : '');
@@ -425,6 +426,9 @@ table {
                     <div class="doc-row"><strong>Fecha:</strong> <?= texto_doc($fechaEmision) ?></div>
                     <div class="doc-row"><strong>Vence:</strong> <?= texto_doc($fechaVence) ?></div>
                     <div class="doc-row"><strong>Pago:</strong> <?= texto_doc($condicionPago) ?></div>
+                    <?php if ($mesaRestaurante !== ''): ?>
+                    <div class="doc-row"><strong>Mesa:</strong> <?= texto_doc($mesaRestaurante) ?></div>
+                    <?php endif; ?>
                 </div>
             </td>
         </tr>
@@ -473,7 +477,10 @@ table {
                 <?php foreach ($detalle as $item): ?>
                     <tr>
                         <td class="text-center"><?= str_pad((string)($item['item'] ?? 0), 2, '0', STR_PAD_LEFT) ?></td>
-                        <td><?= texto_doc(trim(($item['producto'] ?? '') . ' ' . ($item['descripcion'] ?? ''))) ?></td>
+                        <td><?= texto_doc(trim(
+                            ($item['producto'] ?? '') .
+                            ($mesaRestaurante === '' ? ' ' . ($item['descripcion'] ?? '') : '')
+                        )) ?></td>
                         <td><?= texto_doc($item['unidad'] ?? '-') ?></td>
                         <td class="text-right"><?= numero_doc($item['cantidad'] ?? 0) ?></td>
                         <td class="text-right"><?= numero_doc($item['preciounitario'] ?? 0) ?></td>

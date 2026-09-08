@@ -8,6 +8,7 @@
 
   #phuyu_ventas .phuyu-card-ventas {
     border-radius: 16px;
+    max-width: 100%;
   }
 
   #phuyu_ventas .phuyu-search-box .form-control {
@@ -48,8 +49,9 @@
 
   #phuyu_ventas .phuyu-table-wrapper {
     border-radius: 14px;
-    overflow: hidden;
+    overflow: visible;
     border: 1px solid #eef1f4;
+    max-width: 100%;
   }
 
   #phuyu_ventas .phuyu-table-ventas {
@@ -102,10 +104,59 @@
     white-space: nowrap;
   }
 
+  #phuyu_ventas .phuyu-comprobante-wrap {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  #phuyu_ventas .phuyu-mesa-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border: 1px solid #d8c5ff;
+    border-radius: 999px;
+    background: #f5f0ff;
+    color: #6d28d9;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  #phuyu_ventas .phuyu-mesa-badge i {
+    font-size: 11px;
+  }
+
+  #phuyu_ventas .phuyu-cliente-truncado {
+    display: block;
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   #phuyu_ventas .phuyu-download-btn {
     border-radius: 999px;
     font-weight: 700;
     font-size: 11px;
+  }
+
+  #phuyu_ventas .phuyu-table-wrapper .dropdown {
+    position: static;
+  }
+
+  #phuyu_ventas .phuyu-table-wrapper .dropdown-menu {
+    z-index: 1065;
+  }
+
+  #phuyu_ventas .phuyu-whatsapp-btn {
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 11px;
+    white-space: nowrap;
   }
 
   #phuyu_ventas .form-check-input {
@@ -113,6 +164,14 @@
   }
 
   @media (max-width: 768px) {
+    #phuyu_ventas {
+      overflow-x: hidden;
+    }
+
+    #phuyu_ventas .phuyu-card-ventas .card-body {
+      overflow: hidden;
+    }
+
     #phuyu_ventas #title {
       font-size: 1.6rem !important;
     }
@@ -122,12 +181,30 @@
     }
 
     #phuyu_ventas .phuyu-btn-group .phuyu-btn {
-      flex: 1 1 auto;
+      flex: 1 1 calc(50% - .5rem);
+      min-width: 0;
+      padding-inline: 8px;
+    }
+
+    #phuyu_ventas .phuyu-btn-group .phuyu-btn span {
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     #phuyu_ventas .phuyu-table-ventas tbody td,
     #phuyu_ventas .phuyu-table-ventas thead th {
       font-size: 12px;
+    }
+
+    #phuyu_ventas .phuyu-table-wrapper {
+      overflow-x: auto;
+      overflow-y: hidden;
+      border-radius: 12px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #phuyu_ventas .phuyu-table-ventas {
+      min-width: 980px;
     }
   }
 </style>
@@ -237,13 +314,7 @@
           </div>
         </div>
 
-        <div class="phuyu_cargando text-center py-3" v-if="cargando">
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Cargando...</span>
-          </div>
-        </div>
-
-        <div class="table-responsive phuyu-table-wrapper">
+        <div class="table-responsive phuyu-table-wrapper" v-bind:class="{'overlay-spinner phuyu-table-wrapper-loading': cargando}">
           <table class="table table-hover table-sm align-middle mb-0 phuyu-table-ventas">
             <thead>
               <tr>
@@ -256,6 +327,7 @@
                 <th>Pago</th>
                 <th>E. Sunat</th>
                 <th>Descargar</th>
+                <th>WhatsApp</th>
                 <th width="30px" class="text-center">
                   <i class="bi bi-check2-circle"></i>
                 </th>
@@ -267,9 +339,15 @@
                 <td class="fw-bold text-muted">{{dato.codkardex}}</td>
 
                 <td>
-                  <span class="fw-semibold">
-                    {{dato.abreviatura}}: ({{dato.seriecomprobante}} - {{dato.nrocomprobante}})
-                  </span>
+                  <div class="phuyu-comprobante-wrap">
+                    <span class="fw-semibold">
+                      {{dato.abreviatura}}: ({{dato.seriecomprobante}} - {{dato.nrocomprobante}})
+                    </span>
+                    <span v-if="dato.mesa_restaurante" class="phuyu-mesa-badge" title="Código de mesa">
+                      <i class="bi bi-grid-3x3-gap-fill"></i>
+                      {{dato.mesa_restaurante}}
+                    </span>
+                  </div>
                   <span v-if="dato.referencia" class="badge bg-secondary-subtle text-secondary border border-secondary-subtle mt-1 d-inline-flex align-items-center gap-1">
                     <i class="bi bi-receipt"></i>
                     Pedido: {{dato.referencia}}
@@ -277,7 +355,11 @@
                 </td>
 
                 <td>{{dato.documento}}</td>
-                <td class="fw-semibold text-dark">{{dato.cliente}}</td>
+                <td class="fw-semibold text-dark">
+                  <span class="phuyu-cliente-truncado" :title="phuyu_cliente_nombre(dato)">
+                    {{phuyu_cliente_nombre(dato)}}
+                  </span>
+                </td>
 
                 <td>
                   {{dato.fechacomprobante}}<br>
@@ -337,6 +419,18 @@
                   </div>
                 </td>
 
+                <td>
+                  <button
+                    type="button"
+                    class="btn btn-success btn-sm phuyu-whatsapp-btn"
+                    v-on:click="phuyu_whatsapp_abrir(dato)"
+                    v-bind:disabled="dato.estado==0"
+                  >
+                    <i class="bi bi-whatsapp me-1"></i>
+                    Enviar a WhatsApp
+                  </button>
+                </td>
+
                 <td class="text-center">
                   <input
                     type="radio"
@@ -348,7 +442,7 @@
               </tr>
 
               <tr v-if="datos.length === 0 && !cargando">
-                <td colspan="10" class="text-center text-muted py-5">
+                <td colspan="11" class="text-center text-muted py-5">
                   <i class="bi bi-inbox d-block mb-2" style="font-size: 32px;"></i>
                   No se encontraron ventas
                 </td>
@@ -378,6 +472,87 @@
           </div>
         </div>
 
+        <div id="modal_whatsapp" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+          <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+              <form v-on:submit.prevent="phuyu_whatsapp_enviar">
+                <div class="modal-header">
+                  <h5 class="modal-title mb-0">
+                    <i class="bi bi-whatsapp me-2 text-success"></i>
+                    Enviar a WhatsApp
+                  </h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+
+                <div class="modal-body">
+                  <div v-if="whatsapp.comprobante" class="small text-muted mb-2">
+                    {{whatsapp.comprobante}}
+                  </div>
+
+                  <label class="form-label fw-semibold" for="whatsapp_telefono">Teléfono del cliente</label>
+                  <div class="input-group">
+                    <select
+                      class="form-select"
+                      style="max-width: 112px;"
+                      v-model="whatsapp.codigo"
+                      v-bind:disabled="whatsapp.enviando"
+                    >
+                      <option value="+51">🇵🇪 +51</option>
+                      <option value="+1">🇺🇸 +1</option>
+                      <option value="+57">🇨🇴 +57</option>
+                      <option value="+34">🇪🇸 +34</option>
+                      <option value="+52">🇲🇽 +52</option>
+                      <option value="+54">🇦🇷 +54</option>
+                      <option value="+56">🇨🇱 +56</option>
+                      <option value="+593">🇪🇨 +593</option>
+                      <option value="+591">🇧🇴 +591</option>
+                    </select>
+
+                    <input
+                      type="tel"
+                      class="form-control"
+                      id="whatsapp_telefono"
+                      v-model.trim="whatsapp.telefono"
+                      placeholder="999999999"
+                      autocomplete="tel"
+                      v-bind:disabled="whatsapp.enviando"
+                    >
+                  </div>
+
+                  <div class="mt-3">
+                    <label class="form-label fw-semibold">Forma de envío</label>
+                    <select
+                      class="form-select"
+                      v-model="whatsapp.tipo_envio"
+                      v-bind:disabled="whatsapp.enviando"
+                    >
+                      <option value="pdf">PDF adjunto</option>
+                      <option value="link">Link del comprobante</option>
+                    </select>
+                    <small class="text-muted d-block mt-1">
+                      PDF adjunto envía el archivo. Link envía un acceso temporal al comprobante.
+                    </small>
+                  </div>
+
+                  <div class="invalid-feedback d-block" v-if="whatsapp.error">
+                    {{whatsapp.error}}
+                  </div>
+                </div>
+
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal" v-bind:disabled="whatsapp.enviando">
+                    Cancelar
+                  </button>
+                  <button type="submit" class="btn btn-success btn-sm" v-bind:disabled="whatsapp.enviando">
+                    <span class="spinner-border spinner-border-sm me-1" v-if="whatsapp.enviando"></span>
+                    Enviar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -394,4 +569,4 @@
   }
 </script>
 
-<script src="<?php echo base_url();?>phuyu/phuyu_ventas/index.js"></script>
+<script src="<?php echo base_url();?>phuyu/phuyu_ventas/index.js?v=<?php echo filemtime(FCPATH . 'phuyu/phuyu_ventas/index.js'); ?>"></script>

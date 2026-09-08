@@ -77,7 +77,7 @@
 								<td>{{dato.nrocorrelativo}}</td>
 								<td>{{dato.sucursal}}</td>
 								<td class="text-center">
-									<input type="radio" class="form-check-input" name="phuyu_seleccionar" v-on:click="phuyu_seleccionar(dato.codcomprobantetipo+'-'+dato.seriecomprobante)">
+									<input type="radio" class="form-check-input" name="phuyu_seleccionar" v-on:click="phuyu_seleccionar(dato.codsucursal+'-'+dato.codcomprobantetipo+'-'+dato.seriecomprobante)">
 								</td>
 							</tr>
 							<tr v-if="datos.length==0 && !cargando">

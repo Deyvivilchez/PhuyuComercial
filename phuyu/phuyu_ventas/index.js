@@ -2,7 +2,8 @@ var phuyu_ventas = new Vue({
 	el: "#phuyu_ventas",
 	data: {
 		cargando: true, registro:0, estado:0, buscar: "", formato_impresion: $("#formato").val(), datos: [], fechas:{"filtro":1,"desde":"","hasta":""},
-		paginacion: {"total":0, "actual":1, "ultima":0, "desde":0, "hasta":0}, offset: 3
+		paginacion: {"total":0, "actual":1, "ultima":0, "desde":0, "hasta":0}, offset: 3,
+		whatsapp: {codkardex:0, codigo:'+51', tipo_envio:'link', telefono:"", comprobante:"", enviando:false, error:""}
 	},
 	computed: {
 		phuyu_actual: function(){
@@ -29,6 +30,17 @@ var phuyu_ventas = new Vue({
 		}
 	},
 	methods: {
+		phuyu_cliente_nombre: function(dato){
+			var cliente = String(dato.cliente || "").trim();
+			var documento = String(dato.documento || "").trim();
+
+			if (!documento) {
+				return cliente;
+			}
+
+			var documentoRegex = documento.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+			return cliente.replace(new RegExp("\\s*-\\s*" + documentoRegex + "\\s*$"), "").trim();
+		},
 		phuyu_datos: function(){
 			this.fechas.desde = $("#fecha_desde").val(); this.fechas.hasta = $("#fecha_hasta").val();
 			this.cargando = true; this.registro = 0;
@@ -146,10 +158,10 @@ var phuyu_ventas = new Vue({
 				phuyu_sistema.phuyu_alerta("DEBE SELECCIONAR UNA VENTA", "PARA IMPRIMIR EN EL SISTEMA LA VENTA !!!","error");
 			}else{
 				if ($("#formato").val()=="ticket") {
-					window.open(url+"facturacion/formato/ticket/"+this.registro,"_blank");
+					window.open(url+"facturacion/formato/ticket/"+this.registro,"_blank") || (window.location.href = url+"facturacion/formato/ticket/"+this.registro);
 				}else{
 					var phuyu_url = url+"facturacion/formato/"+$("#formato").val()+"/"+this.registro;
-					window.open(phuyu_url,"_blank");
+					window.open(phuyu_url,"_blank") || (window.location.href = phuyu_url);
 					//$("#phuyu_pdf").attr("src",phuyu_url); $("#modal_reportes").modal("show");
 				}
 				
@@ -161,7 +173,7 @@ var phuyu_ventas = new Vue({
 						var phuyu_url = url+"facturacion/formato/a5/"+this.registro;
 	            		$("#phuyu_pdf").attr("src",phuyu_url); $("#modal_reportes").modal("show");
 					}else{
-						window.open(url+"facturacion/formato/ticket/"+this.registro,"_blank");
+						window.open(url+"facturacion/formato/ticket/"+this.registro,"_blank") || (window.location.href = url+"facturacion/formato/ticket/"+this.registro);
 					}
 				} */
 			}
@@ -221,7 +233,7 @@ var phuyu_ventas = new Vue({
 								phuyu_sistema.phuyu_alerta(data.body.mensaje, "","error");
 							}
 						}, function(){
-							phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED","error");
+							phuyu_sistema.phuyu_alerta("ESTAMOS TENIANDO PROBLEMAS LO SENTIMOS", "ERROR DE RED","error");
 						});
 					}
 				});
@@ -230,7 +242,7 @@ var phuyu_ventas = new Vue({
 		phuyu_docu: function(tipo,codkardex){
 			if(tipo=="pdf"){
 				if ($("#formato").val()=="ticket") {
-					window.open(url+"facturacion/formato/ticket/"+codkardex,"_blank");
+					window.open(url+"facturacion/formato/ticket/"+codkardex,"_blank") || (window.location.href = url+"facturacion/formato/ticket/"+codkardex);
 				}else{
 					var phuyu_url = url+"facturacion/formato/"+$("#formato").val()+"/"+codkardex;
 					$("#phuyu_pdf").attr("src",phuyu_url); $("#modal_reportes").modal("show");
@@ -238,6 +250,95 @@ var phuyu_ventas = new Vue({
 			}else{
 				window.open(url+"facturacion/comprobantes/phuyu_"+tipo+"/"+codkardex,"_blank");
 			}
+		},
+		phuyu_whatsapp_telefono: function(telefono){
+			var texto = (telefono || "").toString().replace(/[\s\-\(\)]/g, "");
+			var digitos = texto.replace(/\D/g, "");
+			var codigos = ['+593', '+591', '+57', '+56', '+54', '+52', '+51', '+34', '+1'];
+
+			if (texto.charAt(0) === '+') {
+				for (var i = 0; i < codigos.length; i++) {
+					if (texto.indexOf(codigos[i]) === 0) {
+						return {
+							codigo: codigos[i],
+							numero: texto.substring(codigos[i].length).replace(/\D/g, "")
+						};
+					}
+				}
+			}
+
+			if (/^51(9\d{8})$/.test(digitos)) {
+				return {codigo: '+51', numero: digitos.substring(2)};
+			}
+
+			return {codigo: '+51', numero: digitos};
+		},
+		phuyu_whatsapp_abrir: function(dato){
+			if (dato.estado==0) {
+				phuyu_sistema.phuyu_alerta("VENTA ANULADA", "NO SE PUEDE ENVIAR POR WHATSAPP", "error");
+				return false;
+			}
+
+			var telefono = this.phuyu_whatsapp_telefono(dato.telefono);
+			this.whatsapp.codkardex = dato.codkardex;
+			this.whatsapp.codigo = telefono.codigo;
+			this.whatsapp.tipo_envio = 'link';
+			this.whatsapp.telefono = telefono.numero;
+			this.whatsapp.comprobante = dato.abreviatura+": "+dato.seriecomprobante+"-"+dato.nrocomprobante;
+			this.whatsapp.error = "";
+			this.whatsapp.enviando = false;
+
+			$("#modal_whatsapp").modal("show");
+			setTimeout(function(){
+				$("#whatsapp_telefono").trigger("focus");
+			}, 250);
+		},
+		phuyu_whatsapp_enviar: function(){
+			this.whatsapp.error = "";
+			var codigo = (this.whatsapp.codigo || '+51').replace(/\D/g, '');
+			var numero = (this.whatsapp.telefono || '').replace(/\D/g, '');
+			var telefono = '+' + codigo + numero;
+
+			if (codigo === '51' && !/^9\d{8}$/.test(numero)) {
+				this.whatsapp.error = "Ingrese un celular peruano válido de 9 dígitos.";
+				return false;
+			}
+
+			if (codigo !== '51' && numero.length < 6) {
+				this.whatsapp.error = "Ingrese un número válido.";
+				return false;
+			}
+
+			this.whatsapp.telefono = telefono;
+
+			this.whatsapp.enviando = true;
+			this.$http.post(url+phuyu_controller+"/enviar_whatsapp", {
+				codkardex: this.whatsapp.codkardex,
+				telefono: telefono,
+				tipo_envio: this.whatsapp.tipo_envio || 'link',
+				formato: this.formato_impresion || $("#formato").val()
+			}).then(function(data){
+				var respuesta = data.body || {};
+				this.whatsapp.enviando = false;
+
+				if (respuesta.estado==1) {
+					$("#modal_whatsapp").modal("hide");
+					phuyu_sistema.phuyu_alerta("ENVIADO A WHATSAPP", respuesta.mensaje || "COMPROBANTE ENVIADO CORRECTAMENTE", "success");
+				}else if(respuesta.estado==2){
+					if (data.body && data.body.url) {
+						window.open(data.body.url, "_blank");
+					}
+					$("#modal_whatsapp").modal("hide");
+					phuyu_sistema.phuyu_alerta("WHATSAPP ABIERTO", respuesta.mensaje || "MENSAJE LISTO PARA ENVIAR", "success");
+				}else{
+					this.whatsapp.error = respuesta.mensaje || "No se pudo enviar el comprobante por WhatsApp.";
+					phuyu_sistema.phuyu_alerta("NO SE PUDO ENVIAR", this.whatsapp.error, "error");
+				}
+			}, function(){
+				this.whatsapp.enviando = false;
+				this.whatsapp.error = "Error de red al intentar enviar por WhatsApp.";
+				phuyu_sistema.phuyu_alerta("ERROR DE RED", this.whatsapp.error, "error");
+			});
 		},
 		phuyu_clonar: function(){
 			if (this.registro==0) {

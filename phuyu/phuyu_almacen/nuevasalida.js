@@ -5,7 +5,9 @@ var phuyu_operacion = new Vue({
 			"codkardex_ref":0,"codmovimientotipo":"","codpersona":1,"cliente":$("#codpersona option:selected").text(),"codcomprobantetipo":"","seriecomprobante":"","codalmacen_ref":"",
 			"codcomprobantetipo_ref":0,"seriecomprobante_ref":"","nrocomprobante_ref":"","descripcion":"","fechakardex":""
 		},
-		estado:0, igvsunat:$("#igvsunat").val(), detalle: [],detalle_prestamo: [],putunidades : [], totales: {"valorventa":0.00,"igv":0.00,"importe":0.00},
+		estado:0, igvsunat:$("#igvsunat").val(), stockalmacen: $("#stockalmacen").val(), detalle: [],detalle_prestamo: [],putunidades : [], totales: {"valorventa":0.00,"igv":0.00,"importe":0.00},
+		producto_rapido_procesando: false,
+		producto_rapido_feedback_timer: null,
 	},
 	methods: {
 		phuyu_infocliente: function(){
@@ -97,6 +99,280 @@ var phuyu_operacion = new Vue({
 				phuyu_sistema.phuyu_modulo();
 			});
 		},
+		phuyu_escape_producto_rapido: function(texto) {
+			return String(texto || "")
+				.replace(/&/g, "&amp;")
+				.replace(/</g, "&lt;")
+				.replace(/>/g, "&gt;")
+				.replace(/"/g, "&quot;")
+				.replace(/'/g, "&#039;");
+		},
+		phuyu_producto_rapido_match_exacto: function(producto, texto) {
+			var termino = String(texto || "").trim().toUpperCase();
+			return termino != "" && String(producto.codigo || "").trim().toUpperCase() === termino;
+		},
+		phuyu_formato_producto_rapido: function(resultado) {
+			if (resultado.loading) {
+				return resultado.text;
+			}
+
+			var producto = resultado.producto || resultado;
+			var serie = parseInt(producto.controlarseries) === 1 ? " · Serie" : "";
+			return '' +
+				'<div class="phuyu-product-result">' +
+					'<div>' +
+						'<div class="phuyu-product-result-name">' + this.phuyu_escape_producto_rapido(producto.descripcion) + '</div>' +
+						'<div class="phuyu-product-result-meta">' + this.phuyu_escape_producto_rapido(producto.codigo) + ' · Stock ' + this.phuyu_escape_producto_rapido(producto.stock) + serie + '</div>' +
+					'</div>' +
+					'<div class="phuyu-product-result-price">S/. ' + this.phuyu_escape_producto_rapido(producto.precio) + '</div>' +
+				'</div>';
+		},
+		phuyu_inicializar_producto_rapido_select: function() {
+			var vm = this;
+			var $select = $("#producto_rapido_select");
+			if (!$select.length || typeof $select.select2 !== "function") {
+				return;
+			}
+
+			if ($select.data("select2")) {
+				$select.select2("destroy");
+			}
+
+			$select.select2({
+				ajax: {
+					url: url + "almacen/productos/buscar_salidas",
+					type: "POST",
+					dataType: "json",
+					contentType: "application/json",
+					processData: false,
+					delay: 120,
+					data: function(params) {
+						return JSON.stringify({
+							buscar: params.term || "",
+							pagina: params.page || 1
+						});
+					},
+					processResults: function(data, params) {
+						params.page = params.page || 1;
+						var termino = String(params.term || "").trim().toUpperCase();
+						var lista = data.lista || [];
+
+						lista.sort(function(a, b) {
+							var aExacto = vm.phuyu_producto_rapido_match_exacto(a, termino) ? 0 : 1;
+							var bExacto = vm.phuyu_producto_rapido_match_exacto(b, termino) ? 0 : 1;
+							return aExacto - bExacto;
+						});
+
+						return {
+							results: lista.map(function(producto) {
+								return {
+									id: producto.codproducto + "-" + producto.codunidad,
+									text: producto.descripcion,
+									producto: producto
+								};
+							}),
+							pagination: {
+								more: data.paginacion && params.page < data.paginacion.ultima
+							}
+						};
+					},
+					cache: false
+				},
+				placeholder: "Escribir producto o codigo...",
+				minimumInputLength: 1,
+				width: "100%",
+				dropdownParent: $("#phuyu_operacion"),
+				language: {
+					inputTooShort: function() { return "Escriba al menos 1 caracter"; },
+					searching: function() { return "Buscando productos..."; },
+					noResults: function() { return "No se encontraron productos"; },
+					loadingMore: function() { return "Cargando mas productos..."; }
+				},
+				escapeMarkup: function(markup) {
+					return markup;
+				},
+				templateResult: function(resultado) {
+					return vm.phuyu_formato_producto_rapido(resultado);
+				},
+				templateSelection: function(resultado) {
+					return resultado.text || "Buscar producto";
+				}
+			});
+
+			$select.next(".select2-container").addClass("phuyu-product-select2");
+			$select.off("select2:open.phuyuRapido").on("select2:open.phuyuRapido", function() {
+				window.setTimeout(function() {
+					var $search = $(".select2-container--open .select2-search__field");
+					$search.off("keydown.phuyuRapido").on("keydown.phuyuRapido", function(evento) {
+						var tecla = evento.which || evento.keyCode;
+						if (tecla != 13) {
+							return;
+						}
+
+						var termino = String($(this).val() || "").trim();
+						var hayResultados = $(".select2-container--open .select2-results__option[aria-selected]").length > 0;
+						if (termino != "" && !hayResultados) {
+							evento.preventDefault();
+							evento.stopPropagation();
+							vm.phuyu_buscar_agregar_producto_rapido(termino);
+						}
+					});
+				}, 0);
+			});
+			$select.off("select2:select.phuyuRapido").on("select2:select.phuyuRapido", function(evento) {
+				var producto = evento.params.data.producto;
+				if (!producto) {
+					return;
+				}
+
+				$select.val(null).trigger("change");
+				if (parseInt(producto.controlarseries) === 1) {
+					phuyu_sistema.phuyu_noti("SELECCIONAR SERIE", "Use el boton Productos para elegir la serie del producto", "info");
+					return;
+				}
+
+				vm.phuyu_additem(producto, producto.precio);
+			});
+		},
+		phuyu_enfocar_producto_rapido: function(texto) {
+			this.$nextTick(function() {
+				var $select = $("#producto_rapido_select");
+				if (!$select.length || !$select.data("select2")) {
+					return;
+				}
+
+				$select.val(null).trigger("change");
+				$select.select2("open");
+				window.setTimeout(function() {
+					var $search = $(".select2-container--open .select2-search__field");
+					if (texto) {
+						$search.val(texto).trigger("input");
+					}
+					$search.focus();
+				}, 30);
+			});
+		},
+		phuyu_buscar_agregar_producto_rapido: function(texto) {
+			var termino = String(texto || "").trim();
+			if (termino == "" || this.producto_rapido_procesando) {
+				return false;
+			}
+
+			this.producto_rapido_procesando = true;
+			this.$http.get(url + "almacen/productos/buscar_codigobarra/" + encodeURIComponent(termino)).then(function(data) {
+				if (data.body.cantidad == 1) {
+					var producto = data.body.info[0];
+					producto.precio = data.body.precio;
+					$("#producto_rapido_select").select2("close");
+					this.phuyu_agregar_producto_rapido(producto);
+					this.producto_rapido_procesando = false;
+					return;
+				}
+
+				this.phuyu_buscar_agregar_producto_rapido_lista(termino);
+			}, function() {
+				this.phuyu_buscar_agregar_producto_rapido_lista(termino);
+			});
+		},
+		phuyu_buscar_agregar_producto_rapido_lista: function(termino) {
+			this.$http.post(url + "almacen/productos/buscar_salidas", {
+				buscar: termino,
+				pagina: 1
+			}).then(function(data) {
+				var lista = data.body.lista || [];
+				var exactos = lista.filter(function(producto) {
+					return this.phuyu_producto_rapido_match_exacto(producto, termino);
+				}, this);
+				var producto = null;
+
+				if (exactos.length == 1) {
+					producto = exactos[0];
+				} else if (lista.length == 1) {
+					producto = lista[0];
+				}
+
+				if (producto) {
+					$("#producto_rapido_select").select2("close");
+					this.phuyu_agregar_producto_rapido(producto);
+					this.producto_rapido_procesando = false;
+					return;
+				}
+
+				if (lista.length == 0) {
+					phuyu_sistema.phuyu_noti("PRODUCTO NO ENCONTRADO", "Revise el codigo o nombre ingresado", "warning");
+				} else {
+					phuyu_sistema.phuyu_noti("SE ENCONTRARON VARIOS PRODUCTOS", "Seleccione uno de la lista", "info");
+				}
+				this.phuyu_enfocar_producto_rapido(termino);
+				this.producto_rapido_procesando = false;
+			}, function() {
+				phuyu_sistema.phuyu_error();
+				this.phuyu_enfocar_producto_rapido(termino);
+				this.producto_rapido_procesando = false;
+			});
+		},
+		phuyu_agregar_producto_rapido: function(producto) {
+			if (parseInt(producto.controlarseries) === 1) {
+				phuyu_sistema.phuyu_noti("SELECCIONAR SERIE", "Use el boton Productos para elegir la serie del producto", "info");
+				return false;
+			}
+
+			this.phuyu_additem(producto, producto.precio);
+			$("#producto_rapido_select").val(null).trigger("change");
+		},
+		phuyu_controla_stock_producto: function(producto) {
+			return parseInt(this.stockalmacen || 0) === 1 && parseInt(producto.controlstock || producto.control || 0) === 1;
+		},
+		phuyu_stock_disponible_producto: function(producto) {
+			var stock = parseFloat(producto.stock);
+			return isNaN(stock) ? 0 : stock;
+		},
+		phuyu_cantidad_actual_producto: function(producto) {
+			var total = 0;
+			(this.detalle || []).forEach(function(item) {
+				if (item.codproducto == producto.codproducto && item.codunidad == producto.codunidad) {
+					total += parseFloat(item.cantidad || 0);
+				}
+			});
+			return total;
+		},
+		phuyu_validar_stock_para_agregar: function(producto, cantidadAgregar) {
+			if (!this.phuyu_controla_stock_producto(producto)) {
+				return true;
+			}
+
+			var stock = this.phuyu_stock_disponible_producto(producto);
+			var cantidadActual = this.phuyu_cantidad_actual_producto(producto);
+			var cantidadNueva = cantidadActual + parseFloat(cantidadAgregar || 1);
+
+			if (stock <= 0 || cantidadNueva > stock) {
+				phuyu_sistema.phuyu_noti(
+					"STOCK INSUFICIENTE",
+					producto.descripcion + " tiene stock " + stock + ". No se puede agregar a la salida.",
+					"warning"
+				);
+				return false;
+			}
+
+			return true;
+		},
+		phuyu_preparar_unidad_base_producto: function(producto) {
+			if (producto.codunidad || !producto.unidades) {
+				return;
+			}
+
+			var unidades = (producto.unidades || "").split(";");
+			for (var i = 0; i < unidades.length; i++) {
+				var factores = (unidades[i] || "").split("|");
+				if (factores[8] == 1) {
+					producto.codunidad = factores[0];
+					producto.unidad = factores[1];
+					producto.afectacionigv = factores[14];
+					producto.factor = factores[8];
+					return;
+				}
+			}
+		},
 		phuyu_additem_originalsalidas: function(producto){
 
 			var existeproducto = this.detalle.filter(function(p){
@@ -156,13 +432,26 @@ var phuyu_operacion = new Vue({
 		},
 		phuyu_additem: function(producto,precio){
 			 console.log("producto desde salida almacen:", producto);	
+			this.phuyu_preparar_unidad_base_producto(producto);
+
+			if (!this.phuyu_validar_stock_para_agregar(producto, 1)) {
+				return false;
+			}
+
 			var existe_item = [];
 			if ($("#itemrepetir").val()==0) {
 				var existe_item = this.detalle.filter(function(p){
 				    if(p.codproducto == producto.codproducto && p.codunidad == producto.codunidad ){
-				    	p.cantidad = p.cantidad + 1; return p;
-				    };
+				    	return p;
+				    }
 				});
+			}
+
+			if (existe_item.length > 0 && $("#itemrepetir").val()==0) {
+				existe_item[0].cantidad = Number(existe_item[0].cantidad || 0) + 1;
+				this.phuyu_feedback_producto_rapido("Cantidad actualizada: " + existe_item[0].producto);
+				this.phuyu_calcular(existe_item[0]);
+				return;
 			}
 
 		    if (existe_item.length==0 || $("#itemrepetir").val()==1) {
@@ -258,13 +547,7 @@ var phuyu_operacion = new Vue({
     				serie_seleccionada: producto.controlarseries == 1 ? producto.serie_seleccionada : null,
 				});
 				console.log("detalle despues de agregar producto:", this.detalle);
-				swal({
-					title: "✓ PRODUCTO AGREGADO", 
-					text: producto.descripcion + " se agregó correctamente a la lista", 
-					icon: "success",
-					button: false,
-					timer: 1000
-				});
+				this.phuyu_feedback_producto_rapido("Agregado: " + producto.descripcion);
 				
 			//	this.phuyu_totales();
 				this.phuyu_calcular(producto,1);
@@ -272,6 +555,17 @@ var phuyu_operacion = new Vue({
 		    }else{
 		    	this.phuyu_calcular(existe_item[0]);
 		    }
+		},
+		phuyu_feedback_producto_rapido: function(mensaje) {
+			window.clearTimeout(this.producto_rapido_feedback_timer);
+			var $feedback = $("#phuyu_producto_feedback");
+			if ($feedback.length) {
+				$feedback.find("span").text(mensaje);
+				$feedback.stop(true, true).fadeIn(120);
+			}
+			this.producto_rapido_feedback_timer = window.setTimeout(function() {
+				$("#phuyu_producto_feedback").fadeOut(180);
+			}, 1400);
 		},
 		informacion_unidad: function(index,producto,val){
 			var codunidad = this.detalle[index].codunidad;
@@ -470,5 +764,8 @@ var phuyu_operacion = new Vue({
 		}else{
 			phuyu_sistema.phuyu_fin(); 
 		}
+		this.$nextTick(function(){
+			this.phuyu_inicializar_producto_rapido_select();
+		});
 	}
 });

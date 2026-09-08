@@ -30,7 +30,9 @@ class Backup extends CI_Controller {
         }
 
         $database = $this->db->database;
-        $archivo = "phuyu-backup-" . $this->nombre_archivo_seguro($database) . "-" . date("Ymd-His") . ".backup";
+        $tipo_backup = $this->tipo_backup_solicitado();
+        $extension = $tipo_backup === "sql" ? "sql" : "backup";
+        $archivo = "phuyu-backup-" . $this->nombre_archivo_seguro($database) . "-" . date("Ymd-His") . "." . $extension;
         $temporal = $this->crear_archivo_temporal_backup();
 
         if ($temporal === false) {
@@ -38,12 +40,23 @@ class Backup extends CI_Controller {
             return;
         }
 
-        $comando = $this->comando_pg_dump($pg_dump, $temporal, $database);
+        $comando = $this->comando_pg_dump($pg_dump, $temporal, $database, $tipo_backup);
+
+        $salida_temporal = $this->crear_archivo_temporal_backup();
+        $error_temporal = $this->crear_archivo_temporal_backup();
+
+        if ($salida_temporal === false || $error_temporal === false) {
+            @unlink($temporal);
+            @unlink($salida_temporal);
+            @unlink($error_temporal);
+            $this->responder_error_backup("No se pudo preparar el registro temporal del backup.");
+            return;
+        }
 
         $descriptor = array(
             0 => array("pipe", "r"),
-            1 => array("pipe", "w"),
-            2 => array("pipe", "w")
+            1 => array("file", $salida_temporal, "w"),
+            2 => array("file", $error_temporal, "w")
         );
 
         $entorno = $_ENV;
@@ -53,17 +66,18 @@ class Backup extends CI_Controller {
         $proceso = proc_open($comando, $descriptor, $pipes, null, $entorno);
         if (!is_resource($proceso)) {
             @unlink($temporal);
+            @unlink($salida_temporal);
+            @unlink($error_temporal);
             $this->responder_error_backup("No se pudo iniciar el proceso de backup.");
             return;
         }
 
         fclose($pipes[0]);
-        $salida = stream_get_contents($pipes[1]);
-        $error = stream_get_contents($pipes[2]);
-        fclose($pipes[1]);
-        fclose($pipes[2]);
-
         $codigo = proc_close($proceso);
+        $salida = file_exists($salida_temporal) ? (string) file_get_contents($salida_temporal) : "";
+        $error = file_exists($error_temporal) ? (string) file_get_contents($error_temporal) : "";
+        @unlink($salida_temporal);
+        @unlink($error_temporal);
 
         if ($codigo !== 0 || !file_exists($temporal) || filesize($temporal) === 0) {
             @unlink($temporal);
@@ -75,7 +89,7 @@ class Backup extends CI_Controller {
         $this->limpiar_buffers_salida();
 
         header("Content-Description: File Transfer");
-        header("Content-Type: application/octet-stream");
+        header("Content-Type: " . ($tipo_backup === "sql" ? "application/sql; charset=utf-8" : "application/octet-stream"));
         header("Content-Disposition: attachment; filename=\"" . $archivo . "\"");
         header("Content-Transfer-Encoding: binary");
         header("Content-Length: " . filesize($temporal));
@@ -148,7 +162,20 @@ class Backup extends CI_Controller {
         return "";
     }
 
-    private function comando_pg_dump($pg_dump, $temporal, $database) {
+    private function tipo_backup_solicitado() {
+        $tipo = $this->input->post("tipo");
+        if ($tipo === null || $tipo === "") {
+            $request = json_decode(file_get_contents("php://input"));
+            if (isset($request->tipo)) {
+                $tipo = $request->tipo;
+            }
+        }
+
+        $tipo = strtolower(trim((string) $tipo));
+        return $tipo === "sql" ? "sql" : "backup";
+    }
+
+    private function comando_pg_dump($pg_dump, $temporal, $database, $tipo_backup = "backup") {
         $partes = array(escapeshellarg($pg_dump));
 
         if (!empty($this->db->hostname)) {
@@ -163,9 +190,14 @@ class Backup extends CI_Controller {
             $partes[] = "--username " . escapeshellarg($this->db->username);
         }
 
-        $partes[] = "--format custom";
+        if ($tipo_backup === "sql") {
+            $partes[] = "--format plain";
+            $partes[] = "--encoding UTF8";
+        } else {
+            $partes[] = "--format custom";
+        }
+
         $partes[] = "--blobs";
-        $partes[] = "--verbose";
         $partes[] = "--no-owner";
         $partes[] = "--no-acl";
         $partes[] = "--no-password";

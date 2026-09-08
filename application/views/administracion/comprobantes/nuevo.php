@@ -1,13 +1,14 @@
 <?php include("application/views/phuyu/phuyu_velzon_module.php");?>
 
 <div id="phuyu_form" class="phuyu-velzon-form">
-	<form id="formulario" v-on:submit.prevent="phuyu_guardar()">
+	<form id="formulario" v-on:submit.prevent="phuyu_guardar()" novalidate>
 		<input type="hidden" name="codregistro" v-model="campos.codregistro">
 		<input type="hidden" v-model="campos.seriecomprobante_editar" name="seriecomprobante_editar">
 		<input type="hidden" v-model="campos.codsucursal_editar" name="codsucursal_editar">
 		<input type="hidden" v-model="campos.codcomprobantetipo_editar" name="codcomprobantetipo_editar">
 		<input type="hidden" v-model="campos.logo" name="logo">
 		<input type="hidden" v-model="campos.logoauspiciador" name="logoauspiciador">
+		<input type="hidden" v-model="campos.impresion" name="impresion">
 
 		<div class="card phuyu-card">
 			<div class="card-body">
@@ -22,7 +23,7 @@
 				<div class="row g-3">
 					<div class="col-12">
 						<label class="form-label">Seleccionar sucursal</label>
-						<select class="form-select" id="codsucursal" v-model="campos.codsucursal" name="codsucursal" required v-on:change="phuyu_tipocomprobante()">
+						<select class="form-select" id="codsucursal" v-model="campos.codsucursal" name="codsucursal" required v-on:change="phuyu_tipocomprobante()" v-bind:disabled="campos.codregistro!='' && editable_identidad==0">
 							<option value="">SELECCIONE</option>
 							<?php foreach ($sucursales as $key => $value) { ?>
 								<option value="<?php echo $value["codsucursal"];?>"><?php echo $value["descripcion"];?></option>
@@ -32,7 +33,7 @@
 
 					<div class="col-12">
 						<label class="form-label">Tipo comprobante</label>
-						<select class="form-select" id="codcomprobantetipo" v-model="campos.codcomprobantetipo" required v-on:change="phuyu_tipocomprobante()" name="codcomprobantetipo">
+						<select class="form-select" id="codcomprobantetipo" v-model="campos.codcomprobantetipo" required v-on:change="phuyu_tipocomprobante()" name="codcomprobantetipo" v-bind:disabled="campos.codregistro!='' && editable_identidad==0">
 							<option value="">SELECCIONE</option>
 							<?php foreach ($tipos as $key => $value) { ?>
 								<option value="<?php echo $value["codcomprobantetipo"];?>"><?php echo $value["descripcion"];?></option>
@@ -42,7 +43,7 @@
 
 					<div class="col-12" v-if="caja">
 						<label class="form-label">Seleccione caja</label>
-						<select class="form-select" name="codcaja" v-model="campos.codcaja" id="codcaja" required v-on:change="phuyu_caja()">
+						<select class="form-select" name="codcaja" v-model="campos.codcaja" id="codcaja" required v-on:change="phuyu_caja()" v-bind:disabled="campos.codregistro!='' && editable_identidad==0">
 							<option value="">SELECCIONE</option>
 						</select>
 						<div class="alert alert-danger mt-2 mb-0" v-if="caja_alerta">
@@ -52,7 +53,7 @@
 
 					<div class="col-12" v-if="almacen">
 						<label class="form-label">Seleccione almacen</label>
-						<select class="form-select" name="codalmacen" v-model="campos.codalmacen" id="codalmacen" required v-on:change="phuyu_almacen()">
+						<select class="form-select" name="codalmacen" v-model="campos.codalmacen" id="codalmacen" required v-on:change="phuyu_almacen()" v-bind:disabled="campos.codregistro!='' && editable_identidad==0">
 							<option value="">SELECCIONE</option>
 						</select>
 						<div class="alert alert-danger mt-2 mb-0" v-if="almacen_alerta">
@@ -62,7 +63,7 @@
 
 					<div class="col-12" v-if="nota">
 						<label class="form-label">Comprobante y serie referencia</label>
-						<select class="form-select" name="codcomprobantetipo_ref" v-model="campos.codcomprobantetipo_ref" id="codcomprobantetipo_ref" required v-on:change="phuyu_notas()">
+						<select class="form-select" name="codcomprobantetipo_ref" v-model="campos.codcomprobantetipo_ref" id="codcomprobantetipo_ref" required v-on:change="phuyu_notas()" v-bind:disabled="campos.codregistro!='' && editable_identidad==0">
 							<option value="">SELECCIONE</option>
 						</select>
 						<div class="alert alert-danger mt-2 mb-0" v-if="nota_alerta">
@@ -72,7 +73,7 @@
 
 					<div class="col-12 col-md-4">
 						<label class="form-label">Serie</label>
-						<input type="text" id="seriecomprobante" v-model.trim="campos.seriecomprobante" class="form-control text-uppercase" required autocomplete="off" minlength="4" maxlength="4" name="seriecomprobante">
+						<input type="text" id="seriecomprobante" v-model.trim="campos.seriecomprobante" class="form-control text-uppercase" required autocomplete="off" minlength="4" maxlength="4" name="seriecomprobante" v-bind:disabled="campos.codregistro!='' && editable_identidad==0">
 					</div>
 
 					<div class="col-12 col-md-4">
@@ -98,7 +99,7 @@
 					<div class="row g-3">
 						<div class="col-12 col-md-6">
 							<label class="form-label">Formato</label>
-							<select v-model="campos.formato" class="form-select" required>
+							<select v-model="campos.formato" class="form-select" name="formato" required>
 								<option value="a4">A4</option>
 								<option value="a5">A5</option>
 								<option value="ticket">TICKET</option>
@@ -107,7 +108,7 @@
 
 						<div class="col-12 col-md-6">
 							<label class="form-label">Orientacion</label>
-							<select v-model="campos.orientacion" class="form-select" required>
+							<select v-model="campos.orientacion" class="form-select" name="orientacion" required>
 								<option value="h">HORIZONTAL</option>
 								<option value="p">VERTICAL</option>
 							</select>

@@ -44,6 +44,7 @@
 					<button type="button" class="btn btn-success" v-on:click="phuyu_nuevo()"> <i class="bi bi-plus-lg me-1"></i> Nuevo </button>
 					<button type="button" class="btn btn-info" v-on:click="phuyu_ver()"> <i class="bi bi-eye me-1"></i> Ver </button>
 					<button type="button" class="btn btn-warning" v-on:click="phuyu_editar()"> <i class="bi bi-pencil-square me-1"></i> Editar </button>
+					<button type="button" class="btn btn-primary" v-on:click="phuyu_migrar_stock()"> <i class="bi bi-file-earmark-spreadsheet me-1"></i> Migrar/Actualizar Stock </button>
 					<button type="button" class="btn btn-danger" v-on:click="phuyu_eliminar()"> <i class="bi bi-trash me-1"></i> Eliminar </button>
 				</div>
 			</div>

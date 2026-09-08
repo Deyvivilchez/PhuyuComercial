@@ -1,6 +1,6 @@
 var phuyu_form = new Vue({
 	el: "#phuyu_form",
-	data: {estado: 0, campos: campos, caja:false, caja_alerta:false, almacen:false,almacen_alerta:false, nota:false,nota_alerta:false},
+	data: {estado: 0, campos: campos, caja:false, caja_alerta:false, almacen:false,almacen_alerta:false, nota:false,nota_alerta:false, editable_identidad:1},
 	methods: {
 		phuyu_tipocomprobante : function(){
 			if(this.campos.codcomprobantetipo>=1 && this.campos.codcomprobantetipo<=2){
@@ -81,18 +81,38 @@ var phuyu_form = new Vue({
 		phuyu_editarcomprobante: function(){
 			this.campos.codsucursal_editar = this.campos.codsucursal;
 			this.campos.codcomprobantetipo_editar = this.campos.codcomprobantetipo;
+			this.campos.seriecomprobante_editar = this.campos.seriecomprobante;
 			$("#codsucursal").attr("disabled","true"); $("#codcomprobantetipo").attr("disabled","true");
-			$("#seriecomprobante").attr("disabled","true");
+			$("#codcaja").attr("disabled","true"); $("#codalmacen").attr("disabled","true");
+			$("#codcomprobantetipo_ref").attr("disabled","true"); $("#seriecomprobante").attr("disabled","true");
 
 			this.$http.get(url+phuyu_controller+"/validar_serie/"+phuyu_datos.registro).then(function(data){
 				this.campos.seriecomprobante_editar = data.body.serie;
-				if (data.body.estado==0) {
-					$("#seriecomprobante").removeAttr("disabled");
+				this.editable_identidad = parseInt(data.body.editable_identidad);
+				this.phuyu_tipocomprobante();
+				if (data.body.editable_identidad==1) {
+					$("#codsucursal").removeAttr("disabled"); $("#codcomprobantetipo").removeAttr("disabled");
+					$("#codcaja").removeAttr("disabled"); $("#codalmacen").removeAttr("disabled");
+					$("#codcomprobantetipo_ref").removeAttr("disabled"); $("#seriecomprobante").removeAttr("disabled");
 				}
 			});
 		},
 		phuyu_guardar: function(){
+			if (this.campos.codsucursal=="" || this.campos.codcomprobantetipo=="" || this.campos.seriecomprobante=="" || this.campos.nroinicial==="" || this.campos.nrocorrelativo==="") {
+				phuyu_sistema.phuyu_alerta("DATOS INCOMPLETOS", "VERIFIQUE SUCURSAL, TIPO, SERIE Y CORRELATIVOS","error");
+				return;
+			}
+
 			this.estado= 1;const formulario = new FormData($("#formulario")[0]);
+			formulario.set("codsucursal", this.campos.codsucursal);
+			formulario.set("codcomprobantetipo", this.campos.codcomprobantetipo);
+			formulario.set("seriecomprobante", this.campos.seriecomprobante);
+			formulario.set("codsucursal_editar", this.campos.codsucursal_editar);
+			formulario.set("codcomprobantetipo_editar", this.campos.codcomprobantetipo_editar);
+			formulario.set("seriecomprobante_editar", this.campos.seriecomprobante_editar);
+			formulario.set("codcaja", this.campos.codcaja || 0);
+			formulario.set("codalmacen", this.campos.codalmacen || 0);
+			formulario.set("codcomprobantetipo_ref", this.campos.codcomprobantetipo_ref || 0);
 			this.$http.post(url+phuyu_controller+"/guardar", formulario).then(function(data){
 				if (data.body==1) {
 					if (this.campos.codregistro=="") {
@@ -100,10 +120,16 @@ var phuyu_form = new Vue({
 					}else{
 						phuyu_sistema.phuyu_alerta("EDITADO CORRECTAMENTE", "UN REGISTRO EDITADO EN EL SISTEMA","info");
 					}
+				}else if(data.body==2){
+					phuyu_sistema.phuyu_alerta("SERIE YA REGISTRADA", "EL SISTEMA YA TIENE REGISTRADO ESTE TIPO DOCUMENTO CON ESTA SERIE","error");
+					this.estado= 0;
 				}else{
 					phuyu_sistema.phuyu_alerta("OCURRIO UN ERROR AL REGISTRAR", "NO SE PUEDE REGISTRAR","error");
+					this.estado= 0;
 				}
-				phuyu_datos.phuyu_opcion(); this.phuyu_cerrar();
+				if (data.body==1) {
+					phuyu_datos.phuyu_opcion(); this.phuyu_cerrar();
+				}
 			}, function(){
 				phuyu_sistema.phuyu_alerta("OCURRIO UN ERROR AL REGISTRAR", "EL SISTEMA YA TIENE REGISTRADO ESTE TIPO DOCUMENTO CON ESTA SERIE","error");
 				this.estado= 0;

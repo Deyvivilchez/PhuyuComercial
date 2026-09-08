@@ -241,6 +241,16 @@ class Nuevaventa extends CI_Controller {
 					}
 				}
 
+				$serie_comprobante = strtoupper(trim($this->request->campos->seriecomprobante));
+				if (
+					($this->request->campos->codcomprobantetipo == 10 && substr($serie_comprobante, 0, 1) != "F") ||
+					($this->request->campos->codcomprobantetipo == 12 && substr($serie_comprobante, 0, 1) != "B")
+				) {
+					$data["estado"] = 0;
+					$data["informacion"] = "LA SERIE NO CORRESPONDE AL TIPO DE COMPROBANTE";
+					echo json_encode($data);exit;
+				}
+
 				$this->request->campos->codlote = (!isset($this->request->campos->codlote) || empty($this->request->campos->codlote)) ? 0 : $this->request->campos->codlote;
 
 				$this->db->trans_begin();

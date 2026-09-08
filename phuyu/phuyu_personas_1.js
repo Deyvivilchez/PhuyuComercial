@@ -25,6 +25,13 @@ var phuyu_form = new Vue({
 						phuyu_creditos.phuyu_datos();
 					}
 					var socio = eval(data.body);
+					if(typeof phuyu_hotel_reservas !== "undefined"){
+						phuyu_hotel_reservas.seleccionar_cliente({
+							codpersona: socio[0]["codpersona"],
+							razonsocial: socio[0]["razonsocial"],
+							documento: socio[0]["documento"] || ""
+						});
+					}
 					if(phuyu_controller=="ventas/ventas" || phuyu_controller=="ventas/pedidos" || phuyu_controller=="ventas/proformas" || phuyu_controller=="compras/compras"){ 
 						if($("#acv").is(':checked')){
 							$("#acv").click();

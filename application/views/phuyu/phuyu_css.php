@@ -124,6 +124,109 @@
             transition: height 0.2s ease;
         }
 
+        .app-menu {
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-menu #scrollbar {
+            height: calc(100vh - 70px);
+            max-height: calc(100vh - 70px);
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scrollbar-color: transparent transparent;
+            transition: scrollbar-color .2s ease;
+        }
+
+        .app-menu:hover #scrollbar,
+        .app-menu #scrollbar:focus-within {
+            scrollbar-color: rgba(255, 255, 255, .34) transparent;
+        }
+
+        .app-menu #scrollbar .container-fluid {
+            padding-bottom: 1.75rem;
+        }
+
+        .app-menu #scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .app-menu #scrollbar::-webkit-scrollbar-thumb {
+            background: transparent;
+            border: 2px solid transparent;
+            border-radius: 999px;
+            background-clip: padding-box;
+            min-height: 42px;
+            transition: background .2s ease;
+        }
+
+        .app-menu:hover #scrollbar::-webkit-scrollbar-thumb,
+        .app-menu #scrollbar:focus-within::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, .34);
+            background-clip: padding-box;
+        }
+
+        .app-menu #scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, .48);
+            background-clip: padding-box;
+        }
+
+        .app-menu #scrollbar::-webkit-scrollbar-corner {
+            background: transparent;
+        }
+
+        .app-menu #scrollbar::-webkit-scrollbar-button {
+            width: 0;
+            height: 0;
+            display: none;
+        }
+
+        .app-menu #scrollbar::-webkit-scrollbar-track,
+        .app-menu #scrollbar::-webkit-scrollbar-track-piece {
+            background: transparent;
+            border: 0;
+        }
+
+        html[data-sidebar-size="sm"] .app-menu #scrollbar::-webkit-scrollbar,
+        html[data-sidebar-size="sm-hover"] .app-menu #scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        html[data-sidebar-size="sm"] .app-menu:hover #scrollbar::-webkit-scrollbar-thumb,
+        html[data-sidebar-size="sm-hover"] .app-menu:hover #scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, .28);
+            background-clip: padding-box;
+        }
+
+        html[data-sidebar-size="sm"] .app-menu #scrollbar,
+        html[data-sidebar-size="sm-hover"] .app-menu #scrollbar {
+            scrollbar-width: none;
+        }
+
+        html[data-sidebar-size="sm"] .app-menu:hover #scrollbar,
+        html[data-sidebar-size="sm-hover"] .app-menu:hover #scrollbar {
+            scrollbar-width: thin;
+        }
+
+        html[data-layout-mode="light"] .app-menu:hover #scrollbar,
+        html[data-layout-mode="light"] .app-menu #scrollbar:focus-within {
+            scrollbar-color: rgba(64, 81, 137, .28) transparent;
+        }
+
+        html[data-layout-mode="light"] .app-menu:hover #scrollbar::-webkit-scrollbar-thumb,
+        html[data-layout-mode="light"] .app-menu #scrollbar:focus-within::-webkit-scrollbar-thumb {
+            background: rgba(64, 81, 137, .28);
+            background-clip: padding-box;
+        }
+
+        html[data-layout-mode="light"] .app-menu #scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(64, 81, 137, .42);
+            border-radius: 999px;
+            background-clip: padding-box;
+        }
+
         .app-menu .navbar-nav .menu-link.collapsed[aria-expanded="false"]::after {
             transform: rotate(0deg);
         }
@@ -527,20 +630,287 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 2rem;
-            height: 2rem;
-            margin-top: -1rem;
-            margin-left: -1rem;
-            border: 3px solid rgba(64, 81, 137, 0.20);
-            border-top-color: var(--vz-primary);
-            border-radius: 50%;
-            animation: phuyu-spin .8s linear infinite;
+            width: 9px;
+            height: 9px;
+            margin-top: -11px;
+            margin-left: -11px;
+            border: 0;
+            border-radius: 3px;
+            background: #4d4de0;
+            box-shadow: 13px 0 0 #6aa5e8, 0 13px 0 #9ec4f5, 13px 13px 0 #05056d;
+            animation: phuyu-mini-loader 1s ease-in-out infinite;
             z-index: 11;
         }
 
-        @keyframes phuyu-spin {
+        @keyframes phuyu-mini-loader {
+            0% {
+                transform: rotate(0deg) scale(1);
+            }
+
+            50% {
+                transform: rotate(180deg) scale(1.08);
+            }
+
+            100% {
+                transform: rotate(360deg) scale(1);
+            }
+        }
+
+        .phuyu-mini-brand-loader {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border-radius: 7px;
+            background: #4d4de0;
+            box-shadow: 28px 0 0 #6aa5e8, 0 28px 0 #9ec4f5, 28px 28px 0 #05056d;
+            animation: phuyu-mini-loader 1.2s ease-in-out infinite;
+        }
+
+        .phuyu-table-loading {
+            display: flex;
+            min-height: 92px;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: .85rem;
+            color: #1d1d75;
+            font-size: .78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .phuyu-table-wrapper-loading {
+            min-height: 220px;
+        }
+
+        .phuyu-table-wrapper-loading.overlay-spinner::before {
+            background: rgba(255, 255, 255, 0.82);
+        }
+
+        .phuyu_cargando {
+            display: flex;
+            min-height: 180px;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            border: 1px solid rgba(77, 77, 224, 0.08);
+            border-radius: 12px;
+            background: rgba(248, 250, 252, 0.72);
+        }
+
+        .phuyu_cargando .overlay-spinner {
+            width: 22px;
+            height: 22px;
+            display: inline-block;
+        }
+
+        .phuyu_cargando .overlay-spinner::before {
+            display: none;
+        }
+
+        .phuyu_cargando .overlay-spinner::after {
+            top: 0;
+            left: 0;
+            margin: 0;
+        }
+
+        .phuyu_cargando + .table-responsive {
+            display: none;
+        }
+
+        .phuyu-system-loading {
+            position: relative;
+            min-height: 260px;
+        }
+
+        .phuyu-system-loader {
+            position: fixed;
+            inset: 0;
+            z-index: 2050;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, rgba(244, 246, 251, 0.94), rgba(255, 255, 255, 0.98));
+            border-radius: 0;
+            backdrop-filter: blur(3px);
+        }
+
+        .phuyu-system-loader-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.35rem;
+            width: min(320px, calc(100vw - 2rem));
+            text-align: center;
+        }
+
+        .phuyu-system-spinner {
+            position: relative;
+            width: 118px;
+            height: 118px;
+            animation: phuyu-system-rotate 6s linear infinite;
+        }
+
+        .phuyu-system-ring {
+            position: absolute;
+            inset: -16px;
+            border: 3px dashed rgba(77, 77, 224, 0.28);
+            border-radius: 50%;
+            animation: phuyu-system-rotate-reverse 8s linear infinite;
+        }
+
+        .phuyu-system-square {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 20px rgba(5, 5, 109, 0.10);
+            animation: phuyu-system-pulse 1.8s infinite ease-in-out;
+        }
+
+        .phuyu-system-square-a {
+            top: 0;
+            left: 0;
+            background: #4d4de0;
+            animation-delay: 0s;
+        }
+
+        .phuyu-system-square-b {
+            top: 0;
+            right: 0;
+            background: #6aa5e8;
+            animation-delay: .3s;
+        }
+
+        .phuyu-system-square-c {
+            bottom: 0;
+            left: 0;
+            background: #9ec4f5;
+            animation-delay: .6s;
+        }
+
+        .phuyu-system-square-d {
+            right: 0;
+            bottom: 0;
+            background: #05056d;
+            animation-delay: .9s;
+        }
+
+        .phuyu-system-logo {
+            width: 205px;
+            max-width: 80%;
+            object-fit: contain;
+            animation: phuyu-system-float 3s ease-in-out infinite;
+        }
+
+        .phuyu-system-bar {
+            position: relative;
+            width: min(260px, 78vw);
+            height: 9px;
+            overflow: hidden;
+            border-radius: 20px;
+            background: #dfe5f0;
+        }
+
+        .phuyu-system-bar::before {
+            content: "";
+            position: absolute;
+            left: -40%;
+            width: 40%;
+            height: 100%;
+            border-radius: 20px;
+            background: linear-gradient(90deg, #4d4de0, #6aa5e8);
+            animation: phuyu-system-loading 2s infinite ease-in-out;
+        }
+
+        .phuyu-system-text {
+            color: #1d1d75;
+            font-size: .95rem;
+            font-weight: 600;
+            line-height: 1.35;
+            letter-spacing: 0;
+            animation: phuyu-system-blink 1.5s infinite;
+        }
+
+        @keyframes phuyu-system-rotate {
             to {
                 transform: rotate(360deg);
+            }
+        }
+
+        @keyframes phuyu-system-rotate-reverse {
+            from {
+                transform: rotate(360deg);
+            }
+
+            to {
+                transform: rotate(0deg);
+            }
+        }
+
+        @keyframes phuyu-system-pulse {
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.18);
+            }
+        }
+
+        @keyframes phuyu-system-loading {
+            0% {
+                left: -40%;
+            }
+
+            100% {
+                left: 100%;
+            }
+        }
+
+        @keyframes phuyu-system-float {
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-8px);
+            }
+        }
+
+        @keyframes phuyu-system-blink {
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: .5;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .phuyu-system-spinner {
+                width: 108px;
+                height: 108px;
+            }
+
+            .phuyu-system-ring {
+                inset: -14px;
+            }
+
+            .phuyu-system-square {
+                width: 38px;
+                height: 38px;
+                border-radius: 11px;
+            }
+
+            .phuyu-system-logo {
+                width: 180px;
             }
         }
 
@@ -781,6 +1151,44 @@
             body.vertical-sidebar-enable .app-menu {
                 transform: translateX(0);
                 visibility: visible;
+                width: var(--vz-vertical-menu-width, 250px) !important;
+            }
+
+            body.vertical-sidebar-enable .app-menu .navbar-brand-box {
+                width: var(--vz-vertical-menu-width, 250px) !important;
+            }
+
+            body.vertical-sidebar-enable .app-menu .navbar-brand-box .logo-sm {
+                display: none !important;
+            }
+
+            body.vertical-sidebar-enable .app-menu .navbar-brand-box .logo-lg {
+                display: inline-block !important;
+            }
+
+            body.vertical-sidebar-enable .app-menu .navbar-nav .nav-link span,
+            body.vertical-sidebar-enable .app-menu .navbar-nav .menu-title span {
+                display: inline-block !important;
+            }
+
+            body.vertical-sidebar-enable .app-menu .navbar-nav .nav-link i {
+                margin-right: .665rem;
+            }
+
+            body.vertical-sidebar-enable .app-menu .navbar-nav .nav-link::after {
+                display: block !important;
+            }
+
+            body.vertical-sidebar-enable .app-menu .navbar-nav .menu-dropdown {
+                position: static !important;
+                left: auto !important;
+                width: auto !important;
+                box-shadow: none !important;
+            }
+
+            body.vertical-sidebar-enable .app-menu .navbar-nav .menu-dropdown.show {
+                display: block !important;
+                height: auto !important;
             }
         }
 
@@ -796,6 +1204,68 @@
             .phuyu-system-picker {
                 min-width: 0;
                 width: 100%;
+            }
+        }
+
+        #vertical-hover,
+        .btn-vertical-sm-hover {
+            display: none !important;
+        }
+
+        @media (min-width: 992px) {
+            html[data-sidebar-size="sm"] .app-menu,
+            html[data-sidebar-size="sm"] .app-menu #scrollbar,
+            html[data-sidebar-size="sm"] .app-menu #navbar-nav,
+            html[data-sidebar-size="sm"] .app-menu #scrollbar .container-fluid,
+            html[data-sidebar-size="sm"] .app-menu .simplebar-mask,
+            html[data-sidebar-size="sm"] .app-menu .simplebar-offset,
+            html[data-sidebar-size="sm"] .app-menu .simplebar-content-wrapper {
+                overflow: visible !important;
+            }
+
+            html[data-sidebar-size="sm"] .navbar-menu .navbar-nav .nav-item:hover,
+            html[data-sidebar-size="sm"] .navbar-menu .navbar-nav .nav-item.phuyu-compact-open {
+                position: relative;
+                z-index: 1008;
+            }
+
+            html[data-sidebar-size="sm"] .navbar-menu .navbar-nav .nav-item.phuyu-compact-open > a.menu-link {
+                position: relative;
+                width: calc(200px + var(--vz-vertical-menu-width-sm));
+                transition: none;
+                background: var(--vz-vertical-menu-bg);
+            }
+
+            html[data-sidebar-size="sm"] .navbar-menu .navbar-nav .nav-item.phuyu-compact-open > a.menu-link span,
+            html[data-sidebar-size="sm"] .navbar-menu .navbar-nav .nav-item.phuyu-compact-open .nav-link span {
+                display: inline-block;
+            }
+
+            html[data-sidebar-size="sm"] .navbar-menu .navbar-nav .nav-item.phuyu-compact-open > a.menu-link span {
+                padding-left: 25px;
+            }
+
+            html[data-sidebar-size="sm"] .navbar-menu .navbar-nav .nav-item.phuyu-compact-open > a.menu-link::after {
+                display: block !important;
+                transform: rotate(90deg);
+                color: #fff;
+            }
+
+            html[data-sidebar-size="sm"] .navbar-menu .navbar-nav .nav-item.phuyu-compact-open > .menu-dropdown {
+                display: block !important;
+                left: var(--vz-vertical-menu-width-sm);
+                position: absolute;
+                width: 200px;
+                height: auto !important;
+                padding: .5rem 0;
+                border-radius: 0 0 3px 3px;
+                background: var(--vz-vertical-menu-bg);
+                box-shadow: var(--vz-vertical-menu-dropdown-box-shadow);
+                z-index: 1009;
+            }
+
+            html[data-sidebar-size="sm"] .navbar-menu .navbar-nav .nav-item.phuyu-compact-open > a.menu-link .icon-dual {
+                fill: rgba(255, 255, 255, .16);
             }
         }
     </style>

@@ -68,6 +68,23 @@
                                     <span class="align-middle">Mi empresa</span>
                                 </a>
                                 <div class="dropdown-divider"></div>
+                                <h6 class="dropdown-header">Cambiar módulo</h6>
+                                <?php foreach ($sistemas as $value) { ?>
+                                    <a
+                                        class="dropdown-item d-flex align-items-center justify-content-between"
+                                        href="javascript:;"
+                                        onclick="phuyuCambiarSistema(<?php echo (int)$value['codsistema']; ?>)"
+                                    >
+                                        <span>
+                                            <i class="ri-apps-2-line text-muted fs-16 align-middle me-1"></i>
+                                            <span class="align-middle"><?php echo htmlspecialchars($value['descripcion'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                        </span>
+                                        <?php if ((int)$value['codsistema'] === (int)$_SESSION['phuyu_codsistema']) { ?>
+                                            <i class="ri-check-line text-success fs-16"></i>
+                                        <?php } ?>
+                                    </a>
+                                <?php } ?>
+                                <div class="dropdown-divider"></div>
                                 <a class="dropdown-item" href="javascript:;" onclick="cerrar_sesion()">
                                     <i class="ri-logout-box-r-line text-muted fs-16 align-middle me-1"></i>
                                     <span class="align-middle">Cerrar sesion</span>
@@ -93,25 +110,7 @@
                     </div>
                 </div>
 
-                <div id="modal_electronicos" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
-                    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-                        <div class="modal-content">
-                            <div class="modal-header bg-primary-subtle">
-                                <h4 class="modal-title mb-0">
-                                    <b style="letter-spacing: 2px;">COMPROBANTES POR ENVIAR A SUNAT</b>
-                                </h4>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body" id="modalver"></div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">SEGUIR EN EL SISTEMA</button>
-                                <a href="<?php echo base_url(); ?>phuyu/phuyu_logout" class="btn btn-danger">CERRAR SESION DE TODAS MANERAS</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
-
             <footer class="footer">
                 <div class="container-fluid">
                     <div class="row">
@@ -126,6 +125,24 @@
                     </div>
                 </div>
             </footer>
+        </div>
+    </div>
+
+    <div id="modal_electronicos" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary-subtle">
+                    <h4 class="modal-title mb-0">
+                        <b style="letter-spacing: 2px;">COMPROBANTES POR ENVIAR A SUNAT</b>
+                    </h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="modalver"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">SEGUIR EN EL SISTEMA</button>
+                    <a href="<?php echo base_url(); ?>phuyu/phuyu_logout" class="btn btn-danger">CERRAR SESION DE TODAS MANERAS</a>
+                </div>
+            </div>
         </div>
     </div>
 

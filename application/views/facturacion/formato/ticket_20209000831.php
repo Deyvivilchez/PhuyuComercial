@@ -139,7 +139,7 @@
             <?php 
             	if ($venta[0]["codcomprobantetipo"]==10 || $venta[0]["codcomprobantetipo"]==12) { ?>
             		<tr>
-			            <td colspan="3" align="center" class="footer"> <img src="<?php echo base_url();?>sunat/webphuyu/qrcode.png" style="height:80px;"> </td>
+			            <td colspan="3" align="center" class="footer"> <img src="<?php echo !empty($qrSrc) ? $qrSrc : base_url().'sunat/webphuyu/qrcode.png';?>" style="height:80px;"> </td>
 			        </tr>
 			        <tr align="center" class="footer">
 			            <td colspan="3">CONSULTA TU COMPROBANTE EN http://phuyuperu.com/sunat</td>
