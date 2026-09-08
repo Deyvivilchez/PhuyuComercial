@@ -25,4 +25,4 @@
 /application/cache/
 
 # Dependencias (solo si NO se versionan)
- /vendor/
+/vendor/
