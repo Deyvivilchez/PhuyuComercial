@@ -134,6 +134,24 @@ class Facturacion extends Sunat {
 		}
 	}
 
+	function guias_cdr($codguiar){
+		if (isset($_SESSION["phuyu_codusuario"])) {
+			$codguiar = (int) $codguiar;
+			$ruta = $this->db->query("select ruta_cdr from sunat.guiasunat where codguiar=".$codguiar)->result_array();
+
+			if (count($ruta) && $ruta[0]["ruta_cdr"]!="") {
+				$archivo_cdr = $ruta[0]["ruta_cdr"].".zip";
+				$archivo = explode("R-",$ruta[0]["ruta_cdr"]);
+				$this->load->helper("download");
+
+				if (file_exists($archivo_cdr)) {
+					$descargar_ruta = file_get_contents($archivo_cdr);
+					force_download("R-".$archivo[1].".zip", $descargar_ruta);
+				}
+			}
+		}
+	}
+
 	function resumenes(){
 		if ($this->input->is_ajax_request()) {
 			$facturas_anuladas = $this->db->query("select *from sunat.resumenes where codresumentipo=1 and estado<>1 order by fecharesumen")->result_array();

@@ -1,4 +1,6 @@
-<div id="phuyu_datos">
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<div id="phuyu_datos" class="phuyu-reportes-velzon phuyu-velzon-list">
 	<div class="phuyu_body">
 		<div class="card">
 			<div class="card-body">
@@ -86,7 +88,7 @@
 					</div>
 					<div class="col-md-2">
 						<button type="button" class="btn btn-white btn-icon" v-on:click="buscar_productos()">
-							<i data-acorn-icon="search"></i>
+							<i class="bi bi-search"></i>
 							Consultar
 						</button>
 					</div>
@@ -134,7 +136,7 @@
 						<table class="table table-striped" style="font-size: 11px;">
 							<thead>
 								<tr>
-									<th style="width:5px;"> <center> <i class="fa fa-circle-o"></i> </center> </th>
+									<th style="width:5px;"> <center> <i class="bi bi-circle"></i> </center> </th>
 									<th style="width:5px;">ID</th>
 									<th style="width:10px;">CODIGO</th>
 									<th style="width:35%;">DESCRIPCION</th>
@@ -156,18 +158,18 @@
 									<td>{{d.descripcion}}</td>
 									<td>{{d.unidad}}</td>
 									<td> 
-										<button type="button" class="btn btn-success btn-sm btn-block" v-on:click="phuyu_kardex(d)" style="font-size: 1rem">
-											<i data-acorn-icon="search"></i> {{d.stock}}
+										<button type="button" class="btn btn-success btn-sm w-100" v-on:click="phuyu_kardex(d)" style="font-size: 1rem">
+											<i class="bi bi-search"></i> {{d.stock}}
 										</button>
 									</td>
 									<td> 
-										<button type="button" class="btn btn-primary btn-sm btn-block" v-on:click="phuyu_recoger(d,20)" style="font-size: 1rem">
-											<i class="fa fa-arrow-right"></i> {{d.ventarecogo}}
+										<button type="button" class="btn btn-primary btn-sm w-100" v-on:click="phuyu_recoger(d,20)" style="font-size: 1rem">
+											<i class="bi bi-arrow-right"></i> {{d.ventarecogo}}
 										</button>
 									</td>
 									<td> 
-										<button type="button" class="btn btn-danger btn-sm btn-block" v-on:click="phuyu_recoger(d,2)" style="font-size: 1rem">
-											<i class="fa fa-arrow-right"></i> {{d.comprarecogo}}
+										<button type="button" class="btn btn-danger btn-sm w-100" v-on:click="phuyu_recoger(d,2)" style="font-size: 1rem">
+											<i class="bi bi-arrow-right"></i> {{d.comprarecogo}}
 										</button>
 									</td>
 									<td>{{d.fisico}}</td>
@@ -184,7 +186,7 @@
 			<div id="modal_kardex" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
 				<div class="modal-dialog modal-xl">
 					<div class="modal-content">
-						<div class="modal-header modal-phuyu-titulo">
+						<div class="modal-header">
 							<h5 class="modal-title"> <b style="letter-spacing:1px;" id="producto_kardex"></b> </h5>
 							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> 
 						</div>
@@ -199,20 +201,20 @@
 									<input type="date" class="form-control" id="fechahasta_k" value="<?php echo date('Y-m-d');?>">
 								</div>
 								<div class="col-md-2">
-									<button type="button" class="btn btn-success btn-block btn-sm" v-on:click="phuyu_kardex_1()">Ver Kardex</button>
+									<button type="button" class="btn btn-success w-100 btn-sm" v-on:click="phuyu_kardex_1()">Ver Kardex</button>
 								</div>
 								<div class="col-md-2">
-									<button type="button" class="btn btn-info btn-block btn-sm" v-on:click="phuyu_kardex_pdf()"><i class="fa fa-print"></i>Formato PDF</button>
+									<button type="button" class="btn btn-info w-100 btn-sm" v-on:click="phuyu_kardex_pdf()"><i class="bi bi-printer"></i>Formato PDF</button>
 								</div>
 								<div class="col-md-2">
-									<button type="button" class="btn btn-warning btn-block btn-sm" v-on:click="phuyu_kardex_excel()"><i class="fa fa-file"></i>Formato EXCEL</button>
+									<button type="button" class="btn btn-warning w-100 btn-sm" v-on:click="phuyu_kardex_excel()"><i class="bi bi-file-earmark-excel"></i>Formato EXCEL</button>
 								</div>
 							</div>
 
 							<table class="table table-bordered table-condensed" style="font-size:10px;color:#000 !important">
 								<thead>
 									<tr>
-										<th rowspan="2" width="3px"><i class="fa fa-calendar"></i></th>
+										<th rowspan="2" width="3px"><i class="bi bi-calendar3"></i></th>
 										<th rowspan="2" width="70px">FECHA</th>
 										<th rowspan="2">MOTIVO</th>
 										<th rowspan="2">COMPROBANTE</th>
@@ -242,7 +244,7 @@
 									</tr>
 									<tr v-for="dato in existencias">
 										<td>
-											<button type="button" class="btn btn-success btn-sm" style="margin:0px !important" v-on:click="phuyu_cambiar_fecha(dato)"><i data-acorn-icon="calendar"></i></button>
+											<button type="button" class="btn btn-success btn-sm" style="margin:0px !important" v-on:click="phuyu_cambiar_fecha(dato)"><i class="bi bi-calendar3"></i></button>
 										</td>
 										<td>{{dato.fechakardex}}</td>
 										<td>{{dato.motivo}}</td>
@@ -269,7 +271,7 @@
 			<div id="modal_comprasventas" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
 				<div class="modal-dialog modal-lg">
 					<div class="modal-content">
-						<div class="modal-header modal-phuyu-titulo">
+						<div class="modal-header">
 							<h5 class="modal-title"> <b style="letter-spacing:1px;" id="producto_compraventa"></b> </h5>
 
 							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -295,7 +297,7 @@
 									</select>
 								</div>
 								<div class="col-md-2">
-									<button type="button" class="btn btn-success btn-block btn-sm" v-on:click="phuyu_compraventas()"><i data-acorn-icon="search"></i> BUSCAR</button>
+									<button type="button" class="btn btn-success w-100 btn-sm" v-on:click="phuyu_compraventas()"><i class="bi bi-search"></i> BUSCAR</button>
 								</div>
 							</div>
 
@@ -331,7 +333,7 @@
 			<div id="modal_recoger" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
 				<div class="modal-dialog modal-lg">
 					<div class="modal-content">
-						<div class="modal-header modal-phuyu-titulo">
+						<div class="modal-header">
 							<h5 class="modal-title"><b id="producto_recoger"></b></h5>
 							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 						</div>
@@ -353,8 +355,8 @@
 									<tbody>
 										<tr v-for="dato in recoger">
 											<td>
-												<span class="label label-danger" v-if="dato.codmovimientotipo==2">COMPRA</span>
-												<span class="label label-warning" v-else="dato.codmovimientotipo==20">VENTA</span>
+												<span class="badge bg-danger" v-if="dato.codmovimientotipo==2">COMPRA</span>
+												<span class="badge bg-warning text-dark" v-else="dato.codmovimientotipo==20">VENTA</span>
 											</td>
 											<td>{{dato.documento}}</td>
 											<td>{{dato.razonsocial}}</td>
@@ -375,7 +377,7 @@
 			<div id="modal_kardex_fecha" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
 				<div class="modal-dialog modal-sm">
 					<div class="modal-content">
-						<div class="modal-header modal-phuyu-titulo">
+						<div class="modal-header">
 							<h5 class="modal-title"> <b style="letter-spacing:1px;" id="producto_kardex_fecha"></b> </h5>
 
 							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>

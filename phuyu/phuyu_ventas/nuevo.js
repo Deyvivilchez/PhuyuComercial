@@ -554,9 +554,6 @@ var phuyu_operacion = new Vue({
 
         },
         phuyu_additem: function(producto, precio) {
-            // console.log("controladadore ",phuyu_controller)
-            console.log("Productodesde nuevo de ventassss:", producto);
-            // console.log("controlseries:", producto.controlarseries);
             var existe_item = [];
             if ($("#itemrepetir").val() == 0) {
                 var existe_item = this.detalle.filter(function(p) {
@@ -892,9 +889,6 @@ var phuyu_operacion = new Vue({
         /* DATOS GENERALES DE LA VENTA */
 
         phuyu_guardar: function() {
-
-            console.log(this.campos.codcomprobantetipo);
-            console.log(this.codtipodocumento);
 
             if (this.detalle.length == 0) {
                 phuyu_sistema.phuyu_noti("REGISTRAR UN PRODUCTO EN EL DETALLE", "REGISTRAR ITEM PARA LA VENTA", "danger");

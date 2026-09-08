@@ -36,7 +36,16 @@ var phuyu_form = new Vue({
 						$("#codpersona").empty().html("<option value='"+socio[0]["codpersona"]+"'>"+socio[0]["razonsocial"]+"</option>");
 						phuyu_operacion.phuyu_infocliente();
 					}
-					$(".select2-selection__rendered").empty().append(socio[0]["razonsocial"]); 					
+					if(phuyu_controller=="ventas/lineascredito"){
+						phuyu_operacion.campos.codsocio = socio[0]["codpersona"];
+						phuyu_operacion.campos.codsocioreferencia = socio[0]["codpersona"];
+						phuyu_operacion.campos.cliente = socio[0]["razonsocial"];
+						phuyu_operacion.campos.direccion = socio[0]["direccion"];
+						$("#codsocio").empty().append(new Option(socio[0]["razonsocial"], socio[0]["codpersona"], true, true)).trigger("change");
+						$("#codsocioreferencia").empty().append(new Option(socio[0]["razonsocial"], socio[0]["codpersona"], true, true)).trigger("change");
+					}else{
+						$(".select2-selection__rendered").empty().append(socio[0]["razonsocial"]);
+					}
 					
 				}
 				this.phuyu_cerrar();

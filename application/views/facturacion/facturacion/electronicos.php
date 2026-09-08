@@ -1,4 +1,6 @@
-<div id="phuyu_facturacion">
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<div id="phuyu_facturacion" class="phuyu-velzon-list phuyu-cpe-velzon">
 	<div role="alert" class="alert alert-danger" style="border: 2px solid red;"> 
 	    <h5>ATENCION!, antes de cerrar sesión por favor enviar los comprobantes que estan pendientes de envío a SUNAT, abajo le mostrará enlistado por tipo de comprobante, solo tiene que hacer clik en el <b class="text-success">BOTON ENVIAR</b> que está en cada fila. </h5>
 	</div>
@@ -232,9 +234,8 @@
 		<div class="modal-dialog modal-lg">
 			<div class="modal-content">
 				<div class="modal-header modal-phuyu-titulo">
-					<h4 class="modal-title" align="center"> <b style="letter-spacing:1px;">INFORMACION DEL RESUMEN</b> </h4>
-
-					<button type="button" class="btn-close" v-on:click="phuyu_cerrar()"> </button>
+					<h4 class="modal-title">Informacion del resumen</h4>
+					<button type="button" class="btn-close" v-on:click="phuyu_cerrar()" aria-label="Cerrar"></button>
 				</div>
 
 				<div class="modal-body" style="height:350px;overflow-y:auto;">
@@ -278,7 +279,3 @@
 </div>
 
 <script src="<?php echo base_url();?>phuyu/phuyu_facturacion/electronicos.js"> </script>
-<script>
-	var pantalla = jQuery(document).height(); $("#consultas_modal").css({height: pantalla - 65}); 
-	$(".panel_boletas").css({height: pantalla - 505}); $(".panel_comprobantes").css({height: pantalla - 75});
-</script>

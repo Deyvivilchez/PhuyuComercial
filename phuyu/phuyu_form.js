@@ -144,24 +144,36 @@ var phuyu_form = new Vue({
 		},
 		np_guardar_cargarproductos: function(){
             this.estado = 1; const formulario = new FormData($("#formulario_cargarproductos")[0]);
-            this.$http.post(url+"almacen/kardex/cargarproductos", formulario).then(function (response) {
+            this.$http.post(url+"almacen/productos/cargarproductos", formulario).then(function (response) {
                 if (response.body.estado == 1) {
-                    phuyu_sistema.phuyu_alerta("Guardado correctamente !!!", "Carga del archivo realizada correctamente", "success");
+                    phuyu_sistema.phuyu_alerta("Guardado correctamente !!!", response.body.mensaje || "Carga del archivo realizada correctamente", "success");
+                    if (typeof phuyu_datos !== "undefined" && phuyu_datos.phuyu_opcion) {
+                        phuyu_datos.phuyu_opcion();
+                    }
                 }else{
-                    phuyu_sistema.phuyu_alerta("Operación no registrada !!!", "Formato del archivo incorrecto", "error");
+                    phuyu_sistema.phuyu_alerta("Operación no registrada !!!", response.body.mensaje || "Formato del archivo incorrecto", "error");
                 }
                 this.phuyu_cerrar(); this.estado = 0;
             }, function(){
 				phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS", "ERROR DE RED","error");
 			});
         },
+        np_formato_cargarproductos: function(){
+            window.open(url+"almacen/productos/formato_cargarproductos", "_blank");
+        },
+        np_formato_stockextra: function(){
+            window.open(url+"almacen/productos/formato_stockextra", "_blank");
+        },
         np_guardar_stockextra: function(){
             this.estado = 1; const formulario = new FormData($("#formulario_stockextra")[0]);
             this.$http.post(url+"almacen/productos/stockextra", formulario).then(function (response) {
                 if (response.body.estado == 1) {
-                    phuyu_sistema.phuyu_alerta("Guardado correctamente !!!", "Carga del archivo realizada correctamente", "success");
+                    phuyu_sistema.phuyu_alerta("Guardado correctamente !!!", response.body.mensaje || "Carga del archivo realizada correctamente", "success");
+                    if (typeof phuyu_datos !== "undefined" && phuyu_datos.phuyu_opcion) {
+                        phuyu_datos.phuyu_opcion();
+                    }
                 }else{
-                	phuyu_sistema.phuyu_alerta("Operación no registrada !!!", "Formato del archivo incorrecto", "error");
+                    phuyu_sistema.phuyu_alerta("Operación no registrada !!!", response.body.mensaje || "Formato del archivo incorrecto", "error");
                 }
                 this.phuyu_cerrar(); this.estado = 0;
             }, function(){

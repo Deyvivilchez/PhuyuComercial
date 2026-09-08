@@ -1,10 +1,24 @@
-<div id="phuyu_datos">
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<div id="phuyu_datos" class="phuyu-velzon-list phuyu-agricola-velzon">
 	<div class="phuyu_body">
-		<div class="card">
+		<div class="phuyu-page-title">
+			<div class="phuyu-page-icon"><i class="bi bi-clock-history"></i></div>
+			<div>
+				<div class="text-muted small text-uppercase fw-semibold">Agricola</div>
+				<h4 class="mb-0 fw-bold">Reporte de historial</h4>
+			</div>
+		</div>
+
+		<div class="card phuyu-card">
 			<div class="card-body">
 				<input type="hidden" id="rubro" value="<?php echo $_SESSION["phuyu_rubro"];?>" name="">
 				<div class="row form-group">
-					<div class="col-md-12"> <h4> <b><button type="button" class="btn btn-danger btn-xs" v-on:click="phuyu_atras()"><i data-acorn-icon="arrow-left"></i></button> REPORTE DE HISTORIAL</b></h4> </div>
+					<div class="col-md-12">
+						<button type="button" class="btn btn-danger btn-sm" v-on:click="phuyu_atras()">
+							<i class="bi bi-arrow-left-circle me-1"></i> Atras
+						</button>
+					</div>
 				</div>
 				<div class="row form-group">
 					<div class="col-md-2">
@@ -31,13 +45,13 @@
 					</div>
 					<div class="col-md-4" style="margin-top: 1.2rem">
 						<button type="button" class="btn btn-primary btn-icon" v-on:click="ver_creditos()">
-							<i data-acorn-icon="search"></i> Consultar
+							<i class="bi bi-search me-1"></i> Consultar
 						</button>
 						<button type="button" class="btn btn-danger btn-icon" v-on:click="pdf_creditos()">
-							<i data-acorn-icon="print"></i> Pdf
+							<i class="bi bi-printer me-1"></i> Pdf
 						</button>
 						<button type="button" class="btn btn-success btn-icon" v-on:click="excel_creditos()">
-							<i data-acorn-icon="file-text"></i> Excel
+							<i class="bi bi-file-earmark-excel me-1"></i> Excel
 						</button>
 					</div>
 				</div>
@@ -400,15 +414,13 @@
 			</div>
 
 			<div id="modal_reportes" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
-				<div class="modal-dialog" style="width:100%;margin:0px;">
-					<div class="modal-content" align="center" style="border-radius:0px">
+				<div class="modal-dialog modal-xl modal-fullscreen-lg-down">
+					<div class="modal-content">
 						<div class="modal-header">
-							<button type="button" class="close" data-dismiss="modal" style="font-size:30px;margin-bottom:0px;">
-								<i class="fa fa-times-circle"></i> 
-							</button>
 							<h4 class="modal-title">
-								<b style="letter-spacing:4px;"><?php echo $_SESSION["phuyu_empresa"];?> </b>
+								<?php echo $_SESSION["phuyu_empresa"];?>
 							</h4>
+							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
 						</div>
 						<div class="modal-body" id="reportes_modal" style="height:450px;padding:0px;">
 							<iframe id="phuyu_pdf" src="" style="width:100%; height:100%; border:none;"> </iframe>
@@ -423,12 +435,6 @@
 <script>
 	var campos = {"codpersona":0,"fecha_desde":"","fecha_hasta":"","fecha_saldos":"","tipo_consulta":1,"tipo":1,"mostrar":1,"saldos":0,"codlote":0,"estado":3};
 	var pantalla = jQuery(document).height(); $("#reportes_modal").css({height: pantalla - 65});
-	if (typeof AcornIcons !== 'undefined') {
-      new AcornIcons().replace();
-    }
-    if (typeof Icons !== 'undefined') {
-      const icons = new Icons();
-    }
 </script>
 
 <script src="<?php echo base_url();?>phuyu/phuyu_chacra/creditos.js"> </script>

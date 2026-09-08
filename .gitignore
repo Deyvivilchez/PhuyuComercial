@@ -30,7 +30,4 @@
 /application/cache/
 /application/config/database.php
 /application/config/config.php
-<<<<<<< HEAD
-=======
 /vendor/*
->>>>>>> 35252ebf1341561b07638a13a32149cbd7c398fd

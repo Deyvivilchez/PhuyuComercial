@@ -1,16 +1,18 @@
-<div id="phuyu_datos">
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<div id="phuyu_datos" class="phuyu-reportes-velzon phuyu-velzon-list">
 	<div class="phuyu_body">
 		<div class="card">
 			<div class="card-body">
 				<div class="row form-group mb-3">
 					<div class="col-md-3"> <h5 style="letter-spacing:1px;"> <b>REPORTE DE COMPRAS</b> </h5> </div>
 					<div class="col-md-9">
-						<button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#modal_clientes"><i data-acorn-icon="content"></i> X PROVEEDORES</button>
-						<button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#modal_productos"><i data-acorn-icon="content"></i> X PRODUCTOS</button>
-						<button type="button" class="btn btn-danger btn-sm" v-on:click="pdf_compras()"><i data-acorn-icon="print"></i> Resumen PDF</button>
-						<button type="button" class="btn btn-danger btn-sm" v-on:click="pdf_compras_detallado()"><i data-acorn-icon="print"></i> Detallado PDF</button>
-						<button type="button" class="btn btn-success btn-sm" v-on:click="excel_compras()"><i data-acorn-icon="file-text"></i> Resumen EXCEL</button>
-						<button type="button" class="btn btn-success btn-sm" v-on:click="excel_compras_detallado()"><i data-acorn-icon="file-text"></i> Detallado EXCEL</button>
+						<button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#modal_clientes"><i class="bi bi-layout-text-window"></i> X PROVEEDORES</button>
+						<button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#modal_productos"><i class="bi bi-layout-text-window"></i> X PRODUCTOS</button>
+						<button type="button" class="btn btn-danger btn-sm" v-on:click="pdf_compras()"><i class="bi bi-printer"></i> Resumen PDF</button>
+						<button type="button" class="btn btn-danger btn-sm" v-on:click="pdf_compras_detallado()"><i class="bi bi-printer"></i> Detallado PDF</button>
+						<button type="button" class="btn btn-success btn-sm" v-on:click="excel_compras()"><i class="bi bi-file-earmark-excel"></i> Resumen EXCEL</button>
+						<button type="button" class="btn btn-success btn-sm" v-on:click="excel_compras_detallado()"><i class="bi bi-file-earmark-excel"></i> Detallado EXCEL</button>
 					</div>
 				</div>
 				<input type="hidden" id="fecharef" value="<?php echo date("Y-m-d");?>">
@@ -49,7 +51,7 @@
 					</div>
 
 					<div class="col-md-2" style="margin-top: 1.2rem">
-						<button type="button" class="btn btn-white btn-icon" v-on:click="ver_consulta()"><i data-acorn-icon="search"></i> Consultar</button>
+						<button type="button" class="btn btn-white btn-icon" v-on:click="ver_consulta()"><i class="bi bi-search"></i> Consultar</button>
 					</div>
 				</div>
 				<div class="row form-group mt-4" id="consulta">
@@ -102,7 +104,7 @@
 	<div id="modal_reportes" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
 		<div class="modal-dialog modal-fullscreen-xxl-down">
 			<div class="modal-content">
-				<div class="modal-header modal-phuyu-titulo">
+				<div class="modal-header">
 					<h4 class="modal-title">
 						<b style="letter-spacing:4px;"><?php echo $_SESSION["phuyu_empresa"];?> </b>
 					</h4>
@@ -118,7 +120,7 @@
 	<div class="modal" id="modal_clientes">
 	  <div class="modal-dialog">
 	    <div class="modal-content">
-	      <div class="modal-header modal-phuyu-titulo">
+	      <div class="modal-header">
 	        <h4 class="modal-title">Reporte de compras por proveedores</h4>
 	      </div>
 	      <div class="modal-body">
@@ -133,12 +135,12 @@
 	        <div class="row form-group">
 	        	<div class="col-md-12">
 	        		<div align="center">
-						<button type="button" class="btn btn-danger btn-sm" v-on:click="phuyu_comprasproveedorpdf()"><i class="fa fa-print"></i> Resumen PDF</button>
+						<button type="button" class="btn btn-danger btn-sm" v-on:click="phuyu_comprasproveedorpdf()"><i class="bi bi-printer"></i> Resumen PDF</button>
 						<button type="button" class="btn btn-danger btn-sm" v-on:click="phuyu_comprasproveedorpdfdet()">
-							<i class="fa fa-print"></i> Detallado PDF
+							<i class="bi bi-printer"></i> Detallado PDF
 						</button>
-						<button type="button" class="btn btn-success btn-sm" v-on:click="phuyu_comprasproveedorexcel()"><i class="fa fa-file-excel-o"></i> Resumen EXCEL</button>
-						<button type="button" class="btn btn-success btn-sm" v-on:click="excel_ventas_cliente_detallado()"><i class="fa fa-file-excel-o"></i> Detallado EXCEL</button>
+						<button type="button" class="btn btn-success btn-sm" v-on:click="phuyu_comprasproveedorexcel()"><i class="bi bi-file-earmark-excel"></i> Resumen EXCEL</button>
+						<button type="button" class="btn btn-success btn-sm" v-on:click="excel_ventas_cliente_detallado()"><i class="bi bi-file-earmark-excel"></i> Detallado EXCEL</button>
 					</div>
 				</div>
 			</div>
@@ -153,15 +155,15 @@
 	<div class="modal fade" id="modal_productos" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
 	  <div class="modal-dialog">
 	    <div class="modal-content">
-	      <div class="modal-header modal-phuyu-titulo">
+	      <div class="modal-header">
 	        <h4 class="modal-title">Reporte de compras por productos</h4>
 	      </div>
 	      <div class="modal-body">
 	        <div class="row form-group">
 	        	<div class="col-md-12">
 					<div align="center">
-						<button type="button" class="btn btn-danger btn-sm btn-block" v-on:click="pdf_productos_vendidos()"><i class="fa fa-print"></i> Resumen formato PDF</button>
-						<button type="button" class="btn btn-success btn-sm btn-block" v-on:click="excel_productos_vendidos()"><i class="fa fa-file-excel-o"></i> Resumen formato EXCEL</button>
+						<button type="button" class="btn btn-danger btn-sm w-100" v-on:click="pdf_productos_vendidos()"><i class="bi bi-printer"></i> Resumen formato PDF</button>
+						<button type="button" class="btn btn-success btn-sm w-100" v-on:click="excel_productos_vendidos()"><i class="bi bi-file-earmark-excel"></i> Resumen formato EXCEL</button>
 					</div>
 				</div>
 			</div>

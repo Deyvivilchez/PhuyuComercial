@@ -1,9 +1,11 @@
-<div id="phuyu_datos">
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<div id="phuyu_datos" class="phuyu-reportes-velzon phuyu-velzon-list">
 	<div class="phuyu_body">
 		<div class="card">
 			<div class="card-body">
 
-        		<input type="hidden" id="rubro" value="<?php echo $_SESSION["phuyu_rubro"];?>" name="">
+		<input type="hidden" id="rubro" value="<?php echo $_SESSION["phuyu_rubro"];?>" name="">
 				<div class="row">
 					<div class="col-md-12"> <h4> <b>REPORTE GENERAL DE CREDITOS</b></h4></div>
 				</div>
@@ -18,30 +20,30 @@
 						<label>LINEAS</label>
 						<select class="form-select" name="codlote" v-model="campos.codlote" id="codlote">
 							<option value="0">TODAS LAS LINEAS</option>
-		            	</select>
+			</select>
 					</div>
 					<div class="col-md-2">
-						<label> <i class="fa fa-calendar"></i> FECHA</label>
+						<label> <i class="bi bi-calendar3"></i> FECHA</label>
 						<input type="date" class="form-control" id="fecha_saldos" value="<?php echo date('Y-m-d');?>">
 					</div>
 					<div class="col-md-2" style="margin-top:1.2rem;">
 						<button type="button" class="btn btn-warning btn-icon" v-on:click="saldo_creditos()">
-							<i data-acorn-icon="search"></i> SALDOS
+							<i class="bi bi-search"></i> SALDOS
 						</button>
 					</div>
 					<div class="col-md-2 padding-0" style="margin-top:1.2rem;">
 						<button type="button" class="btn btn-warning btn-icon" v-on:click="saldo_creditos_actual()">
-							<i class="fa fa-print"></i> SALDOS ACTUAL
+							<i class="bi bi-printer"></i> SALDOS ACTUAL
 						</button>
 					</div>
 				</div>
 				<div class="row form-group">
 					<div class="col-md-2">
-						<label><i class="fa fa-calendar"></i> DESDE</label>
+						<label><i class="bi bi-calendar3"></i> DESDE</label>
 						<input type="date" class="form-control" id="fecha_desde" value="<?php echo date('Y-m-01');?>" v-on:blur="phuyu_vacio()">
 					</div>
 					<div class="col-md-2">
-						<label><i class="fa fa-calendar"></i> HASTA</label>
+						<label><i class="bi bi-calendar3"></i> HASTA</label>
 						<input type="date" class="form-control" id="fecha_hasta" value="<?php echo date('Y-m-d');?>" v-on:blur="phuyu_vacio()">
 					</div>
 					<div class="col-md-4">
@@ -80,16 +82,16 @@
 					</div>
 					<div class="col-md-8" style="margin-top: 1.2rem">
 						<button type="button" class="btn btn-primary btn-icon" v-on:click="ver_creditos()">
-							<i data-acorn-icon="search"></i> VER REPORTE
+							<i class="bi bi-search"></i> VER REPORTE
 						</button>
 						<button type="button" class="btn btn-danger btn-icon" v-on:click="pdf_creditos()">
-							<i data-acorn-icon="print"></i> PDF REPORTE
+							<i class="bi bi-printer"></i> PDF REPORTE
 						</button>
 						<button type="button" class="btn btn-success btn-icon" v-on:click="excel_creditos()">
-							<i data-acorn-icon="file-text"></i> EXCEL
+							<i class="bi bi-file-earmark-excel"></i> EXCEL
 						</button>
 						<button type="button" class="btn btn-warning btn-icon" v-on:click="actualizar_interes()">
-							<i data-acorn-icon="save"></i> ACTUALIZAR INTERES
+							<i class="bi bi-save"></i> ACTUALIZAR INTERES
 						</button>
 					</div>
 				</div>
@@ -100,7 +102,7 @@
 								<table class="table table-bordered" style="font-size: 11px">
 									<tr style="background:#f2f2f2">
 										<th colspan="9">
-											<b v-if="campos.tipo==1">CLIENTE:</b> 
+											<b v-if="campos.tipo==1">CLIENTE:</b>
 											<b v-if="campos.tipo!=1">PROVEEDOR:</b> {{dato.razonsocial}}  |
 											<b>DIRECCION:</b> {{dato.direccion}}
 										</th>
@@ -141,7 +143,7 @@
 										<td align="right"><b>{{dato.total_interes}}</b></td>
 										<td align="right"><b>{{dato.cargototal}}</b></td>
 										<td align="right"><b>{{dato.abono}}</b></td>
-										
+
 										<td align="right"><b>{{dato.saldo}}</b></td>
 									</tr>
 								</table>
@@ -153,7 +155,7 @@
 								<table class="table table-bordered" style="font-size: 11px">
 									<tr style="background:#f2f2f2;">
 										<th colspan="8">
-											<b v-if="campos.tipo==1">CLIENTE:</b> 
+											<b v-if="campos.tipo==1">CLIENTE:</b>
 											<b v-if="campos.tipo!=1">PROVEEDOR:</b> {{dato.razonsocial}} |
 											<b>DIRECCION:</b> {{dato.direccion}}
 										</th>
@@ -188,7 +190,7 @@
 							<table class="table table-bordered" style="font-size: 11px;">
 								<tr style="background:#f2f2f2">
 									<th colspan="12">
-										<b v-if="campos.tipo==1">CLIENTE:</b> 
+										<b v-if="campos.tipo==1">CLIENTE:</b>
 										<b v-if="campos.tipo!=1">PROVEEDOR:</b> {{dato.razonsocial}} |
 										<b>DIRECCION:</b> {{dato.direccion}}
 									</th>
@@ -247,7 +249,7 @@
 								<table class="table table-bordered" style="font-size: 11px">
 									<tr style="background:#f2f2f2">
 										<th colspan="9">
-											<b v-if="campos.tipo==1">CLIENTE:</b> 
+											<b v-if="campos.tipo==1">CLIENTE:</b>
 											<b v-if="campos.tipo!=1">PROVEEDOR:</b> {{dato.razonsocial}} |
 											<b>DIRECCION:</b> {{dato.direccion}}
 										</th>
@@ -280,10 +282,10 @@
 										<td style="width:10%;" align="right">{{c.interesactual}}</td>
 										<td style="width:10%;" align="right">{{c.cargototal}} </td>
 										<td style="width:10%;" align="right">{{c.abono}} </td>
-										
+
 										<!-- <td style="width:10%;" align="right">{{c.saldo}} </td> -->
 										<td style="width:10%;" align="right">
-										
+
 										{{c.saldo}}
 										</td>
 									</tr>
@@ -294,10 +296,10 @@
 										<td align="right"><b>{{dato.cargototal}}</b></td>
 										<td align="right"><b>{{dato.abono}}</b></td>
 										<td align="right"><b>
-										
+
 										{{dato.saldoit}}
 										</b></td>
-										
+
 										<!-- <td align="right"><b>{{dato.saldo}}</b></td> -->
 									</tr>
 								</table>
@@ -309,7 +311,7 @@
 								<table class="table table-bordered" style="font-size: 11px">
 									<tr style="background:#f2f2f2;">
 										<th colspan="8">
-											<b v-if="campos.tipo==1">CLIENTE:</b> 
+											<b v-if="campos.tipo==1">CLIENTE:</b>
 											<b v-if="campos.tipo!=1">PROVEEDOR:</b> {{dato.razonsocial}} |
 											<b>DIRECCION:</b> {{dato.direccion}}
 										</th>
@@ -344,7 +346,7 @@
 							<table class="table table-bordered" style="font-size: 11px">
 								<tr style="background:#f2f2f2">
 									<th colspan="12">
-										<b v-if="campos.tipo==1">CLIENTE:</b> 
+										<b v-if="campos.tipo==1">CLIENTE:</b>
 										<b v-if="campos.tipo!=1">PROVEEDOR:</b> {{dato.razonsocial}} |
 										<b>DIRECCION:</b> {{dato.direccion}}
 									</th>
@@ -402,7 +404,7 @@
 							<table class="table table-bordered" style="font-size: 11px">
 								<tr style="background:#f2f2f2">
 									<th colspan="8">
-										<b v-if="campos.tipo==1">CLIENTE:</b> 
+										<b v-if="campos.tipo==1">CLIENTE:</b>
 										<b v-if="campos.tipo!=1">PROVEEDOR:</b> {{dato.razonsocial}}  |
 										<b>DIRECCION:</b> {{dato.direccion}}
 									</th>
@@ -448,7 +450,7 @@
 							<table class="table table-bordered" style="font-size: 11px">
 								<tr style="background:#f2f2f2">
 									<th colspan="8">
-										<b v-if="campos.tipo==1">CLIENTE:</b> 
+										<b v-if="campos.tipo==1">CLIENTE:</b>
 										<b v-if="campos.tipo!=1">PROVEEDOR:</b> {{dato.razonsocial}}  |
 										<b>DIRECCION:</b> {{dato.direccion}}
 									</th>
@@ -496,8 +498,8 @@
 				<div class="modal-dialog" style="width:100%;margin:0px;">
 					<div class="modal-content" align="center" style="border-radius:0px">
 						<div class="modal-header">
-							<button type="button" class="close" data-dismiss="modal" style="font-size:30px;margin-bottom:0px;">
-								<i class="fa fa-times-circle"></i> 
+							<button type="button" class="close" data-bs-dismiss="modal" style="font-size:30px;margin-bottom:0px;">
+								<i class="bi bi-x-circle"></i>
 							</button>
 							<h4 class="modal-title">
 								<b style="letter-spacing:4px;"><?php echo $_SESSION["phuyu_empresa"];?> </b>

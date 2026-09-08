@@ -1,97 +1,81 @@
-<div id="phuyu_datos">
-	<div class="row">
-		<div class="col-12 col-md-6">
-            <h1 class="mb-0 pb-0 display-4" id="title">Administracion Cajas</h1>
-            <nav class="breadcrumb-container d-inline-block" aria-label="breadcrumb">
-              <ul class="breadcrumb pt-0">
-                <li class="breadcrumb-item"><a href="javascript:;">Inicio</a></li>
-                <li class="breadcrumb-item"><a href="javascript:;">Cajas</a></li>
-              </ul>
-            </nav>
-        </div>
-	</div>
-	<div class="phuyu_body">
-		<div class="card">
-			<div class="card-body">
-				<input type="hidden" id="phuyu_opcion" value="1">
-				<div class="row">
-					<div class="col-sm-12 col-md-5 col-lg-5 col-xxl-2 mb-1">
-		                <div class="d-inline-block float-md-start me-1 mb-1 search-input-container w-100 shadow bg-foreground">
-		                  <input class="form-control datatable-search" v-model="buscar" v-on:keyup="phuyu_buscar()" placeholder="BUSCAR REGISTRO . . ." />
-		                  <span class="search-magnifier-icon">
-		                    <i data-acorn-icon="search"></i>
-		                  </span>
-		                  <span class="search-delete-icon d-none">
-		                    <i data-acorn-icon="close"></i>
-		                  </span>
-		                </div>
-		            </div>
-		            <div class="col-sm-12 col-md-7 col-lg-7 col-xxl-10 text-end mb-1" align="right">
-		                <div class="d-inline-block me-0 me-sm-3 float-start float-md-none">
-		                  <!-- Add Button Start -->
-		                  <button type="button" class="btn btn-success btn-icon" type="button" type="button" v-on:click="phuyu_nuevo()">
-		                  	<i data-acorn-icon="plus" class="icon"></i> Nuevo
-		                  </button>
-		                  <!-- Add Button End -->
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
 
-		                  <button
-		                    class="btn btn-warning btn-icon"
-		                    type="button" v-on:click="phuyu_editar()"
-		                  >
-		                    <i data-acorn-icon="edit"></i> Editar
-		                  </button>
-		                  <!-- Delete Button Start -->
-		                  <button
-		                    class="btn eliminar btn-danger btn-icon"
-		                    type="button" v-on:click="phuyu_eliminar()"
-		                  >
-		                    <i data-acorn-icon="bin"></i> Eliminar
-		                  </button>
-		                  <!-- Delete Button End -->
-		                </div>
-		            </div>
-			    </div>
+<div id="phuyu_datos" class="phuyu-velzon-list">
+	<div class="phuyu-page-title">
+		<div class="phuyu-page-icon"><i class="bi bi-cash-stack"></i></div>
+		<div>
+			<div class="text-muted small text-uppercase fw-semibold">Administracion</div>
+			<h4 class="mb-0 fw-bold">Cajas</h4>
+			<nav aria-label="breadcrumb">
+				<ol class="breadcrumb mb-0 mt-1">
+					<li class="breadcrumb-item"><a href="javascript:;">Inicio</a></li>
+					<li class="breadcrumb-item active" aria-current="page">Cajas</li>
+				</ol>
+			</nav>
+		</div>
+	</div>
+
+	<div class="phuyu_body">
+		<input type="hidden" id="phuyu_opcion" value="1">
+		<div class="card phuyu-card">
+			<div class="card-body">
+				<div class="phuyu-toolbar">
+					<div class="phuyu-search">
+						<i class="bi bi-search"></i>
+						<input class="form-control datatable-search" v-model="buscar" v-on:keyup="phuyu_buscar()" placeholder="Buscar caja">
+					</div>
+
+					<div class="phuyu-actions">
+						<button type="button" class="btn btn-primary" v-on:click="phuyu_nuevo()">
+							<i class="bi bi-plus-circle me-1"></i> Nuevo
+						</button>
+						<button type="button" class="btn btn-warning" v-on:click="phuyu_editar()">
+							<i class="bi bi-pencil-square me-1"></i> Editar
+						</button>
+						<button type="button" class="btn btn-danger eliminar" v-on:click="phuyu_eliminar()">
+							<i class="bi bi-trash3 me-1"></i> Eliminar
+						</button>
+					</div>
+				</div>
+
 				<div class="phuyu_cargando" v-if="cargando">
 					<div class="overlay-spinner"></div>
 				</div>
-				<div v-if="!cargando">
-					<div class="row form-group">
-						<div class="data-table-responsive-wrapper">
-							<table class="table table-striped" style="font-size: 11px">
-								<thead>
-									<th>ID</th>
-									<th>DESCRIPCION</th>
-									<th>SUCURSAL</th>
-									<th>TELEFONOS</th>
-									<th width="5%"></th>
-								</thead>
-								<tbody>
-									<tr v-for="dato in datos">
-										<td>{{dato.codcaja}}</td>
-										<td>{{dato.descripcion}}</td>
-										<td>{{dato.sucursal}}</td>
-										<td>{{dato.telefonos}}</td>
-										<td> 
-											<input type="radio" class=" form-check-input" name="phuyu_seleccionar" v-on:click="phuyu_seleccionar(dato.codcaja)"> 
-										</td>
-									</tr>
-								</tbody>
-							</table>
-						</div>
-					</div>
-					<?php include("application/views/phuyu/phuyu_paginacion.php");?>
+
+				<div class="phuyu-table-wrap">
+					<table class="table table-hover table-striped align-middle">
+						<thead>
+							<tr>
+								<th width="90">ID</th>
+								<th>Descripcion</th>
+								<th>Sucursal</th>
+								<th>Telefonos</th>
+								<th width="70" class="text-center">Sel.</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr v-for="dato in datos">
+								<td class="fw-semibold">{{dato.codcaja}}</td>
+								<td>{{dato.descripcion}}</td>
+								<td>{{dato.sucursal}}</td>
+								<td>{{dato.telefonos}}</td>
+								<td class="text-center">
+									<input type="radio" class="form-check-input" name="phuyu_seleccionar" v-on:click="phuyu_seleccionar(dato.codcaja)">
+								</td>
+							</tr>
+							<tr v-if="datos.length==0 && !cargando">
+								<td colspan="5" class="text-center text-muted py-4">
+									<i class="bi bi-inbox me-1"></i> Sin cajas registradas
+								</td>
+							</tr>
+						</tbody>
+					</table>
 				</div>
+
+				<?php include("application/views/phuyu/phuyu_paginacion.php");?>
 			</div>
 		</div>
 	</div>
 </div>
 
-<script>
-	if (typeof AcornIcons !== 'undefined') {
-      new AcornIcons().replace();
-    }
-    if (typeof Icons !== 'undefined') {
-      const icons = new Icons();
-    }
-</script>
 <script src="<?php echo base_url();?>phuyu/phuyu_datos.js"> </script>

@@ -1,4 +1,55 @@
-<div id="phuyu_operacion">
+<style>
+	#phuyu_operacion.phuyu-proforma-compra-form .phuyu-section {
+		padding: 1rem;
+		border: 1px solid rgba(64, 81, 137, .10);
+		border-radius: .75rem;
+		background: #f8fafc;
+	}
+
+	#phuyu_operacion.phuyu-proforma-compra-form .phuyu-section label,
+	#phuyu_operacion.phuyu-proforma-compra-form .phuyu-section .form-label {
+		font-size: .74rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		letter-spacing: .03em;
+		color: #495057;
+		margin-bottom: .4rem;
+	}
+
+	#phuyu_operacion.phuyu-proforma-compra-form .phuyu-section .form-control,
+	#phuyu_operacion.phuyu-proforma-compra-form .phuyu-section .form-select,
+	#phuyu_operacion.phuyu-proforma-compra-form .phuyu-select-wrap .select2-container .select2-selection {
+		border-color: rgba(64, 81, 137, .16);
+		min-height: 40px;
+	}
+
+	#phuyu_operacion.phuyu-proforma-compra-form .phuyu-select-wrap .select2-container {
+		width: 100% !important;
+	}
+
+	#phuyu_operacion.phuyu-proforma-compra-form .phuyu-select-wrap .select2-selection--single {
+		display: flex !important;
+		align-items: center !important;
+		border-radius: .375rem !important;
+		height: 40px !important;
+	}
+
+	#phuyu_operacion.phuyu-proforma-compra-form .phuyu-select-wrap .select2-selection__rendered {
+		line-height: 40px !important;
+		padding-left: .75rem !important;
+	}
+
+	#phuyu_operacion.phuyu-proforma-compra-form .phuyu-btn-icon-only {
+		min-height: 40px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding-left: .75rem;
+		padding-right: .75rem;
+	}
+</style>
+
+<div id="phuyu_operacion" class="phuyu-proforma-compra-form">
 	
 	<form id="formulario" class="form-horizontal" v-on:submit.prevent="phuyu_guardar()">
 		<input type="hidden" id="itemrepetir" value="<?php echo $_SESSION["phuyu_itemrepetir"];?>">
@@ -14,37 +65,45 @@
 					</div>
 				</div>
 				<div class="card-body">
-					<div class="row mb-2">
-						<div class="col-md-4 col-xs-12">
-							<label>PROVEEDOR DE LA PROFORMA</label>
-			    			<select class="form-control selectpicker ajax" name="codpersona" id="codpersona" required data-live-search="true" v-on:change="phuyu_infocliente()">
-			    				<option value="">SELECCIONAR PROVEEDOR</option>
-			    			</select>
-						</div>
-						<div class="col-md-1 col-xs-2">
-							<label>&nbsp;</label>
-							<button type="button" class="btn btn-success btn-block" v-on:click="phuyu_addproveedor()" title="AGREGAR PROVEEDOR"> 
-								<i class="fa fa-user-plus"></i>
-							</button>
-						</div>
-						<div class="col-md-3 col-xs-12">
-							<label>PROVEEDOR DE LA PROFORMA</label>
-							<input type="text" class="form-control" id="cliente" v-model.trim="campos.cliente" autocomplete="off" maxlength="250" placeholder="Razon social del proveedor . . ." required>
-							<input type="hidden" id="direccion" v-model.trim="campos.direccion" maxlength="250">
-						</div>
-						<div class="col-md-2 col-xs-6">
-							<label>FECHA PROFORMA</label>
-			    			<input type="date" class="form-control" name="fechacomprobante" id="fechacomprobante" autocomplete="off" v-on:blur="phuyu_tipocambio()" required value="<?php echo date('Y-m-d');?>">
-						</div>
-						<div class="col-md-2 col-xs-6">
-							<label>MONEDA</label>
-			    			<select class="form-control" name="codmoneda" v-model="campos.codmoneda" v-on:change="phuyu_tipocambio()" required>
-			    				<?php 
-			    					foreach ($monedas as $key => $value) {?>
-			    						<option value="<?php echo $value["codmoneda"];?>"><?php echo $value["simbolo"]." ".$value["descripcion"];?></option>
-			    					<?php }
-			    				?>
-			    			</select>
+					<div class="phuyu-section mb-3">
+						<div class="row g-3 align-items-end">
+							<div class="col-12 col-lg-4">
+								<label class="form-label">Seleccionar proveedor</label>
+								<div class="phuyu-select-wrap">
+									<select class="form-select ajax" name="codpersona" id="codpersona" required data-live-search="true" v-on:change="phuyu_infocliente()">
+										<option value="">SELECCIONAR PROVEEDOR</option>
+									</select>
+								</div>
+							</div>
+
+							<div class="col-12 col-sm-2 col-lg-1">
+								<label class="form-label d-none d-lg-block">&nbsp;</label>
+								<button type="button" class="btn btn-primary phuyu-btn-icon-only w-100" v-on:click="phuyu_addproveedor()" title="Agregar proveedor">
+									<i class="bi bi-person-plus"></i>
+								</button>
+							</div>
+
+							<div class="col-12 col-lg-3">
+								<label class="form-label">Proveedor de la proforma</label>
+								<input type="text" class="form-control" id="cliente" v-model.trim="campos.cliente" autocomplete="off" maxlength="250" placeholder="Razon social del proveedor" required>
+								<input type="hidden" id="direccion" v-model.trim="campos.direccion" maxlength="250">
+							</div>
+
+							<div class="col-12 col-md-6 col-lg-2">
+								<label class="form-label">Fecha proforma</label>
+								<input type="date" class="form-control" name="fechacomprobante" id="fechacomprobante" autocomplete="off" v-on:blur="phuyu_tipocambio()" required value="<?php echo date('Y-m-d');?>">
+							</div>
+
+							<div class="col-12 col-md-6 col-lg-2">
+								<label class="form-label">Moneda</label>
+								<select class="form-select" name="codmoneda" v-model="campos.codmoneda" v-on:change="phuyu_tipocambio()" required>
+									<?php
+										foreach ($monedas as $key => $value) {?>
+											<option value="<?php echo $value["codmoneda"];?>"><?php echo $value["simbolo"]." ".$value["descripcion"];?></option>
+										<?php }
+									?>
+								</select>
+							</div>
 						</div>
 					</div>
 

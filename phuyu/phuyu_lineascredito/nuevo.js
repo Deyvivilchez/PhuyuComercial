@@ -4,7 +4,7 @@ var phuyu_operacion = new Vue({
 		estado:0,
 		campos:{
 			codlote:0, codsocio:"",codsocioreferencia:"", fechainicio:"", fechafin:"", departamento:"", observaciones:"", cliente:"", direccion:"",
-			provincia:"", codubigeo:"", codzona:"", codempleado:"", area:0, tipoposesion:"", estado:"0",comprado:0,tasainteres:0, creditomaximo:0
+			provincia:"", codubigeo:"", codzona:"", codempleado:"", area:0, tipoposesion:"", estado:"0",comprado:false,tasainteres:0, creditomaximo:0
 		}
 	},
 	methods: {
@@ -13,11 +13,11 @@ var phuyu_operacion = new Vue({
 
 		phuyu_venta: function(){
 			swal({
-				title: "SEGURO REGISTRAR NUEVA VENTA?",   
+				title: "SEGURO REGISTRAR NUEVA LINEA?",   
 				text: "LOS CAMPOS SE QUEDARAN VACIOS ", 
 				icon: "warning",
 				dangerMode: true,
-				buttons: ["CANCELAR", "SI, NUEVA VENTA"],
+				buttons: ["CANCELAR", "SI, NUEVA LINEA"],
 			}).then((willDelete) => {
 				if (willDelete){
 					this.phuyu_nueva_venta();
@@ -32,10 +32,26 @@ var phuyu_operacion = new Vue({
 		},
 		phuyu_nuevo_zona: function(){
 			this.$http.get(url+"administracion/zonas/nuevo_1").then(function(data){
-				$("#zonas_modal").empty().html(data.body); $("#modal_zonas").modal("show");
+				$("#zonas_modal").empty().html(data.body);
+				if (typeof bootstrap !== "undefined") {
+					bootstrap.Modal.getOrCreateInstance(document.getElementById("modal_zonas")).show();
+				}else{
+					$("#modal_zonas").modal("show");
+				}
 			});
 		},
 		obtener_zona: function(codzona,datos){
+			if (!datos || datos.length === 0) {
+				this.campos.departamento = "";
+				this.campos.provincia = "";
+				this.campos.codubigeo = "";
+				this.campos.codzona = codzona || "";
+				$("#provincia").empty().html('<option value="">SELECCIONE</option>');
+				$("#codubigeo").empty().html('<option value="">SELECCIONE</option>');
+				$("#codzona").empty().html('<option value="">SELECCIONE</option>');
+				return;
+			}
+
 			var zona = eval(codzona);
 			this.campos.departamento = datos[0]["ubidepartamento"];
 
@@ -52,7 +68,11 @@ var phuyu_operacion = new Vue({
 						$("#codzona").empty().html(data.body); 
 						this.campos.codzona = zona;
 
-						$("#modal_zonas").modal("hide");
+						if (typeof bootstrap !== "undefined") {
+							bootstrap.Modal.getOrCreateInstance(document.getElementById("modal_zonas")).hide();
+						}else{
+							$("#modal_zonas").modal("hide");
+						}
 					});
 
 				});
@@ -64,9 +84,15 @@ var phuyu_operacion = new Vue({
 		phuyu_addcliente: function(){
 			$(".compose").slideToggle(); $("#phuyu_tituloform").text("CREAR CLIENTE");  phuyu_sistema.phuyu_loader("phuyu_formulario",180); 
 			this.$http.post(url+"ventas/clientes/nuevo_1").then(function(data){
-				$("#phuyu_formulario").empty().html(data.body);
+				try {
+					$("#phuyu_formulario").empty().html(data.body);
+				} catch (e) {
+					console.log(e);
+				}
+				phuyu_sistema.phuyu_finloader("phuyu_formulario");
 			},function(){ 
 				phuyu_sistema.phuyu_error_operacion(); 
+				phuyu_sistema.phuyu_finloader("phuyu_formulario");
 			});
 		},
 		phuyu_provincias: function(){
@@ -99,6 +125,12 @@ var phuyu_operacion = new Vue({
 		/* DATOS GENERALES DE LA VENTA */
 
 		phuyu_guardar: function(){
+			this.phuyu_infosocio();
+			this.phuyu_infosocioref();
+			if(!this.campos.codsocioreferencia){
+				this.campos.codsocioreferencia = this.campos.codsocio;
+			}
+
 			this.campos.fechainicio = $("#fechainicio").val();
 			this.campos.fechafin = $("#fechafin").val();
 
@@ -113,24 +145,40 @@ var phuyu_operacion = new Vue({
 					}
 				}else{
 					phuyu_sistema.phuyu_alerta("OCURRIO UN ERROR AL REGISTRAR", "NO SE PUEDE REGISTRAR","error");
+					this.estado = 0;
 				}
 			}, function(){
 				phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS", "ERROR DE RED","error");
+				this.estado = 0;
 			});
 		},
 		phuyu_editar: function(){
 			this.$http.post(url+phuyu_controller+"/editar",{"codregistro":phuyu_lineas.registro}).then(function(info){
 				this.campos.codlote = phuyu_lineas.registro;
-				var socio = eval(info.body.info);
-				var datos = eval(info.body.ubigeo);
-				$("#select2-codsocio-container").empty().append(socio[0]["cliente"]);
+				var socio = info.body.info || [];
+				var datos = info.body.ubigeo || [];
+
+				if(typeof socio === "string"){
+					socio = JSON.parse(socio);
+				}
+				if(typeof datos === "string"){
+					datos = JSON.parse(datos);
+				}
+				if(socio.length===0){
+					phuyu_sistema.phuyu_alerta("NO SE ENCONTRO LA LINEA", "NO SE PUEDE EDITAR EL REGISTRO","error");
+					phuyu_sistema.phuyu_fin();
+					return;
+				}
+
+				$("#codsocio").empty().append(new Option(socio[0]["cliente"], socio[0]["codsocio"], true, true)).trigger("change");
 				this.campos.codsocio = socio[0]["codsocio"];
-				$("#select2-codsocioreferencia-container").empty().append(socio[0]["garante"]);
+				$("#codsocioreferencia").empty().append(new Option(socio[0]["garante"], socio[0]["codsocioreferencia"], true, true)).trigger("change");
 				this.campos.codsocioreferencia = socio[0]["codsocioreferencia"];
 
 				$("#codsocio").removeAttr('required');
 				$("#fechainicio").val(socio[0]["fechainicio"]); 
 				$("#fechafin").val(socio[0]["fechafin"]);
+				this.campos.cliente = socio[0]["descripcion"];
 				this.campos.direccion = socio[0]["direccion"];
 				this.campos.codempleado = socio[0]["codempleado"];
 				this.campos.area = socio[0]["area"];
@@ -138,8 +186,9 @@ var phuyu_operacion = new Vue({
 				this.campos.observaciones = socio[0]["observaciones"];
 				this.campos.tasainteres = socio[0]["tasainteres"];
 				this.campos.creditomaximo = socio[0]["creditomaximo"];
-				this.campos.comprado = parseInt(socio[0]["comprado"]);
+				this.campos.comprado = parseInt(socio[0]["comprado"])===1;
 				this.obtener_zona(socio[0]["codzona"],datos);
+				phuyu_sistema.phuyu_fin();
 			},function(){
 				phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED","error"); phuyu_sistema.phuyu_fin();
 			});
