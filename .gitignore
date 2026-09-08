@@ -14,6 +14,11 @@
 /sunat/
 
 # ==========================
+# Guias y SQL locales
+# ==========================
+/guia_productos_unidades_almacenes.sql
+
+# ==========================
 # Logos e imágenes propias de cada empresa
 # ==========================
 /public/img/empresa/
