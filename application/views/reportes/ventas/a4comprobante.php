@@ -329,6 +329,29 @@ $condicionPago = ((int)($venta['condicionpago'] ?? 0) === 1)
             line-height: 1.35;
         }
 
+        .proforma-note {
+            margin-top: 12px;
+            border: 1px solid #e4d4ff;
+            border-left: 4px solid #6d28d9;
+            border-radius: 10px;
+            background: rgba(250, 247, 255, 0.76);
+            padding: 10px 12px;
+        }
+
+        .proforma-note-title {
+            font-size: 9px;
+            font-weight: bold;
+            color: #581c87;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .proforma-note-text {
+            font-size: 8.1px;
+            color: #5e556e;
+            line-height: 1.45;
+        }
+
         .totales-box {
             border: 1px solid rgba(228, 212, 255, 0.60);
             background: rgba(255, 255, 255, 0.50);
@@ -614,9 +637,17 @@ $condicionPago = ((int)($venta['condicionpago'] ?? 0) === 1)
                                 <div class="qr-image">
                                     <img src="<?= $qr_src ?>" alt="QR">
                                 </div>
+                            <?php elseif (!empty($es_proforma)): ?>
+                                <div class="proforma-note">
+                                    <div class="proforma-note-title">Proforma valida para cotizacion</div>
+                                    <div class="proforma-note-text">
+                                        Documento informativo no valido como comprobante de pago.<br>
+                                        Precios sujetos a disponibilidad y confirmacion de venta.
+                                    </div>
+                                </div>
                             <?php endif; ?>
 
-                            <?php if (!empty($parametros['urlconsultacomprobantes'])): ?>
+                            <?php if (empty($es_proforma) && !empty($parametros['urlconsultacomprobantes'])): ?>
                                 <div class="qr-text"><?= texto_doc($parametros['urlconsultacomprobantes']) ?></div>
                             <?php endif; ?>
 
