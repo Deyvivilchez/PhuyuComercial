@@ -271,6 +271,29 @@ table {
     max-height: 72px;
 }
 
+.proforma-note {
+    margin-top: 8px;
+    border: 1px solid #e4d4ff;
+    border-left: 3px solid #6d28d9;
+    border-radius: 8px;
+    background: #faf7ff;
+    padding: 7px 8px;
+}
+
+.proforma-note-title {
+    font-size: 7.3px;
+    font-weight: bold;
+    color: #581c87;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.proforma-note-text {
+    font-size: 6.8px;
+    color: #5e556e;
+    line-height: 1.4;
+}
+
 .totales-box {
     border: 1px solid #e4d4ff;
     border-radius: 8px;
@@ -510,6 +533,14 @@ table {
                     <?php if (!empty($qr_src)): ?>
                         <div class="qr-image">
                             <img src="<?= $qr_src ?>" alt="QR">
+                        </div>
+                    <?php elseif (!empty($es_proforma)): ?>
+                        <div class="proforma-note">
+                            <div class="proforma-note-title">Proforma valida para cotizacion</div>
+                            <div class="proforma-note-text">
+                                Documento informativo no valido como comprobante de pago.<br>
+                                Precios sujetos a disponibilidad y confirmacion de venta.
+                            </div>
                         </div>
                     <?php endif; ?>
                 </div>
