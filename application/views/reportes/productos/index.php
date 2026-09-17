@@ -1,38 +1,66 @@
-<div id="phuyu_datos">
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<div id="phuyu_datos" class="phuyu-reportes-velzon phuyu-velzon-list">
 	<div class="phuyu_body">
 		<div class="card">
 			<div class="card-body">
-				<div class="row form-group">
-					<div class="col-md-8">
-						<h5> <b>REPORTE GENERAL DE PRODUCTOS</b> </h5> 
+				<div class="row align-items-center g-2 mb-3">
+					<div class="col-lg-5">
+						<h5 class="mb-0"> <b>REPORTE GENERAL DE PRODUCTOS</b> </h5>
 					</div>
-					<div class="col-md-2">
-                    	<div class="dropdown">
-                          <button class="btn btn-warning dropdown-toggle mb-1"
-                            type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            Stock Productos
-                          </button>
-                          <div class="dropdown-menu">
-                            <a class="dropdown-item" href="javascript:;" v-on:click="stock_general()">Formato PDF</a>
-                            <a class="dropdown-item" href="javascript:;" v-on:click="stock_general_excel()">Formato Excel</a>
-                          </div>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                    	<div class="dropdown">
-                          <button class="btn btn-danger dropdown-toggle mb-1"
-                            type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            Stock Valorizado
-                          </button>
-                          <div class="dropdown-menu">
-                            <a class="dropdown-item" href="javascript:;" v-on:click="stock_valorizado()">Formato PDF</a>
-                            <a class="dropdown-item" href="javascript:;" v-on:click="stock_valorizado_excel()">Formato Excel</a>
-                          </div>
-                        </div>
+					<div class="col-lg-7">
+						<div class="d-flex flex-wrap justify-content-lg-end gap-2">
+							<div class="dropdown">
+								<button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+									Stock Productos
+								</button>
+								<div class="dropdown-menu">
+									<a class="dropdown-item" href="javascript:;" v-on:click="stock_general()">Formato PDF</a>
+									<a class="dropdown-item" href="javascript:;" v-on:click="stock_general_excel()">Formato Excel</a>
+								</div>
+							</div>
+							<div class="dropdown">
+								<button class="btn btn-danger dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+									Stock Valorizado
+								</button>
+								<div class="dropdown-menu">
+									<a class="dropdown-item" href="javascript:;" v-on:click="stock_valorizado()">Formato PDF</a>
+									<a class="dropdown-item" href="javascript:;" v-on:click="stock_valorizado_excel()">Formato Excel</a>
+								</div>
+							</div>
+							<div class="dropdown">
+								<button class="btn btn-info dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+									Compras y Ventas
+								</button>
+								<div class="dropdown-menu">
+									<a class="dropdown-item" href="javascript:;" v-on:click="compras_producto()">Lista de Compras</a>
+									<a class="dropdown-item" href="javascript:;" v-on:click="ventas_producto()">Lista de Ventas</a>
+								</div>
+							</div>
+							<div class="dropdown">
+								<button class="btn btn-info dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+									Precios Productos
+								</button>
+								<div class="dropdown-menu">
+									<a class="dropdown-item" href="javascript:;" v-on:click="pdf_precios()">Precios PDF</a>
+									<a class="dropdown-item" href="javascript:;" v-on:click="pdf_precios_stock()">Precios + Stock PDF</a>
+									<a class="dropdown-item" href="javascript:;" v-on:click="excel_precios()">Precios Excel</a>
+								</div>
+							</div>
+							<div class="dropdown">
+								<button class="btn btn-info dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+									Kardex Valorizado
+								</button>
+								<div class="dropdown-menu">
+									<a class="dropdown-item" href="javascript:;" v-on:click="pdf_kardexproductos()">Formato PDF</a>
+									<a class="dropdown-item" href="javascript:;" v-on:click="excel_kardexproductos()">Formato Excel</a>
+								</div>
+							</div>
+						</div>
 					</div>
 				</div>
-				<div class="row form-group" >
-					<div class="col-md-2">
+				<div class="row g-2 align-items-end mb-2" >
+					<div class="col-lg-3 col-md-6">
 						<label>ALMACEN</label>
 						<select class="form-select" v-model="campos.codalmacen">
 							<?php 
@@ -42,7 +70,7 @@
 							?>
 						</select>
 					</div>
-					<div class="col-md-2">
+					<div class="col-lg-3 col-md-6">
 						<label>LINEA PRODUCTO</label>
 						<select class="form-select" v-model="campos.codlinea">
 							<option value="0">TODAS LAS LINEAS DE PRODUCTOS</option>
@@ -53,7 +81,7 @@
 							?>
 						</select>
 					</div>
-					<div class="col-md-2">
+					<div class="col-lg-2 col-md-4">
 						<label>STOCK PRODUCTO</label>
 						<select class="form-select" v-model="campos.stock">
 							<option value="0">TODOS</option>
@@ -61,71 +89,47 @@
 							<option value="2">SIN STOCK</option>
 						</select>
 					</div>
-					<div class="col-md-2">
+					<div class="col-lg-2 col-md-4">
 						<label>DESDE FECHA (KARDEX)</label>
 						<input type="date" class="form-control" id="fechad" v-model="campos.fechad" v-on:blur="phuyu_fecha()">
 					</div>
-					<div class="col-md-2">
+					<div class="col-lg-2 col-md-4">
 						<label>A LA FECHA (KARDEX)</label>
 						<input type="date" class="form-control" id="fecha" v-model="campos.fecha" v-on:blur="phuyu_fecha()">
 					</div>
-					<div class="col-md-1">
-						<label style="margin-top:5px;">CTRL&nbsp;STOCK</label> <br>
-						<label style="margin-top:5px;">ACTIVOS</label>
-					</div>
-
-					<div class="col-md-1">
-						<input type="checkbox" class="form-check-input" style="height:20px;width:20px;" v-model="campos.controlstock"> <br>
-						<input type="checkbox" class="form-check-input" style="height:20px;width:20px;" v-model="campos.estado">
-					</div>
 				</div>
 
-				<div class="row form-group" >
-					<div class="col-md-4">
+				<div class="row g-2 align-items-end mb-2" >
+					<div class="col-lg-4 col-md-6">
+						<label>BUSCAR</label>
 						<input type="text" class="form-control" v-model="campos.buscar" placeholder="BUSCAR PRODUCTO . . ." v-on:keyup.13="buscar_productos()">
 					</div>
-					<div class="col-md-2">
-						<button type="button" class="btn btn-white btn-icon" v-on:click="buscar_productos()">
-							<i data-acorn-icon="search"></i>
+					<div class="col-lg-2 col-md-3">
+						<label>FORMATO</label>
+						<select class="form-select" v-model="campos.agruparlinea">
+							<option value="1">AGRUPADO POR LINEA</option>
+							<option value="0">LISTA SIMPLE</option>
+						</select>
+					</div>
+					<div class="col-lg-2 col-md-3">
+						<label>&nbsp;</label>
+						<button type="button" class="btn btn-white btn-icon w-100" v-on:click="buscar_productos()">
+							<i class="bi bi-search"></i>
 							Consultar
 						</button>
 					</div>
-					<div class="col-md-2">
-                    	<div class="dropdown">
-                          <button class="btn btn-info dropdown-toggle mb-1"
-                            type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            Compras y Ventas
-                          </button>
-                          <div class="dropdown-menu">
-                            <a class="dropdown-item" href="javascript:;" v-on:click="compras_producto()">Lista de Compras</a>
-                            <a class="dropdown-item" href="javascript:;" v-on:click="ventas_producto()">Lista de Ventas</a>
-                          </div>
-                        </div>
-					</div>
-					<div class="col-md-2">
-                    	<div class="dropdown">
-                          <button class="btn btn-info dropdown-toggle mb-1"
-                            type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            Precios Productos
-                          </button>
-                          <div class="dropdown-menu">
-                            <a class="dropdown-item" href="javascript:;" v-on:click="pdf_precios()">Precios PDF</a>
-                            <a class="dropdown-item" href="javascript:;" v-on:click="pdf_precios_stock()">Precios + Stock PDF</a>
-                            <a class="dropdown-item" href="javascript:;" v-on:click="excel_precios()">Precios Excel</a>
-                          </div>
-                        </div>
-					</div>
-					<div class="col-md-2">
-                    	<div class="dropdown">
-                          <button class="btn btn-info dropdown-toggle mb-1"
-                            type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            Kardex Valorizado
-                          </button>
-                          <div class="dropdown-menu">
-                            <a class="dropdown-item" href="javascript:;" v-on:click="pdf_kardexproductos()">Formato PDF</a>
-                            <a class="dropdown-item" href="javascript:;" v-on:click="excel_kardexproductos()">Formato Excel</a>
-                          </div>
-                        </div>
+					<div class="col-lg-4 col-md-12">
+						<label>OPCIONES</label>
+						<div class="d-flex flex-wrap align-items-center gap-3 border rounded px-3" style="min-height:37px;">
+							<label class="form-check-label mb-0">
+								<input type="checkbox" class="form-check-input me-1" v-model="campos.controlstock">
+								CTRL STOCK
+							</label>
+							<label class="form-check-label mb-0">
+								<input type="checkbox" class="form-check-input me-1" v-model="campos.estado">
+								ACTIVOS
+							</label>
+						</div>
 					</div>
 				</div>
 				<div class="detalle" v-if="consultar.precios==1" style="height:150px;overflow-y:auto;">
@@ -134,7 +138,7 @@
 						<table class="table table-striped" style="font-size: 11px;">
 							<thead>
 								<tr>
-									<th style="width:5px;"> <center> <i class="fa fa-circle-o"></i> </center> </th>
+									<th style="width:5px;"> <center> <i class="bi bi-circle"></i> </center> </th>
 									<th style="width:5px;">ID</th>
 									<th style="width:10px;">CODIGO</th>
 									<th style="width:35%;">DESCRIPCION</th>
@@ -156,18 +160,18 @@
 									<td>{{d.descripcion}}</td>
 									<td>{{d.unidad}}</td>
 									<td> 
-										<button type="button" class="btn btn-success btn-sm btn-block" v-on:click="phuyu_kardex(d)" style="font-size: 1rem">
-											<i data-acorn-icon="search"></i> {{d.stock}}
+										<button type="button" class="btn btn-success btn-sm w-100" v-on:click="phuyu_kardex(d)" style="font-size: 1rem">
+											<i class="bi bi-search"></i> {{d.stock}}
 										</button>
 									</td>
 									<td> 
-										<button type="button" class="btn btn-primary btn-sm btn-block" v-on:click="phuyu_recoger(d,20)" style="font-size: 1rem">
-											<i class="fa fa-arrow-right"></i> {{d.ventarecogo}}
+										<button type="button" class="btn btn-primary btn-sm w-100" v-on:click="phuyu_recoger(d,20)" style="font-size: 1rem">
+											<i class="bi bi-arrow-right"></i> {{d.ventarecogo}}
 										</button>
 									</td>
 									<td> 
-										<button type="button" class="btn btn-danger btn-sm btn-block" v-on:click="phuyu_recoger(d,2)" style="font-size: 1rem">
-											<i class="fa fa-arrow-right"></i> {{d.comprarecogo}}
+										<button type="button" class="btn btn-danger btn-sm w-100" v-on:click="phuyu_recoger(d,2)" style="font-size: 1rem">
+											<i class="bi bi-arrow-right"></i> {{d.comprarecogo}}
 										</button>
 									</td>
 									<td>{{d.fisico}}</td>
@@ -184,7 +188,7 @@
 			<div id="modal_kardex" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
 				<div class="modal-dialog modal-xl">
 					<div class="modal-content">
-						<div class="modal-header modal-phuyu-titulo">
+						<div class="modal-header">
 							<h5 class="modal-title"> <b style="letter-spacing:1px;" id="producto_kardex"></b> </h5>
 							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> 
 						</div>
@@ -199,20 +203,20 @@
 									<input type="date" class="form-control" id="fechahasta_k" value="<?php echo date('Y-m-d');?>">
 								</div>
 								<div class="col-md-2">
-									<button type="button" class="btn btn-success btn-block btn-sm" v-on:click="phuyu_kardex_1()">Ver Kardex</button>
+									<button type="button" class="btn btn-success w-100 btn-sm" v-on:click="phuyu_kardex_1()">Ver Kardex</button>
 								</div>
 								<div class="col-md-2">
-									<button type="button" class="btn btn-info btn-block btn-sm" v-on:click="phuyu_kardex_pdf()"><i class="fa fa-print"></i>Formato PDF</button>
+									<button type="button" class="btn btn-info w-100 btn-sm" v-on:click="phuyu_kardex_pdf()"><i class="bi bi-printer"></i>Formato PDF</button>
 								</div>
 								<div class="col-md-2">
-									<button type="button" class="btn btn-warning btn-block btn-sm" v-on:click="phuyu_kardex_excel()"><i class="fa fa-file"></i>Formato EXCEL</button>
+									<button type="button" class="btn btn-warning w-100 btn-sm" v-on:click="phuyu_kardex_excel()"><i class="bi bi-file-earmark-excel"></i>Formato EXCEL</button>
 								</div>
 							</div>
 
 							<table class="table table-bordered table-condensed" style="font-size:10px;color:#000 !important">
 								<thead>
 									<tr>
-										<th rowspan="2" width="3px"><i class="fa fa-calendar"></i></th>
+										<th rowspan="2" width="3px"><i class="bi bi-calendar3"></i></th>
 										<th rowspan="2" width="70px">FECHA</th>
 										<th rowspan="2">MOTIVO</th>
 										<th rowspan="2">COMPROBANTE</th>
@@ -242,7 +246,7 @@
 									</tr>
 									<tr v-for="dato in existencias">
 										<td>
-											<button type="button" class="btn btn-success btn-sm" style="margin:0px !important" v-on:click="phuyu_cambiar_fecha(dato)"><i data-acorn-icon="calendar"></i></button>
+											<button type="button" class="btn btn-success btn-sm" style="margin:0px !important" v-on:click="phuyu_cambiar_fecha(dato)"><i class="bi bi-calendar3"></i></button>
 										</td>
 										<td>{{dato.fechakardex}}</td>
 										<td>{{dato.motivo}}</td>
@@ -269,7 +273,7 @@
 			<div id="modal_comprasventas" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
 				<div class="modal-dialog modal-lg">
 					<div class="modal-content">
-						<div class="modal-header modal-phuyu-titulo">
+						<div class="modal-header">
 							<h5 class="modal-title"> <b style="letter-spacing:1px;" id="producto_compraventa"></b> </h5>
 
 							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -295,7 +299,7 @@
 									</select>
 								</div>
 								<div class="col-md-2">
-									<button type="button" class="btn btn-success btn-block btn-sm" v-on:click="phuyu_compraventas()"><i data-acorn-icon="search"></i> BUSCAR</button>
+									<button type="button" class="btn btn-success w-100 btn-sm" v-on:click="phuyu_compraventas()"><i class="bi bi-search"></i> BUSCAR</button>
 								</div>
 							</div>
 
@@ -331,7 +335,7 @@
 			<div id="modal_recoger" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
 				<div class="modal-dialog modal-lg">
 					<div class="modal-content">
-						<div class="modal-header modal-phuyu-titulo">
+						<div class="modal-header">
 							<h5 class="modal-title"><b id="producto_recoger"></b></h5>
 							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 						</div>
@@ -353,8 +357,8 @@
 									<tbody>
 										<tr v-for="dato in recoger">
 											<td>
-												<span class="label label-danger" v-if="dato.codmovimientotipo==2">COMPRA</span>
-												<span class="label label-warning" v-else="dato.codmovimientotipo==20">VENTA</span>
+												<span class="badge bg-danger" v-if="dato.codmovimientotipo==2">COMPRA</span>
+												<span class="badge bg-warning text-dark" v-else="dato.codmovimientotipo==20">VENTA</span>
 											</td>
 											<td>{{dato.documento}}</td>
 											<td>{{dato.razonsocial}}</td>
@@ -375,7 +379,7 @@
 			<div id="modal_kardex_fecha" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
 				<div class="modal-dialog modal-sm">
 					<div class="modal-content">
-						<div class="modal-header modal-phuyu-titulo">
+						<div class="modal-header">
 							<h5 class="modal-title"> <b style="letter-spacing:1px;" id="producto_kardex_fecha"></b> </h5>
 
 							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -409,7 +413,7 @@
     }
 </script>
 <script> 
-	var campos = {"codalmacen":<?php echo $_SESSION["phuyu_codalmacen"];?>,"codlinea":0,"stock":0,"fechad":"<?php echo date('Y-m-01');?>","fecha":"<?php echo date("Y-m-d");?>","controlstock":1,"estado":1,"buscar":""};
+	var campos = {"codalmacen":<?php echo $_SESSION["phuyu_codalmacen"];?>,"codlinea":0,"stock":0,"agruparlinea":1,"fechad":"<?php echo date('Y-m-01');?>","fecha":"<?php echo date("Y-m-d");?>","controlstock":1,"estado":1,"buscar":""};
 
 	var pantalla = jQuery(document).height(); $("#reportes_modal").css({height: pantalla - 65});
 	$(".detalle").css({height: pantalla - 280});

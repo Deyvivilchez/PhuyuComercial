@@ -1,138 +1,317 @@
-<div id="phuyu_ventas">
-	<div class="row">
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<style>
+#phuyu_ventas .phuyu-card-lineas {
+	border-radius: 16px;
+}
+
+#phuyu_ventas .phuyu-search-box .form-control {
+	border-radius: 12px;
+	min-height: 40px;
+}
+
+#phuyu_ventas .phuyu-btn-group .phuyu-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	border-radius: 10px;
+	font-weight: 700;
+	padding: 7px 12px;
+	transition: all .2s ease;
+	box-shadow: 0 2px 6px rgba(15, 23, 42, .06);
+	white-space: nowrap;
+}
+
+#phuyu_ventas .phuyu-btn-group .phuyu-btn:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 18px rgba(15, 23, 42, .14);
+}
+
+#phuyu_ventas .phuyu-btn-group .phuyu-btn:hover i {
+	transform: scale(1.15);
+}
+
+#phuyu_ventas .phuyu-btn-group .phuyu-btn i {
+	transition: transform .2s ease;
+}
+
+#phuyu_ventas .phuyu-table-wrapper {
+	border-radius: 14px;
+	overflow: auto;
+	border: 1px solid #eef1f4;
+}
+
+#phuyu_ventas .phuyu-table-lineas {
+	font-size: 13px;
+	min-width: 980px;
+}
+
+#phuyu_ventas .phuyu-table-lineas thead th {
+	background: #f8f9fb;
+	color: #495057;
+	font-size: 12px;
+	font-weight: 800;
+	text-transform: uppercase;
+	border-bottom: 1px solid #e9ecef;
+	white-space: nowrap;
+	vertical-align: middle;
+}
+
+#phuyu_ventas .phuyu-table-lineas tbody td {
+	font-size: 13px;
+	vertical-align: middle;
+	border-color: #f1f3f5;
+}
+
+#phuyu_ventas .phuyu-table-lineas tbody tr:hover {
+	background: #fafcff;
+}
+
+#phuyu_ventas .phuyu-table-lineas tbody tr.phuyu_selected {
+	background: rgba(64, 81, 137, .08);
+}
+
+#phuyu_ventas .phuyu_anulado {
+	opacity: .65;
+	background: #fff5f5 !important;
+}
+
+#phuyu_ventas .phuyu_anulado td {
+	color: #8b8b8b !important;
+}
+
+#phuyu_ventas .phuyu-money {
+	font-weight: 800;
+	color: #0ab39c;
+	white-space: nowrap;
+}
+
+#phuyu_ventas .phuyu-status-icon {
+	width: 28px;
+	height: 28px;
+	border-radius: 999px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 15px;
+}
+
+#phuyu_ventas .phuyu-status-ok {
+	background: rgba(10, 179, 156, .12);
+	color: #0ab39c;
+}
+
+#phuyu_ventas .phuyu-status-no {
+	background: rgba(240, 101, 72, .12);
+	color: #f06548;
+}
+
+#phuyu_ventas .form-check-input {
+	cursor: pointer;
+}
+
+@media (max-width: 768px) {
+	#phuyu_ventas #title {
+		font-size: 1.6rem !important;
+	}
+
+	#phuyu_ventas .phuyu-btn-group {
+		justify-content: flex-start !important;
+	}
+
+	#phuyu_ventas .phuyu-btn-group .phuyu-btn {
+		flex: 1 1 auto;
+	}
+}
+</style>
+
+<div id="phuyu_ventas" class="phuyu-velzon-list phuyu-ventas-velzon">
+	<div class="row g-3 align-items-start mb-3">
 		<div class="col-12 col-md-6">
-            <h1 class="mb-0 pb-0 display-4" id="title">Administracion Linea Credito</h1>
-            <nav class="breadcrumb-container d-inline-block" aria-label="breadcrumb">
-              <ul class="breadcrumb pt-0">
-                <li class="breadcrumb-item"><a href="javascript:;">Inicio</a></li>
-                <li class="breadcrumb-item"><a href="javascript:;">Línea Credito</a></li>
-              </ul>
-            </nav>
-        </div>
-        <div class="col-12 col-md-6 d-flex align-items-start justify-content-end" style="font-size: 11px">
-			<div class="col-md-4 col-xs-12">
-				<label><i class="fa fa-calendar"></i> DESDE:</label>
-				<input type="date" class="form-control input-sm" id="fecha_desde" value="" v-on:change="phuyu_buscar()" autocomplete="off">
+			<div class="phuyu-page-title mb-0">
+				<span class="phuyu-page-icon"><i class="bi bi-credit-card-2-front"></i></span>
+				<div>
+					<div class="text-muted small text-uppercase fw-semibold">Ventas</div>
+					<h4 class="mb-1" id="title">Líneas de crédito</h4>
+					<p class="text-muted mb-0">Gestión de líneas, saldos y condiciones de crédito.</p>
+				</div>
 			</div>
-			<div class="col-md-4 col-xs-12">
-				<label><i class="fa fa-calendar"></i> HASTA:</label>
-				<input type="date" class="form-control input-sm" id="fecha_hasta" value="<?php echo date('Y-m-d');?>" v-on:change="phuyu_buscar()" autocomplete="off">
+		</div>
+
+		<div class="col-12 col-md-6">
+			<div class="row g-2 justify-content-md-end">
+				<div class="col-12 col-sm-4">
+					<label class="form-label small fw-semibold mb-1">
+						<i class="bi bi-calendar-date me-1"></i> Desde
+					</label>
+					<input type="date" class="form-control form-control-sm" id="fecha_desde" value="" v-on:change="phuyu_buscar()" autocomplete="off">
+				</div>
+
+				<div class="col-12 col-sm-4">
+					<label class="form-label small fw-semibold mb-1">
+						<i class="bi bi-calendar-check me-1"></i> Hasta
+					</label>
+					<input type="date" class="form-control form-control-sm" id="fecha_hasta" value="<?php echo date('Y-m-d');?>" v-on:change="phuyu_buscar()" autocomplete="off">
+				</div>
 			</div>
-        </div>
-    </div>
+		</div>
+	</div>
+
 	<div class="phuyu_body">
-		<div class="card">
+		<div class="card border-0 shadow-sm phuyu-card-lineas">
 			<div class="card-body">
-				<div class="row">
-					<div class="col-sm-12 col-md-5 col-lg-4 col-xxl-2 mb-1">
-	                    <div class="d-inline-block float-md-start me-1 mb-1 search-input-container w-100 shadow bg-foreground">
-	                      <input class="form-control datatable-search" v-model="buscar" v-on:keyup="phuyu_buscar()" placeholder="BUSCAR REGISTRO . . ." />
-	                      <span class="search-magnifier-icon">
-	                        <i data-acorn-icon="search"></i>
-	                      </span>
-	                      <span class="search-delete-icon d-none">
-	                        <i data-acorn-icon="close"></i>
-	                      </span>
-	                    </div>
-	                </div>
-					<div class="col-sm-12 col-md-7 col-lg-8 col-xxl-10 text-end mb-1">
-				    	<div class="d-inline-block me-0 me-sm-3 float-start float-md-none">
-					    	<button type="button" class="btn btn-success btn-icon" title="Nuevo registro" data-bs-toggle="tooltip" v-on:click="phuyu_nuevo()"> <i data-acorn-icon="plus" class="icon"></i> Nuevo</button>
-					    	<button type="button" class="btn btn-warning btn-icon editar" title="Editar registro" data-bs-toggle="tooltip" v-on:click="phuyu_editar()"> <i data-acorn-icon="edit"></i> Editar</button>
-						    <button
-	                        class="btn btn-icon eliminar btn-danger" data-bs-toggle="tooltip" data-bs-placement="top" title="Anular registro" type="button" data-bs-delay="0" v-on:click="phuyu_eliminar()"> <i data-acorn-icon="bin"></i> Eliminar</button>
-					    	<button
-	                        class="btn btn-icon btn-info"
-	                        data-bs-toggle="tooltip"
-	                        data-bs-placement="top"
-	                        title="Ver registro"
-	                        type="button"
-	                        data-bs-delay="0" v-on:click="phuyu_ver()"
-	                      >
-	                        <i data-acorn-icon="eye"></i> Ver
-	                      </button>
-					    </div>
+
+				<div class="row g-3 align-items-center mb-3">
+					<div class="col-12 col-md-5 col-lg-4 col-xl-3">
+						<div class="position-relative phuyu-search-box">
+							<input
+								class="form-control ps-5"
+								v-model="buscar"
+								v-on:keyup="phuyu_buscar()"
+								placeholder="Buscar registro..."
+								autocomplete="off"
+							>
+							<i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+						</div>
+					</div>
+
+					<div class="col-12 col-md-7 col-lg-8 col-xl-9">
+						<div class="d-flex flex-wrap gap-2 justify-content-md-end phuyu-btn-group">
+							<button type="button" class="btn btn-success btn-sm phuyu-btn" title="Nueva línea de crédito" data-bs-toggle="tooltip" v-on:click="phuyu_nuevo()">
+								<i class="bi bi-plus-circle"></i>
+								<span>Nuevo</span>
+							</button>
+
+							<button type="button" class="btn btn-warning btn-sm phuyu-btn editar" title="Editar línea de crédito" data-bs-toggle="tooltip" v-on:click="phuyu_editar()">
+								<i class="bi bi-pencil-square"></i>
+								<span>Editar</span>
+							</button>
+
+							<button type="button" class="btn btn-danger btn-sm phuyu-btn eliminar" title="Anular línea de crédito" data-bs-toggle="tooltip" v-on:click="phuyu_eliminar()">
+								<i class="bi bi-trash"></i>
+								<span>Eliminar</span>
+							</button>
+
+							<button type="button" class="btn btn-info btn-sm text-white phuyu-btn" title="Ver línea de crédito" data-bs-toggle="tooltip" v-on:click="phuyu_ver()">
+								<i class="bi bi-eye"></i>
+								<span>Ver</span>
+							</button>
+						</div>
 					</div>
 				</div>
+
 				<div class="phuyu_cargando" v-if="cargando">
 					<div class="overlay-spinner"></div>
 				</div>
-				<div class="data-table-responsive-wrapper">
-					<table class="table table-striped" style="font-size: 11px">
+
+				<div class="table-responsive phuyu-table-wrapper">
+					<table class="table table-hover align-middle mb-0 phuyu-table-lineas">
 						<thead>
 							<tr>
-								<th>ID</th>
-								<th>SOCIO</th>
-								<th>FECHA</th>
-								<th>CREDITO MAX.</th>
-								<th width="100px">TIPO POSESION</th>
-								<th>VERIFICADO</th>
-								<th>LIQUIDADO</th>
-								<th>ESTADO</th>
-								<th width="5px;"> <center> <i class="fa fa-circle-o"></i> </center> </th>
+								<th style="width:70px;">ID</th>
+								<th>Socio</th>
+								<th style="width:120px;">Fecha</th>
+								<th style="width:140px;" class="text-end">Crédito max.</th>
+								<th style="width:160px;">Tipo posesión</th>
+								<th style="width:110px;" class="text-center">Verificado</th>
+								<th style="width:110px;" class="text-center">Liquidado</th>
+								<th style="width:110px;">Estado</th>
+								<th style="width:60px;" class="text-center">
+									<i class="bi bi-check2-circle"></i>
+								</th>
 							</tr>
 						</thead>
+
 						<tbody>
-							<tr v-for="dato in datos" v-bind:class="[dato.estado==0 ? 'phuyu_anulado':'']">
-								<td>{{dato.codlote}}</td>
-								<td>{{dato.socio}}</td>
+							<tr v-for="dato in datos" v-bind:key="dato.codlote" v-bind:class="[dato.estado==0 ? 'phuyu_anulado':'', registro==dato.codlote ? 'phuyu_selected':'']">
+								<td class="text-muted fw-semibold">{{dato.codlote}}</td>
+								<td class="fw-semibold text-dark">{{dato.socio}}</td>
 								<td>{{dato.fechainicio}}</td>
-								<td>{{dato.creditomaximo}}</td>
-								<td>
-									<span v-if="dato.tipoposesion==0">PROPIA</span>
-									<span v-if="dato.tipoposesion==1">ALQUILADA</span>
-									<span v-if="dato.tipoposesion==2">ALQUILER COMPRA</span>
+								<td class="text-end">
+									<span class="phuyu-money">S/. {{dato.creditomaximo}}</span>
 								</td>
+
 								<td>
-									<span v-if="dato.verificado=='0'"><i data-acorn-icon="close"></i></span>
-									<span v-else="dato.verificado=='1'"><i data-acorn-icon="check"></i></span>
+									<span v-if="dato.tipoposesion==0" class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle">Propia</span>
+									<span v-if="dato.tipoposesion==1" class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle">Alquilada</span>
+									<span v-if="dato.tipoposesion==2" class="badge rounded-pill bg-info-subtle text-info border border-info-subtle">Alquiler compra</span>
 								</td>
+
+								<td class="text-center">
+									<span v-if="dato.verificado=='0'" class="phuyu-status-icon phuyu-status-no">
+										<i class="bi bi-x-lg"></i>
+									</span>
+									<span v-else class="phuyu-status-icon phuyu-status-ok">
+										<i class="bi bi-check-lg"></i>
+									</span>
+								</td>
+
+								<td class="text-center">
+									<span v-if="dato.liquidado=='0'" class="phuyu-status-icon phuyu-status-no">
+										<i class="bi bi-x-lg"></i>
+									</span>
+									<span v-else class="phuyu-status-icon phuyu-status-ok">
+										<i class="bi bi-check-lg"></i>
+									</span>
+								</td>
+
 								<td>
-									<span v-if="dato.liquidado=='0'"><i data-acorn-icon="close"></i></span>
-									<span v-else="dato.liquidado=='1'"><i data-acorn-icon="check"></i></span>
+									<span v-if="dato.estado==0" class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle">Anulado</span>
+									<span v-if="dato.estado==1" class="badge rounded-pill bg-success-subtle text-success border border-success-subtle">Válido</span>
 								</td>
-								<td>
-									<span v-if="dato.estado==0">ANULADO</span>
-									<span v-if="dato.estado==1">VÁLIDO</span>
+
+								<td v-if="dato.estado!='2'" class="text-center">
+									<input type="radio" class="form-check-input" name="phuyu_seleccionar" v-on:click="phuyu_seleccionar(dato.codlote,dato.estado)">
 								</td>
-								<td v-if="dato.estado!='2'"> 
-									<input type="radio" class="form-check-input" name="phuyu_seleccionar" v-on:click="phuyu_seleccionar(dato.codlote)"> 
+							</tr>
+
+							<tr v-if="!cargando && datos.length === 0">
+								<td colspan="9" class="text-center text-muted py-5">
+									<i class="bi bi-inbox d-block mb-2" style="font-size:32px;"></i>
+									No se encontraron líneas de crédito
 								</td>
 							</tr>
 						</tbody>
 					</table>
 				</div>
-				<?php include("application/views/phuyu/phuyu_paginacion.php");?>
 
-			    <div id="modal_reportes" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
-					<div class="modal-dialog" style="width:100%;margin:0px;">
-						<div class="modal-content" align="center" style="border-radius:0px">
+				<div class="mt-3">
+					<?php include("application/views/phuyu/phuyu_paginacion.php");?>
+				</div>
+
+				<div id="modal_reportes" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+					<div class="modal-dialog modal-fullscreen">
+						<div class="modal-content border-0 rounded-0">
 							<div class="modal-header">
-								<button type="button" class="close" data-dismiss="modal" style="font-size:30px;margin-bottom:0px;">
-									<i class="fa fa-times-circle"></i> 
-								</button>
-								<h4 class="modal-title">
+								<h4 class="modal-title mb-0 w-100 text-center">
+									<i class="bi bi-file-earmark-pdf me-2"></i>
 									<b style="letter-spacing:4px;"><?php echo $_SESSION["phuyu_empresa"];?> </b>
 								</h4>
+
+								<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
 							</div>
-							<div class="modal-body" id="reportes_modal" style="height:450px;padding:0px;">
-								<iframe id="phuyu_pdf" src="" style="width:100%; height:100%; border:none;"> </iframe>
+
+							<div class="modal-body p-0" id="reportes_modal" style="height:450px;">
+								<iframe id="phuyu_pdf" src="" style="width:100%; height:100%; border:none;"></iframe>
 							</div>
 						</div>
 					</div>
 				</div>
+
 			</div>
 		</div>
 	</div>
 </div>
 
 <script>
-	if (typeof AcornIcons !== 'undefined') {
-      new AcornIcons().replace();
-    }
-    if (typeof Icons !== 'undefined') {
-      const icons = new Icons();
-    }
-	var pantalla = jQuery(document).height(); $("#reportes_modal").css({height: pantalla - 65});
+	var pantalla = jQuery(document).height();
+	$("#reportes_modal").css({height: pantalla - 65});
+
+	if (typeof bootstrap !== 'undefined') {
+		document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+			bootstrap.Tooltip.getOrCreateInstance(el);
+		});
+	}
 </script>
-<script src="<?php echo base_url();?>phuyu/phuyu_lineascredito/index.js"> </script>
+<script src="<?php echo base_url();?>phuyu/phuyu_lineascredito/index.js"></script>

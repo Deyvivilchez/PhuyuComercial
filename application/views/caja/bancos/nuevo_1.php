@@ -1,4 +1,6 @@
-<div class="row" id="phuyu_form_1">
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<div class="row phuyu-velzon-form" id="phuyu_form_1">
 	<div class="col-md-7 col-xs-12" style="border-right: 1px solid #e5e6e7">
 		<h4><b>REGISTRAR NUEVA MARCA</b></h4> 
 		<span>SI YA ESTA REGISTRADA NO ES NECESARIO QUE INGRESES DE NUEVO SOLO TIENES QUE BUSCAR</span> <hr>
@@ -10,14 +12,14 @@
 			</div>
 
 			<div class="form-group text-center"> <br>
-				<button type="submit" class="btn btn-success" v-bind:disabled="estado_1==1"> <i class="fa fa-save"></i> GUARDAR </button>
+				<button type="submit" class="btn btn-success" v-bind:disabled="estado_1==1"> <i class="bi bi-save me-1"></i> GUARDAR </button>
 				<button type="button" class="btn btn-danger" data-dismiss="modal">CERRAR</button>
 			</div>
 		</form>
 	</div>
 	<div class="col-md-5 col-xs-12">
 		<h5><b>ESTAS REGISTRANDO</b> <br> UNA NUEVA MARCA PARA AGRUPAR LOS PRODUCTOS</h5>
-		<div class="text-center"> <i class="phuyu_big_icon fa fa-bookmark-o"></i> </div>
+		<div class="text-center"> <i class="bi bi-bookmark-check" style="font-size:64px;color:#405189;"></i> </div>
 	</div>
 </div>
 

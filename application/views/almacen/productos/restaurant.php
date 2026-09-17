@@ -1,17 +1,146 @@
-<div id="phuyu_buscar">
-	<div class="x_header" style="margin-bottom:10px;">
-		<input type="text" class="form-control" v-model="buscar" v-on:keyup="phuyu_buscar()" placeholder="BUSCAR PRODUCTO, PLATO O BEBIDA . . ." autocomplete="off" style="border:2px solid #d43f3a !important;">
+<style>
+	#phuyu_buscar.phuyu-restobar-buscar .x_header {
+		background: #fff;
+		border: 1px solid #e9ebec;
+		border-radius: 8px;
+		box-shadow: 0 1px 2px rgba(56, 65, 74, 0.08);
+		flex: 0 0 auto;
+		margin-bottom: 12px;
+		padding: 12px;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar {
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+		min-height: 0;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .form-control {
+		border: 1px solid #d9e2ef;
+		border-radius: 6px;
+		box-shadow: none;
+		min-height: 40px;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-product-card {
+		border: 1px solid #e9ebec;
+		border-radius: 8px;
+		cursor: pointer;
+		margin-top: 8px;
+		overflow: hidden;
+		padding: 4px;
+		transition: box-shadow .2s ease, transform .2s ease;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-product-card.sin-stock {
+		border-color: #f06548;
+		box-shadow: inset 0 0 0 1px rgba(240, 101, 72, .28);
+		cursor: not-allowed;
+		opacity: .78;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-product-card:hover {
+		box-shadow: 0 8px 18px rgba(15, 23, 42, 0.1);
+		transform: translateY(-1px);
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-product-card.sin-stock:hover {
+		box-shadow: inset 0 0 0 1px rgba(240, 101, 72, .28);
+		transform: none;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-stock-badge {
+		border-radius: 999px;
+		display: inline-block;
+		font-size: 10px;
+		font-weight: 700;
+		margin-top: 4px;
+		padding: 2px 7px;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-product-title {
+		font-size: 10px;
+		font-weight: 700;
+		height: 30px;
+		line-height: 1.2;
+		margin: 0 0 3px;
+		overflow: hidden;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-product-unit-mini {
+		background: rgba(64, 81, 137, .10);
+		border-radius: 999px;
+		color: #405189;
+		flex: 0 0 auto;
+		font-size: 8px;
+		font-weight: 800;
+		line-height: 1;
+		padding: 2px 4px;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-products-scroll {
+		flex: 1 1 auto;
+		max-height: 285px;
+		min-height: 0;
+		overflow-x: hidden;
+		overflow-y: auto;
+		padding-right: 6px;
+		scrollbar-color: #cbd5e1 #f3f6f9;
+		scrollbar-width: thin;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-products-scroll::-webkit-scrollbar {
+		width: 6px;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-products-scroll::-webkit-scrollbar-track {
+		background: #f3f6f9;
+		border-radius: 999px;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-products-scroll::-webkit-scrollbar-thumb {
+		background: #cbd5e1;
+		border-radius: 999px;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-products-scroll::-webkit-scrollbar-thumb:hover {
+		background: #9ca3af;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-stock-ok {
+		background: rgba(10, 179, 156, .14);
+		color: #087f6f;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .phuyu-stock-error {
+		background: rgba(240, 101, 72, .16);
+		color: #d84b2a;
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .modal-content {
+		border: 0;
+		border-radius: 8px;
+		box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
+	}
+	#phuyu_buscar.phuyu-restobar-buscar .modal-header {
+		background: #f3f6f9;
+		border-bottom: 1px solid #e9ebec;
+	}
+</style>
+
+<div id="phuyu_buscar" class="phuyu-restobar-buscar">
+	<div class="x_header">
+		<div class="input-group">
+			<span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
+			<input type="text" class="form-control border-start-0" v-model="buscar" v-on:keyup="phuyu_buscar()" placeholder="BUSCAR PRODUCTO, PLATO O BEBIDA . . ." autocomplete="off">
+		</div>
 	</div>
 
 	<div class="phuyu_cargando" v-if="cargando">
-		<i class="fa fa-spinner fa-spin"></i> <h5>CARGANDO DATOS</h5>
+		<div class="spinner-border text-primary" role="status"></div> <h5>CARGANDO DATOS</h5>
 	</div>
-	<div class="row" v-if="!cargando">
-		<div class="col-md-4" v-for="dato in productos" v-on:click="phuyu_seleccionado(dato)" style="margin-top:5px;cursor: pointer;border:1px solid #bbb;padding:4px">
-			<div v-bind:style="{background: dato.background}" v-bind:title="dato.mostrarstock">
-				<div style="padding:4px;text-align:center;">
-					<p style="height:30px;font-weight:bold;font-size:10px;">{{dato.descripcion.substring(0,30)}} - {{dato.marca}}</p>
-					<b style="font-size:20px;">S/. {{dato.precio}}</b>
+	<div class="phuyu-products-scroll" v-if="!cargando">
+		<div class="row">
+			<div class="col-md-4" v-for="dato in productos" v-on:click="phuyu_seleccionado(dato)">
+				<div class="phuyu-product-card" v-bind:class="phuyu_sin_stock(dato) ? 'sin-stock' : ''">
+				<div v-bind:style="{background: dato.background}" v-bind:title="dato.mostrarstock">
+					<div style="padding:4px;text-align:center;">
+						<p class="phuyu-product-title">{{dato.descripcion.substring(0,34)}} - {{dato.marca}}</p>
+						<b style="font-size:20px;">S/. {{dato.precio}}</b>
+						<div v-if="dato.controlstock == 1">
+							<span class="phuyu-stock-badge" v-bind:class="phuyu_sin_stock(dato) ? 'phuyu-stock-error' : 'phuyu-stock-ok'">
+								{{ dato.mostrarstock || 'STOCK: 0' }}
+							</span>
+						</div>
+						<div>
+							<span class="phuyu-product-unit-mini">{{ dato.unidad && dato.unidad.indexOf('UNIDAD') === 0 ? 'UND' : dato.unidad }}</span>
+						</div>
+					</div>
+				</div>
 				</div>
 			</div>
 		</div>
@@ -21,14 +150,12 @@
 		<div class="modal-dialog">
 			<div class="modal-content" align="center">
 				<div class="modal-header"> 
-					<button type="button" class="close" data-dismiss="modal" style="font-size:30px;margin-bottom:0px;">
-						<i class="fa fa-times-circle"></i> 
-					</button>
-					<h4 class="modal-title"> <b style="letter-spacing:1px;">MAS PRECIOS DEL PRODUCTO</b> </h4> 
+					<h5 class="modal-title">Mas precios del producto</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
 				</div>
 				<div class="modal-body" style="height: 380px;">
 					<h4 align="center">
-						{{masprecios.producto}} <br> <br> <span class="label label-warning">UNIDAD: {{masprecios.unidad}}</span> 
+						{{masprecios.producto}} <br> <br> <span class="badge bg-warning text-dark">UNIDAD: {{masprecios.unidad}}</span>
 					</h4> <hr>
 					
 					<div class="col-md-4">
@@ -109,7 +236,18 @@
 				this.phuyu_productos();
 			},
 
+			phuyu_sin_stock: function(producto){
+				return parseInt(phuyu_operacion.stockalmacen) === 1 && parseInt(producto.controlstock) === 1 && (parseFloat(producto.stockdisponible) || 0) <= 0;
+			},
 			phuyu_seleccionado: function(producto){
+				if (this.phuyu_sin_stock(producto)) {
+					phuyu_sistema.phuyu_alerta(
+						"No hay stock disponible",
+						producto.descripcion + " | " + (producto.mostrarstock || "STOCK: 0"),
+						"error"
+					);
+					return false;
+				}
 				phuyu_operacion.phuyu_additem(producto, producto.precio);
 			},
 			phuyu_masprecios:function(producto){

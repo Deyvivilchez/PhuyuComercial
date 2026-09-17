@@ -1,13 +1,20 @@
-<div id="phuyu_operacion">
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<div id="phuyu_operacion" class="phuyu-velzon-form phuyu-agricola-velzon">
 	<form id="formulario" class="form-horizontal" v-on:submit.prevent="phuyu_guardar()">
 		<input type="hidden" id="igvsunat" value="<?php echo $_SESSION["phuyu_igv"];?>">
 
 		<div class="phuyu_body">
-			<div class="card">
+			<div class="phuyu-form-title">
+				<div class="phuyu-form-icon"><i class="bi bi-flower2"></i></div>
+				<div>
+					<div class="text-muted small text-uppercase fw-semibold">Agricola</div>
+					<h4 class="mb-0 fw-bold">Registro ingreso por produccion</h4>
+				</div>
+			</div>
+
+			<div class="card phuyu-card">
 				<div class="card-body">
-				    <div class="row form-group">
-						<div class="col-md-12 col-xs-12"> <h5><b>REGISTRO INGRESO POR PRODUCCION</b></h5> </div>
-					</div>
 		        	<div class="row mb-2">
 		        		<div class="col-md-3">
 					    	<label>PERSONA RESPONSABLE</label>
@@ -104,7 +111,7 @@
 				    <div class="row form-group">
 				    	<div class="col-md-9"></div>
 						<div class="col-md-3" align="right">
-							<button type="button" class="btn-items-mas btn btn-success btn-icon" style="margin-top: 1.3rem;" v-on:click="phuyu_item()"><i data-acorn-icon="plus"></i> Buscar Productos </button>
+							<button type="button" class="btn-items-mas btn btn-success btn-icon" style="margin-top: 1.3rem;" v-on:click="phuyu_item()"><i class="bi bi-search me-1"></i> Buscar Productos </button>
 						</div>
 				    </div>
 				    <?php
@@ -191,11 +198,3 @@
 
 <script src="<?php echo base_url();?>phuyu/phuyu_chacra/produccion.js"> </script>
 <script src="<?php echo base_url();?>phuyu/phuyu_personas_2.js"> </script>
-<script> 
-if (typeof AcornIcons !== 'undefined') {
-      new AcornIcons().replace();
-    }
-    if (typeof Icons !== 'undefined') {
-      const icons = new Icons();
-    }
-</script>

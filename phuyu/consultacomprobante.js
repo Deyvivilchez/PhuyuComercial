@@ -1,3 +1,22 @@
+function phuyu_notificar_consulta(titulo, mensaje, tipo) {
+	if (typeof phuyu_sistema !== "undefined" && phuyu_sistema.phuyu_alerta) {
+		phuyu_sistema.phuyu_alerta(titulo, mensaje || "", tipo || "error");
+		return;
+	}
+
+	if (typeof swal === "function") {
+		swal({ title: titulo, text: mensaje || "", icon: tipo || "error" });
+		return;
+	}
+
+	if (window.jQuery && jQuery.notify) {
+		jQuery.notify({ title: titulo, message: mensaje || "" }, { type: tipo === "error" ? "danger" : tipo || "warning" });
+		return;
+	}
+
+	window.alert(titulo + (mensaje ? "\n" + mensaje : ""));
+}
+
 var phuyu_operacion = new Vue({
 	el: "#phuyu_operacion",
 	data: {
@@ -20,29 +39,25 @@ var phuyu_operacion = new Vue({
 		},
 		enviar_consulta: function(){
 			if(this.codcomprobantetipo == ""){
-            	new PNotify({title: "SELECCIONE EL TIPO DE COMPROBANTE",text: "",type: "error",delay: 2500,styling: 'bootstrap3'});
+            	phuyu_notificar_consulta("SELECCIONE EL TIPO DE COMPROBANTE", "", "error");
             	return false;
             }
             if(this.coddocumentotipo == ""){
-            	new PNotify({title: "SELECCIONE EL TIPO DE DOCUMENTO",text: "",type: "error",delay: 2500,styling: 'bootstrap3'});
+            	phuyu_notificar_consulta("SELECCIONE EL TIPO DE DOCUMENTO", "", "error");
             	return false;
             }
             if(this.documento == ""){
-            	new PNotify({title: "INGRESE EL NUMERO DE DOCUMENTO",text: "",type: "error",delay: 2500,styling: 'bootstrap3'});
+            	phuyu_notificar_consulta("INGRESE EL NUMERO DE DOCUMENTO", "", "error");
             	return false;
             }
 
             if(this.coddocumentotipo == 4){
             	if(this.documento.length != 11){
-            		new PNotify({title: "EL RUC DEBE TENER 11 CARACTERES",text: "",type: "error",delay: 3500,
-						styling: 'bootstrap3'
-					});return false;
+            		phuyu_notificar_consulta("EL RUC DEBE TENER 11 CARACTERES", "", "error");return false;
             	}
             }else if(this.coddocumentotipo == 2){
             	if(this.documento.length != 8){
-            		new PNotify({title: "EL DNI DEBE TENER 8 CARACTERES",text: "",type: "error",delay: 3500,
-						styling: 'bootstrap3'
-					});return false;
+            		phuyu_notificar_consulta("EL DNI DEBE TENER 8 CARACTERES", "", "error");return false;
             	}
             }
 
@@ -57,7 +72,7 @@ var phuyu_operacion = new Vue({
 				this.detalle = data.body
 				this.estado = 0;
 			}, function(){
-				new PNotify({title: "ERROR AL REALIZAR LA CONSULTA",text: "Consulte con su Proveedor",type: "error",delay: 3500,styling: 'bootstrap3'});
+				phuyu_notificar_consulta("ERROR AL REALIZAR LA CONSULTA", "Consulte con su Proveedor", "error");
 				this.estado = 0;
 			});
 		},

@@ -1,146 +1,293 @@
-<div id="phuyu_operacion">
-	<div class="phuyu_header">
-		<div class="row phuyu_header_title">
-			<div class="col-md-7 col-xs-12"> <h5>PRODUCTOS PARA LA VENTA - RECETAS</h5> </div>
-			<div class="col-md-4 col-xs-12">
-				<input type="text" class="form-control" v-model="buscar" placeholder="BUSCAR PRODUCTO . . .">
-			</div>
-		</div>
+<style>
+	#phuyu_operacion.phuyu-recetas .phuyu-page-title {
+		display: flex;
+		align-items: center;
+		gap: .75rem;
+		margin-bottom: 1rem;
+	}
 
-		<div class="row">
-			<div class="col-md-1"> <label style="padding-top:6px;"><i class="fa fa-calendar"></i> DESDE</label></div>
-			<div class="col-md-2">
-				<input type="text" class="form-control input-sm datepicker" id="fechadesde" value="<?php echo date('Y-m-d');?>" autocomplete="off">
-			</div>
-			<div class="col-md-1"> <label style="padding-top:6px;"><i class="fa fa-calendar"></i> HASTA</label></div>
-			<div class="col-md-2">
-				<input type="text" class="form-control input-sm datepicker" id="fechahasta" value="<?php echo date('Y-m-d');?>" autocomplete="off">
-			</div>
-			<div class="col-md-3">
-				<button type="button" class="btn btn-success btn-sm btn-block" v-on:click="consumo_total()"> 
-					<i class="fa fa-print"></i> CONSUMO INGREDIENTES TOTALIZADO
-				</button>
-			</div>
-			<div class="col-md-3">
-				<button type="button" class="btn btn-warning btn-sm btn-block" v-on:click="consumo_fechas()"> 
-					<i class="fa fa-print"></i> CONSUMO INGREDIENTES FECHAS
-				</button>
-			</div>
-		</div> <br>
-	</div> <br>
+	#phuyu_operacion.phuyu-recetas .phuyu-page-icon {
+		width: 44px;
+		height: 44px;
+		border-radius: 12px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(10, 132, 117, .10);
+		color: #0a8475;
+		font-size: 1.25rem;
+	}
 
-	<div class="phuyu_body">
-		<div class="table-responsive lista" style="overflow-y:auto;height:200px;">
-			<table class="table table-condensed table-bordered">
-				<thead>
-					<tr>
-						<th width="3%"> # </th>
-						<th width="40%">PRODUCTO</th>
-						<th width="5%">S/.&nbsp;COSTO</th>
-						<th width="5%">S/.&nbsp;VENTA</th>
-						<th width="40%">VER RECETA</th>
-						<th width="7%">RECETA</th>
-					</tr>
-				</thead>
-				<tbody>
-					<tr v-for="(dato, index) in buscar_productos">
-						<td>{{dato.nro}}</td>
-						<td>{{dato.descripcion}} <b style="color:#06B8AC">{{dato.unidad}}</b></td>
-						<td><b>{{dato.preciocosto}}</b></td>
-						<td><b>{{dato.precioventa}}</b></td>
-						<td style="padding:0px;">
-							<div style="background:#FAFAFA; font-size:13px;padding:5px 10px;height:50px;overflow-y:auto;">
-								<ul class="list-unstyled text-left">
-									<li v-for="d in dato.receta"><i class="fa fa-check text-success"></i> CANT. {{d.cantidad}} <strong>{{d.producto}} - {{d.unidad}}</strong></li>
-								</ul>
-							</div>
-						</td>
-						<td>
-							<button type="button" class="btn btn-success btn-sm btn-block" v-on:click="phuyu_receta(dato)">RECETA</button>
-						</td>
-					</tr>
-				</tbody>
-			</table>
+	#phuyu_operacion.phuyu-recetas .phuyu-card {
+		border: 1px solid rgba(10, 132, 117, .12);
+		border-radius: .9rem;
+		box-shadow: 0 10px 28px rgba(15, 23, 42, .06);
+	}
+
+	#phuyu_operacion.phuyu-recetas .phuyu-toolbar {
+		display: grid;
+		grid-template-columns: minmax(220px, 1fr) repeat(2, 170px) auto auto;
+		gap: .65rem;
+		align-items: end;
+		margin-bottom: 1rem;
+	}
+
+	#phuyu_operacion.phuyu-recetas .phuyu-search {
+		position: relative;
+	}
+
+	#phuyu_operacion.phuyu-recetas .phuyu-search .form-control {
+		padding-left: 2.35rem;
+	}
+
+	#phuyu_operacion.phuyu-recetas .phuyu-search i {
+		position: absolute;
+		left: .85rem;
+		top: 50%;
+		transform: translateY(-50%);
+		color: #878a99;
+	}
+
+	#phuyu_operacion.phuyu-recetas .form-label {
+		font-size: .72rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		color: #495057;
+		margin-bottom: .35rem;
+	}
+
+	#phuyu_operacion.phuyu-recetas .form-control,
+	#phuyu_operacion.phuyu-recetas .form-select {
+		min-height: 40px;
+		border-color: rgba(10, 132, 117, .18);
+	}
+
+	#phuyu_operacion.phuyu-recetas .phuyu-table-wrap {
+		border: 1px solid rgba(10, 132, 117, .12);
+		border-radius: .75rem;
+		overflow: hidden;
+	}
+
+	#phuyu_operacion.phuyu-recetas table thead th {
+		background: #f8fafc;
+		color: #495057;
+		font-size: .72rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		white-space: nowrap;
+	}
+
+	#phuyu_operacion.phuyu-recetas table tbody td {
+		font-size: .84rem;
+		vertical-align: middle;
+	}
+
+	#phuyu_operacion.phuyu-recetas .phuyu-recipe-list {
+		max-height: 58px;
+		overflow: auto;
+		background: #f8fafc;
+		border-radius: .55rem;
+		padding: .45rem .65rem;
+	}
+
+	#phuyu_operacion.phuyu-recetas .phuyu-modal-scroll {
+		height: calc(100vh - 210px);
+		min-height: 320px;
+		overflow: auto;
+	}
+
+	#phuyu_operacion.phuyu-recetas .phuyu-products-panel {
+		height: calc(100vh - 220px);
+		min-height: 320px;
+		overflow: auto;
+		border: 1px solid rgba(10, 132, 117, .12);
+		border-radius: .75rem;
+		padding: .75rem;
+	}
+
+	@media (max-width: 991.98px) {
+		#phuyu_operacion.phuyu-recetas .phuyu-toolbar {
+			grid-template-columns: 1fr 1fr;
+		}
+
+		#phuyu_operacion.phuyu-recetas .phuyu-search {
+			grid-column: 1 / -1;
+		}
+	}
+
+	@media (max-width: 575.98px) {
+		#phuyu_operacion.phuyu-recetas .phuyu-toolbar {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>
+
+<div id="phuyu_operacion" class="phuyu-recetas">
+	<div class="phuyu-page-title">
+		<div class="phuyu-page-icon"><i class="bi bi-journal-check"></i></div>
+		<div>
+			<div class="text-muted small text-uppercase fw-semibold">Restobar</div>
+			<h4 class="mb-0 fw-bold">Productos para la venta - recetas</h4>
 		</div>
 	</div>
 
-	<div id="modal_receta" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
-		<div class="modal-dialog" style="width:100%;margin:0px;">
-			<div class="modal-content" align="center" style="border-radius:0px">
-				<div class="modal-header">
-					<button type="button" class="close" data-dismiss="modal" style="font-size:30px;margin-bottom:0px;">
-						<i class="fa fa-times-circle"></i> 
+	<div class="phuyu_body">
+		<div class="card phuyu-card">
+			<div class="card-body">
+				<div class="phuyu-toolbar">
+					<div class="phuyu-search">
+						<i class="bi bi-search"></i>
+						<input type="text" class="form-control" v-model="buscar" placeholder="Buscar producto">
+					</div>
+
+					<div>
+						<label class="form-label">Desde</label>
+						<input type="text" class="form-control datepicker" id="fechadesde" value="<?php echo date('Y-m-d');?>" autocomplete="off">
+					</div>
+
+					<div>
+						<label class="form-label">Hasta</label>
+						<input type="text" class="form-control datepicker" id="fechahasta" value="<?php echo date('Y-m-d');?>" autocomplete="off">
+					</div>
+
+					<button type="button" class="btn btn-primary" v-on:click="consumo_total()">
+						<i class="bi bi-printer me-1"></i> Totalizado
 					</button>
-					<h4 class="modal-title"> <b style="letter-spacing:3px;" id="titulo_receta"></b> </h4>
+
+					<button type="button" class="btn btn-warning" v-on:click="consumo_fechas()">
+						<i class="bi bi-calendar-range me-1"></i> Por fechas
+					</button>
 				</div>
-				<div class="modal-body" id="receta_modal" style="height:400px;padding:10px;">
-					<div class="row">
-						<div class="col-md-6 col-xs-12">
-							<h4><b>LISTA DE PRODUCTOS EN LA RECETA</b></h4> <hr>
-							<table class="table table-bordered">
-								<thead>
-									<tr>
-										<th>PRODUCTO</th>
-										<th>UNIDAD</th>
-										<th width="10px">CANTIDAD</th>
-										<th><i class="fa fa-trash-o"></i></th>
-									</tr>
-								</thead>
-								<tbody>
-									<tr v-for="(dato,index) in detalle">
-										<td>{{dato.producto}}</td>
-										<td>{{dato.unidad}}</td>
-										<td>
-											<input type="number" step="0.001" class="phuyu-input number" v-model.number="dato.cantidad" min="0.001" required>
-										</td>
-										<td> 
-											<button type="button" class="btn btn-danger btn-xs" style="margin-bottom:-1px;" v-on:click="phuyu_deleteitem(index,dato)">
-												<i class="fa fa-trash-o"></i> 
-											</button>
-										</td>
-									</tr>
-								</tbody>
-							</table>
-							<div class="text-center">
-								<button type="button" class="btn btn-success" v-on:click="phuyu_guardar()" v-bind:disabled="estado==1">GUARDAR RECETA</button>
-								<button type="button" class="btn btn-danger" data-dismiss="modal">CANCELAR</button>
+
+				<div class="table-responsive phuyu-table-wrap lista" style="overflow-y:auto;height:420px;">
+					<table class="table table-hover align-middle mb-0">
+						<thead>
+							<tr>
+								<th width="70">#</th>
+								<th>Producto</th>
+								<th width="110">Costo</th>
+								<th width="110">Venta</th>
+								<th>Receta actual</th>
+								<th class="text-center" width="110">Editar</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr v-for="dato in buscar_productos">
+								<td class="text-muted fw-semibold">{{dato.nro}}</td>
+								<td>
+									<div class="fw-semibold">{{dato.descripcion}}</div>
+									<div class="text-muted small">{{dato.unidad}}</div>
+								</td>
+								<td>S/. <b>{{dato.preciocosto}}</b></td>
+								<td>S/. <b>{{dato.precioventa}}</b></td>
+								<td>
+									<div class="phuyu-recipe-list">
+										<div v-for="d in dato.receta" class="small">
+											<i class="bi bi-check2 text-success me-1"></i>
+											Cant. {{d.cantidad}} <strong>{{d.producto}} - {{d.unidad}}</strong>
+										</div>
+										<div v-if="dato.receta.length==0" class="text-muted small">Sin receta registrada</div>
+									</div>
+								</td>
+								<td class="text-center">
+									<button type="button" class="btn btn-success btn-sm" v-on:click="phuyu_receta(dato)">
+										<i class="bi bi-pencil-square me-1"></i> Receta
+									</button>
+								</td>
+							</tr>
+							<tr v-if="buscar_productos.length==0">
+								<td colspan="6" class="text-center text-muted py-3">
+									<i class="bi bi-inbox me-1"></i> Sin productos
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div id="modal_receta" class="modal fade" tabindex="-1" aria-hidden="true">
+		<div class="modal-dialog modal-xl modal-dialog-scrollable">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title fw-bold" id="titulo_receta"></h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+				</div>
+				<div class="modal-body">
+					<div class="row g-3">
+						<div class="col-12 col-lg-6">
+							<div class="d-flex align-items-center justify-content-between mb-2">
+								<h6 class="mb-0 fw-bold">Productos en la receta</h6>
+								<button type="button" class="btn btn-primary btn-sm" v-on:click="phuyu_guardar()" v-bind:disabled="estado==1">
+									<i class="bi bi-save me-1"></i> Guardar
+								</button>
+							</div>
+							<div class="table-responsive phuyu-table-wrap phuyu-modal-scroll">
+								<table class="table table-hover align-middle mb-0">
+									<thead>
+										<tr>
+											<th>Producto</th>
+											<th width="120">Unidad</th>
+											<th width="120">Cantidad</th>
+											<th class="text-center" width="70"><i class="bi bi-trash3"></i></th>
+										</tr>
+									</thead>
+									<tbody>
+										<tr v-for="(dato,index) in detalle">
+											<td class="fw-semibold">{{dato.producto}}</td>
+											<td>{{dato.unidad}}</td>
+											<td>
+												<input type="number" step="0.001" class="form-control number" v-model.number="dato.cantidad" min="0.001" required>
+											</td>
+											<td class="text-center">
+												<button type="button" class="btn btn-danger btn-sm" v-on:click="phuyu_deleteitem(index,dato)">
+													<i class="bi bi-trash3"></i>
+												</button>
+											</td>
+										</tr>
+										<tr v-if="detalle.length==0">
+											<td colspan="4" class="text-center text-muted py-3">Sin ingredientes</td>
+										</tr>
+									</tbody>
+								</table>
 							</div>
 						</div>
-						<div class="col-md-6 col-xs-12">
-							<div class="x_panel" style="height:450px;overflow-y:auto;">
-								<div id="lista_productos"></div>
-							</div>
+						<div class="col-12 col-lg-6">
+							<h6 class="mb-2 fw-bold">Buscar ingredientes</h6>
+							<div class="phuyu-products-panel" id="lista_productos"></div>
 						</div>
 					</div>
 				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-light" data-bs-dismiss="modal">
+						<i class="bi bi-x-circle me-1"></i> Cerrar
+					</button>
+				</div>
 			</div>
 		</div>
 	</div>
 
-	<div id="modal_reportes" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
-		<div class="modal-dialog" style="width:100%;margin:0px;">
-			<div class="modal-content" align="center" style="border-radius:0px">
+	<div id="modal_reportes" class="modal fade" tabindex="-1" aria-hidden="true">
+		<div class="modal-dialog modal-fullscreen">
+			<div class="modal-content">
 				<div class="modal-header">
-					<button type="button" class="close" data-dismiss="modal" style="font-size:30px;margin-bottom:0px;">
-						<i class="fa fa-times-circle"></i> 
-					</button>
-					<h4 class="modal-title">
-						<b style="letter-spacing:4px;"><?php echo $_SESSION["phuyu_empresa"];?> </b>
-					</h4>
+					<h5 class="modal-title fw-bold"><?php echo $_SESSION["phuyu_empresa"];?></h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
 				</div>
-				<div class="modal-body" id="reportes_modal" style="height:450px;padding:0px;">
+				<div class="modal-body p-0" id="reportes_modal">
 					<iframe id="phuyu_pdf" src="" style="width:100%; height:100%; border:none;"> </iframe>
 				</div>
 			</div>
 		</div>
 	</div>
-
 </div>
 
 <script>
-	var pantalla = jQuery(document).height(); $("#reportes_modal").css({height: pantalla - 65}); 
-	var productos = pantalla - 220; $(".lista").css("height",productos+"px");
-	$("#receta_modal").css({height: pantalla - 70});
+	var pantalla = jQuery(document).height();
+	$("#reportes_modal").css({height: pantalla - 65});
+	var productos = pantalla - 250;
+	$(".lista").css("height", productos + "px");
 </script>
 
 <script src="<?php echo base_url();?>phuyu/phuyu_restaurante/recetas.js"></script>

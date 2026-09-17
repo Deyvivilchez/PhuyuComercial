@@ -51,6 +51,9 @@ var phuyu_sunat = new Vue({
 			this.$http.get(url+"facturacion/facturacion/resumenes_ver/"+dato.codresumentipo+"/"+dato.periodo+"/"+dato.nrocorrelativo).then(function(data){
 				this.resumenes_info = data.body; $("#modal_resumenes").modal("show");
 			});
+		},
+		phuyu_cerrarresumen: function(){
+			$("#modal_resumenes").modal("hide");
 		}
 	},
 	created: function(){

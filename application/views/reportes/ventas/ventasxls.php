@@ -1,7 +1,56 @@
 <?php
+if (!function_exists('phuyu_nombre_archivo_empresa')) {
+    function phuyu_nombre_archivo_empresa($tipo, $empresaDatos = array())
+    {
+        $empresaInfo = isset($empresaDatos[0]) ? $empresaDatos[0] : array();
+        $empresa = '';
+
+        if (!empty($empresaInfo["razonsocial"])) {
+            $empresa = $empresaInfo["razonsocial"];
+        } elseif (!empty($empresaInfo["nombrecomercial"])) {
+            $empresa = $empresaInfo["nombrecomercial"];
+        } elseif (!empty($empresaInfo["documento"])) {
+            $empresa = $empresaInfo["documento"];
+        } elseif (!empty($_SESSION["phuyu_empresa"])) {
+            $empresa = $_SESSION["phuyu_empresa"];
+        } else {
+            $empresa = "Negocio";
+        }
+
+        $empresaAscii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $empresa);
+        $empresa = $empresaAscii !== false ? $empresaAscii : $empresa;
+        $empresa = preg_replace('/[^A-Za-z0-9]+/', '_', $empresa);
+        $empresa = trim($empresa, '_');
+
+        return ($empresa !== '' ? $empresa : 'Negocio') . '_' . $tipo . '_' . date('Y-m-d') . '.xls';
+    }
+}
+
 header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-header('Content-Disposition: attachment;filename="ReporteVentas' . date('Y-m-d') . '.xls"');
+header('Content-Disposition: attachment;filename="' . phuyu_nombre_archivo_empresa('ReporteVentasContable', isset($empresa) ? $empresa : array()) . '"');
 header('Cache-Control: max-age=0');
+
+if (!function_exists('phuyu_estado_sunat_texto')) {
+    function phuyu_estado_sunat_texto($estado)
+    {
+        if ($estado === null || $estado === '') {
+            return 'PENDIENTE';
+        }
+
+        switch ((int)$estado) {
+            case 1:
+                return 'ACEPTADO';
+            case 2:
+                return 'ACEPTADO CON OBS.';
+            case 3:
+                return 'RECHAZADO';
+            case 4:
+                return 'OBSERVADO';
+            default:
+                return 'PENDIENTE';
+        }
+    }
+}
 ?>
 <style type="text/css">
     .celdauno{
@@ -20,22 +69,22 @@ header('Cache-Control: max-age=0');
 </style>
 <table style="font-size: 12px">
     <tr>
-        <th colspan="23"> 
+        <th colspan="26"> 
             <b><?php echo utf8_decode($_SESSION["phuyu_empresa"]);?></b>
         </th>
     </tr>
     <tr>
-        <th colspan="23">
+        <th colspan="26">
             <?php echo 'RUC: '.$empresa[0]["documento"]; ?>
         </th>
     </tr>
     <tr>
-        <th colspan="23"><?php echo 'DIRECCION: '.$empresa[0]["direccion"];?></th>
+        <th colspan="26"><?php echo 'DIRECCION: '.$empresa[0]["direccion"];?></th>
     </tr>
     <tr>
-        <th colspan="23"><?php echo 'REGISTRO DE VENTAS E INGRESOS PERIODO: '.$periodo[1].'/'.$periodo[0];?></th>
+        <th colspan="26"><?php echo 'REGISTRO DE VENTAS E INGRESOS PERIODO: '.$periodo[1].'/'.$periodo[0];?></th>
     </tr>
-    <tr><th colspan="23"></th></tr>
+    <tr><th colspan="26"></th></tr>
 </table>
 <table style="font-size: 10px">
     <?php 
@@ -53,6 +102,9 @@ header('Cache-Control: max-age=0');
             <td class="celdauno" rowspan="3">ICBPER</td>
             <td class="celdauno" rowspan="3">OTROS</td>
             <td class="celdauno" rowspan="3">IMPORTE TOTAL</td>
+            <td class="celdauno" rowspan="3">ESTADO SUNAT</td>
+            <td class="celdauno" rowspan="3">COD. SUNAT</td>
+            <td class="celdauno" rowspan="3">RESPUESTA SUNAT</td>
             <td class="celdauno" rowspan="3">TIPO DE CAMBIO</td>
             <td class="celdauno" rowspan="2" colspan="4">REF. DE COMPROBANTE DE PAGO O DOC. ORIGINAL QUE SE MODIFICO</td>
         </tr>
@@ -112,6 +164,9 @@ header('Cache-Control: max-age=0');
                                 echo '<td class="celdatres">'.number_format(0.00,2).'</td>';
                                 echo '<td class="celdatres"></td>';
                                 echo '<td class="celdatres">'.number_format(0.00,2).'</td>';
+                                echo '<td class="celdatres">'.phuyu_estado_sunat_texto($val["estadosunat"]).'</td>';
+                                echo '<td class="celdatres">'.$val["codigosunat"].'</td>';
+                                echo '<td class="celdatres">'.utf8_decode($val["respuestasunat"]).'</td>';
                                 echo '<td class="celdatres"></td>';
                             }else{
                                 $valorventa = $valorventa + $val["valorventa"]; 
@@ -129,6 +184,9 @@ header('Cache-Control: max-age=0');
                                 echo '<td class="celdatres">'.number_format($val["icbper"],2).'</td>';
                                 echo '<td class="celdatres"></td>';
                                 echo '<td class="celdatres">'.number_format($val["importe"],2).'</td>';
+                                echo '<td class="celdatres">'.phuyu_estado_sunat_texto($val["estadosunat"]).'</td>';
+                                echo '<td class="celdatres">'.$val["codigosunat"].'</td>';
+                                echo '<td class="celdatres">'.utf8_decode($val["respuestasunat"]).'</td>';
                                 echo '<td class="celdatres"></td>';
                             }
                         ?>
@@ -158,6 +216,7 @@ header('Cache-Control: max-age=0');
         <td class="celdados"><?php echo number_format($icbper,2)?></td>
         <td class="celdados">0</td>
         <td class="celdados"><?php echo number_format($total,2)?></td>
+        <td class="celdatres" colspan="3"></td>
         <td class="celdatres"></td>
         <td class="celdatres" colspan="4"> </td>
     </tr>

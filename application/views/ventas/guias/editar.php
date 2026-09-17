@@ -58,10 +58,9 @@
 
 		<div class="ln_solid"></div>
 		<div class="form-group" align="center">
-			<!-- <div class="alert alert-danger" v-if="sunat==1">EL COMPROBANTE YA FUE ENVIADO A SUNAT - NO PUEDES EDITAR LO SENTIMOS</div>
-			<button type="submit" class="btn btn-success" v-if="sunat==0" v-bind:disabled="estado==1"> <i class="fa fa-save"></i> GUARDAR </button> -->
+			<!-- <div class="alert alert-danger" v-if="sunat==1">EL COMPROBANTE YA FUE ENVIADO A SUNAT - NO PUEDES EDITAR LO SENTIMOS</div> -->
 
-			<button type="submit" class="btn btn-success" v-bind:disabled="estado==1"> <i class="fa fa-save"></i> GUARDAR </button>
+			<button type="submit" class="btn btn-success" v-bind:disabled="estado==1"> <i class="bi bi-save me-1"></i> GUARDAR </button>
 			<button type="button" class="btn btn-danger" v-on:click="phuyu_cerrar()">CERRAR</button>
 		</div>
 	</form>

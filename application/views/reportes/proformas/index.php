@@ -1,4 +1,6 @@
-<div id="phuyu_datos">
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<div id="phuyu_datos" class="phuyu-reportes-velzon phuyu-velzon-list">
 	<div class="phuyu_body">
 		<div class="card">
 			<div class="card-header">
@@ -9,8 +11,8 @@
 				<div class="row">
 					<div class="col-md-4">
 						<div class="input-group m-b-5">
-							<span class="input-group-addon">
-								<i class="fa fa-home"></i> SUCURSALES
+							<span class="input-group-text">
+								<i class="bi bi-house"></i> SUCURSALES
 							</span> 
 							<select class="form-control" v-model="campos.codsucursal">
 								<option value="0">TODAS SUCURSALES</option>
@@ -25,8 +27,8 @@
 					</div>
 					<div class="col-md-3">
 						<div class="input-group m-b-5">
-							<span class="input-group-addon">
-								<i class="fa fa-calendar"></i> DESDE
+							<span class="input-group-text">
+								<i class="bi bi-calendar3"></i> DESDE
 							</span>
 							<input type="hidden" id="fechad" value="<?php echo date("Y-m-01");?>">
 							<input type="text" class="form-control datepicker" id="fechadesde" v-model="campos.fechadesde" v-on:blur="phuyu_fecha()">
@@ -34,8 +36,8 @@
 					</div>
 					<div class="col-md-3">
 						<div class="input-group m-b-5">
-							<span class="input-group-addon">
-								<i class="fa fa-calendar"></i> HASTA
+							<span class="input-group-text">
+								<i class="bi bi-calendar3"></i> HASTA
 							</span>
 							<input type="hidden" id="fechah" value="<?php echo date("Y-m-d");?>">
 							<input type="text" class="form-control datepicker" id="fechahasta" v-model="campos.fechahasta" v-on:blur="phuyu_fecha()">
@@ -43,8 +45,8 @@
 					</div>
 					<div class="col-md-2">
 						<div class="input-group m-b-5">
-							<span class="input-group-addon">
-								<i class="fa fa-circle"></i>
+							<span class="input-group-text">
+								<i class="bi bi-circle-fill"></i>
 							</span> 
 							<select class="form-control" v-model="campos.estado">
 								<option value="0">TODOS</option>
@@ -63,8 +65,8 @@
 							<div class="card-body"><br>
 								<p align="center" style="font-size: 20px;">REPORTE GENERAL PDF</p>
 								<div align="center">
-									<button type="button" class="btn btn-danger btn-sm" v-on:click="pdf_pedidos()"><i class="fa fa-print"></i> PROFORMAS PDF</button>
-									<button type="button" class="btn btn-danger btn-sm" v-on:click="pdf_pedidos_detallado()"><i class="fa fa-print"></i> PROFORMAS DETALLADO PDF</button>
+									<button type="button" class="btn btn-danger btn-sm" v-on:click="pdf_pedidos()"><i class="bi bi-printer"></i> PROFORMAS PDF</button>
+									<button type="button" class="btn btn-danger btn-sm" v-on:click="pdf_pedidos_detallado()"><i class="bi bi-printer"></i> PROFORMAS DETALLADO PDF</button>
 								</div>
 								<br>
 							</div>
@@ -75,8 +77,8 @@
 							<div class="card-body"><br>
 								<p align="center" style="font-size: 20px;">REPORTE GENERAL EXCEL</p>
 								<div align="center">
-									<button type="button" class="btn btn-success btn-sm" v-on:click="excel_proformas()"><i class="fa fa-file-excel-o"></i> PROFORMAS EXCEL</button>
-									<button type="button" class="btn btn-success btn-sm" v-on:click="excel_proformas_detallado()"><i class="fa fa-file-excel-o"></i> PROFORMAS DETALLADO EXCEL</button>
+									<button type="button" class="btn btn-success btn-sm" v-on:click="excel_proformas()"><i class="bi bi-file-earmark-excel"></i> PROFORMAS EXCEL</button>
+									<button type="button" class="btn btn-success btn-sm" v-on:click="excel_proformas_detallado()"><i class="bi bi-file-earmark-excel"></i> PROFORMAS DETALLADO EXCEL</button>
 								</div>
 								<br>
 							</div>
@@ -94,10 +96,10 @@
 								<br>
 								<div align="center">
 									<button type="button" class="btn btn-danger" v-on:click="pdf_producto_proformas()">
-										<i class="fa fa-print"></i> PDF
+										<i class="bi bi-printer"></i> PDF
 									</button>
 									<button type="button" class="btn btn-success" v-on:click="excel_producto_proformas()">
-										<i class="fa fa-cloud"></i> EXCEL
+										<i class="bi bi-cloud-download"></i> EXCEL
 									</button>
 								</div>
 								<br>
@@ -115,10 +117,10 @@
 								</div><br>
 								<div align="center">
 									<button type="button" class="btn btn-danger" v-on:click="pdf_cliente_proformas()">
-										<i class="fa fa-print"></i> PDF
+										<i class="bi bi-printer"></i> PDF
 									</button>
 									<button type="button" class="btn btn-success" v-on:click="excel_cliente_proformas()">
-										<i class="fa fa-cloud"></i> EXCEL
+										<i class="bi bi-cloud-download"></i> EXCEL
 									</button>
 								</div>
 								<br>

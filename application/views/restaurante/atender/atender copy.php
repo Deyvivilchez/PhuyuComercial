@@ -1397,6 +1397,14 @@
                             width: '100%',
                             dropdownParent: $('#modal_pago')
                         });
+                        if (typeof phuyu_select2_velzon === 'function') {
+                            phuyu_select2_velzon('#codpersona');
+                        } else {
+                            if (!document.getElementById('phuyu-select2-velzon-style')) {
+                                $('head').append('<style id="phuyu-select2-velzon-style">.phuyu-select2-velzon.select2-container{width:100%!important;}.phuyu-select2-velzon .select2-selection--single{display:flex!important;align-items:center!important;height:40px!important;min-height:40px!important;border:1px solid rgba(64,81,137,.16)!important;border-radius:.375rem!important;background:#fff!important;box-shadow:none!important;}.phuyu-select2-velzon .select2-selection__rendered{line-height:40px!important;padding-left:.75rem!important;padding-right:2rem!important;font-size:.86rem!important;font-weight:600!important;color:#343a40!important;}.phuyu-select2-velzon .select2-selection__arrow{height:40px!important;right:.25rem!important;}</style>');
+                            }
+                            $('#codpersona').next('.select2-container').addClass('phuyu-select2-velzon');
+                        }
 
                         // Sincronizar con v-model
                         $('#codpersona').on('select2:select', (e) => {

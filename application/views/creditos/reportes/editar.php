@@ -1,4 +1,6 @@
-<div id="phuyu_form">
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<div id="phuyu_form" class="phuyu-velzon-form phuyu-creditos-velzon">
 	<div style="padding:0px 10px;">
 		<h6><b>NROCREDITO:</b> 000<?php echo $info[0]["codcredito"] ?> | <b>FECHA CREDITO:</b> <?php echo $info[0]["fechacredito"] ?></h6>
 		<h6><b>FECHA VENCIMIENTO:</b> <?php echo $info[0]["fechavencimiento"] ?> | <b>NRO CUOTAS:</b> | 0<?php echo $info[0]["nrocuotas"] ?> </h6>
@@ -7,10 +9,10 @@
 		<h6><b>REFERENCIA:</b> <?php echo $info[0]["referencia"];?> </h6>
 
 		<h5>
-			<span class="label label-success">CREDITO: <?php echo number_format($info[0]["importe"],2);?></span>
-			<span class="label label-warning">INTERES: <?php echo number_format($info[0]["interes"],2);?></span>
-			<span class="label label-info">TOTAL: <?php echo number_format($info[0]["total"],2);?></span>
-			<span class="label label-danger">SALDO: <?php echo number_format($info[0]["saldo"],2);?></span>
+			<span class="badge bg-success">CREDITO: <?php echo number_format($info[0]["importe"],2);?></span>
+			<span class="badge bg-warning text-dark">INTERES: <?php echo number_format($info[0]["interes"],2);?></span>
+			<span class="badge bg-info text-dark">TOTAL: <?php echo number_format($info[0]["total"],2);?></span>
+			<span class="badge bg-danger">SALDO: <?php echo number_format($info[0]["saldo"],2);?></span>
 		</h5>
 	</div>
 
@@ -26,11 +28,11 @@
 			</div>
 		</div>
 
-		<div class="text-center"> <span class="label label-danger">NOTA* NECESITAS LA CLAVE DE ADMINISTRADOR</span> </div>
+		<div class="text-center"> <span class="badge bg-danger">NOTA* NECESITAS LA CLAVE DE ADMINISTRADOR</span> </div>
 		<div class="ln_solid"></div>
 		<div class="form-group" align="center">
 			<div class="alert alert-danger" v-if="sunat==1">EL CREDITO LE PERTENECE A UN COMPROBANTE ELECTRONICO QUE YA FUE DECLARADO A SUNAT - NO PUEDES EDITAR LO SENTIMOS</div>
-			<button type="submit" class="btn btn-success" v-if="sunat==0" v-bind:disabled="estado==1"> <i class="fa fa-save"></i> GUARDAR </button>
+			<button type="submit" class="btn btn-success" v-if="sunat==0" v-bind:disabled="estado==1"> <i class="bi bi-save me-1"></i> GUARDAR </button>
 			<button type="button" class="btn btn-danger" v-on:click="phuyu_cerrar()">CERRAR</button>
 		</div>
 	</form>

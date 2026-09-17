@@ -1,105 +1,161 @@
-<div id="phuyu_datos">
-	<div class="row">
-		<div class="col-12 col-md-8">
-            <h1 class="mb-0 pb-0 display-4" id="title">Administracion de Ambientes</h1>
-            <nav class="breadcrumb-container d-inline-block" aria-label="breadcrumb">
-              <ul class="breadcrumb pt-0">
-                <li class="breadcrumb-item"><a href="javascript:;">Inicio</a></li>
-                <li class="breadcrumb-item"><a href="javascript:;">Ambientes</a></li>
-              </ul>
-            </nav>
-        </div>
-	</div>
-	<div class="phuyu_body">
-		<div class="card">
-			<div class="card-body">
-				<input type="hidden" id="phuyu_opcion" value="1">		
-				<div class="row">
-					<div class="col-sm-12 col-md-5 col-lg-4 col-xxl-2 mb-1">
-	                    <div class="d-inline-block float-md-start me-1 mb-1 search-input-container w-100 shadow bg-foreground">
-	                      <input class="form-control datatable-search" v-model="buscar" v-on:keyup="phuyu_buscar()" placeholder="BUSCAR REGISTRO . . ." />
-	                      <span class="search-magnifier-icon">
-	                        <i data-acorn-icon="search"></i>
-	                      </span>
-	                      <span class="search-delete-icon d-none">
-	                        <i data-acorn-icon="close"></i>
-	                      </span>
-	                    </div>
-	                </div>
-	                <div class="col-sm-12 col-md-7 col-lg-8 col-xxl-10 text-end mb-1">
-	                    <div class="d-inline-block me-0 me-sm-3 float-start float-md-none">
-	                      <!-- Add Button Start -->
-	                      <button type="button" class="btn btn-success btn-icon" type="button" data-bs-toggle="tooltip"
-	                        data-bs-placement="top"
-	                        title="Nuevo registro"
-	                        type="button"
-	                        data-bs-delay="0" v-on:click="phuyu_nuevo()">
-	                      	<i data-acorn-icon="plus" class="icon"></i> Nuevo
-	                      </button>
-	                      <!-- Add Button End -->
+<style>
+	#phuyu_datos.phuyu-restobar-list .phuyu-page-title {
+		display: flex;
+		align-items: center;
+		gap: .75rem;
+		margin-bottom: 1rem;
+	}
 
-	                      <button
-	                        class="btn btn-warning btn-icon"
-	                        data-bs-toggle="tooltip"
-	                        data-bs-placement="top"
-	                        title="Editar registro"
-	                        type="button"
-	                        data-bs-delay="0" v-on:click="phuyu_editar()"
-	                      >
-	                        <i data-acorn-icon="edit"></i> Editar
-	                      </button>
-	                      <!-- Delete Button Start -->
-	                      <button
-	                        class="btn eliminar btn-danger btn-icon"
-	                        data-bs-toggle="tooltip"
-	                        data-bs-placement="top"
-	                        title="Eliminar registro"
-	                        type="button"
-	                        data-bs-delay="0" v-on:click="phuyu_eliminar()"
-	                      >
-	                        <i data-acorn-icon="bin"></i> Eliminar
-	                      </button>
-	                      <!-- Delete Button End -->
-	                    </div>
-	                  </div>
-			    </div>
+	#phuyu_datos.phuyu-restobar-list .phuyu-page-icon {
+		width: 44px;
+		height: 44px;
+		border-radius: 12px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(10, 132, 117, .10);
+		color: #0a8475;
+		font-size: 1.25rem;
+	}
+
+	#phuyu_datos.phuyu-restobar-list .phuyu-card {
+		border: 1px solid rgba(10, 132, 117, .12);
+		border-radius: .9rem;
+		box-shadow: 0 10px 28px rgba(15, 23, 42, .06);
+	}
+
+	#phuyu_datos.phuyu-restobar-list .phuyu-toolbar {
+		display: flex;
+		flex-wrap: wrap;
+		gap: .6rem;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 1rem;
+	}
+
+	#phuyu_datos.phuyu-restobar-list .phuyu-search {
+		max-width: 360px;
+		position: relative;
+		flex: 1 1 260px;
+	}
+
+	#phuyu_datos.phuyu-restobar-list .phuyu-search .form-control {
+		padding-left: 2.35rem;
+		min-height: 40px;
+		border-color: rgba(10, 132, 117, .18);
+	}
+
+	#phuyu_datos.phuyu-restobar-list .phuyu-search i {
+		position: absolute;
+		left: .85rem;
+		top: 50%;
+		transform: translateY(-50%);
+		color: #878a99;
+	}
+
+	#phuyu_datos.phuyu-restobar-list .phuyu-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: .45rem;
+	}
+
+	#phuyu_datos.phuyu-restobar-list .phuyu-table-wrap {
+		border: 1px solid rgba(10, 132, 117, .12);
+		border-radius: .75rem;
+		overflow: hidden;
+	}
+
+	#phuyu_datos.phuyu-restobar-list table thead th {
+		background: #f8fafc;
+		color: #495057;
+		font-size: .74rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		white-space: nowrap;
+		border-bottom: 1px solid rgba(10, 132, 117, .14);
+	}
+
+	#phuyu_datos.phuyu-restobar-list table tbody td {
+		font-size: .86rem;
+		vertical-align: middle;
+	}
+
+	@media (max-width: 575.98px) {
+		#phuyu_datos.phuyu-restobar-list .phuyu-actions .btn,
+		#phuyu_datos.phuyu-restobar-list .phuyu-search {
+			width: 100%;
+			max-width: 100%;
+		}
+	}
+</style>
+
+<div id="phuyu_datos" class="phuyu-restobar-list">
+	<div class="phuyu-page-title">
+		<div class="phuyu-page-icon"><i class="bi bi-shop"></i></div>
+		<div>
+			<div class="text-muted small text-uppercase fw-semibold">Restobar</div>
+			<h4 class="mb-0 fw-bold">Administracion de ambientes</h4>
+		</div>
+	</div>
+
+	<div class="phuyu_body">
+		<input type="hidden" id="phuyu_opcion" value="1">
+		<div class="card phuyu-card">
+			<div class="card-body">
+				<div class="phuyu-toolbar">
+					<div class="phuyu-search">
+						<i class="bi bi-search"></i>
+						<input class="form-control" v-model="buscar" v-on:keyup="phuyu_buscar()" placeholder="Buscar ambiente">
+					</div>
+
+					<div class="phuyu-actions">
+						<button type="button" class="btn btn-primary" v-on:click="phuyu_nuevo()">
+							<i class="bi bi-plus-circle me-1"></i> Nuevo
+						</button>
+						<button type="button" class="btn btn-warning" v-on:click="phuyu_editar()">
+							<i class="bi bi-pencil-square me-1"></i> Editar
+						</button>
+						<button type="button" class="btn btn-danger" v-on:click="phuyu_eliminar()">
+							<i class="bi bi-trash3 me-1"></i> Eliminar
+						</button>
+					</div>
+				</div>
+
 				<div class="phuyu_cargando" v-if="cargando">
 					<div class="overlay-spinner"></div>
 				</div>
 
-				<div v-if="!cargando">
-					<div class="table-responsive">
-						<table class="table table-striped" style="font-size: 11px">
-							<thead>
-								<tr>
-									<th>DESCRIPCION AMBIENTE</th>
-									<th>AFORO</th>
-									<th>SUCURSAL</th>
-									<th width="5px;"> <center> <i class="fa fa-circle-o"></i> </center> </th>
-								</tr>
-							</thead>
-							<tbody>
-								<tr v-for="dato in datos">
-									<td>{{dato.descripcion}}</td>
-									<td>{{dato.aforo}}</td>
-									<td>{{dato.sucursal}}</td>
-									<td> <input type="radio" class="form-check-input" name="phuyu_seleccionar" v-on:click="phuyu_seleccionar(dato.codambiente)"> </td>
-								</tr>
-							</tbody>
-						</table>
-					</div>
-					<?php include("application/views/phuyu/phuyu_paginacion.php");?>
+				<div class="table-responsive phuyu-table-wrap">
+					<table class="table table-hover align-middle mb-0">
+						<thead>
+							<tr>
+								<th>Ambiente</th>
+								<th width="120">Aforo</th>
+								<th>Sucursal</th>
+								<th class="text-center" width="70">Sel.</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr v-for="dato in datos">
+								<td class="fw-semibold">{{dato.descripcion}}</td>
+								<td>{{dato.aforo}}</td>
+								<td>{{dato.sucursal}}</td>
+								<td class="text-center">
+									<input type="radio" class="form-check-input" name="phuyu_seleccionar" v-on:click="phuyu_seleccionar(dato.codambiente)">
+								</td>
+							</tr>
+							<tr v-if="datos.length==0">
+								<td colspan="4" class="text-center text-muted py-3">
+									<i class="bi bi-inbox me-1"></i> Sin ambientes registrados
+								</td>
+							</tr>
+						</tbody>
+					</table>
 				</div>
+				<?php include("application/views/phuyu/phuyu_paginacion.php");?>
 			</div>
 		</div>
 	</div>
 </div>
-<script>
-	if (typeof AcornIcons !== 'undefined') {
-      new AcornIcons().replace();
-    }
-    if (typeof Icons !== 'undefined') {
-      const icons = new Icons();
-    }
-</script>
+
 <script src="<?php echo base_url();?>phuyu/phuyu_datos.js"> </script>

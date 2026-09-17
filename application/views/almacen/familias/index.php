@@ -1,57 +1,150 @@
-<div id="phuyu_datos">
-	<div class="row">
-		<div class="col-12 col-md-6">
-            <h1 class="mb-0 pb-0 display-4" id="title">Administración de Familias</h1>
-            <nav class="breadcrumb-container d-inline-block" aria-label="breadcrumb">
-              <ul class="breadcrumb pt-0">
-                <li class="breadcrumb-item"><a href="javascript:;">Inicio</a></li>
-                <li class="breadcrumb-item"><a href="javascript:;">Familias</a></li>
-              </ul>
-            </nav>
-        </div>
+<style>
+	#phuyu_datos.phuyu-almacen-list .phuyu-page-title {
+		display: flex;
+		align-items: center;
+		gap: .75rem;
+		margin-bottom: 1rem;
+	}
+
+	#phuyu_datos.phuyu-almacen-list .phuyu-page-icon {
+		width: 44px;
+		height: 44px;
+		border-radius: 12px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(64, 81, 137, .10);
+		color: #405189;
+		font-size: 1.25rem;
+	}
+
+	#phuyu_datos.phuyu-almacen-list .phuyu-card {
+		border: 1px solid rgba(64, 81, 137, .10);
+		border-radius: .9rem;
+		box-shadow: 0 10px 28px rgba(15, 23, 42, .06);
+	}
+
+	#phuyu_datos.phuyu-almacen-list .phuyu-toolbar {
+		display: flex;
+		flex-wrap: wrap;
+		gap: .6rem;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 1rem;
+	}
+
+	#phuyu_datos.phuyu-almacen-list .phuyu-search {
+		max-width: 360px;
+		position: relative;
+		flex: 1 1 260px;
+	}
+
+	#phuyu_datos.phuyu-almacen-list .phuyu-search .form-control {
+		padding-left: 2.35rem;
+		min-height: 40px;
+		border-color: rgba(64, 81, 137, .16);
+	}
+
+	#phuyu_datos.phuyu-almacen-list .phuyu-search i {
+		position: absolute;
+		left: .85rem;
+		top: 50%;
+		transform: translateY(-50%);
+		color: #878a99;
+	}
+
+	#phuyu_datos.phuyu-almacen-list .phuyu-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: .45rem;
+	}
+
+	#phuyu_datos.phuyu-almacen-list .phuyu-table-wrap {
+		border: 1px solid rgba(64, 81, 137, .10);
+		border-radius: .75rem;
+		overflow: hidden;
+	}
+
+	#phuyu_datos.phuyu-almacen-list table thead th {
+		background: #f8fafc;
+		color: #495057;
+		font-size: .74rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		white-space: nowrap;
+		border-bottom: 1px solid rgba(64, 81, 137, .12);
+	}
+
+	#phuyu_datos.phuyu-almacen-list table tbody td {
+		font-size: .86rem;
+		vertical-align: middle;
+	}
+
+	@media (max-width: 575.98px) {
+		#phuyu_datos.phuyu-almacen-list .phuyu-actions .btn,
+		#phuyu_datos.phuyu-almacen-list .phuyu-search {
+			width: 100%;
+			max-width: 100%;
+		}
+	}
+</style>
+
+<div id="phuyu_datos" class="phuyu-almacen-list">
+	<div class="phuyu-page-title">
+		<div class="phuyu-page-icon"><i class="bi bi-collection"></i></div>
+		<div>
+			<div class="text-muted small text-uppercase fw-semibold">Almacen</div>
+			<h4 class="mb-0 fw-bold">Administracion de familias</h4>
+		</div>
 	</div>
+
 	<div class="phuyu_body">
 		<input type="hidden" id="phuyu_opcion" value="1">
-		<div class="card">
+		<div class="card phuyu-card">
 			<div class="card-body">
-				<div class="row">
-					<div class="col-sm-12 col-md-5 col-lg-4 col-xxl-2 mb-1">
-	                    <div class="d-inline-block float-md-start me-1 mb-1 search-input-container w-100 shadow bg-foreground">
-	                      <input class="form-control datatable-search" v-model="buscar" v-on:keyup="phuyu_buscar()" placeholder="BUSCAR REGISTRO . . ." />
-	                      <span class="search-magnifier-icon">
-	                        <i data-acorn-icon="search"></i>
-	                      </span>
-	                      <span class="search-delete-icon d-none">
-	                        <i data-acorn-icon="close"></i>
-	                      </span>
-	                    </div>
-	                </div>
-	                <div class="col-sm-12 col-md-7 col-lg-8 col-xxl-10 text-end mb-1">
-	                    <div class="d-inline-block me-0 me-sm-3 float-start float-md-none">
-	                    	<button type="button" class="btn btn-success btn-icon" v-on:click="phuyu_nuevo()"> <i data-acorn-icon="plus"></i> NUEVO </button>
-						    <button type="button" class="btn btn-warning btn-icon" v-on:click="phuyu_editar()"> <i data-acorn-icon="edit"></i> EDITAR </button>
-						    <button type="button" class="btn btn-danger btn-icon" v-on:click="phuyu_eliminar()"> <i data-acorn-icon="bin"></i> ELIMINAR </button>
-		                    </div>
-	                </div>
-			    </div>
+				<div class="phuyu-toolbar">
+					<div class="phuyu-search">
+						<i class="bi bi-search"></i>
+						<input class="form-control" v-model="buscar" v-on:keyup="phuyu_buscar()" placeholder="Buscar registro">
+					</div>
+
+					<div class="phuyu-actions">
+						<button type="button" class="btn btn-primary" v-on:click="phuyu_nuevo()">
+							<i class="bi bi-plus-circle me-1"></i> Nuevo
+						</button>
+						<button type="button" class="btn btn-warning" v-on:click="phuyu_editar()">
+							<i class="bi bi-pencil-square me-1"></i> Editar
+						</button>
+						<button type="button" class="btn btn-danger" v-on:click="phuyu_eliminar()">
+							<i class="bi bi-trash3 me-1"></i> Eliminar
+						</button>
+					</div>
+				</div>
+
 				<div class="phuyu_cargando" v-if="cargando">
 					<div class="overlay-spinner"></div>
 				</div>
-				<div class="table-responsive">
-					<table class="table table-striped" style="font-size: 11px">
+
+				<div class="table-responsive phuyu-table-wrap">
+					<table class="table table-hover align-middle mb-0">
 						<thead>
 							<tr>
-								<th width="10px">ID</th>	
-								<th>DESCRIPCION FAMILIA</th>
-								<th width="5%"></th>
+								<th width="80">ID</th>
+								<th>Descripcion familia</th>
+								<th class="text-center" width="70">Sel.</th>
 							</tr>
 						</thead>
 						<tbody>
 							<tr v-for="(dato,index) in datos">
-								<td>{{dato.codfamilia}}</td>
-								<td>{{dato.descripcion}}</td>
-								<td>
-									<input type="radio" class=" form-check-input" name="phuyu_seleccionar" v-on:click="phuyu_seleccionar(dato.codfamilia)">
+								<td class="text-muted fw-semibold">{{dato.codfamilia}}</td>
+								<td class="fw-semibold">{{dato.descripcion}}</td>
+								<td class="text-center">
+									<input type="radio" class="form-check-input" name="phuyu_seleccionar" v-on:click="phuyu_seleccionar(dato.codfamilia)">
+								</td>
+							</tr>
+							<tr v-if="datos.length==0">
+								<td colspan="3" class="text-center text-muted py-3">
+									<i class="bi bi-inbox me-1"></i> Sin registros
 								</td>
 							</tr>
 						</tbody>
@@ -63,12 +156,4 @@
 	</div>
 </div>
 
-<script>
-	if (typeof AcornIcons !== 'undefined') {
-      new AcornIcons().replace();
-    }
-    if (typeof Icons !== 'undefined') {
-      const icons = new Icons();
-    }
-</script>
 <script src="<?php echo base_url();?>phuyu/phuyu_datos.js"> </script>

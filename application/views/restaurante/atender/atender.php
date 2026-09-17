@@ -1,5 +1,3 @@
-<!-- <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" /> -->
-<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
 <style>
     .total-bar {
         position: fixed;
@@ -15,10 +13,6 @@
     .chip.active {
         background-color: #007bff;
         color: white !important;
-    }
-
-    body {
-        background: #f8fafc;
     }
 
     /* chips */
@@ -90,6 +84,11 @@
         transform: scale(1.03);
     }
 
+    .mesa-cambio-activo {
+        border-color: #f7b84b !important;
+        box-shadow: 0 0 0 3px rgba(247, 184, 75, .22);
+    }
+
     /* productos */
     .producto {
         border: 1px solid #e5e7eb;
@@ -109,6 +108,47 @@
 
     .producto .precio {
         font-weight: 700;
+    }
+
+    .producto-meta {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .producto-unidad {
+        background: rgba(13, 110, 253, .10);
+        border-radius: 999px;
+        color: #0d6efd;
+        display: inline-block;
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1;
+        padding: 3px 6px;
+    }
+
+    .contenedor-scroll {
+        scrollbar-color: #cbd5e1 #f3f6f9;
+        scrollbar-width: thin;
+    }
+
+    .contenedor-scroll::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .contenedor-scroll::-webkit-scrollbar-track {
+        background: #f3f6f9;
+        border-radius: 999px;
+    }
+
+    .contenedor-scroll::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 999px;
+    }
+
+    .contenedor-scroll::-webkit-scrollbar-thumb:hover {
+        background: #9ca3af;
     }
 
     .agotado {
@@ -280,7 +320,7 @@
                     <!-- Botón "Todo" -->
                     <button class="chip btn btn-sm text-dark" :class="{ 'active': lineaActiva === 0 }"
                         v-on:click="phuyu_producto(0)">
-                        <span class="me-1">🍮</span> Todo
+                        <i class="bi bi-grid me-1"></i> Todo
                     </button>
 
                     <!-- Botones de líneas -->
@@ -289,7 +329,7 @@
                             :class="{ 'active': lineaActiva === <?php echo $value['codlinea']; ?> }"
                             cod-linea="<?php echo $value['codlinea']; ?>"
                             v-on:click="phuyu_producto(<?php echo $value['codlinea']; ?>)">
-                            <span class="me-1">🍮</span> <?php echo $value['descripcion']; ?>
+                            <i class="bi bi-cup-hot me-1"></i> <?php echo $value['descripcion']; ?>
                         </button>
                     <?php } ?>
                 </div>
@@ -306,7 +346,7 @@
                 <div class="row g-2">
                     <div v-for="mesa in mesas" :key="mesa.codmesa" class="col-6 col-sm-4">
                         <div class="mesa-card"
-                            :class="[mesa.texto === 'LIBRE' ? 'mesa-libre' : 'mesa-ocupada', mesaSeleccionada === mesa.codmesa ? 'mesa-activa' : ''  ]"
+                            :class="[mesa.texto === 'LIBRE' ? 'mesa-libre' : 'mesa-ocupada', mesaSeleccionada == mesa.codmesa ? 'mesa-activa' : '', modoCambioMesa ? 'mesa-cambio-activo' : ''  ]"
                             @click="selectMesa(mesa)">
                             {{ mesa . nromesa }}<br /><small>{{ mesa . texto }}</small>
                         </div>
@@ -352,11 +392,14 @@
                 </div>
                 <div class="contenedor-scroll" style="height: 500px; overflow-y: auto;">
                     <div class="row">
-                        <div v-for="p in productosVisibles" :key="p.codproducto" class="col-6 col-md-4 mb-3">
+                        <div v-for="p in productosVisibles" :key="p.codproducto + '-' + p.codunidad" class="col-6 col-md-4 mb-3">
                             <div class="producto" :style="p.stockdisponible <= 0 ? { opacity: '0.7', border: '1px solid red' } : {}">
                                 <div>
                                     <h6 class="mb-0">{{ p . descripcion || 'SIN NOMBRE' }}</h6>
-                                    <div class="text-muted small">{{ p . marca || 'GENÉRICO' }}</div>
+                                    <div class="text-muted small producto-meta">
+                                        <span class="producto-unidad">{{ p . unidad || 'SIN UNIDAD' }}</span>
+                                        <span>{{ p . marca || 'GENÉRICO' }}</span>
+                                    </div>
                                     <div class="text-sm"
                                         :style="{ color: p.stockdisponible <= 0 ? 'red' : '#6c757d', fontWeight: p
                                                 .stockdisponible <= 0 ? 'bold' : 'normal' }">
@@ -370,10 +413,10 @@
                                 </div>
                                 <div class="d-flex align-items-center justify-content-between mt-2">
                                     <span class="precio">S/. {{ (p . precio || 0) . toFixed(2) }}</span>
-                                    <button class="btn btn-sm" :class="(p.controlstock == 1 && p.stockdisponible <= 0) ? 'btn-secondary' :
-                                        'btn-primary'" :disabled="p.controlstock == 1 && p.stockdisponible <= 0"
+                                    <button class="btn btn-sm" :class="!puedeAgregarProducto(p) ? 'btn-secondary' :
+                                        'btn-primary'" :disabled="!puedeAgregarProducto(p)"
                                         @click="agregar(p,p.precio)">
-                                        <i :class="(p.controlstock == 1 && p.stockdisponible <= 0) ? 'bi bi-dash-circle' :
+                                        <i :class="!puedeAgregarProducto(p) ? 'bi bi-dash-circle' :
                                             'bi bi-plus-circle'"></i>
                                     </button>
                                 </div>
@@ -432,6 +475,7 @@
                                     <li class="dropdown-header">Pedido</li>
                                     <li><a class="dropdown-item" @click.prevent="guardar">💾 Guardar pedido</a></li>
                                     <li><a class="dropdown-item" @click.prevent="phuyu_atender_pedido">👨‍🍳 Atender pedido</a></li>
+                                    <li><a class="dropdown-item" @click.prevent="cambiar_mesa"><i class="bi bi-arrow-left-right me-1"></i> Cambiar mesa</a></li>
                                     <li><a class="dropdown-item" v-on:click="phuyu_avance_pedido()">🧾 Imprimir pre-cuenta</a></li>
                                     <li><a class="dropdown-item" v-on:click="phuyu_comanda()">🖨️ Imprimir comanda</a></li>
                                     <li><a class="dropdown-item text-danger" v-on:click="phuyu_anular_pedido()">❌ Anular pedido</a></li>
@@ -483,7 +527,7 @@
                                 <button type="button" class="btn btn-xs py-0"
                                     :class="producto.atendido == 1 ? ' btn-success' : 'btn-danger'">
                                     <small>
-                                        <i class="fa fa-flag-o"></i>
+                                        <i class="bi bi-flag"></i>
                                         {{ producto . atendido == 1 ? 'ATENDIDO' : 'PENDIENTE' }}
                                     </small>
                                 </button>
@@ -494,8 +538,8 @@
                                 </button>
 
                                 <!-- Stock info -->
-                                <span v-if="producto.controlstock == 1" class="text-muted small">
-                                    Stock: {{ producto . stockdisponible }}
+                                <span v-if="controlaStock(producto)" class="text-muted small">
+                                    Stock: {{ stockDisponiblePedido(producto) }}
                                 </span>
                             </div>
 
@@ -506,12 +550,13 @@
                                         <i class="bi bi-dash"></i>
                                     </button>
                                     <input type="number" v-model.number="producto.cantidad"
+                                        @focus="guardarCantidadAnterior(producto)"
                                         @change="validarCantidad(producto, index)"
                                         class="form-control form-control-sm" style="width: 60px; text-align: center"
                                         min="1"
-                                        :max="producto.controlstock == 1 ? producto.stockdisponible : null">
+                                        :max="controlaStock(producto) ? stockDisponiblePedido(producto) : null">
                                     <button class="btn btn-outline-secondary btn-sm" @click="inc(index)"
-                                        :disabled="producto.controlstock == 1 && producto.cantidad >= producto.stockdisponible">
+                                        :disabled="controlaStock(producto) && producto.cantidad >= stockDisponiblePedido(producto)">
                                         <i class="bi bi-plus"></i>
                                     </button>
                                 </div>
@@ -708,7 +753,7 @@
                                 </div>
                                 <div class="col-md-2">
                                     <button type="button" class="btn btn-primary w-100" v-on:click="phuyu_addcliente()" title="Agregar Cliente">
-                                        <i data-acorn-icon="user"></i> Añadir
+                                        <i class="bi bi-person-plus me-1"></i> Añadir
                                     </button>
                                 </div>
                             </div>
@@ -777,11 +822,11 @@
 
                             <!-- Pago Contado -->
                             <div v-if="campos.condicionpago==1">
-                                <h5 class="text-center mb-3"><b><i class="fa fa-money"></i> Registrar Pago de la Venta</b></h5>
+                                <h5 class="text-center mb-3"><b><i class="bi bi-cash-coin me-1"></i> Registrar Pago de la Venta</b></h5>
                                 <hr>
                                 <div class="row mb-3">
                                     <div class="col-md-4 text-center">
-                                        <label><i class="fa fa-money fa-2x"></i><br>Pago en Efectivo</label>
+                                        <label><i class="bi bi-cash-stack fs-3"></i><br>Pago en Efectivo</label>
                                     </div>
                                     <div class="col-md-4">
                                         <label>Monto Recibido</label>
@@ -1019,7 +1064,7 @@
                                         class="btn btn-success w-100 btn-consultar"
                                         @click="phuyu_consultar()"
                                         title="Consultar">
-                                        <i data-acorn-icon="search"></i>
+                                        <i class="bi bi-search"></i>
                                     </button>
                                 </div>
                             </div>
@@ -1107,7 +1152,7 @@
                             <!-- Botones -->
                             <div class="d-flex justify-content-center gap-3 mt-3">
                                 <button type="submit" class="btn btn-success btn-lg" :disabled="estado==1">
-                                    <i class="fa fa-save"></i> GUARDAR
+                                    <i class="bi bi-save me-1"></i> GUARDAR
                                 </button>
                                 <button type="button" class="btn btn-danger btn-lg" data-bs-dismiss="modal" v-on:click="phuyu_cerrar()">
                                     CERRAR
@@ -1161,7 +1206,6 @@
     let tipopagos = <?php echo json_encode($tipopagos ?? []); ?>;
     let vendedores = <?php echo json_encode($vendedores ?? []); ?>;
 
-    console.log('Vendedores:', vendedores);
     let sucursal = <?php echo json_encode($sucursal[0] ?? []); ?>;
 </script>
 <script>
@@ -1178,6 +1222,7 @@
                 series: [],
                 cuotas: [],
                 mesas: [],
+                modoCambioMesa: false,
                 detalle: [],
                 atender: [],
                 atendidos: [],
@@ -1384,11 +1429,15 @@
                         }, 300);
                         return false;
 
-                    }
+	                    }
 
-                    this.$http.post(url + "ventas/pedidos/guardar_pedido", {
-                        "campos": this.campos,
-                        "detalle": this.items,
+	                    if (!this.validarStockPedido()) {
+	                        return false;
+	                    }
+
+	                    this.$http.post(url + "ventas/pedidos/guardar_pedido", {
+	                        "campos": this.campos,
+	                        "detalle": this.items,
                         "totales": this.totales
                     }).then(function(data) {
                         if (data.body == "e") {
@@ -1441,6 +1490,7 @@
                     if ($("#sessioncaja").val() == 0) {
                         phuyu_sistema.phuyu_noti("ESTIMADO USUARIO SU CAJA NO ESTA APERTURADA", "NO PUEDE COBRAR PEDIDO", "error");
                     } else {
+                        this.recalcularTotalesItems();
                         this.campos.codcomprobantetipo = this.campos.codcomprobante;
                         this.phuyu_series();
                         this.pagos.monto_efectivo = this.totales.importe;
@@ -1502,6 +1552,14 @@
                             width: '100%',
                             dropdownParent: $('#modal_pago')
                         });
+                        if (typeof phuyu_select2_velzon === 'function') {
+                            phuyu_select2_velzon('#codpersona');
+                        } else {
+                            if (!document.getElementById('phuyu-select2-velzon-style')) {
+                                $('head').append('<style id="phuyu-select2-velzon-style">.phuyu-select2-velzon.select2-container{width:100%!important;}.phuyu-select2-velzon .select2-selection--single{display:flex!important;align-items:center!important;height:40px!important;min-height:40px!important;border:1px solid rgba(64,81,137,.16)!important;border-radius:.375rem!important;background:#fff!important;box-shadow:none!important;}.phuyu-select2-velzon .select2-selection__rendered{line-height:40px!important;padding-left:.75rem!important;padding-right:2rem!important;font-size:.86rem!important;font-weight:600!important;color:#343a40!important;}.phuyu-select2-velzon .select2-selection__arrow{height:40px!important;right:.25rem!important;}</style>');
+                            }
+                            $('#codpersona').next('.select2-container').addClass('phuyu-select2-velzon');
+                        }
 
                         // Sincronizar con v-model
                         $('#codpersona').on('select2:select', (e) => {
@@ -1727,21 +1785,156 @@
                     myOffcanvas.show()
                     // data-bs-target="#pedidoCanvas"
                 },
+                controlaStock(producto) {
+                    return Number(this.stockalmacen) === 1 && Number(producto.controlstock || producto.control || 0) === 1;
+                },
+                stockMaximoItem(producto) {
+                    if (!this.controlaStock(producto)) return null;
+
+                    var disponible = Number(producto.stockdisponible);
+                    if (!isNaN(disponible) && disponible >= 0) return disponible;
+
+                    var stock = Number(producto.stock);
+                    return isNaN(stock) ? 0 : Math.max(0, stock);
+                },
+                stockProductoListado(producto) {
+                    var disponible = Number(producto.stockdisponible);
+                    if (!isNaN(disponible)) return disponible;
+
+                    var stock = Number(producto.stock);
+                    return isNaN(stock) ? 0 : Math.max(0, stock);
+                },
+                productoListadoPorItem(producto) {
+                    return (this.productos || []).find(function(item) {
+                        return item.codproducto == producto.codproducto && item.codunidad == producto.codunidad;
+                    });
+                },
+                stockDisponiblePedido(producto) {
+                    var productoListado = this.productoListadoPorItem(producto);
+                    if (productoListado) {
+                        return this.maximoCantidadPedido(productoListado);
+                    }
+
+                    return this.stockMaximoItem(producto);
+                },
+                maximoCantidadPedido(producto) {
+                    var productoListado = this.productoListadoPorItem(producto) || producto;
+
+                    if (productoListado.stock_maximo_pedido === undefined) {
+                        productoListado.stock_maximo_pedido = this.cantidadEnPedido(productoListado) + this.stockProductoListado(productoListado);
+                    }
+
+                    return Math.max(0, Number(productoListado.stock_maximo_pedido) || 0);
+                },
+                cantidadEnPedido(producto, omitir) {
+                    return this.items.reduce(function(total, item) {
+                        if (item === omitir) return total;
+                        if (item.codproducto == producto.codproducto && item.codunidad == producto.codunidad) {
+                            return total + (parseFloat(item.cantidad) || 0);
+                        }
+                        return total;
+                    }, 0);
+                },
+                puedeAgregarProducto(producto) {
+                    if (!this.controlaStock(producto)) return true;
+
+                    var existente = this.items.find(function(item) {
+                        return item.codproducto == producto.codproducto && item.codunidad == producto.codunidad;
+                    });
+                    var maximo = this.maximoCantidadPedido(producto);
+                    var solicitado = this.cantidadEnPedido(producto, existente) + (existente ? (parseFloat(existente.cantidad) || 0) + 1 : 1);
+
+                    return solicitado <= maximo;
+                },
+                alertaStockInsuficiente(producto, solicitado, stockDisponible) {
+                    var maximo = stockDisponible !== undefined ? stockDisponible : this.stockMaximoItem(producto);
+                    phuyu_sistema.phuyu_alerta(
+                        "STOCK INSUFICIENTE",
+                        (producto.producto || producto.descripcion) + "\nDisponible: " + maximo + " UND\nSolicitado: " + solicitado + " UND",
+                        "error"
+                    );
+                },
+                guardarCantidadAnterior(producto) {
+                    producto.cantidad_anterior = parseFloat(producto.cantidad) || 1;
+                    this.maximoCantidadPedido(producto);
+                },
+                recalcularItem(producto) {
+                    producto.subtotal = Number(((parseFloat(producto.cantidad) || 0) * (parseFloat(producto.precio) || 0)).toFixed(2));
+                    producto.valorventa = producto.subtotal;
+                    producto.subtotal_tem = producto.subtotal;
+                    this.totales.valorventa = Number(this.items.reduce(function(total, item) {
+                        return total + (parseFloat(item.subtotal) || 0);
+                    }, 0).toFixed(2));
+                    this.totales.importe = this.totales.valorventa;
+                },
+                recalcularTotalesItems() {
+                    var valorventa = 0;
+                    var igv = 0;
+                    var importe = 0;
+
+                    for (var i = 0; i < this.items.length; i++) {
+                        var item = this.items[i];
+                        var cantidad = parseFloat(item.cantidad) || 0;
+                        var precio = parseFloat(item.precio) || 0;
+
+                        item.subtotal = Number((cantidad * precio).toFixed(2));
+                        item.igv = Number((parseFloat(item.igv) || 0).toFixed(2));
+                        item.valorventa = Number((item.subtotal - item.igv).toFixed(2));
+                        item.subtotal_tem = item.subtotal;
+
+                        valorventa = Number((valorventa + item.valorventa).toFixed(2));
+                        igv = Number((igv + item.igv).toFixed(2));
+                        importe = Number((importe + item.subtotal).toFixed(2));
+                    }
+
+                    this.totales.valorventa = valorventa;
+                    this.totales.igv = igv;
+                    this.totales.importe = importe;
+                },
+                cantidadActual(producto) {
+                    return parseFloat(producto.cantidad) || 1;
+                },
+                fijarCantidadItem(producto, cantidad) {
+                    producto.cantidad = cantidad;
+                    producto.cantidad_anterior = cantidad;
+                    this.recalcularItem(producto);
+                },
                 validarCantidad(producto, index) {
                     let nuevaCantidad = parseInt(producto.cantidad) || 1;
+                    var productoListado = this.productoListadoPorItem(producto);
+                    if (productoListado && productoListado.stock_maximo_pedido === undefined) {
+                        var anterior = parseFloat(producto.cantidad_anterior) || nuevaCantidad;
+                        productoListado.stock_maximo_pedido = this.cantidadEnPedido(producto, producto) + anterior + this.stockProductoListado(productoListado);
+                    }
+                    var maximo = this.stockDisponiblePedido(producto);
 
-                    if (producto.controlstock == 1 && nuevaCantidad > producto.stockdisponible) {
-                        nuevaCantidad = producto.stockdisponible;
-                        alert(`Stock máximo disponible: ${producto.stockdisponible}`);
+                    if (this.controlaStock(producto) && nuevaCantidad > maximo) {
+                        this.alertaStockInsuficiente(producto, nuevaCantidad, maximo);
+                        var anterior = parseFloat(producto.cantidad_anterior) || 1;
+                        nuevaCantidad = anterior <= maximo ? anterior : maximo;
                     }
 
                     if (nuevaCantidad < 1) {
                         nuevaCantidad = 1;
                     }
 
-                    producto.cantidad = nuevaCantidad;
+                    this.fijarCantidadItem(producto, nuevaCantidad);
+                },
+                validarStockPedido() {
+                    for (var i = 0; i < this.items.length; i++) {
+                        var item = this.items[i];
+                        if (!this.controlaStock(item)) continue;
 
-                    this.actualizarStockVisual(producto);
+                        var maximo = this.stockDisponiblePedido(item);
+                        var cantidad = parseFloat(item.cantidad) || 0;
+
+                        if (cantidad > maximo) {
+                            this.alertaStockInsuficiente(item, cantidad, maximo);
+                            return false;
+                        }
+                    }
+
+                    return true;
                 },
                 configurarScroll() {
                     // Esperar a que Vue renderice el DOM
@@ -1828,8 +2021,68 @@
                     phuyu_sistema.phuyu_noti("MOZO SELECIONADO", "", "success");
                     $("#modalVendedor").modal("hide");
                 },
+                cambiar_mesa() {
+                    if (this.campos.pedidonuevo == 1) {
+                        phuyu_sistema.phuyu_noti("DEBE SELECCIONAR UNA MESA CON PEDIDO", "PARA CAMBIAR DE MESA", "error");
+                        return false;
+                    }
+
+                    this.modoCambioMesa = true;
+                    phuyu_sistema.phuyu_noti("SELECCIONE UNA MESA LIBRE", "PARA MOVER EL PEDIDO 000" + this.campos.codpedido, "info");
+                },
+                confirmarCambioMesa(mesa) {
+                    if (mesa.codmesa == this.campos.codmesa) {
+                        this.modoCambioMesa = false;
+                        phuyu_sistema.phuyu_noti("CAMBIO DE MESA CANCELADO", "", "info");
+                        return false;
+                    }
+
+                    swal({
+                        title: "CAMBIAR MESA ?",
+                        text: "Mover pedido 000" + this.campos.codpedido + " a la mesa " + mesa.nromesa,
+                        icon: "warning",
+                        dangerMode: true,
+                        buttons: ["CANCELAR", "SI, CAMBIAR"],
+                    }).then((confirmado) => {
+                        if (!confirmado) {
+                            this.modoCambioMesa = false;
+                            return false;
+                        }
+
+                        this.estado = 1;
+                        this.$http.post(url + "ventas/pedidos/cambiar_mesa", {
+                            codpedido: this.campos.codpedido,
+                            codmesa_origen: this.campos.codmesa,
+                            codmesa_destino: mesa.codmesa
+                        }).then(function(data) {
+                            this.estado = 0;
+                            this.modoCambioMesa = false;
+
+                            if (data.body.estado == 1) {
+                                phuyu_sistema.phuyu_noti(data.body.mensaje, "MESA " + mesa.nromesa, "success");
+                                this.campos.codmesa = mesa.codmesa;
+                                this.campos.mesa = mesa.nromesa;
+                                this.campos.pedidonuevo = 0;
+                                this.mesaSeleccionada = mesa.codmesa;
+                                this.DatosMesaSelect = mesa;
+                                this.DatosMesaSelect.pedidonuevo = 0;
+                                this.phuyu_mesas();
+                            } else {
+                                phuyu_sistema.phuyu_noti(data.body.mensaje || "NO SE PUDO CAMBIAR LA MESA", "", "error");
+                            }
+                        }, function() {
+                            this.estado = 0;
+                            this.modoCambioMesa = false;
+                            phuyu_sistema.phuyu_alerta("ERROR AL CAMBIAR DE MESA", "ERROR DE RED", "error");
+                        });
+                    });
+                },
                 // Seleccionar mesa
                 async selectMesa(mesa) {
+                    if (this.modoCambioMesa) {
+                        this.confirmarCambioMesa(mesa);
+                        return false;
+                    }
 
                     //ABIR MODAL PARA SELECIONAR MOZO QUE ATENDERA//
 
@@ -1907,37 +2160,33 @@
 
                 // Carrito / pedido
                 agregar(producto, precio) {
-                    //let p = producto;
-
                     if (!this.mesaSeleccionada) {
-                        //alert('Por favor, selecciona una mesa primero');
                         phuyu_sistema.phuyu_alerta("Debe selecionar una mesa", "", "error");
                         return;
                     }
 
-                    // Validar stock si controla stock
-                    if (producto.controlstock == 1 && (!producto.stockdisponible || producto
-                            .stockdisponible <= 0)) {
-                        //  alert('No hay stock disponible');
-                        phuyu_sistema.phuyu_alerta("No hay stock disponibl", "", "error");
+                    if (this.controlaStock(producto) && !this.puedeAgregarProducto(producto)) {
+                        this.alertaStockInsuficiente(producto, this.cantidadEnPedido(producto) + 1, this.maximoCantidadPedido(producto));
                         return;
                     }
+
                     var existe_item = [];
                     if ($("#itemrepetir").val() == 0) {
-                        var existe_item = this.items.filter(function(p) {
-                            if (p.codproducto == producto.codproducto && p.codunidad == producto
-                                .codunidad) {
-                                p.cantidad = parseFloat(p.cantidad) + 1;
-                                return p;
-                            };
+                        existe_item = this.items.filter(function(p) {
+                            return p.codproducto == producto.codproducto && p.codunidad == producto.codunidad;
                         });
-                        // Actualizar stock localmente si controla stock
-                        if (producto.controlstock == 1 && producto.stockdisponible > 0) {
-                            producto.stockdisponible--;
-                            producto.mostrarstock = "STOCK: " + producto.stockdisponible;
-                        }
 
+                        if (existe_item.length > 0) {
+                            var itemExistente = existe_item[0];
+                            var cantidadAnterior = this.cantidadActual(itemExistente);
+                            itemExistente.stock = producto.stock;
+                            itemExistente.stockdisponible = producto.stockdisponible;
+                            itemExistente.controlstock = producto.controlstock;
+                            itemExistente.control = producto.controlstock;
+                            this.fijarCantidadItem(itemExistente, cantidadAnterior + 1);
+                        }
                     }
+
                     if (existe_item.length == 0 || $("#itemrepetir").val() == 1) {
                         producto.preciosinigv = producto.precio;
                         producto.precio = precio;
@@ -1977,6 +2226,8 @@
                             unidad: producto.unidad,
                             cantidad: 1,
                             stock: producto.stock,
+                            stockdisponible: producto.stockdisponible,
+                            controlstock: producto.controlstock,
                             control: producto.control,
                             preciobruto: producto.preciosinigv,
                             preciosinigv: producto.preciosinigv,
@@ -1999,14 +2250,7 @@
                         });
                         let text = "Se Agregó " + producto.descripcion + " al pedido";
                         phuyu_sistema.phuyu_noti(text, "", "success");
-                        // Actualizar stock localmente si controla stock
-                        if (producto.controlstock == 1 && producto.stockdisponible > 0) {
-                            producto.stockdisponible--;
-                            producto.mostrarstock = "STOCK: " + producto.stockdisponible;
-                        }
-                        //this.phuyu_calcular(producto,1);
-                    } else {
-                        //this.phuyu_calcular(existe_item[0],3);
+                        this.recalcularItem(this.items[this.items.length - 1]);
                     }
                 },
                 phuyu_calcular: function(producto, tipo) {
@@ -2043,7 +2287,11 @@
 
                     // Validar stock si controla stock
                     if (p.controlstock == 1 && (!p.stockdisponible || p.stockdisponible <= 0)) {
-                        alert('No hay stock disponible');
+                        phuyu_sistema.phuyu_alerta(
+                            "STOCK INSUFICIENTE",
+                            p.descripcion + "\nDisponible: 0 UND",
+                            "error"
+                        );
                         return;
                     }
 
@@ -2073,7 +2321,7 @@
                         return false;
                     }
 
-                    if (this.campos.codmesa == "") {
+                    if (parseInt(this.campos.codmesa || 0) <= 0) {
                         phuyu_sistema.phuyu_noti("DEBE SELECCIONAR LA MESA DEL PEDIDO PARA PODER REGISTRAR", "", "error");
                         return false;
                     }
@@ -2082,14 +2330,19 @@
                     //     phuyu_sistema.phuyu_noti("REGISTRAR UN PRODUCTO EN EL DETALLE", "REGISTRAR ITEM PARA EL PEDIDO", "error");
                     //     return false;
                     // }
-                    if (this.items.length == 0) {
-                        phuyu_sistema.phuyu_noti("REGISTRAR UN PRODUCTO EN EL DETALLE", "REGISTRAR ITEM PARA EL PEDIDO", "error");
-                        return false;
-                    }
+	                    if (this.items.length == 0) {
+	                        phuyu_sistema.phuyu_noti("REGISTRAR UN PRODUCTO EN EL DETALLE", "REGISTRAR ITEM PARA EL PEDIDO", "error");
+	                        return false;
+	                    }
 
-                    this.estado = 1;
+		                    if (!this.validarStockPedido()) {
+		                        return false;
+		                    }
 
-                    phuyu_sistema.phuyu_inicio_guardar("GUARDANDO PEDIDO . . .");
+		                    this.recalcularTotalesItems();
+		                    this.estado = 1;
+
+	                    phuyu_sistema.phuyu_inicio_guardar("GUARDANDO PEDIDO . . .");
                     this.$http.post(url + "ventas/pedidos/guardar_pedido", {
                         "campos": this.campos,
                         "detalle": this.items,
@@ -2119,7 +2372,7 @@
                                 //     };
                                 // });
                             } else {
-                                phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR PEDIDO", "ERROR DE RED", "error");
+                                phuyu_sistema.phuyu_alerta(data.body.mensaje || "ERROR AL REGISTRAR PEDIDO", "ERROR DE RED", "error");
                             }
                         }
                         phuyu_sistema.phuyu_fin();
@@ -2132,12 +2385,13 @@
                 },
                 phuyu_pagar: function() {
 
-                    if (this.estado == 1) {
-                        return; // ya en proceso
-                    }
+	                    if (this.estado == 1) {
+	                        return; // ya en proceso
+	                    }
 
+	                    this.recalcularTotalesItems();
 
-                    console.log(this.campos);
+	                    console.log(this.campos);
                     console.log(this.codtipodocumento);
                     //return false;
 
@@ -2205,10 +2459,10 @@
                                     }
                                 });
                                 phuyu_sistema.phuyu_noti("VENTA REGISTRADA CORRECTAMENTE", "VENTA REGISTRADA EN EL SISTEMA", "success");
-                            } else {
-                                phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR VENTA", "ERROR DE RED", "error");
-                                this.estado = 0;
-                            }
+	                            } else {
+	                                phuyu_sistema.phuyu_alerta(data.body.mensaje || "ERROR AL REGISTRAR VENTA", "REVISE EL PEDIDO", "error");
+	                                this.estado = 0;
+	                            }
                         }
                         phuyu_sistema.phuyu_fin();
                         phuyu_sistema.phuyu_modulo();
@@ -2222,13 +2476,29 @@
                     this.estado == 0
                 },
                 inc(i) {
-                    this.items[i].cantidad++
+                    var item = this.items[i];
+                    var cantidadAnterior = this.cantidadActual(item);
+                    var nuevaCantidad = cantidadAnterior + 1;
+                    var maximo = this.stockDisponiblePedido(item);
+
+                    if (this.controlaStock(item) && nuevaCantidad > maximo) {
+                        this.alertaStockInsuficiente(item, nuevaCantidad, maximo);
+                        this.fijarCantidadItem(item, cantidadAnterior);
+                        return;
+                    }
+
+                    this.fijarCantidadItem(item, nuevaCantidad);
                 },
                 dec(i) {
-                    this.items[i].cantidad = Math.max(1, this.items[i].cantidad - 1)
+                    var item = this.items[i];
+                    this.fijarCantidadItem(item, Math.max(1, this.cantidadActual(item) - 1));
                 },
                 delItem(i) {
-                    this.items.splice(i, 1)
+                    this.items.splice(i, 1);
+                    this.totales.valorventa = Number(this.items.reduce(function(total, item) {
+                        return total + (parseFloat(item.subtotal) || 0);
+                    }, 0).toFixed(2));
+                    this.totales.importe = this.totales.valorventa;
                 },
                 guardar() {
                     this.phuyu_guardar_pedido();

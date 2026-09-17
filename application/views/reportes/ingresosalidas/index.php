@@ -1,19 +1,21 @@
-<div id="phuyu_datos">
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<div id="phuyu_datos" class="phuyu-reportes-velzon phuyu-velzon-list">
 	<div class="phuyu_body">
 		<div class="card">
 			<div class="card-body">
 				<div class="row form-group">
 					<div class="col-md-5">
-						<h5> <b>REPORTE DE INGRESO Y SALIDAS DE ALMACEN</b> </h5> 
+						<h5> <b>REPORTE DE INGRESO Y SALIDAS DE ALMACEN</b> </h5>
 					</div>
 					<div class="col-md-7" align="right">
 						<button type="button" class="btn btn-danger btn-icon" v-on:click="generar_pdf()">
-							<i data-acorn-icon="print"></i> Generar PDF
+							<i class="bi bi-printer"></i> Generar PDF
 						</button>
 						<button type="button" class="btn btn-success btn-icon" v-on:click="generar_excel()">
-							<i data-acorn-icon="file-text"></i> Generar EXCEL
+							<i class="bi bi-file-earmark-excel"></i> Generar EXCEL
 						</button>
-						<button type="button" class="btn btn-warning btn-icon" v-on:click="phuyu_modalprestamos()"><i data-acorn-icon="search"></i> CONSULTAR PRESTAMOS</button>
+						<button type="button" class="btn btn-warning btn-icon" v-on:click="phuyu_modalprestamos()"><i class="bi bi-search"></i> CONSULTAR PRESTAMOS</button>
 					</div>
 				</div>
 
@@ -22,9 +24,9 @@
 						<label>ALMACENES</label>
 						<select class="form-select input-sm" v-model="campos.codalmacen">
 							<option value="0">TODOS ALMACENES</option>
-							<?php 
+							<?php
 								foreach ($almacenes as $key => $value) { ?>
-									<option value="<?php echo $value["codalmacen"];?>"><?php echo $value["descripcion"];?></option>	
+									<option value="<?php echo $value["codalmacen"];?>"><?php echo $value["descripcion"];?></option>
 								<?php }
 							?>
 						</select>
@@ -53,9 +55,9 @@
 					</div>
 					<div class="col-md-2" style="margin-top: 1.3rem">
 						<button type="button" class="btn btn-white btn-icon" v-on:click="generar_reporte()">
-							<i data-acorn-icon="search"></i> Consultar
+							<i class="bi bi-search"></i> Consultar
 						</button>
-					</div>	
+					</div>
 				</div>
 				<hr>
 				<div class="row form-group detalle mt-3">
@@ -79,8 +81,8 @@
 								<td>{{d.codkardex}}</td>
 								<td>{{d.fechacomprobante}}</td>
 								<td>
-									<span class="label label-primary" v-if="d.tipomov==1">INGRESO</span>
-									<span class="label label-danger" v-if="d.tipomov==2">SALIDA</span>
+									<span class="badge bg-primary" v-if="d.tipomov==1">INGRESO</span>
+									<span class="badge bg-danger" v-if="d.tipomov==2">SALIDA</span>
 								</td>
 								<td>{{d.motivo}}</td>
 								<td>{{d.seriecomprobante}}-{{d.nrocomprobante}}</td>
@@ -102,8 +104,8 @@
 					<div class="modal-dialog modal-lg">
 						<div class="modal-content">
 							<div class="modal-header">
-								<button type="button" class="close" data-dismiss="modal" style="font-size:30px;margin-bottom:0px;">
-									<i class="fa fa-times-circle"></i> 
+								<button type="button" class="close" data-bs-dismiss="modal" style="font-size:30px;margin-bottom:0px;">
+									<i class="bi bi-x-circle"></i>
 								</button>
 								<h4 class="modal-title">REPORTE DE PRESTAMOS RECIBIDOS Y OTORGADOS</h4>
 							</div>
@@ -142,7 +144,7 @@
 								<div class="row">
 									<div class="col-md-4"></div>
 									<div class="col-md-8">
-										<button type="button" style="margin-top: 2rem" class="btn btn-primary" v-on:click="phuyu_listaprestamos()"><i class="fa fa-search"></i> CONSULTAR</button>
+										<button type="button" style="margin-top: 2rem" class="btn btn-primary" v-on:click="phuyu_listaprestamos()"><i class="bi bi-search"></i> CONSULTAR</button>
 										<button type="button" style="margin-top: 2rem" class="btn btn-danger" v-on:click="pdf_reporte_prestamo()">PDF</button>
 										<button type="button" style="margin-top: 2rem" class="btn btn-success" v-on:click="excel_reporte_prestamo()">EXCEL</button>
 									</div>
@@ -157,10 +159,10 @@
 													<th>COMPROB. REF.</th>
 													<th>IMPORTE</th>
 													<th colspan="2">OBSERVACION</th>
-													<th>ESTADO</th>	
+													<th>ESTADO</th>
 												</thead>
 												<tbody>
-													<template v-for="dato in detalleprestamo">	
+													<template v-for="dato in detalleprestamo">
 														<tr>
 															<td colspan="2">{{dato.persona}}</td>
 															<td>{{dato.fechakardex}}</td>
@@ -170,11 +172,11 @@
 															</td>
 															<td colspan="2">{{dato.descripcion}}</td>
 															<td>
-																<span class="label label-success" v-if="dato.procesoprestamo==1">DEVUELTO</span>	
-																<span class="label label-danger" v-if="dato.procesoprestamo!=1">PENDIENTE</span>	
-															</td>	
+																<span class="badge bg-success" v-if="dato.procesoprestamo==1">DEVUELTO</span>
+																<span class="badge bg-danger" v-if="dato.procesoprestamo!=1">PENDIENTE</span>
+															</td>
 														</tr>
-														<template v-if="filtro.formato==2">	
+														<template v-if="filtro.formato==2">
 															<tr>
 																<th>#</th>
 																<th class="detalle">PRODUCTO</th>
@@ -182,16 +184,16 @@
 																<th class="detalle">CODIGO</th>
 																<th class="detalle">UNIDAD</th>
 																<th class="detalle">CANT. PRESTADA</th>
-																<th class="detalle">CANT. DEVUELTA</th>		
+																<th class="detalle">CANT. DEVUELTA</th>
 															</tr>
 															<tr v-for="(item,i) in dato.detalle"  v-bind:class="[item.cantidadxdevolver>0 ? 'faltante':'devuelto']">
-																<td>{{i+1}}</td>		
+																<td>{{i+1}}</td>
 																<td class="detalle">{{item.producto}}</td>
 																<td class="detalle">{{item.codproducto}}</td>
 																<td class="detalle">{{item.codigo}}</td>
 																<td class="detalle">{{item.unidad}}</td>
 																<td class="detalle">{{item.cantidad}}</td>
-																<td class="detalle">{{item.cantidaddevuelta}}</td>		
+																<td class="detalle">{{item.cantidaddevuelta}}</td>
 															</tr>
 														</template>
 													</template>
@@ -209,7 +211,7 @@
 	</div>
 </div>
 
-<script> 
+<script>
 	var campos = {"codalmacen":'<?php echo $_SESSION['phuyu_codalmacen'];?>',"tipo":0,"codmovimientotipo":0,"stock":0,"fecha":"<?php echo date("Y-m-d");?>","controlstock":1,"estado":1,"buscar":""};
 
 	if (typeof AcornIcons !== 'undefined') {

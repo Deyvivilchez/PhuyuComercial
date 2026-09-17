@@ -1,7 +1,9 @@
-<div id="phuyu_editarcredito" style="margin-top: -2rem">
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<div id="phuyu_editarcredito" class="phuyu-velzon-form phuyu-creditos-velzon" style="margin-top: -2rem">
 	<form id="formulario" v-on:submit.prevent="phuyu_guardar()">
 		<div class="phuyu_body">
-			<div class="card">
+			<div class="card phuyu-card">
 				<div class="card-body" style="margin-top: -2rem">
 					<input type="hidden" id="rubro" value="<?php echo $_SESSION["phuyu_rubro"]?>" name="">
 		        	<input type="hidden" id="codcredito" value="<?php echo $creditos[0]["codcredito"];?>" name="">
@@ -19,7 +21,7 @@
 				            </select>
 				        </div>
 				        <div class="col-md-3" style="margin-top: 1.2rem">
-				        	<button type="button" class="btn btn-success btn-icon" v-on:click="phuyu_lineascreditodirecto()"><i data-acorn-icon="plus"></i> NUEVA LINEA DE CREDITO</button>
+							<button type="button" class="btn btn-success" v-on:click="phuyu_lineascreditodirecto()"><i class="bi bi-plus-circle me-1"></i> NUEVA LINEA DE CREDITO</button>
 				        </div>
 				        <div class="col-md-2 col-xs-12">
 					    	<label>FECHA</label>

@@ -1,4 +1,6 @@
-<div id="phuyu_datos">
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<div id="phuyu_datos" class="phuyu-reportes-velzon phuyu-velzon-list">
 	<div class="phuyu_body">
 		<div class="card">
 			<div class="card-body">
@@ -12,32 +14,32 @@
 							<option value="0">LISTA GENERAL - TODAS LAS PERSONAS</option>
 						</select>
 					</div>
-					<div class="col-md-2"> 
-						<label> <i class="fa fa-calendar"></i> CAJA DETALLADO AL</label> 
+					<div class="col-md-2">
+						<label> <i class="bi bi-calendar3"></i> CAJA DETALLADO AL</label>
 						<input type="date" class="form-control" id="fecha_detallado" value="<?php echo date('Y-m-d');?>">
 					</div>
 					<div class="col-md-6" style="margin-top:20px;">
 						<button type="button" class="btn btn-warning btn-icon" v-on:click="caja_detallado()">
-							<i data-acorn-icon="print"></i> CAJA DETALLADO
+							<i class="bi bi-printer"></i> CAJA DETALLADO
 						</button>
 						<button type="button" class="btn btn-success btn-icon" v-on:click="modal_conceptos()">
-							<i data-acorn-icon="search"></i> TODOS LOS CONCEPTOS
+							<i class="bi bi-search"></i> TODOS LOS CONCEPTOS
 						</button>
 					</div>
 				</div><hr>
 				<div class="row">
-					<div class="col-md-2"> 
-						<label><i class="fa fa-calendar"></i> DESDE</label> 
+					<div class="col-md-2">
+						<label><i class="bi bi-calendar3"></i> DESDE</label>
 						<input type="date" class="form-control" id="fecha_desde" value="<?php echo date('Y-m-d');?>">
 					</div>
-					<div class="col-md-2"> 
-						<label><i class="fa fa-calendar"></i> HASTA</label> 
+					<div class="col-md-2">
+						<label><i class="bi bi-calendar3"></i> HASTA</label>
 						<input type="date" class="form-control" id="fecha_hasta" value="<?php echo date('Y-m-d');?>">
 					</div>
-					
+
 					<div class="col-md-1">
 						<label>CAJAS</label><br>
-						<input type="checkbox" style="height:25px;width:25px;" v-model="campos.caja"> 
+						<input type="checkbox" style="height:25px;width:25px;" v-model="campos.caja">
 					</div>
 					<div class="col-md-1">
 						<label>BANCO</label>
@@ -45,17 +47,17 @@
 					</div>
 					<div class="col-md-4" style="margin-top:20px">
 						<button type="button" class="btn btn-success btn-icon" v-on:click="reporte_movimientos()">
-							<i data-acorn-icon="search"></i> MOVIMIENTOS
+							<i class="bi bi-search"></i> MOVIMIENTOS
 						</button>
 						<button type="button" class="btn btn-danger btn-icon" v-on:click="reporte_movimientos_anulados()">
-							<i data-acorn-icon="search"></i> MOV. ANULADOS
+							<i class="bi bi-search"></i> MOV. ANULADOS
 						</button>
 					</div>
 					<div class="col-md-2" style="margin-top: 20px">
 						<div class="dropdown">
                           <button class="btn btn-warning dropdown-toggle mb-1 btn-icon"
                             type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            <i data-acorn-icon="print"></i> FORMATOS
+                            <i class="bi bi-printer"></i> FORMATOS
                           </button>
                           <div class="dropdown-menu">
                             <a class="dropdown-item" href="javascript:;" v-on:click="pdf_caja()">Formato PDF</a>
@@ -148,8 +150,8 @@
 				<div class="modal-dialog" style="width:100%;margin:0px;">
 					<div class="modal-content" align="center" style="border-radius:0px">
 						<div class="modal-header">
-							<button type="button" class="close" data-dismiss="modal" style="font-size:30px;margin-bottom:0px;">
-								<i class="fa fa-times-circle"></i> 
+							<button type="button" class="close" data-bs-dismiss="modal" style="font-size:30px;margin-bottom:0px;">
+								<i class="bi bi-x-circle"></i>
 							</button>
 							<h4 class="modal-title">
 								<b style="letter-spacing:4px;"><?php echo $_SESSION["phuyu_empresa"];?> </b>
@@ -166,8 +168,8 @@
 				<div class="modal-dialog">
 					<div class="modal-content">
 						<div class="modal-header">
-							<button type="button" class="close" data-dismiss="modal" style="font-size:30px;margin-bottom:0px;">
-								<i class="fa fa-times-circle"></i> 
+							<button type="button" class="close" data-bs-dismiss="modal" style="font-size:30px;margin-bottom:0px;">
+								<i class="bi bi-x-circle"></i>
 							</button>
 							<h4 class="modal-title"> <b>CONCEPTOS DE CAJA</b> </h4>
 						</div>
@@ -181,7 +183,7 @@
 										</tr>
 									</table>
 								</div>
-							</div>	
+							</div>
 							<div class="row">
 								<div class="col-md-6" style="height:400px;overflow-y:scroll;">
 									<table class="table table-bordered">
@@ -193,7 +195,7 @@
 										</thead>
 										<tbody>
 
-											<?php 
+											<?php
 												foreach ($conceptosingresos as $key => $value) { ?>
 													<tr>
 														<td><?php echo $value["descripcion"];?></td>
@@ -215,7 +217,7 @@
 											</tr>
 										</thead>
 										<tbody>
-											<?php 
+											<?php
 												foreach ($conceptosegresos as $key => $value) { ?>
 													<tr>
 														<td><?php echo $value["descripcion"];?></td>
@@ -236,7 +238,7 @@
 		</div>
 	</div>
 </div>
-<script> 
+<script>
 	var campos = {"codpersona":0,"fecha_detallado":$("#fecharef").val(),"fecha_desde":$("#fecharef").val(),"fecha_hasta":$("#fecharef").val(),"caja":1,"banco":0,"reporte":0,"cliente":"TODAS LAS PERSONAS"};
 
 	var pantalla = jQuery(document).height(); $("#reportes_modal").css({height: pantalla - 65});

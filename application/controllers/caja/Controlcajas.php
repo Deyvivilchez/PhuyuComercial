@@ -40,8 +40,9 @@ class Controlcajas extends CI_Controller {
 
 					$saldocaja = $this->Caja_model->phuyu_saldocaja_diario($_SESSION["phuyu_codcontroldiario"]); 
 					$saldobanco = $this->Caja_model->phuyu_saldobanco_diario($_SESSION["phuyu_codcontroldiario"]); 
+					$cajas = $this->db->query("select codcaja, descripcion from caja.cajas where codsucursal=".$_SESSION["phuyu_codsucursal"]." and estado=1 order by descripcion")->result_array();
 
-					$this->load->view("caja/controlcajas/index", compact("caja","tipopagos","comprobantes","saldocaja","saldobanco"));
+					$this->load->view("caja/controlcajas/index", compact("caja","tipopagos","comprobantes","saldocaja","saldobanco","cajas"));
 				}
 			}else{
 				$this->load->view("phuyu/505");
@@ -63,6 +64,72 @@ class Controlcajas extends CI_Controller {
 		}
 	}
 
+	function detalle_tipopago($codtipopago){
+		if ($this->input->is_ajax_request()) {
+			$codtipopago = (int)$codtipopago;
+			$codcontroldiario = isset($_SESSION["phuyu_codcontroldiario"]) ? (int)$_SESSION["phuyu_codcontroldiario"] : 0;
+
+			$tipopago = $this->db->query("select descripcion from caja.tipopagos where codtipopago=".$codtipopago." and estado=1 limit 1")->result_array();
+			$lista = $this->db->query("
+				select
+					movimientos.codmovimiento,
+					movimientos.fechamovimiento,
+					COALESCE(
+						TO_CHAR(movimientos.horamovimiento, 'HH24:MI:SS'),
+						SPLIT_PART(kardex.hora::text, '.', 1)
+					) as horamovimiento,
+					movimientos.seriecomprobante,
+					movimientos.nrocomprobante,
+					movimientos.seriecomprobante_ref,
+					movimientos.nrocomprobante_ref,
+					movimientos.referencia,
+					movimientos.tipomovimiento,
+					movimientos.cobrado,
+					round(md.importe, 2) as importe_r,
+					personas.razonsocial,
+					conceptos.descripcion as concepto
+				from caja.movimientos as movimientos
+				inner join caja.movimientosdetalle as md on(movimientos.codmovimiento=md.codmovimiento)
+				inner join public.personas as personas on(movimientos.codpersona=personas.codpersona)
+				inner join caja.conceptos as conceptos on(movimientos.codconcepto=conceptos.codconcepto)
+				left join kardex.kardex as kardex on(kardex.codkardex=movimientos.codkardex)
+				where movimientos.codcontroldiario=".$codcontroldiario."
+				  and md.codtipopago=".$codtipopago."
+				  and movimientos.condicionpago=1
+				  and movimientos.estado=1
+				order by movimientos.fechamovimiento asc, movimientos.codmovimiento asc
+			")->result_array();
+
+			$ingresos = 0;
+			$egresos = 0;
+			foreach ($lista as $key => $value) {
+				$importe = round((double)$value["importe_r"], 2);
+				$lista[$key]["recibo"] = $value["seriecomprobante"]."-".$value["nrocomprobante"];
+				$lista[$key]["documento_ref"] = trim($value["seriecomprobante_ref"]."-".$value["nrocomprobante_ref"], "-");
+				$lista[$key]["tipo"] = ((int)$value["tipomovimiento"] === 2) ? "Egreso" : "Ingreso";
+				$lista[$key]["estado_pago"] = ((int)$value["cobrado"] === 0) ? "Pendiente" : "Confirmado";
+
+				if ((int)$value["tipomovimiento"] === 2) {
+					$egresos += $importe;
+				}else{
+					$ingresos += $importe;
+				}
+			}
+
+			echo json_encode(array(
+				"tipopago" => count($tipopago) > 0 ? $tipopago[0]["descripcion"] : "",
+				"lista" => $lista,
+				"totales" => array(
+					"ingresos" => round($ingresos, 2),
+					"egresos" => round($egresos, 2),
+					"neto" => round($ingresos - $egresos, 2)
+				)
+			));
+		}else{
+			$this->load->view("phuyu/404");
+		}
+	}
+
 	function phuyu_aperturar(){
 		if ($this->input->is_ajax_request()) {
 			if (isset($_SESSION["phuyu_usuario"])) {
@@ -78,14 +145,14 @@ class Controlcajas extends CI_Controller {
 					$saldoinicialbanco = $this->Caja_model->phuyu_saldobanco($caja[0]["codcontroldiario"]);
 				}
 
-				$campos = ["codcaja","codusuario","codsucursal","saldoinicialcaja","saldoinicialbanco","codigodiario","cerrado"];
+				$campos = ["codcaja","codusuario","codsucursal","saldoinicialcaja","saldoinicialbanco","codigodiario","cerrado","horaapertura"];
 				$valores = [
 					(int)$_SESSION["phuyu_codcaja"],
 					(int)$_SESSION["phuyu_codusuario"],
 					(int)$_SESSION["phuyu_codsucursal"],
 					((double)$saldoinicialcaja["total"] + (double)$saldoinicialcaja["saldoinicial"]),
 					((double)$saldoinicialbanco["total"] + (double)$saldoinicialbanco["saldoinicial"]),
-					date("dmY"),1
+					date("dmY"),1,date("H:i:s")
 				];
 				$estado = $this->phuyu_model->phuyu_guardar("caja.controldiario", $campos, $valores);
 
@@ -102,7 +169,7 @@ class Controlcajas extends CI_Controller {
 
 						$fechamovimiento = date('Y-m-d');
 
-						$campos = ["codcontroldiario","codcaja","codconcepto","codpersona","codusuario","codcomprobantetipo","seriecomprobante","tipomovimiento","importe","codcomprobantetipo_ref","seriecomprobante_ref","nrocomprobante_ref","referencia","codempleado","condicionpago","fechamovimiento"];
+						$campos = ["codcontroldiario","codcaja","codconcepto","codpersona","codusuario","codcomprobantetipo","seriecomprobante","tipomovimiento","importe","codcomprobantetipo_ref","seriecomprobante_ref","nrocomprobante_ref","referencia","codempleado","condicionpago","fechamovimiento","horamovimiento"];
 						$valores = [
 							(int)$_SESSION["phuyu_codcontroldiario"],
 							(int)$_SESSION["phuyu_codcaja"],
@@ -115,7 +182,7 @@ class Controlcajas extends CI_Controller {
 							"REF","",
 							"SALDO INICIAL DE CAPITAL A CAJA CENTRAL",
 							1,
-							1, $fechamovimiento
+							1, $fechamovimiento, date("H:i:s")
 						];
 
 						$codmovimiento = $this->phuyu_model->phuyu_guardar("caja.movimientos", $campos, $valores,"true");
@@ -167,7 +234,7 @@ class Controlcajas extends CI_Controller {
 
 						$fechamovimiento = date('Y-m-d');
 
-						$campos = ["codcontroldiario","codcaja","codconcepto","codpersona","codusuario","codcomprobantetipo","seriecomprobante","tipomovimiento","importe","codcomprobantetipo_ref","seriecomprobante_ref","nrocomprobante_ref","referencia","codempleado","condicionpago","fechamovimiento"];
+						$campos = ["codcontroldiario","codcaja","codconcepto","codpersona","codusuario","codcomprobantetipo","seriecomprobante","tipomovimiento","importe","codcomprobantetipo_ref","seriecomprobante_ref","nrocomprobante_ref","referencia","codempleado","condicionpago","fechamovimiento","horamovimiento"];
 						$valores = [
 							(int)$_SESSION["phuyu_codcontroldiario"],
 							(int)$_SESSION["phuyu_codcaja"],
@@ -180,7 +247,7 @@ class Controlcajas extends CI_Controller {
 							"REF","",
 							"DEVOLUCION DE CAPITAL A CAJA CENTRAL",
 							1,
-							1, $fechamovimiento
+							1, $fechamovimiento, date("H:i:s")
 						];
 
 						$codmovimiento = $this->phuyu_model->phuyu_guardar("caja.movimientos", $campos, $valores,"true");
@@ -205,9 +272,9 @@ class Controlcajas extends CI_Controller {
                 $saldocaja = $this->Caja_model->phuyu_saldocaja($_SESSION["phuyu_codcontroldiario"]);
 				$saldobanco = $this->Caja_model->phuyu_saldobanco($_SESSION["phuyu_codcontroldiario"]);
 
-				$campos = ["codusuariocierre","fechacierre","saldofinalcaja","totalingresoscaja","totalegresoscaja","saldofinalbanco","totalingresosbanco","totalegresosbanco","cerrado"];
+				$campos = ["codusuariocierre","fechacierre","horacierre","saldofinalcaja","totalingresoscaja","totalegresoscaja","saldofinalbanco","totalingresosbanco","totalegresosbanco","cerrado"];
 				$valores = [
-					(int)$_SESSION["phuyu_codusuario"],date("Y-m-d"),
+					(int)$_SESSION["phuyu_codusuario"],date("Y-m-d"),date("H:i:s"),
 					(double)($saldocaja["total"]),
 					(double)($saldocaja["ingresos"]),
 					(double)($saldocaja["egresos"]),
@@ -420,13 +487,10 @@ class Controlcajas extends CI_Controller {
 
 	function pdf_arqueo_caja($codcontroldiario){
 		$estilo = "border-top:1px solid #D5D8DC; border-left:1px solid #D5D8DC; border-right:1px solid #D5D8DC;";
-
 		$sesion = $this->db->query("select *from caja.controldiario where codcontroldiario=".$codcontroldiario)->result_array();
 		$html = $this->pdf_cabecera("ARQUEO DE CAJA","CAJA NUMERO 000".$sesion[0]["codcontroldiario"]." - FECHA: ".$sesion[0]["fechaapertura"]);
-
 		$tipopagos = $this->db->query("select *from caja.tipopagos where estado=1 order by codtipopago")->result_array();
 		$caja = $this->db->query("select *from caja.controldiario where codcontroldiario=".$codcontroldiario)->result_array();
-
 		$html .= '<table cellpadding="4" width="100%" style="border:1px solid #D5D8DC;font-size:9px;">';
 			$html .= '<tr>';
 				$html .= '<th style="'.$estilo.' width:30%;"> <b>SALDO INICIAL</b> </th>';
@@ -526,20 +590,21 @@ class Controlcajas extends CI_Controller {
 
 		$html .= '<br> <h4 align="center">OPERACIONES REALIZADAS (CAJA APERTURADA N° 000'.$codcontroldiario.') (FECHA APERTURADA: '.$sesion[0]["fechaapertura"].')</h4> <hr> <h6></h6>';
 
-		$lista = $this->db->query("select movimientos.*, round(movimientos.importe,2) as importe_r, personas.razonsocial,conceptos.descripcion as concepto from caja.movimientos as movimientos inner join public.personas as personas on(movimientos.codpersona=personas.codpersona) inner join caja.conceptos as conceptos on(movimientos.codconcepto=conceptos.codconcepto) where movimientos.codcontroldiario=".$codcontroldiario." and movimientos.tipomovimiento=1 and movimientos.condicionpago=1 and movimientos.estado=1 order by movimientos.codmovimiento asc")->result_array();
+			$lista = $this->db->query("select movimientos.*, round(md.importe,2) as importe_r, tp.descripcion as tipopago, personas.razonsocial,conceptos.descripcion as concepto from caja.movimientos as movimientos inner join caja.movimientosdetalle as md on(movimientos.codmovimiento=md.codmovimiento) inner join caja.tipopagos as tp on(md.codtipopago=tp.codtipopago) inner join public.personas as personas on(movimientos.codpersona=personas.codpersona) inner join caja.conceptos as conceptos on(movimientos.codconcepto=conceptos.codconcepto) where movimientos.codcontroldiario=".$codcontroldiario." and movimientos.tipomovimiento=1 and movimientos.condicionpago=1 and movimientos.estado=1 order by movimientos.codmovimiento asc, md.codtipopago asc")->result_array();
 
 		$html .= '<h4 align="center">LISTA DE INGRESOS</h4>';
 		$html .= '<table cellpadding="4" width="100%" style="border:1px solid #D5D8DC;font-size:8px;">';
 			$html .= '<tr>';
-				$html .= '<th style="'.$estilo.' width:8%;"> <b>FECHA</b> </th>';
-				$html .= '<th style="'.$estilo.' width:11%;"> <b>N° RECIBO</b> </th>';
-				$html .= '<th style="'.$estilo.' width:10%;"> <b>CONCEPTO CAJA</b> </th>';
-				$html .= '<th style="'.$estilo.' width:10%;"> <b>DOC. REF.</b> </th>';
-				$html .= '<th style="'.$estilo.' width:20%;"> <b>RAZÓN SOCIAL</b> </th>';
-				$html .= '<th style="'.$estilo.' width:14%;"> <b>REFERENCIA</b> </th>';
-				$html .= '<th style="'.$estilo.' width:9%;"> <b>PENDIENTE</b> </th>';
-				$html .= '<th style="'.$estilo.' width:8%;"> <b>COBRADO</b> </th>';
-				$html .= '<th style="'.$estilo.' width:10%;"> <b>S/. TOTAL</b> </th>';
+					$html .= '<th style="'.$estilo.' width:8%;"> <b>FECHA</b> </th>';
+					$html .= '<th style="'.$estilo.' width:10%;"> <b>N° RECIBO</b> </th>';
+					$html .= '<th style="'.$estilo.' width:9%;"> <b>CONCEPTO</b> </th>';
+					$html .= '<th style="'.$estilo.' width:9%;"> <b>DOC. REF.</b> </th>';
+					$html .= '<th style="'.$estilo.' width:16%;"> <b>RAZÓN SOCIAL</b> </th>';
+					$html .= '<th style="'.$estilo.' width:12%;"> <b>REFERENCIA</b> </th>';
+					$html .= '<th style="'.$estilo.' width:10%;"> <b>TIPO PAGO</b> </th>';
+					$html .= '<th style="'.$estilo.' width:8%;"> <b>PEND.</b> </th>';
+					$html .= '<th style="'.$estilo.' width:8%;"> <b>COBRADO</b> </th>';
+					$html .= '<th style="'.$estilo.' width:10%;"> <b>S/. TOTAL</b> </th>';
 			$html .= '</tr>';
 
 			$ingresos = 0; $tcobrado = 0; $tpendiente = 0;
@@ -558,36 +623,38 @@ class Controlcajas extends CI_Controller {
 					$html .= '<th style="'.$estilo.'"> '.$value["fechamovimiento"].' </th>';
 					$html .= '<th style="'.$estilo.'"> '.$value["seriecomprobante"].'-'.$value["nrocomprobante"].' </th>';
 					$html .= '<th style="'.$estilo.'"> '.$value["concepto"].' </th>';
-					$html .= '<th style="'.$estilo.'"> '.$value["seriecomprobante_ref"].'-'.$value["nrocomprobante_ref"].' </th>';
-					$html .= '<th style="'.$estilo.'"> '.$value["razonsocial"].' </th>';
-					$html .= '<th style="'.$estilo.'"> '.$value["referencia"].' </th>';
-					$html .= '<th style="'.$estilo.' text-align:right"> S/. '.$pendiente.' </th>';
-					$html .= '<th style="'.$estilo.' text-align:right"> S/. '.$cobrado.' </th>';
-					$html .= '<th style="'.$estilo.' text-align:right"> S/. '.$total.' </th>';
+						$html .= '<th style="'.$estilo.'"> '.$value["seriecomprobante_ref"].'-'.$value["nrocomprobante_ref"].' </th>';
+						$html .= '<th style="'.$estilo.'"> '.$value["razonsocial"].' </th>';
+						$html .= '<th style="'.$estilo.'"> '.$value["referencia"].' </th>';
+						$html .= '<th style="'.$estilo.'"> '.$value["tipopago"].' </th>';
+						$html .= '<th style="'.$estilo.' text-align:right"> S/. '.$pendiente.' </th>';
+						$html .= '<th style="'.$estilo.' text-align:right"> S/. '.$cobrado.' </th>';
+						$html .= '<th style="'.$estilo.' text-align:right"> S/. '.$total.' </th>';
 				$html .= '</tr>';
 			}
 			$html .= '<tr>';
-				$html .= '<th style="'.$estilo.'" colspan="6">TOTAL INGRESOS</th>';
+					$html .= '<th style="'.$estilo.'" colspan="7">TOTAL INGRESOS</th>';
 				$html .= '<th style="'.$estilo.' text-align:right"> S/. '.number_format($tpendiente,2).'</th>';
 				$html .= '<th style="'.$estilo.' text-align:right"> S/. '.number_format($tcobrado,2).'</th>';
 				$html .= '<th style="'.$estilo.' text-align:right"> S/. '.number_format($ingresos,2).'</th>';
 			$html .= '</tr>';
 		$html .= '</table>';
 
-		$lista = $this->db->query("select movimientos.*, round(movimientos.importe,2) as importe_r, personas.razonsocial,conceptos.descripcion as concepto from caja.movimientos as movimientos inner join public.personas as personas on(movimientos.codpersona=personas.codpersona) inner join caja.conceptos as conceptos on(movimientos.codconcepto=conceptos.codconcepto) where movimientos.codcontroldiario=".$codcontroldiario." and movimientos.tipomovimiento=2 and movimientos.condicionpago=1 and movimientos.estado=1 order by movimientos.codmovimiento asc")->result_array();
+			$lista = $this->db->query("select movimientos.*, round(md.importe,2) as importe_r, tp.descripcion as tipopago, personas.razonsocial,conceptos.descripcion as concepto from caja.movimientos as movimientos inner join caja.movimientosdetalle as md on(movimientos.codmovimiento=md.codmovimiento) inner join caja.tipopagos as tp on(md.codtipopago=tp.codtipopago) inner join public.personas as personas on(movimientos.codpersona=personas.codpersona) inner join caja.conceptos as conceptos on(movimientos.codconcepto=conceptos.codconcepto) where movimientos.codcontroldiario=".$codcontroldiario." and movimientos.tipomovimiento=2 and movimientos.condicionpago=1 and movimientos.estado=1 order by movimientos.codmovimiento asc, md.codtipopago asc")->result_array();
 
 		$html .= '<br> <h4 align="center">LISTA DE EGRESOS</h4>';
 		$html .= '<table cellpadding="4" width="100%" style="border:1px solid #D5D8DC;font-size:8px;">';
 			$html .= '<tr>';
-				$html .= '<th style="'.$estilo.' width:8%;"> <b>FECHA</b> </th>';
-				$html .= '<th style="'.$estilo.' width:11%;"> <b>N° RECIBO</b> </th>';
-				$html .= '<th style="'.$estilo.' width:10%;"> <b>CONCEPTO CAJA</b> </th>';
-				$html .= '<th style="'.$estilo.' width:10%;"> <b>DOC. REF.</b> </th>';
-				$html .= '<th style="'.$estilo.' width:20%;"> <b>RAZÓN SOCIAL</b> </th>';
-				$html .= '<th style="'.$estilo.' width:14%;"> <b>REFERENCIA</b> </th>';
-				$html .= '<th style="'.$estilo.' width:9%;"> <b>PENDIENTE</b> </th>';
-				$html .= '<th style="'.$estilo.' width:8%;"> <b>COBRADO</b> </th>';
-				$html .= '<th style="'.$estilo.' width:10%;"> <b>S/. TOTAL</b> </th>';
+					$html .= '<th style="'.$estilo.' width:8%;"> <b>FECHA</b> </th>';
+					$html .= '<th style="'.$estilo.' width:10%;"> <b>N° RECIBO</b> </th>';
+					$html .= '<th style="'.$estilo.' width:9%;"> <b>CONCEPTO</b> </th>';
+					$html .= '<th style="'.$estilo.' width:9%;"> <b>DOC. REF.</b> </th>';
+					$html .= '<th style="'.$estilo.' width:16%;"> <b>RAZÓN SOCIAL</b> </th>';
+					$html .= '<th style="'.$estilo.' width:12%;"> <b>REFERENCIA</b> </th>';
+					$html .= '<th style="'.$estilo.' width:10%;"> <b>TIPO PAGO</b> </th>';
+					$html .= '<th style="'.$estilo.' width:8%;"> <b>PEND.</b> </th>';
+					$html .= '<th style="'.$estilo.' width:8%;"> <b>COBRADO</b> </th>';
+					$html .= '<th style="'.$estilo.' width:10%;"> <b>S/. TOTAL</b> </th>';
 			$html .= '</tr>';
 
 			$egresos = 0; $tcobradoe = 0; $tpendientee = 0;
@@ -607,16 +674,17 @@ class Controlcajas extends CI_Controller {
 					$html .= '<th style="'.$estilo.'"> '.$value["fechamovimiento"].' </th>';
 					$html .= '<th style="'.$estilo.'"> '.$value["seriecomprobante"].'-'.$value["nrocomprobante"].' </th>';
 					$html .= '<th style="'.$estilo.'"> '.$value["concepto"].' </th>';
-					$html .= '<th style="'.$estilo.'"> '.$value["seriecomprobante_ref"].'-'.$value["nrocomprobante_ref"].' </th>';
-					$html .= '<th style="'.$estilo.'"> '.$value["razonsocial"].' </th>';
-					$html .= '<th style="'.$estilo.'"> '.$value["referencia"].' </th>';
-					$html .= '<th style="'.$estilo.' text-align:right"> S/. '.$pendiente.' </th>';
-					$html .= '<th style="'.$estilo.' text-align:right"> S/. '.$cobrado.' </th>';
-					$html .= '<th style="'.$estilo.' text-align:right"> S/. '.$total.' </th>';
+						$html .= '<th style="'.$estilo.'"> '.$value["seriecomprobante_ref"].'-'.$value["nrocomprobante_ref"].' </th>';
+						$html .= '<th style="'.$estilo.'"> '.$value["razonsocial"].' </th>';
+						$html .= '<th style="'.$estilo.'"> '.$value["referencia"].' </th>';
+						$html .= '<th style="'.$estilo.'"> '.$value["tipopago"].' </th>';
+						$html .= '<th style="'.$estilo.' text-align:right"> S/. '.$pendiente.' </th>';
+						$html .= '<th style="'.$estilo.' text-align:right"> S/. '.$cobrado.' </th>';
+						$html .= '<th style="'.$estilo.' text-align:right"> S/. '.$total.' </th>';
 				$html .= '</tr>';
 			}
 			$html .= '<tr>';
-				$html .= '<th style="'.$estilo.'" colspan="6">TOTAL EGRESOS</th>';
+					$html .= '<th style="'.$estilo.'" colspan="7">TOTAL EGRESOS</th>';
 				$html .= '<th style="'.$estilo.' text-align:right"> S/. '.number_format($tpendientee,2).'</th>';
 				$html .= '<th style="'.$estilo.' text-align:right"> S/. '.number_format($tcobradoe,2).'</th>';
 				$html .= '<th style="'.$estilo.'"> S/. '.number_format($egresos,2).'</th>';
@@ -656,7 +724,36 @@ class Controlcajas extends CI_Controller {
 	}
 
 	function actualizar_controldiario(){
-		$control = $this->db->query("select * from caja.controldiario order by codcontroldiario")->result_array();
+		$this->request = json_decode(file_get_contents('php://input'));
+		$desde = isset($this->request->desde) ? $this->request->desde : "";
+		$hasta = isset($this->request->hasta) ? $this->request->hasta : "";
+		$codcaja = isset($this->request->codcaja) ? (int)$this->request->codcaja : 0;
+		if ($codcaja == 0) {
+			$codcaja = isset($_SESSION["phuyu_codcaja"]) ? (int)$_SESSION["phuyu_codcaja"] : 0;
+		}
+
+		if ($desde != "" && $hasta != "") {
+			if ($desde > $hasta || $codcaja == 0) {
+				echo json_encode(["estado" => 0, "mensaje" => "Rango de fechas invalido."]);
+				return;
+			}
+
+			$caja_sucursal = $this->db->query("select codcaja from caja.cajas where codcaja=".$codcaja." and codsucursal=".$_SESSION["phuyu_codsucursal"]." and estado=1")->result_array();
+			if (count($caja_sucursal)==0) {
+				echo json_encode(["estado" => 0, "mensaje" => "La caja seleccionada no pertenece a la sucursal actual."]);
+				return;
+			}
+
+			$control = $this->db->query("select * from caja.controldiario where codcaja=".$codcaja." and fechaapertura>=".$this->db->escape($desde)." and fechaapertura<=".$this->db->escape($hasta)." order by codcontroldiario")->result_array();
+			if (count($control)==0) {
+				echo json_encode(["estado" => 0, "mensaje" => "No se encontraron cajas en el rango seleccionado."]);
+				return;
+			}
+		}else{
+			$control = $this->db->query("select * from caja.controldiario order by codcontroldiario")->result_array();
+		}
+
+		$estado = 1;
 		foreach ($control as $key => $value) {
 			$codcontroldiario = $value["codcontroldiario"];
 
@@ -682,19 +779,6 @@ class Controlcajas extends CI_Controller {
 			$ingresos_banco = $this->db->query("select round(COALESCE(sum(md.importe),0),2) as importe from caja.movimientos as m inner join caja.movimientosdetalle as md on(m.codmovimiento=md.codmovimiento) where m.codcontroldiario=".$codcontroldiario." and m.tipomovimiento=1 and (md.codtipopago<>1 and md.codtipopago<>2) and m.estado=1")->result_array();
 			$egresos_banco = $this->db->query("select round(COALESCE(sum(md.importe),0),2) as importe from caja.movimientos as m inner join caja.movimientosdetalle as md on(m.codmovimiento=md.codmovimiento) where m.codcontroldiario=".$codcontroldiario." and m.tipomovimiento=2 and (md.codtipopago<>1 and md.codtipopago<>3) and m.estado=1")->result_array();
 
-			echo 
-				"CONTROL DE CAJA: ".$value["codcontroldiario"].
-				"<br> SALDO INICIAL CAJA: ".($inicialcaja + $finalcaja).
-				"<br> SALDO FINAL CAJA: ".($ingresos_caja[0]["importe"] - $egresos_caja[0]["importe"]).
-				"<br> TOTAL INGRESOS CAJA: ".($ingresos_caja[0]["importe"]).
-				"<br> TOTAL EGRESOS CAJA: ".($egresos_caja[0]["importe"]).
-
-				"<br> SALDO INICIAL BANCO: ".($inicialbanco + $finalbanco).
-				"<br> SALDO FINAL BANCO: ".($ingresos_banco[0]["importe"] - $egresos_banco[0]["importe"]).
-				"<br> TOTAL INGRESOS BANCO: ".($ingresos_banco[0]["importe"]).
-				"<br> TOTAL EGRESOS BANCO: ".($egresos_banco[0]["importe"]).
-				"<br> <br>";
-
 			$campos = ["saldoinicialcaja","saldofinalcaja","totalingresoscaja","totalegresoscaja","saldoinicialbanco","saldofinalbanco","totalingresosbanco","totalegresosbanco"];
 			$valores = [
 				(double)($inicialcaja + $finalcaja),(double)($ingresos_caja[0]["importe"] - $egresos_caja[0]["importe"]),(double)$ingresos_caja[0]["importe"],(double)$egresos_caja[0]["importe"],
@@ -702,6 +786,12 @@ class Controlcajas extends CI_Controller {
 			];
 			$estado = $this->phuyu_model->phuyu_editar("caja.controldiario", $campos, $valores, "codcontroldiario", $value["codcontroldiario"]);
 
+		}
+
+		if ($desde != "" && $hasta != "") {
+			echo json_encode(["estado" => (int)$estado, "mensaje" => count($control)." control(es) diario(s) recalculado(s)."]);
+		}else{
+			echo $estado;
 		}
 	}
 

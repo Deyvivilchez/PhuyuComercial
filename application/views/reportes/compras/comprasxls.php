@@ -12,7 +12,7 @@ header('Cache-Control: max-age=0');
     </tr>
     <tr>
         <th colspan="15">
-            <b style="font-size:9px">COMPRAS DESDE <?php echo $fechadesde.' A '.$fechahasta;?></b>
+            <b style="font-size:9px">COMPRAS POR <?php echo isset($titulo_fecha) ? $titulo_fecha : 'FECHA COMPROBANTE';?> DESDE <?php echo $fechadesde.' A '.$fechahasta;?></b>
         </th>
     </tr>
     <?php 
@@ -23,9 +23,10 @@ header('Cache-Control: max-age=0');
             </tr>                  
             <tr>
                 <td style="font-weight: 700">N°</td>
-                <td style="font-weight: 700">FECHA</td>
+                <td style="font-weight: 700">FECHA COMP.</td>
+                <td style="font-weight: 700">FECHA KARDEX</td>
                 <td style="font-weight: 700">DOCUMENTO</td>
-                <td style="font-weight: 700" colspan="7">RAZON SOCIAL</td>
+                <td style="font-weight: 700" colspan="6">RAZON SOCIAL</td>
                 <td style="font-weight: 700">TIPO</td>
                 <td style="font-weight: 700">COMPROBANTE</td>
                 <td style="font-weight: 700">VALOR VENTA</td>
@@ -50,8 +51,9 @@ header('Cache-Control: max-age=0');
                     <tr style="<?php echo $color;?>">
                         <td style="<?php echo $relleno; ?>"><?php echo $item; ?></td>
                         <td style="<?php echo $relleno; ?>"><?php echo $val["fechacomprobante"];?></td>
+                        <td style="<?php echo $relleno; ?>"><?php echo $val["fechakardex"];?></td>
                         <td style="<?php echo $relleno; ?>"><?php echo $val["documento"];?></td>
-                        <td style="<?php echo $relleno; ?>" colspan="7"><?php echo $val["razonsocial"];?></td>
+                        <td style="<?php echo $relleno; ?>" colspan="6"><?php echo $val["razonsocial"];?></td>
                         <td style="<?php echo $relleno; ?>"><?php echo $val["tipo"];?></td>
                         <td style="<?php echo $relleno; ?>"><?php echo $val["seriecomprobante"].'-'.$val["nrocomprobante"];?></td>
                         <td style="<?php echo $relleno; ?>"><?php echo $val["valorventa"];?></td>

@@ -1,73 +1,78 @@
-<div id="phuyu_datos">
-	<div class="row">
-		<div class="col-12 col-md-8">
-			<input type="hidden" id="estadocaja" value="<?php echo $_SESSION['phuyu_codcontroldiario'];?>">
-			<input type="hidden" id="saldarautomaticamente" value="<?php echo $automatico[0]['estado'];?>" name="">
-            <h3 class="mb-0 pb-0" id="title"><span class="bg bg-danger" style="padding: .5rem;border-radius: 1rem">CAJA CERRADA</span> 
-					<b><?php echo $_SESSION["phuyu_caja"];?> AL DIA <?php echo date("d / m / Y");?></h3>
-        </div>
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<div id="phuyu_datos" class="phuyu-velzon-list">
+	<input type="hidden" id="estadocaja" value="<?php echo $_SESSION['phuyu_codcontroldiario'];?>">
+	<input type="hidden" id="saldarautomaticamente" value="<?php echo $automatico[0]['estado'];?>" name="">
+
+	<div class="phuyu-page-title">
+		<div class="phuyu-page-icon"><i class="bi bi-cash-coin"></i></div>
+		<div>
+			<div class="text-muted small text-uppercase fw-semibold">Tesoreria</div>
+			<h4 class="mb-0 fw-bold">Caja cerrada</h4>
+			<div class="text-muted"><?php echo $_SESSION["phuyu_caja"];?> al dia <?php echo date("d / m / Y");?></div>
+		</div>
 	</div>
-<br>
+
 	<div class="phuyu_body">
-		<div class="card">
+		<div class="card phuyu-card">
 			<div class="card-body">
-				<div class="row form-group">
-					<div class="col-md-12" align="center">
-		        		<button type="button" class="btn btn-success" v-on:click="phuyu_aperturar()" v-bind:disabled="estado==1">
-		        			<b><i data-acorn-icon="money"></i> APERTURAR CAJA ACTUAL</b>
-		        		</button>
-					</div>
-				</div><br>
-				<div class="row form-group">
-					<div class="col-md-4">
-						<div class="card">
+				<div class="text-center mb-4">
+					<button type="button" class="btn btn-primary btn-lg" v-on:click="phuyu_aperturar()" v-bind:disabled="estado==1">
+						<i class="bi bi-unlock me-1"></i> Aperturar caja actual
+					</button>
+				</div>
+
+				<div class="row g-3">
+					<div class="col-12 col-lg-4">
+						<div class="card border h-100">
 							<div class="card-body">
-								<h5>REPORTE DE MOVIMIENTOS</h5>
-								<div class="row form-group">
-									<div class="col-md-6">	
-										<label>FECHA DESDE</label>
-							        	<input type="date" id="f_desde" class="form-control" autocomplete="off" value="<?php echo date('Y-m-d');?>" />
-							        </div>
-							        <div class="col-md-6">
-										<label>FECHA HASTA</label>
-							        	<input type="date" id="f_hasta" class="form-control" autocomplete="off" value="<?php echo date('Y-m-d');?>" />
-							        </div>
-						        </div>
-						        <div class="row form-group" align="center"> <br>
-			              			<button type="button" class="btn btn-warning btn-lg" v-on:click="pdf_movimientos()"><i data-acorn-icon="print"></i> IMPRIMIR MOVIMIENTOS</button>
-			              		</div>
-							</div>
-						</div>
-					</div>
-					<div class="col-md-4">
-						<div class="card">
-							<div class="card-body">
-								<h5>REPORTE DE ARQUEO</h5>
-								<div class="row form-group">
-									<div class="col-md-12">	
-										<label>FECHA APERTURA</label>
-							        	<input type="date" id="f_arqueo" class="form-control" autocomplete="off" value="<?php echo date('Y-m-d');?>" />
-							        </div>
-						        </div>
-						        <div class="row form-group" align="center"> <br>
-			              			<button type="button" class="btn btn-info btn-lg" v-on:click="pdf_arqueo()"><i data-acorn-icon="print"></i> IMPRIMIR ARQUEO</button>
-			              		</div>
+								<h5 class="fw-bold mb-3">Reporte de movimientos</h5>
+								<div class="row g-3">
+									<div class="col-12 col-md-6">
+										<label class="form-label">Fecha desde</label>
+										<input type="date" id="f_desde" class="form-control" autocomplete="off" value="<?php echo date('Y-m-d');?>">
+									</div>
+									<div class="col-12 col-md-6">
+										<label class="form-label">Fecha hasta</label>
+										<input type="date" id="f_hasta" class="form-control" autocomplete="off" value="<?php echo date('Y-m-d');?>">
+									</div>
+									<div class="col-12 text-center">
+										<button type="button" class="btn btn-warning" v-on:click="pdf_movimientos()">
+											<i class="bi bi-printer me-1"></i> Imprimir movimientos
+										</button>
+									</div>
+								</div>
 							</div>
 						</div>
 					</div>
 
-					<div class="col-md-4 col-xs-12">
-						<div class="animated flipInY col-md-12 col-xs-12">
-							<div class="alert alert-warning" align="center" role="alert">
-								<strong>SALDO CAJA <br> <i class="fa fa-dollar" style="font-size:40px;"></i> </strong>
-								<h1> <b>S/. <?php echo number_format(round($saldocaja["total"],2) ,2);?> </b> </h1>
+					<div class="col-12 col-lg-4">
+						<div class="card border h-100">
+							<div class="card-body">
+								<h5 class="fw-bold mb-3">Reporte de arqueo</h5>
+								<div class="row g-3">
+									<div class="col-12">
+										<label class="form-label">Fecha apertura</label>
+										<input type="date" id="f_arqueo" class="form-control" autocomplete="off" value="<?php echo date('Y-m-d');?>">
+									</div>
+									<div class="col-12 text-center">
+										<button type="button" class="btn btn-info" v-on:click="pdf_arqueo()">
+											<i class="bi bi-printer me-1"></i> Imprimir arqueo
+										</button>
+									</div>
+								</div>
 							</div>
 						</div>
-						<div class="animated flipInY col-md-12 col-xs-12">
-							<div class="alert alert-success" align="center" role="alert">
-								<strong>SALDO BANCO <br> <i class="fa fa-dollar" style="font-size:40px;"></i> </strong>
-								<h1> <b>S/. <?php echo number_format(round($saldobanco["total"],2) ,2);?> </b> </h1>
-							</div>
+					</div>
+
+					<div class="col-12 col-lg-4">
+						<div class="alert alert-warning text-center">
+							<strong>Saldo caja</strong>
+							<h2 class="fw-bold mb-0">S/. <?php echo number_format(round($saldocaja["total"],2),2);?></h2>
+						</div>
+						<div class="alert alert-success text-center mb-0">
+							<strong>Saldo banco</strong>
+							<h2 class="fw-bold mb-0">S/. <?php echo number_format(round($saldobanco["total"],2),2);?></h2>
 						</div>
 					</div>
 				</div>
@@ -76,15 +81,13 @@
 	</div>
 
 	<div id="modal_reportes" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
-		<div class="modal-dialog" style="width:100%;margin:0px;">
+		<div class="modal-dialog modal-fullscreen-sm-down" style="margin:0px;">
 			<div class="modal-content" align="center" style="border-radius:0px">
 				<div class="modal-header">
-					<button type="button" class="close" data-dismiss="modal" style="font-size:30px;margin-bottom:0px;">
-						<i class="fa fa-times-circle"></i> 
-					</button>
 					<h4 class="modal-title">
-						<b style="letter-spacing:4px;"><?php echo $_SESSION["phuyu_empresa"]." - ".$_SESSION["phuyu_sucursal"];?> </b>
+						<b><?php echo $_SESSION["phuyu_empresa"]." - ".$_SESSION["phuyu_sucursal"];?> </b>
 					</h4>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
 				</div>
 				<div class="modal-body" id="reportes_modal" style="height:450px;padding:0px;">
 					<iframe id="phuyu_pdf" src="" style="width:100%; height:100%; border:none;"> </iframe>
@@ -93,12 +96,5 @@
 		</div>
 	</div>
 </div>
-<script>
-	if (typeof AcornIcons !== 'undefined') {
-      new AcornIcons().replace();
-    }
-    if (typeof Icons !== 'undefined') {
-      const icons = new Icons();
-    }
-</script>
+
 <script src="<?php echo base_url();?>phuyu/phuyu_caja/controlcaja.js"> </script>

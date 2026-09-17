@@ -1,45 +1,47 @@
-<div id="phuyu_buscar">
-	<div class="row">
-		<div class="col-md-4">
-			<select class="form-control" v-model="bancos" v-on:change="phuyu_buscar()">
-				<option value="0">TODOS LOS BANCOS</option>
-	    		<?php 
-	    			foreach ($bancos as $key => $value) { ?>
-						<option value="<?php echo $value["codbanco"];?>">
-	    					<?php echo $value["banco"];?>
-	    				</option>
-	    		<?php
-	    			}
-	    		?>
-    		</select>
-		</div>	
-		<div class="col-md-6 col-xs-10">
-			<input type="text" class="form-control" v-model="buscar" v-on:keyup="phuyu_buscar()" placeholder="BUSCAR CUENTA CORRIENTE . . ." v-bind:autofocus="true">
-		</div>
-		<div class="col-md-2 col-xs-2">
-			<button type="button" class="btn btn-block btn-success" v-on:click="phuyu_nuevoccte()">
-				<i class="fa fa-shopping-cart"></i> <i class="fa fa-plus-circle"></i>
-			</button>
-		</div>
-	</div>
+<div id="phuyu_buscar" class="phuyu-velzon-list">
+	<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
 
-	<div class="col-xs-12">
-		<div class="phuyu_cargando" v-if="cargando">
-			<img src="<?php echo base_url();?>public/img/phuyu_loading.gif"> <h5>CARGANDO DATOS</h5>
-		</div>
-		<div class="row" v-if="!cargando">
-			<div class="table-responsive">
-				<table class="table table-bordered table-condensed">
+	<div class="card phuyu-card">
+		<div class="card-body">
+			<div class="row g-2 align-items-end mb-3">
+				<div class="col-12 col-md-4">
+					<label class="form-label">Banco</label>
+					<select class="form-select" v-model="bancos" v-on:change="phuyu_buscar()">
+						<option value="0">TODOS LOS BANCOS</option>
+						<?php foreach ($bancos as $key => $value) { ?>
+							<option value="<?php echo $value["codbanco"];?>"><?php echo $value["banco"];?></option>
+						<?php } ?>
+					</select>
+				</div>
+
+				<div class="col-12 col-md-6">
+					<label class="form-label">Buscar cuenta corriente</label>
+					<input type="text" class="form-control" v-model="buscar" v-on:keyup="phuyu_buscar()" placeholder="Buscar cuenta corriente" v-bind:autofocus="true">
+				</div>
+
+				<div class="col-12 col-md-2">
+					<button type="button" class="btn btn-primary w-100" v-on:click="phuyu_nuevoccte()">
+						<i class="bi bi-plus-circle"></i>
+					</button>
+				</div>
+			</div>
+
+			<div class="phuyu_cargando" v-if="cargando">
+				<div class="overlay-spinner"></div>
+			</div>
+
+			<div class="phuyu-table-wrap" v-if="!cargando">
+				<table class="table table-hover align-middle">
 					<thead>
 						<tr>
-							<th>BANCO / CAJA</th>
-							<th>MONEDA</th>
-							<th>NRO CUENTA</th>
-							<th>CODIGO INTERB. (CCI)</th>
-							<th></th>
+							<th>Banco / caja</th>
+							<th>Moneda</th>
+							<th>Nro cuenta</th>
+							<th>Codigo interb. (CCI)</th>
+							<th width="70" class="text-center">Sel.</th>
 						</tr>
 					</thead>
-					<tbody style="font-size: 11px">
+					<tbody>
 						<tr v-for="dato in datos">
 							<td>{{dato.banco}}</td>
 							<td>
@@ -48,11 +50,21 @@
 							</td>
 							<td>{{dato.nroctacte}}</td>
 							<td>{{dato.descripcion}}</td>
-							<td><button type="button" class="btn btn-xs btn-success" v-on:click="phuyu_seleccionado(dato)"><i class="fa fa-check"></i></button></td>
+							<td class="text-center">
+								<button type="button" class="btn btn-sm btn-success" v-on:click="phuyu_seleccionado(dato)">
+									<i class="bi bi-check-lg"></i>
+								</button>
+							</td>
+						</tr>
+						<tr v-if="datos.length==0">
+							<td colspan="5" class="text-center text-muted py-4">
+								<i class="bi bi-inbox me-1"></i> Sin cuentas corrientes
+							</td>
 						</tr>
 					</tbody>
 				</table>
 			</div>
+
 			<?php include("application/views/phuyu/phuyu_paginacion.php");?>
 		</div>
 	</div>

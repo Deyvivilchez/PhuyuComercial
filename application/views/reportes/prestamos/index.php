@@ -1,4 +1,6 @@
-<div id="phuyu_datos">
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<div id="phuyu_datos" class="phuyu-reportes-velzon phuyu-velzon-list">
 	<div class="phuyu_body">
 		<div class="card">
 			<div class="card-body">
@@ -8,10 +10,10 @@
 					</div>
 					<div class="col-md-7" align="right">
 						<button type="button" class="btn btn-danger btn-icon" v-on:click="pdf_reporte_prestamo()">
-							<i data-acorn-icon="print"></i> Generar PDF
+							<i class="bi bi-printer"></i> Generar PDF
 						</button>
 						<button type="button" class="btn btn-success btn-icon" v-on:click="excel_reporte_prestamo()">
-							<i data-acorn-icon="file-text"></i> Generar EXCEL
+							<i class="bi bi-file-earmark-excel"></i> Generar EXCEL
 						</button>
 					</div>
 				</div>
@@ -48,7 +50,7 @@
 						</select>
 					</div>
 					<div class="col-md-2" style="margin-top: 1.3rem">
-						<button type="button" class="btn btn-white btn-icon" v-on:click="phuyu_listaprestamos()"><i data-acorn-icon="search"></i> Consultar</button>
+						<button type="button" class="btn btn-white btn-icon" v-on:click="phuyu_listaprestamos()"><i class="bi bi-search"></i> Consultar</button>
 					</div>	
 				</div>
 				<hr>

@@ -6,32 +6,136 @@ use RobRichards\XMLSecLibs\XMLSecurityKey;
 
 class Sunat extends CI_Controller {
 
-	function phuyu_firmarXML($carpeta_phuyu,$phuyu){
+    function phuyu_consultaIntegradaSUNAT($datos, $client_id, $client_secret, $ruc_consultante){
+        if (!function_exists("curl_init") || trim($client_id)==="" || trim($client_secret)==="") {
+            return ["estado" => 0, "nivel" => "danger", "mensaje" => "FALTAN CREDENCIALES API SUNAT", "detalle" => "Configure el Client ID y Client Secret de Consulta Integrada."];
+        }
+        $clave_sesion = "phuyu_sunat_api_token_".(int)$_SESSION["phuyu_codempresa"];
+        $token = isset($_SESSION[$clave_sesion]) ? $_SESSION[$clave_sesion] : null;
+        if (!is_array($token) || empty($token["access_token"]) || empty($token["vence"]) || (int)$token["vence"]<=time()+60) {
+            $curl = curl_init("https://api-seguridad.sunat.gob.pe/v1/clientesextranet/".rawurlencode($client_id)."/oauth2/token/");
+            curl_setopt($curl, CURLOPT_POST, true);
+            curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query(["grant_type"=>"client_credentials", "scope"=>"https://api.sunat.gob.pe/v1/contribuyente/contribuyentes", "client_id"=>$client_id, "client_secret"=>$client_secret]));
+            curl_setopt($curl, CURLOPT_HTTPHEADER, ["Content-Type: application/x-www-form-urlencoded"]);
+            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true); curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 10); curl_setopt($curl, CURLOPT_TIMEOUT, 30);
+            $respuesta_token = curl_exec($curl); $error_token = curl_error($curl); $http_token = curl_getinfo($curl, CURLINFO_HTTP_CODE); curl_close($curl);
+            $token_data = json_decode((string)$respuesta_token, true);
+            if ($http_token<200 || $http_token>=300 || !is_array($token_data) || empty($token_data["access_token"])) {
+                $detalle = is_array($token_data) && !empty($token_data["error_description"]) ? $token_data["error_description"] : ($error_token!=="" ? $error_token : "SUNAT rechazo las credenciales API.");
+                return ["estado"=>0, "nivel"=>"danger", "mensaje"=>"NO SE PUDO OBTENER TOKEN SUNAT", "detalle"=>$detalle];
+            }
+            $token = ["access_token"=>$token_data["access_token"], "vence"=>time()+max(60, (int)(isset($token_data["expires_in"]) ? $token_data["expires_in"] : 3600))];
+            $_SESSION[$clave_sesion] = $token;
+        }
+        $curl = curl_init("https://api.sunat.gob.pe/v1/contribuyente/contribuyentes/".rawurlencode($ruc_consultante)."/validarcomprobante");
+        curl_setopt($curl, CURLOPT_POST, true); curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($datos));
+        curl_setopt($curl, CURLOPT_HTTPHEADER, ["Authorization: Bearer ".$token["access_token"], "Content-Type: application/json", "Accept: application/json"]);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true); curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 10); curl_setopt($curl, CURLOPT_TIMEOUT, 30);
+        $respuesta = curl_exec($curl); $error = curl_error($curl); $http = curl_getinfo($curl, CURLINFO_HTTP_CODE); curl_close($curl);
+        $data = json_decode((string)$respuesta, true);
+        if ($http<200 || $http>=300 || !is_array($data)) {
+            return ["estado"=>0, "nivel"=>"warning", "mensaje"=>"SUNAT NO PUDO PROCESAR LA CONSULTA", "detalle"=>$error!=="" ? $error : (is_array($data) && !empty($data["message"]) ? $data["message"] : "HTTP ".$http)];
+        }
+        if (!empty($data["success"]) && isset($data["data"])) {
+			$info=$data["data"]; $estados=["0"=>"NO EXISTE", "1"=>"ACEPTADO", "2"=>"ANULADO", "3"=>"AUTORIZADO", "4"=>"NO AUTORIZADO"];
+			$estados_ruc=["00"=>"ACTIVO", "01"=>"BAJA PROVISIONAL", "02"=>"BAJA DE OFICIO", "03"=>"SUSPENSION TEMPORAL", "10"=>"BAJA DEFINITIVA", "11"=>"BAJA DE OFICIO", "22"=>"INHABILITADO"];
+			$condiciones=["00"=>"HABIDO", "01"=>"NO HALLADO", "02"=>"NO HALLADO", "03"=>"NO HALLADO", "04"=>"NO HALLADO", "05"=>"NO HALLADO", "06"=>"NO HALLADO", "07"=>"NO HALLADO", "08"=>"NO HALLADO", "09"=>"PENDIENTE"];
+			$codigo=(string)$info["estadoCp"]; $mensaje=isset($estados[$codigo]) ? $estados[$codigo] : "ESTADO ".$codigo;
+			$codigo_ruc=isset($info["estadoRuc"])?(string)$info["estadoRuc"]:""; $codigo_condicion=isset($info["condDomiRuc"])?(string)$info["condDomiRuc"]:"";
+			$estado_ruc=isset($estados_ruc[$codigo_ruc])?$estados_ruc[$codigo_ruc]:$codigo_ruc; $condicion=isset($condiciones[$codigo_condicion])?$condiciones[$codigo_condicion]:$codigo_condicion;
+			$detalle="RUC: ".$estado_ruc." | DOMICILIO: ".$condicion;
+			return ["estado"=>$codigo==="1"?1:0, "nivel"=>$codigo==="1"?"success":($codigo==="0"?"danger":"warning"), "mensaje"=>$mensaje, "detalle"=>$detalle, "estado_cp"=>$mensaje, "estado_ruc"=>$estado_ruc, "condicion"=>$condicion, "observaciones"=>isset($info["observaciones"])?$info["observaciones"]:[]];
+        }
+        return ["estado"=>0, "nivel"=>"warning", "mensaje"=>"SUNAT NO VALIDO EL COMPROBANTE", "detalle"=>!empty($data["message"])?$data["message"]:(!empty($data["errorCode"])?"Codigo: ".$data["errorCode"]:"Sin detalle")];
+    }
+
+    protected function phuyu_respuesta_cpe($estado, $mensaje, $alerta = null){
+        $data = array("estado" => $estado, "mensaje" => $mensaje);
+        if ($alerta !== null) {
+            $data["alerta"] = $alerta;
+        }
+        return $data;
+    }
+
+    protected function phuyu_descripcion_cdr($descripcion){
+        $partes = explode("-", (string)$descripcion, 2);
+        return isset($partes[1]) ? trim($partes[1]) : (string)$descripcion;
+    }
+
+    protected function phuyu_normalizar_error_sunat($mensaje, $respuesta = "", $operacion = ""){
+        $texto = trim((string)$mensaje);
+        $respuesta = trim((string)$respuesta);
+        $base = $respuesta !== "" ? $respuesta : $texto;
+
+        $faultcode = "";
+        $faultstring = "";
+        if ($base !== "" && preg_match('/<faultcode[^>]*>(.*?)<\/faultcode>/is', $base, $m)) {
+            $faultcode = trim(strip_tags($m[1]));
+        }
+        if ($base !== "" && preg_match('/<faultstring[^>]*>(.*?)<\/faultstring>/is', $base, $m)) {
+            $faultstring = trim(html_entity_decode(strip_tags($m[1]), ENT_QUOTES, "UTF-8"));
+        }
+
+        if ($faultstring !== "") {
+            if (strpos($faultcode, "0140") !== false) {
+                return "SUNAT ya tiene este resumen en proceso. Espere 15 minutos y vuelva a consultar/enviar. Detalle SUNAT: ".$faultstring;
+            }
+            return "SUNAT rechazo la solicitud".($faultcode !== "" ? " (".$faultcode.")" : "").": ".$faultstring;
+        }
+
+        if (stripos($texto, "Bad Request") !== false) {
+            return "SUNAT devolvio Bad Request. Normalmente significa que el resumen ya fue recibido y esta en proceso. Espere 15 minutos y vuelva a consultar o enviar; no lo regenere todavia.";
+        }
+
+        return $texto !== "" ? $texto : "SUNAT no devolvio una respuesta interpretable para ".$operacion.".";
+    }
+
+	function phuyu_firmarXML($carpeta_phuyu,$phuyu,$respuesta_detallada = false){
+        $xml_file = $carpeta_phuyu.".xml";
+        $private_key_file = "./sunat/certificados/private_key.pem";
+        $public_key_file = "./sunat/certificados/public_key.pem";
+
+        try {
+            if (!is_readable($xml_file)) {
+                throw new Exception("No se puede leer el XML a firmar: ".$xml_file);
+            }
+            if (!is_readable($private_key_file)) {
+                throw new Exception("No se puede leer la clave privada: ".$private_key_file);
+            }
+            if (!is_readable($public_key_file)) {
+                throw new Exception("No se puede leer el certificado publico: ".$public_key_file);
+            }
 
         // 1: CARGAMOS EL ARCHIVO XML A FIRMAR //
         $doc = new DOMDocument();
-        $doc->load($carpeta_phuyu.".xml");
+        if (!$doc->load($xml_file)) {
+            throw new Exception("El XML no es valido o no se pudo cargar: ".$xml_file);
+        }
         
         $objDSig = new XMLSecurityDSig();
         $objDSig->setCanonicalMethod(XMLSecurityDSig::EXC_C14N);
         $objDSig->addReference($doc,XMLSecurityDSig::SHA1,array("http://www.w3.org/2000/09/xmldsig#enveloped-signature"),array("force_uri" => true));
 
         $objKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA1, array("type" => "private"));
-        $objKey->loadKey("./sunat/certificados/private_key.pem", true);
+        $objKey->loadKey($private_key_file, true);
         $objDSig->sign($objKey);
 
-        $objDSig->add509Cert(file_get_contents("./sunat/certificados/public_key.pem"), true, false, array("subjectName" => true));
+        $objDSig->add509Cert(file_get_contents($public_key_file), true, false, array("subjectName" => true));
 
         $objDSig->appendSignature($doc->getElementsByTagName("ExtensionContent")->item($phuyu));
         
         // 2: GUARDAMOS EL XML FIRMADO //
-        $doc->save($carpeta_phuyu.".xml");
-        chmod($carpeta_phuyu.".xml", 0777);
+        if ($doc->save($xml_file) === false) {
+            throw new Exception("No se pudo guardar el XML firmado: ".$xml_file);
+        }
+        chmod($xml_file, 0777);
         
-        if (file_exists($carpeta_phuyu.".xml")) {
-            return 1;
-        }else{
-            return 0;
+        if (file_exists($xml_file)) {
+            return $respuesta_detallada ? $this->phuyu_respuesta_cpe(1, "XML firmado correctamente") : 1;
+        }
+        throw new Exception("El XML firmado no existe despues de guardar: ".$xml_file);
+        } catch (Throwable $e) {
+            return $respuesta_detallada ? $this->phuyu_respuesta_cpe(0, $e->getMessage()) : 0;
         }
     }
 
@@ -140,301 +244,370 @@ class Sunat extends CI_Controller {
         return $xml;
     }
 
-    function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales, $tipo = "electronico"){
+function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales, $tipo = "electronico"){
+    
+    // 1: CREAMOS EL ARCHIVO ZIP CON EL XML DEL COMPROBANTE //
+    $this->load->library("zip");
+    $this->zip->clear_data();
+    $this->zip->read_file($carpeta_phuyu."/".$archivo_phuyu.".xml");
+    $this->zip->archive($carpeta_phuyu."/".$archivo_phuyu.".zip");
+    $this->zip->clear_data();
+    chmod($carpeta_phuyu."/".$archivo_phuyu.".zip", 0777);
+
+    $webservice = $this->db->query("select * from public.webservice")->result_array();
+    
+    // NOTA: campo->sunatose = 0: SERVICIO SUNAT, campo->sunatose = 1: SERVICIO OSE //
+    $camposervice = "servicesunat";
+    if ($webservice[0]["sunatose"] == 1) {
+        $camposervice = "serviceose";
+    }
+
+    if ($tipo != "electronico") {
+        $camposervice = $camposervice.$tipo;
+    }
+
+    // NOTA: campo->serviceweb = 0: PRODUCCION SUNAT, campo->serviceweb = 1: DEMO //
+    if ($webservice[0]["serviceweb"] == 1) {
+        $camposervice = $camposervice."_demo";
+    }
+
+    $wsdlURL = $webservice[0][$camposervice];
+    
+    // 2: ESTRUCTURA DEL XML PARA LA CONEXION //
+    if ($send == "sendSummary") {
+        $XMLString = $this->phuyu_sendSummary($carpeta_phuyu, $archivo_phuyu, $credenciales);
+        $result = $this->soapCall($wsdlURL, $send, $XMLString);
         
-        // 1: CREAMOS EL ARCHIVO ZIP CON EL XML DEL COMPROBANTE //
+        if ($result["error"] == "si") {
+            $estado = 0;
+            $mensaje = $result["mensaje"];
+            $respuesta_sunat = isset($result["respuesta"]) ? $result["respuesta"] : "";
+        } else {
+            // 3: DESCARGAMOS EL ARCHIVO RESPUESTA DE SUNAT //
+            $archivoresponse = fopen($carpeta_phuyu."/R-".$archivo_phuyu.".xml", "w+");
+            fputs($archivoresponse, $result["mensaje"]);
+            fclose($archivoresponse);
 
-        $this->load->library("zip");
-        $this->zip->read_file($carpeta_phuyu."/".$archivo_phuyu.".xml");
-        $this->zip->archive($carpeta_phuyu."/".$archivo_phuyu.".zip");
-        chmod($carpeta_phuyu."/".$archivo_phuyu.".zip", 0777);
+            // 4: LEEMOS EL ARCHIVO XML RESPONSE //
+            $xml = simplexml_load_file($carpeta_phuyu."/R-".$archivo_phuyu.".xml");
 
-        $webservice = $this->db->query("select * from public.webservice")->result_array();
-        
-        // NOTA: campo->sunatose = 0: SERVICIO SUNAT, campo->sunatose = 1: SERVICIO OSE //
-        $camposervice = "servicesunat";
-        if ($webservice[0]["sunatose"]==1) {
-            $camposervice = "serviceose";
-        }
-
-        if ($tipo!="electronico") {
-            $camposervice = $camposervice.$tipo;
-        }
-
-        // NOTA: campo->serviceweb = 0: PRODUCCION SUNAT, campo->serviceweb = 1: DEMO //
-        if ($webservice[0]["serviceweb"]==1) {
-            $camposervice = $camposervice."_demo";
-        }
-        $wsdlURL = $webservice[0][$camposervice];
-        
-        // 2: ESTRUCTURA DEL XML PARA LA CONEXION //
-
-        if($send=="sendSummary"){
-            $XMLString = $this->phuyu_sendSummary($carpeta_phuyu, $archivo_phuyu, $credenciales);
-            $result = $this->soapCall($wsdlURL, $callFunction = $send, $XMLString);
-            
-            if($result["error"] == "si"){
-                $estado = 0; $mensaje = $result["mensaje"];
-            }else{
-                // 3: DESCARGAMOS EL ARCHIVO RESPUESTA DE SUNAT //
-                $archivoresponse = fopen($carpeta_phuyu."/R-".$archivo_phuyu.".xml","w+");
-                fputs($archivoresponse,$result["mensaje"]); fclose($archivoresponse);
-
-                // 4: LEEMOS EL ARCHIVO XML RESPONSE //
-                $xml = simplexml_load_file($carpeta_phuyu."/R-".$archivo_phuyu.".xml"); 
-                foreach ($xml->xpath('//ticket') as $response){ 
-                    $ticket = $response;
+            $ticket = "";
+            if ($xml !== false) {
+                foreach ($xml->xpath('//ticket') as $item) {
+                    $ticket = (string) $item;
                 }
+            }
 
-                //print_r('jola '.$ticket);exit;
+            if ($ticket !== "") {
+                // 5: CONSULTAMOS EL TICKET //
+                $update = array(
+                    "fechaenvio" => date("Y-m-d"),
+                    "ticket" => $ticket
+                );
+                $this->db->where("codresumentipo", $credenciales[3]);
+                $this->db->where("periodo", $credenciales[4]);
+                $this->db->where("nrocorrelativo", $credenciales[5]);
+                $this->db->where("codempresa", $credenciales[6]);
+                $this->db->update("sunat.resumenes", $update);
 
-                if($ticket != ""){
-                    // 5: CONSULTAMOS EL TICKET //
+                // 5: SI ES RESUMEN DE BOLETAS //
+                if ($credenciales[3] == 3) {
+                    $detalle = $this->db->query("select codkardex from sunat.kardexsunatdetalle where codresumentipo=".$credenciales[3]." and periodo='".$credenciales[4]."' and nrocorrelativo=".$credenciales[5]." and codempresa=".$credenciales[6])->result_array();
 
-                    $update = array(
-                        "fechaenvio" => date("Y-m-d"), 
-                        "ticket" => $ticket
-                    );
-                    $this->db->where("codresumentipo",$credenciales[3]);
-                    $this->db->where("periodo",$credenciales[4]);
-                    $this->db->where("nrocorrelativo",$credenciales[5]);
-                    $this->db->where("codempresa",$credenciales[6]);
-                    $actualizarkardex = $this->db->update("sunat.resumenes", $update);
-
-                    // 5: SI ES RESUMEN DE BOLETAS //
-
-                    if ($credenciales[3]==3) {
-                        $detalle = $this->db->query("select codkardex from sunat.kardexsunatdetalle where codresumentipo=".$credenciales[3]." and periodo='".$credenciales[4]."' and nrocorrelativo=".$credenciales[5]." and codempresa=".$credenciales[6])->result_array();
-                        foreach ($detalle as $value) {
-                            $update = array(
-                                "fechaenvio" => date("Y-m-d")
-                            );
-                            $this->db->where("codkardex",$value["codkardex"]);
-                            $actualizarkardex = $this->db->update("sunat.kardexsunat", $update);
-                        }
-
+                    foreach ($detalle as $value) {
                         $update = array(
                             "fechaenvio" => date("Y-m-d")
                         );
-                        $this->db->where("codresumentipo",$credenciales[3]);
-                        $this->db->where("periodo",$credenciales[4]);
-                        $this->db->where("nrocorrelativo",$credenciales[5]);
-                        $this->db->where("codempresa",$credenciales[6]);
-                        $actualizarkardex = $this->db->update("sunat.kardexsunatdetalle", $update);
-                    }
-
-                    // 6: ELIMINAMOS EL ARCHIVO RESPONSE Y LA CARPETA TEMPORAL //
-
-                    foreach(glob($carpeta_phuyu . "/*") as $archivos_carpeta){             
-                        if (is_dir($archivos_carpeta)){
-                            rmdir($carpeta_phuyu."/dummy");
-                        } else {
-                            unlink($archivos_carpeta);
-                        }
-                    }
-                    rmdir($carpeta_phuyu);
-
-                    // 7: CONSULTAMOS EL TICKET //
-
-                    $estado = $this->phuyu_consultarTICKET($archivo_phuyu, $ticket, $credenciales);
-                    $mensaje = $estado["mensaje"]; $estado = $estado["estado"];
-                }else{
-                    $estado = 0; $mensaje = "NO HAY RESPUESTA DE LA SUNAT !!! INTENTALO MAS TARDE";
-                }
-            }
-        }
-        
-        if($send=="sendBill"){
-            $XMLString = $this->phuyu_sendBill($carpeta_phuyu, $archivo_phuyu, $credenciales);
-            $result = $this->soapCall($wsdlURL, $callFunction = $send, $XMLString);
-            //print_r($result);exit;
-            if($result["error"] == "si"){
-                $estado = 0; $mensaje = $result["mensaje"];
-                $comprobante = $this->db->query("select *from kardex.kardex where codkardex=".$credenciales[3])->result_array();
-                $fechacomprobante = $comprobante[0]["fechacomprobante"];
-                $fechacomprobante = explode("-", $fechacomprobante);
-                $year = $fechacomprobante[0];
-                $month = $fechacomprobante[1];
-                $tipocomprobante = $this->db->query("select *from caja.comprobantetipos where codcomprobantetipo=".$comprobante[0]["codcomprobantetipo"])->result_array();
-                $informacion = [$tipocomprobante[0]["oficial"],$comprobante[0]["seriecomprobante"],$comprobante[0]["nrocomprobante"]];
-                $consultarCDR = $this->phuyu_consultarSUNATCDR($informacion,$carpeta_phuyu, $archivo_phuyu, $credenciales, $tipo);
-
-                if($consultarCDR["estado"] != 0){
-                    $archivoresponse = fopen($carpeta_phuyu."/C-".$archivo_phuyu.".xml","w+");
-                    fputs($archivoresponse,$consultarCDR["mensaje"]); fclose($archivoresponse);
-
-                    // 4: LEEMOS EL ARCHIVO XML RESPONSE //
-                    $xml = simplexml_load_file($carpeta_phuyu."/C-".$archivo_phuyu.".xml");
-
-                    foreach ($xml->xpath('//content') as $response){ }
-
-                    if($response != ""){
-                        // 5: CREAMOS UNA CARPETA PARA ALMACENAR LOS CDR POR AÑO//
-                        $carpeta_year  = "./sunat/comprobantes/".$year;
-                        if (!file_exists($carpeta_year)) { 
-                            mkdir($carpeta_year,0777); chmod($carpeta_year, 0777);
-                        }
-                        
-                        // 5: CREAMOS UNA CARPETA PARA ALMACENAR LOS CDR POR MES //
-                        $carpeta_month = $carpeta_year."/".$month;
-                        if (!file_exists($carpeta_month)) { 
-                            mkdir($carpeta_month,0777);
-                            chmod($carpeta_month, 0777);
-                        }
-
-                        // 5: DESCARGAMOS EL ARCHIVO CDR (CONSTANCIA DE RECEPCIÓN) //
-                        $cdr = base64_decode($response);
-                        $archivoresponse = fopen($carpeta_month."/R-".$archivo_phuyu.".zip","w+");
-                        fputs($archivoresponse, $cdr); fclose($archivoresponse);
-                        // chmod($carpeta_month."/R-".$archivo_phuyu.".zip", 0777);
-
-                        //print_r("hola");exit;
-
-                        // 6: EXTRAEMOS EL ARCHIVO RESPUESTA //
-                        $zip = new ZipArchive;
-                        if ($zip->open($carpeta_month."/R-".$archivo_phuyu.".zip") === TRUE){
-                            $zip->extractTo($carpeta_phuyu."/"); $zip->close();
-                        }
-
-                        // 7: LEEMOS EL CDR Y ACTUALIZAMOS EN LA BASE DE DATOS EN KARDEXSUNAT //
-                        $xml_respuesta = simplexml_load_file($carpeta_phuyu."/R-".$archivo_phuyu.'.xml');
-                        foreach ($xml_respuesta->xpath('//cbc:ResponseCode') as $responsecode){ 
-                            $responsecode_texto = $responsecode;
-                        }
-                        foreach ($xml_respuesta->xpath('//cbc:Description') as $description) {
-                            $description_texto = $description;
-                        }
-
-                        //print_r($responsecode_texto);
-
-                        $descripcion_explode = explode("-",$description_texto);
-                        if($responsecode_texto == 0){    
-                            $estado = 1; $mensaje =  (string)($description_texto);
-                        }elseif($responsecode_texto >= 100 and $responsecode_texto<=1999){
-                            $estado = 2; $mensaje = (string)($descripcion_explode[1]);
-                        }elseif($responsecode_texto >= 2000 and $responsecode_texto<=3999){
-                            $estado = 3; $mensaje = (string)($descripcion_explode[1]);
-                        }else{
-                            $estado = 4; $mensaje = (string)($descripcion_explode[1]);
-                        }
-
-                        $update = array(
-                            "fechaenvio" => date("Y-m-d"), 
-                            "codigorespuesta" => $responsecode_texto, 
-                            "ruta_cdr" => $carpeta_month."/R-".$archivo_phuyu, 
-                            "descripcion_cdr" => $mensaje,
-                            "estado" => $estado
-                        );
-                        $this->db->where("codkardex",$credenciales[3]);
-                        $actualizarkardex = $this->db->update("sunat.kardexsunat", $update);
-
-                        // 8: ELIMINAMOS EL ARCHIVO RESPONSE Y LA CARPETA TEMPORAL //
-
-                        foreach(glob($carpeta_phuyu . "/*") as $archivos_carpeta){             
-                            if (is_dir($archivos_carpeta)){
-                                rmdir($carpeta_phuyu."/dummy");
-                            } else {
-                                unlink($archivos_carpeta);
-                            }
-                        }
-                        rmdir($carpeta_phuyu);
-                    }else{
-                        $estado = 0; $mensaje = "NO HAY RESPUESTA DE LA SUNAT !!! INTENTALO MAS TARDE";
-                    }
-                }
-            }else{
-                // 3: DESCARGAMOS EL ARCHIVO RESPUESTA DE SUNAT //
-                $archivoresponse = fopen($carpeta_phuyu."/C-".$archivo_phuyu.".xml","w+");
-                fputs($archivoresponse,$result["mensaje"]); fclose($archivoresponse);
-
-                // 4: LEEMOS EL ARCHIVO XML RESPONSE //
-                $xml = simplexml_load_file($carpeta_phuyu."/C-".$archivo_phuyu.".xml");
-                foreach ($xml->xpath('//applicationResponse') as $response){ }
-
-                if($response != ""){
-                    // 5: CREAMOS UNA CARPETA PARA ALMACENAR LOS CDR POR AÑO//
-                    $carpeta_year  = "./sunat/comprobantes/".date("Y");
-                    if (!file_exists($carpeta_year)) { 
-                        mkdir($carpeta_year,0777); chmod($carpeta_year, 0777);
-                    }
-                    
-                    // 5: CREAMOS UNA CARPETA PARA ALMACENAR LOS CDR POR MES //
-                    $carpeta_month = $carpeta_year."/".date("m");
-                    if (!file_exists($carpeta_month)) { 
-                        mkdir($carpeta_month,0777); chmod($carpeta_month, 0777);
-                    }
-
-                    // 5: DESCARGAMOS EL ARCHIVO CDR (CONSTANCIA DE RECEPCIÓN) //
-                    $cdr = base64_decode($response);
-                    $archivoresponse = fopen($carpeta_month."/R-".$archivo_phuyu.".zip","w+");
-                    fputs($archivoresponse, $cdr); fclose($archivoresponse);
-                    // chmod($carpeta_month."/R-".$archivo_phuyu.".zip", 0777);
-
-                    // 6: EXTRAEMOS EL ARCHIVO RESPUESTA //
-                    $zip = new ZipArchive;
-                    if ($zip->open($carpeta_month."/R-".$archivo_phuyu.".zip") === TRUE){
-                        $zip->extractTo($carpeta_phuyu."/"); $zip->close();
-                    }
-
-                    // 7: LEEMOS EL CDR Y ACTUALIZAMOS EN LA BASE DE DATOS EN KARDEXSUNAT //
-                    $xml_respuesta = simplexml_load_file($carpeta_phuyu."/R-".$archivo_phuyu.'.xml');
-                    foreach ($xml_respuesta->xpath('//cbc:ResponseCode') as $responsecode){ 
-                        $responsecode_texto = $responsecode;
-                    }
-                    foreach ($xml_respuesta->xpath('//cbc:Description') as $description) {
-                        $description_texto = $description;
-                    }
-
-                    //print_r($responsecode_texto);
-
-                    $descripcion_explode = explode("-",$description_texto);
-                    if($responsecode_texto == 0){    
-                        $estado = 1; $mensaje =  (string)($description_texto);
-                    }elseif($responsecode_texto >= 100 and $responsecode_texto<=1999){
-                        $estado = 2; $mensaje = (string)($descripcion_explode[1]);
-                    }elseif($responsecode_texto >= 2000 and $responsecode_texto<=3999){
-                        $estado = 3; $mensaje = (string)($descripcion_explode[1]);
-                    }else{
-                        $estado = 4; $mensaje = (string)($descripcion_explode[1]);
+                        $this->db->where("codkardex", $value["codkardex"]);
+                        $this->db->update("sunat.kardexsunat", $update);
                     }
 
                     $update = array(
-                        "fechaenvio" => date("Y-m-d"), 
-                        "codigorespuesta" => $responsecode_texto, 
-                        "ruta_cdr" => $carpeta_month."/R-".$archivo_phuyu, 
-                        "descripcion_cdr" => $mensaje,
-                        "estado" => $estado
+                        "fechaenvio" => date("Y-m-d")
                     );
-                    $this->db->where("codkardex",$credenciales[3]);
-                    $actualizarkardex = $this->db->update("sunat.kardexsunat", $update);
-
-                    // 8: ELIMINAMOS EL ARCHIVO RESPONSE Y LA CARPETA TEMPORAL //
-
-                    foreach(glob($carpeta_phuyu . "/*") as $archivos_carpeta){             
-                        if (is_dir($archivos_carpeta)){
-                            rmdir($carpeta_phuyu."/dummy");
-                        } else {
-                            unlink($archivos_carpeta);
-                        }
-                    }
-                    rmdir($carpeta_phuyu);
-                }else{
-                    $estado = 0; $mensaje = "NO HAY RESPUESTA DE LA SUNAT !!! INTENTALO MAS TARDE";
+                    $this->db->where("codresumentipo", $credenciales[3]);
+                    $this->db->where("periodo", $credenciales[4]);
+                    $this->db->where("nrocorrelativo", $credenciales[5]);
+                    $this->db->where("codempresa", $credenciales[6]);
+                    $this->db->update("sunat.kardexsunatdetalle", $update);
                 }
+
+                // 6: ELIMINAMOS EL ARCHIVO RESPONSE Y LA CARPETA TEMPORAL //
+                foreach (glob($carpeta_phuyu . "/*") as $archivos_carpeta) {
+                    if (is_dir($archivos_carpeta)) {
+                        @rmdir($carpeta_phuyu."/dummy");
+                    } else {
+                        @unlink($archivos_carpeta);
+                    }
+                }
+                @rmdir($carpeta_phuyu);
+
+                // 7: CONSULTAMOS EL TICKET //
+                $resultado_ticket = $this->phuyu_consultarTICKET($archivo_phuyu, $ticket, $credenciales);
+                $mensaje = $resultado_ticket["mensaje"];
+                $estado  = $resultado_ticket["estado"];
+            } else {
+                $estado = 0;
+                $mensaje = "NO HAY RESPUESTA DE LA SUNAT !!! INTENTALO MAS TARDE";
             }
         }
-
-        $data["estado"] = $estado; $data["mensaje"] = $mensaje;
-        return $data;
     }
+    
+    if ($send == "sendBill") {
+        $XMLString = $this->phuyu_sendBill($carpeta_phuyu, $archivo_phuyu, $credenciales);
+        $result = $this->soapCall($wsdlURL, $send, $XMLString);
+
+        if ($result["error"] == "si") {
+            $estado = 0;
+            $mensaje = $result["mensaje"];
+
+            $comprobante = $this->db->query("select * from kardex.kardex where codkardex=".$credenciales[3])->result_array();
+
+            if (!empty($comprobante)) {
+                $fechacomprobante = explode("-", $comprobante[0]["fechacomprobante"]);
+                $year = $fechacomprobante[0];
+                $month = $fechacomprobante[1];
+
+                $tipocomprobante = $this->db->query("select * from caja.comprobantetipos where codcomprobantetipo=".$comprobante[0]["codcomprobantetipo"])->result_array();
+
+                if (!empty($tipocomprobante)) {
+                    $informacion = array(
+                        $tipocomprobante[0]["oficial"],
+                        $comprobante[0]["seriecomprobante"],
+                        $comprobante[0]["nrocomprobante"]
+                    );
+
+                    $consultarCDR = $this->phuyu_consultarSUNATCDR($informacion, $carpeta_phuyu, $archivo_phuyu, $credenciales, $tipo);
+
+                    if ($consultarCDR["estado"] != 0) {
+                        $archivoresponse = fopen($carpeta_phuyu."/C-".$archivo_phuyu.".xml", "w+");
+                        fputs($archivoresponse, $consultarCDR["mensaje"]);
+                        fclose($archivoresponse);
+
+                        // 4: LEEMOS EL ARCHIVO XML RESPONSE //
+                        $xml = simplexml_load_file($carpeta_phuyu."/C-".$archivo_phuyu.".xml");
+
+                        $response = "";
+                        if ($xml !== false) {
+                            foreach ($xml->xpath('//content') as $item) {
+                                $response = (string) $item;
+                            }
+                        }
+
+                        if ($response !== "") {
+                            // 5: CREAMOS UNA CARPETA PARA ALMACENAR LOS CDR POR AÑO//
+                            $carpeta_year = "./sunat/comprobantes/".$year;
+                            if (!file_exists($carpeta_year)) {
+                                mkdir($carpeta_year, 0777);
+                                chmod($carpeta_year, 0777);
+                            }
+
+                            // 5: CREAMOS UNA CARPETA PARA ALMACENAR LOS CDR POR MES //
+                            $carpeta_month = $carpeta_year."/".$month;
+                            if (!file_exists($carpeta_month)) {
+                                mkdir($carpeta_month, 0777);
+                                chmod($carpeta_month, 0777);
+                            }
+
+                            // 5: DESCARGAMOS EL ARCHIVO CDR //
+                            $cdr = base64_decode($response);
+                            $archivoresponse = fopen($carpeta_month."/R-".$archivo_phuyu.".zip", "w+");
+                            fputs($archivoresponse, $cdr);
+                            fclose($archivoresponse);
+
+                            // 6: EXTRAEMOS EL ARCHIVO RESPUESTA //
+                            $zip = new ZipArchive;
+                            if ($zip->open($carpeta_month."/R-".$archivo_phuyu.".zip") === TRUE) {
+                                $zip->extractTo($carpeta_phuyu."/");
+                                $zip->close();
+                            }
+
+                            // 7: LEEMOS EL CDR Y ACTUALIZAMOS EN LA BASE DE DATOS EN KARDEXSUNAT //
+                            $xml_respuesta = simplexml_load_file($carpeta_phuyu."/R-".$archivo_phuyu.'.xml');
+
+                            $responsecode_texto = "";
+                            $description_texto = "";
+
+                            if ($xml_respuesta !== false) {
+                                foreach ($xml_respuesta->xpath('//cbc:ResponseCode') as $responsecode) {
+                                    $responsecode_texto = (string) $responsecode;
+                                }
+                                foreach ($xml_respuesta->xpath('//cbc:Description') as $description) {
+                                    $description_texto = (string) $description;
+                                }
+                            }
+
+                            $responsecode_texto = trim((string) $responsecode_texto);
+                            $responsecode_numero = is_numeric($responsecode_texto) ? (int) $responsecode_texto : null;
+
+                            if ($responsecode_texto === "0") {
+                                $estado = 1;
+                                $mensaje = (string) $description_texto;
+                            } elseif ($responsecode_numero !== null && $responsecode_numero >= 100 && $responsecode_numero <= 1999) {
+                                $estado = 2;
+                                $mensaje = $this->phuyu_descripcion_cdr($description_texto);
+                            } elseif ($responsecode_numero !== null && $responsecode_numero >= 2000 && $responsecode_numero <= 3999) {
+                                $estado = 3;
+                                $mensaje = $this->phuyu_descripcion_cdr($description_texto);
+                            } elseif ($responsecode_numero !== null) {
+                                $estado = 4;
+                                $mensaje = $this->phuyu_descripcion_cdr($description_texto);
+                            } else {
+                                $estado = 0;
+                                $mensaje = "NO SE PUDO LEER EL CODIGO DE RESPUESTA DEL CDR";
+                            }
+
+                            $update = array(
+                                "fechaenvio" => date("Y-m-d"),
+                                "codigorespuesta" => $responsecode_texto,
+                                "ruta_cdr" => $carpeta_month."/R-".$archivo_phuyu,
+                                "descripcion_cdr" => $mensaje,
+                                "estado" => $estado
+                            );
+                            $this->db->where("codkardex", $credenciales[3]);
+                            $this->db->update("sunat.kardexsunat", $update);
+
+                            // 8: ELIMINAMOS EL ARCHIVO RESPONSE Y LA CARPETA TEMPORAL //
+                            foreach (glob($carpeta_phuyu . "/*") as $archivos_carpeta) {
+                                if (is_dir($archivos_carpeta)) {
+                                    @rmdir($carpeta_phuyu."/dummy");
+                                } else {
+                                    @unlink($archivos_carpeta);
+                                }
+                            }
+                            @rmdir($carpeta_phuyu);
+                        } else {
+                            $estado = 0;
+                            $mensaje = "NO HAY RESPUESTA DE LA SUNAT !!! INTENTALO MAS TARDE";
+                        }
+                    }
+                } else {
+                    $estado = 0;
+                    $mensaje = $consultarCDR["mensaje"];
+                }
+            }
+        } else {
+            // 3: DESCARGAMOS EL ARCHIVO RESPUESTA DE SUNAT //
+            $archivoresponse = fopen($carpeta_phuyu."/C-".$archivo_phuyu.".xml", "w+");
+            fputs($archivoresponse, $result["mensaje"]);
+            fclose($archivoresponse);
+
+            // 4: LEEMOS EL ARCHIVO XML RESPONSE //
+            $xml = simplexml_load_file($carpeta_phuyu."/C-".$archivo_phuyu.".xml");
+
+            $response = "";
+            if ($xml !== false) {
+                foreach ($xml->xpath('//applicationResponse') as $item) {
+                    $response = (string) $item;
+                }
+            }
+
+            if ($response !== "") {
+                // 5: CREAMOS UNA CARPETA PARA ALMACENAR LOS CDR POR AÑO//
+                $carpeta_year = "./sunat/comprobantes/".date("Y");
+                if (!file_exists($carpeta_year)) {
+                    mkdir($carpeta_year, 0777);
+                    chmod($carpeta_year, 0777);
+                }
+
+                // 5: CREAMOS UNA CARPETA PARA ALMACENAR LOS CDR POR MES //
+                $carpeta_month = $carpeta_year."/".date("m");
+                if (!file_exists($carpeta_month)) {
+                    mkdir($carpeta_month, 0777);
+                    chmod($carpeta_month, 0777);
+                }
+
+                // 5: DESCARGAMOS EL ARCHIVO CDR //
+                $cdr = base64_decode($response);
+                $archivoresponse = fopen($carpeta_month."/R-".$archivo_phuyu.".zip", "w+");
+                fputs($archivoresponse, $cdr);
+                fclose($archivoresponse);
+
+                // 6: EXTRAEMOS EL ARCHIVO RESPUESTA //
+                $zip = new ZipArchive;
+                if ($zip->open($carpeta_month."/R-".$archivo_phuyu.".zip") === TRUE) {
+                    $zip->extractTo($carpeta_phuyu."/");
+                    $zip->close();
+                }
+
+                // 7: LEEMOS EL CDR Y ACTUALIZAMOS EN LA BASE DE DATOS EN KARDEXSUNAT //
+                $xml_respuesta = simplexml_load_file($carpeta_phuyu."/R-".$archivo_phuyu.'.xml');
+
+                $responsecode_texto = "";
+                $description_texto = "";
+
+                if ($xml_respuesta !== false) {
+                    foreach ($xml_respuesta->xpath('//cbc:ResponseCode') as $responsecode) {
+                        $responsecode_texto = (string) $responsecode;
+                    }
+                    foreach ($xml_respuesta->xpath('//cbc:Description') as $description) {
+                        $description_texto = (string) $description;
+                    }
+                }
+
+                $responsecode_texto = trim((string) $responsecode_texto);
+                $responsecode_numero = is_numeric($responsecode_texto) ? (int) $responsecode_texto : null;
+
+                if ($responsecode_texto === "0") {
+                    $estado = 1;
+                    $mensaje = (string) $description_texto;
+                } elseif ($responsecode_numero !== null && $responsecode_numero >= 100 && $responsecode_numero <= 1999) {
+                    $estado = 2;
+                    $mensaje = $this->phuyu_descripcion_cdr($description_texto);
+                } elseif ($responsecode_numero !== null && $responsecode_numero >= 2000 && $responsecode_numero <= 3999) {
+                    $estado = 3;
+                    $mensaje = $this->phuyu_descripcion_cdr($description_texto);
+                } elseif ($responsecode_numero !== null) {
+                    $estado = 4;
+                    $mensaje = $this->phuyu_descripcion_cdr($description_texto);
+                } else {
+                    $estado = 0;
+                    $mensaje = "NO SE PUDO LEER EL CODIGO DE RESPUESTA DEL CDR";
+                }
+
+                $update = array(
+                    "fechaenvio" => date("Y-m-d"),
+                    "codigorespuesta" => $responsecode_texto,
+                    "ruta_cdr" => $carpeta_month."/R-".$archivo_phuyu,
+                    "descripcion_cdr" => $mensaje,
+                    "estado" => $estado
+                );
+                $this->db->where("codkardex", $credenciales[3]);
+                $this->db->update("sunat.kardexsunat", $update);
+
+                // 8: ELIMINAMOS EL ARCHIVO RESPONSE Y LA CARPETA TEMPORAL //
+                foreach (glob($carpeta_phuyu . "/*") as $archivos_carpeta) {
+                    if (is_dir($archivos_carpeta)) {
+                        @rmdir($carpeta_phuyu."/dummy");
+                    } else {
+                        @unlink($archivos_carpeta);
+                    }
+                }
+                @rmdir($carpeta_phuyu);
+            } else {
+                $estado = 0;
+                $mensaje = "NO HAY RESPUESTA DE LA SUNAT !!! INTENTALO MAS TARDE";
+            }
+        }
+    }
+
+    $data["estado"] = $estado;
+    $data["mensaje"] = $mensaje;
+    if (isset($respuesta_sunat) && $respuesta_sunat !== "") {
+        $data["respuesta"] = $respuesta_sunat;
+    }
+    return $data;
+}
 
     function phuyu_enviarSUNATGUIA($send, $carpeta_phuyu, $archivo_phuyu, $credenciales, $tipo = "electronico"){
         
         // 1: CREAMOS EL ARCHIVO ZIP CON EL XML DEL COMPROBANTE //
 
         $this->load->library("zip");
+        $this->zip->clear_data();
         $this->zip->read_file($carpeta_phuyu."/".$archivo_phuyu.".xml");
         $this->zip->archive($carpeta_phuyu."/".$archivo_phuyu.".zip");
+        $this->zip->clear_data();
         chmod($carpeta_phuyu."/".$archivo_phuyu.".zip", 0777);
 
         $webservice = $this->db->query("select * from public.webservice")->result_array();
@@ -545,7 +718,12 @@ class Sunat extends CI_Controller {
 
                 // 4: LEEMOS EL ARCHIVO XML RESPONSE //
                 $xml = simplexml_load_file($carpeta_phuyu."/C-".$archivo_phuyu.".xml");
-                foreach ($xml->xpath('//applicationResponse') as $response){ }
+                $response = "";
+                if ($xml !== false) {
+                    foreach ($xml->xpath('//applicationResponse') as $item){
+                        $response = (string)$item;
+                    }
+                }
 
                 if($response != ""){
                     // 5: CREAMOS UNA CARPETA PARA ALMACENAR LOS CDR POR AÑO//
@@ -574,24 +752,30 @@ class Sunat extends CI_Controller {
 
                     // 7: LEEMOS EL CDR Y ACTUALIZAMOS EN LA BASE DE DATOS EN KARDEXSUNAT //
                     $xml_respuesta = simplexml_load_file($carpeta_phuyu."/R-".$archivo_phuyu.'.xml');
-                    foreach ($xml_respuesta->xpath('//cbc:ResponseCode') as $responsecode){ 
-                        $responsecode_texto = $responsecode;
-                    }
-                    foreach ($xml_respuesta->xpath('//cbc:Description') as $description) {
-                        $description_texto = $description;
+                    $responsecode_texto = "";
+                    $description_texto = "";
+                    if ($xml_respuesta !== false) {
+                        foreach ($xml_respuesta->xpath('//cbc:ResponseCode') as $responsecode){ 
+                            $responsecode_texto = (string)$responsecode;
+                        }
+                        foreach ($xml_respuesta->xpath('//cbc:Description') as $description) {
+                            $description_texto = (string)$description;
+                        }
                     }
 
-                    //print_r($responsecode_texto);
+                    $responsecode_texto = trim((string) $responsecode_texto);
+                    $responsecode_numero = is_numeric($responsecode_texto) ? (int) $responsecode_texto : null;
 
-                    $descripcion_explode = explode("-",$description_texto);
-                    if($responsecode_texto == 0){    
+                    if($responsecode_texto === "0"){    
                         $estado = 1; $mensaje =  (string)($description_texto);
-                    }elseif($responsecode_texto >= 100 and $responsecode_texto<=1999){
-                        $estado = 2; $mensaje = (string)($descripcion_explode[1]);
-                    }elseif($responsecode_texto >= 2000 and $responsecode_texto<=3999){
-                        $estado = 3; $mensaje = (string)($descripcion_explode[1]);
+                    }elseif($responsecode_numero !== null and $responsecode_numero >= 100 and $responsecode_numero<=1999){
+                        $estado = 2; $mensaje = $this->phuyu_descripcion_cdr($description_texto);
+                    }elseif($responsecode_numero !== null and $responsecode_numero >= 2000 and $responsecode_numero<=3999){
+                        $estado = 3; $mensaje = $this->phuyu_descripcion_cdr($description_texto);
+                    }elseif($responsecode_numero !== null){
+                        $estado = 4; $mensaje = $this->phuyu_descripcion_cdr($description_texto);
                     }else{
-                        $estado = 4; $mensaje = (string)($descripcion_explode[1]);
+                        $estado = 0; $mensaje = "NO SE PUDO LEER EL CODIGO DE RESPUESTA DEL CDR";
                     }
 
                     $update = array(
@@ -665,8 +849,16 @@ class Sunat extends CI_Controller {
 
             // 4: LEEMOS EL ARCHIVO XML //
             $xml = simplexml_load_file($carpeta_phuyu."/R-".$ticket.".xml"); 
-            //print_r($xml);exit;
-            foreach ($xml->xpath('//content') as $response){ }
+            $response = "";
+            $status_code = "";
+            if ($xml !== false) {
+                foreach ($xml->xpath('//content') as $item){
+                    $response = (string)$item;
+                }
+                foreach ($xml->xpath('//statusCode') as $item){
+                    $status_code = trim((string)$item);
+                }
+            }
 //print_r($response);exit;
             if($response != ""){
                 // 5: CREAMOS UNA CARPETA PARA ALMACENAR LOS TICKETS POR AÑO//
@@ -704,23 +896,35 @@ class Sunat extends CI_Controller {
                 exit;*/
 
                 // 7: LEEMOS EL CDR Y ACTUALIZAMOS EN LA BASE DE DATOS EN RESUMENES //
-                $xml_respuesta = simplexml_load_file($carpeta_phuyu."/R-".$nombre_xml.'.xml');
-                foreach ($xml_respuesta->xpath('//cbc:ResponseCode') as $responsecode){ 
-                    $responsecode_texto = $responsecode;
+                $archivo_cdr = $carpeta_phuyu."/R-".$nombre_xml.'.xml';
+                if (!is_readable($archivo_cdr)) {
+                    return ["estado" => 0, "mensaje" => "SUNAT devolvio CDR, pero no se encontro el XML esperado: R-".$nombre_xml.".xml"];
                 }
-                foreach ($xml_respuesta->xpath('//cbc:Description') as $description) {
-                    $description_texto = $description;
+                $xml_respuesta = simplexml_load_file($archivo_cdr);
+                $responsecode_texto = "";
+                $description_texto = "";
+                if ($xml_respuesta !== false) {
+                    foreach ($xml_respuesta->xpath('//cbc:ResponseCode') as $responsecode){ 
+                        $responsecode_texto = (string)$responsecode;
+                    }
+                    foreach ($xml_respuesta->xpath('//cbc:Description') as $description) {
+                        $description_texto = (string)$description;
+                    }
                 }
 
-                $descripcion_explode = explode("-",$description_texto);
-                if($responsecode_texto == 0){    
+                $responsecode_texto = trim((string) $responsecode_texto);
+                $responsecode_numero = is_numeric($responsecode_texto) ? (int) $responsecode_texto : null;
+
+                if($responsecode_texto === "0"){    
                     $estado = 1; $mensaje =  (string)($description_texto);
-                }elseif($responsecode_texto >= 100 and $responsecode_texto<=1999){
-                    $estado = 2; $mensaje = (string)($descripcion_explode[1]);
-                }elseif($responsecode_texto >= 2000 and $responsecode_texto<=3999){
-                    $estado = 3; $mensaje = (string)($descripcion_explode[1]);
+                }elseif($responsecode_numero !== null and $responsecode_numero >= 100 and $responsecode_numero<=1999){
+                    $estado = 2; $mensaje = $this->phuyu_descripcion_cdr($description_texto);
+                }elseif($responsecode_numero !== null and $responsecode_numero >= 2000 and $responsecode_numero<=3999){
+                    $estado = 3; $mensaje = $this->phuyu_descripcion_cdr($description_texto);
+                }elseif($responsecode_numero !== null){
+                    $estado = 4; $mensaje = $this->phuyu_descripcion_cdr($description_texto);
                 }else{
-                    $estado = 4; $mensaje = (string)($descripcion_explode[1]);
+                    $estado = 0; $mensaje = "NO SE PUDO LEER EL CODIGO DE RESPUESTA DEL CDR";
                 }
 
                 $update = array(
@@ -783,7 +987,12 @@ class Sunat extends CI_Controller {
                 }
                 rmdir($carpeta_phuyu);
             }else{
-                $estado = 0; $mensaje = "NO HAY RESPUESTA DE LA SUNAT !!! INTENTALO MAS TARDE";
+                $estado = 0;
+                if ($status_code === "0098") {
+                    $mensaje = "Ticket ".$ticket." en proceso SUNAT (0098). Pendiente consultar CDR; no reenviar XML.";
+                } else {
+                    $mensaje = "NO HAY RESPUESTA DE LA SUNAT !!! INTENTALO MAS TARDE";
+                }
             }
         }
 
@@ -874,16 +1083,16 @@ class Sunat extends CI_Controller {
     }
 
     function soapCall($wsdlURL, $callFunction = "", $XMLString) {
-        $client = new funcionSoap($wsdlURL, array("trace" => true));
         try{
+            $client = new funcionSoap($wsdlURL, array("trace" => true, "exceptions" => true));
             $reply  = $client->SoapClientCall($XMLString);
             $client->__call("$callFunction", array(), array());
 
-
-
             return array("error" => "no", "mensaje" => $client->__getLastResponse());
         }catch(Exception $e){
-            return array("error" => "si", "mensaje" => $client->__getLastResponse());
+            $respuesta = isset($client) ? trim((string)$client->__getLastResponse()) : "";
+            $mensaje = $this->phuyu_normalizar_error_sunat($e->getMessage(), $respuesta, $callFunction);
+            return array("error" => "si", "mensaje" => $mensaje, "respuesta" => $respuesta);
         }
     }
 

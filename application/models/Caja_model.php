@@ -35,6 +35,7 @@ class Caja_model extends CI_Model {
 			"importe" => (double)$importe,
 			"referencia" => $descripcion,
 			"condicionpago" => $campos->condicionpago,
+			"horamovimiento" => date("H:i:s"),
 			"codlote" => (int)$campos->codlote,
 			"cliente" => $campos->cliente, "direccion" => $campos->direccion,
 			"tipocambio" => $campos->tipocambio, "importemoneda" => $importemoneda
@@ -339,26 +340,31 @@ class Caja_model extends CI_Model {
 	}
 
 	function phuyu_saldotipopago($codcontroldiario,$codtipopago){
-		$ingresos = $this->db->query("select round(COALESCE(sum(md.importe),0),2) as importe from caja.movimientos as m inner join caja.movimientosdetalle as md on(m.codmovimiento=md.codmovimiento) where m.codcontroldiario=".$codcontroldiario." and m.tipomovimiento=1 and md.codtipopago=".$codtipopago." and m.estado=1")->result_array();
-		$ingresosconfirmados = $this->db->query("select round(COALESCE(sum(md.importe),0),2) as importe from caja.movimientos as m inner join caja.movimientosdetalle as md on(m.codmovimiento=md.codmovimiento) where m.codcontroldiario=".$codcontroldiario." and m.tipomovimiento=1 and md.codtipopago=".$codtipopago." and m.estado=1 and m.cobrado=1")->result_array();
-		$ingresospendientes = $this->db->query("select round(COALESCE(sum(md.importe),0),2) as importe from caja.movimientos as m inner join caja.movimientosdetalle as md on(m.codmovimiento=md.codmovimiento) where m.codcontroldiario=".$codcontroldiario." and m.tipomovimiento=1 and md.codtipopago=".$codtipopago." and m.estado=1 and m.cobrado=0")->result_array();
-
-		$egresos = $this->db->query("select round(COALESCE(sum(md.importe),0),2) as importe from caja.movimientos as m inner join caja.movimientosdetalle as md on(m.codmovimiento=md.codmovimiento) where m.codcontroldiario=".$codcontroldiario." and m.tipomovimiento=2 and md.codtipopago=".$codtipopago." and m.estado=1")->result_array();
-
-		$egresosconfirmados = $this->db->query("select round(COALESCE(sum(md.importe),0),2) as importe from caja.movimientos as m inner join caja.movimientosdetalle as md on(m.codmovimiento=md.codmovimiento) where m.codcontroldiario=".$codcontroldiario." and m.tipomovimiento=2 and md.codtipopago=".$codtipopago." and m.estado=1 and m.cobrado = 1")->result_array();
-
-		$egresospendientes = $this->db->query("select round(COALESCE(sum(md.importe),0),2) as importe from caja.movimientos as m inner join caja.movimientosdetalle as md on(m.codmovimiento=md.codmovimiento) where m.codcontroldiario=".$codcontroldiario." and m.tipomovimiento=2 and md.codtipopago=".$codtipopago." and m.estado=1 and m.cobrado = 0")->result_array();
-
-		$transacciones = $this->db->query("select count(md.*) as transacciones from caja.movimientos as m inner join caja.movimientosdetalle as md on(m.codmovimiento=md.codmovimiento) where md.codcontroldiario=".$codcontroldiario." and md.codtipopago=".$codtipopago." and m.estado=1")->result_array();
+		$saldo = $this->db->query("
+			select
+				round(COALESCE(sum(case when m.tipomovimiento=1 and m.cobrado=1 then md.importe else 0 end),0),2) as ingresosconfirmados,
+				round(COALESCE(sum(case when m.tipomovimiento=1 and m.cobrado=0 then md.importe else 0 end),0),2) as ingresospendientes,
+				round(COALESCE(sum(case when m.tipomovimiento=1 then md.importe else 0 end),0),2) as ingresos,
+				round(COALESCE(sum(case when m.tipomovimiento=2 and m.cobrado=1 then md.importe else 0 end),0),2) as egresosconfirmados,
+				round(COALESCE(sum(case when m.tipomovimiento=2 and m.cobrado=0 then md.importe else 0 end),0),2) as egresospendientes,
+				round(COALESCE(sum(case when m.tipomovimiento=2 then md.importe else 0 end),0),2) as egresos,
+				count(*) as transacciones
+			from caja.movimientos as m
+			inner join caja.movimientosdetalle as md on(m.codmovimiento=md.codmovimiento)
+			where m.codcontroldiario=".(int)$codcontroldiario."
+			  and md.codtipopago=".(int)$codtipopago."
+			  and m.condicionpago=1
+			  and m.estado=1
+		")->result_array();
 
 		$total = array();
-		$total["ingresosconfirmados"] = (double)($ingresosconfirmados[0]["importe"]);
-		$total["ingresospendientes"] = (double)($ingresospendientes[0]["importe"]);
-		$total["ingresos"] = (double)($ingresos[0]["importe"]);
-		$total["egresosconfirmados"] = (double)($egresosconfirmados[0]["importe"]);
-		$total["egresospendientes"] = (double)($egresospendientes[0]["importe"]);
-		$total["egresos"] = (double)($egresos[0]["importe"]);
-		$total["transacciones"] = (int)($transacciones[0]["transacciones"]);
+		$total["ingresosconfirmados"] = (double)($saldo[0]["ingresosconfirmados"]);
+		$total["ingresospendientes"] = (double)($saldo[0]["ingresospendientes"]);
+		$total["ingresos"] = (double)($saldo[0]["ingresos"]);
+		$total["egresosconfirmados"] = (double)($saldo[0]["egresosconfirmados"]);
+		$total["egresospendientes"] = (double)($saldo[0]["egresospendientes"]);
+		$total["egresos"] = (double)($saldo[0]["egresos"]);
+		$total["transacciones"] = (int)($saldo[0]["transacciones"]);
 		
 		return $total;
 	}

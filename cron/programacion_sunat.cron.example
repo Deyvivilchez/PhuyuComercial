@@ -1,0 +1,16 @@
+# Cron maestro para Programacion SUNAT / CPE
+#
+# Este archivo es una plantilla versionable. Para activar el cron en el
+# servidor, copiar esta linea al crontab del usuario que ejecuta el proyecto:
+#
+# crontab -e
+#
+# Linea para este proyecto:
+* * * * * cd /var/www/demo.comercial.phuyusystem.com && /usr/bin/php7.4 index.php facturacion/programacionsunat/cron >/dev/null 2>&1
+#
+# Verificar instalacion:
+# crontab -l
+#
+# Probar manualmente:
+# cd /var/www/demo.comercial.phuyusystem.com
+# /usr/bin/php7.4 index.php facturacion/programacionsunat/cron

@@ -22,9 +22,24 @@ class Arqueos extends CI_Controller {
 		if ($this->input->is_ajax_request()) {
 			$this->request = json_decode(file_get_contents('php://input'));
 			$limit = 10; $offset = $this->request->pagina * $limit - $limit;
+			$desde = $this->request->filtro->desde;
+			$hasta = $this->request->filtro->hasta;
+			$codcaja = (int) $_SESSION["phuyu_codcaja"];
 
-			$lista = $this->db->query("select *, round(saldoinicialcaja + saldofinalcaja,2) as cierre from caja.controldiario where fechaapertura>='".$this->request->filtro->desde."' and fechaapertura<='".$this->request->filtro->hasta."' AND codcaja = ".$_SESSION["phuyu_codcaja"]." order by fechaapertura desc offset ".$offset." limit ".$limit)->result_array();
-			$total = $this->db->query("select count(*) as total from caja.controldiario where fechaapertura>='".$this->request->filtro->desde."' and fechaapertura<='".$this->request->filtro->hasta."' AND codcaja = ".$_SESSION["phuyu_codcaja"])->result_array();
+			$lista = $this->db->query(
+				"select cd.*, round(cd.saldoinicialcaja + cd.saldofinalcaja,2) as cierre,
+				to_char(cd.horaapertura, 'HH24:MI') as horaapertura_texto,
+				to_char(cd.horacierre, 'HH24:MI') as horacierre_texto
+				from caja.controldiario as cd
+				where cd.fechaapertura>=? and cd.fechaapertura<=? and cd.codcaja=?
+				order by cd.fechaapertura desc, cd.horaapertura desc, cd.codcontroldiario desc
+				offset ? limit ?",
+				[$desde, $hasta, $codcaja, $offset, $limit]
+			)->result_array();
+			$total = $this->db->query(
+				"select count(*) as total from caja.controldiario where fechaapertura>=? and fechaapertura<=? and codcaja=?",
+				[$desde, $hasta, $codcaja]
+			)->result_array();
 
 			$paginas = floor($total[0]["total"] / $limit);
 			if ( ($total[0]["total"] % $limit)!=0 ) {

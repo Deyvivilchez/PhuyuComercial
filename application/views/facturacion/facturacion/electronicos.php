@@ -1,4 +1,6 @@
-<div id="phuyu_facturacion">
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<div id="phuyu_facturacion" class="phuyu-velzon-list phuyu-cpe-velzon">
 	<div role="alert" class="alert alert-danger" style="border: 2px solid red;"> 
 	    <h5>ATENCION!, antes de cerrar sesión por favor enviar los comprobantes que estan pendientes de envío a SUNAT, abajo le mostrará enlistado por tipo de comprobante, solo tiene que hacer clik en el <b class="text-success">BOTON ENVIAR</b> que está en cada fila. </h5>
 	</div>
@@ -32,8 +34,9 @@
 					<td> S/. {{dato.importe}} </td>
 					<td>
 						<b v-if="dato.estado==0" style="color:#d43f3a">PENDIENTE</b>
-						<b v-if="dato.estado==3" style="color:#eea236">CON EXCEPCIONES</b> 
-						<b v-if="dato.estado==4" style="color:#eea236">RECHAZADO</b> 
+						<b v-if="dato.estado==2" style="color:#eea236">CON EXCEPCIONES</b> 
+						<b v-if="dato.estado==3" style="color:#d43f3a">RECHAZADO</b> 
+						<b v-if="dato.estado==4" style="color:#eea236">OBSERVADO</b> 
 					</td>
 					<td style="padding-top:5px;"> 
 						<button type="button" class="btn btn-info btn-sm" v-on:click="comprobantes_xml(dato.codkardex,'01')">
@@ -81,8 +84,9 @@
 					<td> {{dato.nombre_xml}} </td>
 					<td>
 						<b v-if="dato.estado==0" style="color:#d43f3a">PENDIENTE</b>
-						<b v-if="dato.estado==3" style="color:#eea236">CON EXCEPCIONES</b> 
-						<b v-if="dato.estado==4" style="color:#eea236">RECHAZADO</b> 
+						<b v-if="dato.estado==2" style="color:#eea236">CON EXCEPCIONES</b> 
+						<b v-if="dato.estado==3" style="color:#d43f3a">RECHAZADO</b> 
+						<b v-if="dato.estado==4" style="color:#eea236">OBSERVADO</b> 
 					</td>
 					<td> 
 						<button type="button" class="btn btn-primary btn-sm" v-on:click="resumenes_ver(dato.codresumentipo,dato.periodo,dato.nrocorrelativo)"><i class="fa fa-file"></i> VER</button>
@@ -128,8 +132,9 @@
 					<td> {{dato.nombre_xml}} </td>
 					<td>
 						<b v-if="dato.estado==0" style="color:#d43f3a">PENDIENTE</b>
-						<b v-if="dato.estado==3" style="color:#eea236">CON EXCEPCIONES</b> 
-						<b v-if="dato.estado==4" style="color:#eea236">RECHAZADO</b> 
+						<b v-if="dato.estado==2" style="color:#eea236">CON EXCEPCIONES</b> 
+						<b v-if="dato.estado==3" style="color:#d43f3a">RECHAZADO</b> 
+						<b v-if="dato.estado==4" style="color:#eea236">OBSERVADO</b> 
 					</td>
 					<td style="padding-top:5px;"> 
 						<button type="button" class="btn btn-info btn-sm" v-on:click="resumenes_xml(dato.codresumentipo,dato.periodo,dato.nrocorrelativo)"> <i class="fa fa-cloud-download"></i> XML</button>
@@ -175,8 +180,9 @@
 					<td> {{dato.motivo}} </td>
 					<td>
 						<b v-if="dato.estado==0" style="color:#d43f3a">PENDIENTE</b>
-						<b v-if="dato.estado==3" style="color:#eea236">CON EXCEPCIONES</b> 
-						<b v-if="dato.estado==4" style="color:#eea236">RECHAZADO</b> 
+						<b v-if="dato.estado==2" style="color:#eea236">CON EXCEPCIONES</b> 
+						<b v-if="dato.estado==3" style="color:#d43f3a">RECHAZADO</b> 
+						<b v-if="dato.estado==4" style="color:#eea236">OBSERVADO</b> 
 					</td>
 					<td style="padding-top:5px;"> 
 						<button type="button" class="btn btn-info btn-sm" v-on:click="guias_xml(dato.codguiar,'09')">
@@ -216,8 +222,9 @@
 					<td> S/. {{dato.importe}} </td>
 					<td>
 						<b v-if="dato.estado==0" style="color:#d43f3a">PENDIENTE</b>
-						<b v-if="dato.estado==3" style="color:#eea236">CON EXCEPCIONES</b> 
-						<b v-if="dato.estado==4" style="color:#eea236">RECHAZADO</b> 
+						<b v-if="dato.estado==2" style="color:#eea236">CON EXCEPCIONES</b> 
+						<b v-if="dato.estado==3" style="color:#d43f3a">RECHAZADO</b> 
+						<b v-if="dato.estado==4" style="color:#eea236">OBSERVADO</b> 
 					</td>
 					<td style="padding-top:5px;"> 
 						<button type="button" class="btn btn-info btn-sm" v-on:click="comprobantes_xml(dato.codkardex,'01')">
@@ -232,9 +239,8 @@
 		<div class="modal-dialog modal-lg">
 			<div class="modal-content">
 				<div class="modal-header modal-phuyu-titulo">
-					<h4 class="modal-title" align="center"> <b style="letter-spacing:1px;">INFORMACION DEL RESUMEN</b> </h4>
-
-					<button type="button" class="btn-close" v-on:click="phuyu_cerrar()"> </button>
+					<h4 class="modal-title">Informacion del resumen</h4>
+					<button type="button" class="btn-close" v-on:click="phuyu_cerrar()" aria-label="Cerrar"></button>
 				</div>
 
 				<div class="modal-body" style="height:350px;overflow-y:auto;">
@@ -278,7 +284,3 @@
 </div>
 
 <script src="<?php echo base_url();?>phuyu/phuyu_facturacion/electronicos.js"> </script>
-<script>
-	var pantalla = jQuery(document).height(); $("#consultas_modal").css({height: pantalla - 65}); 
-	$(".panel_boletas").css({height: pantalla - 505}); $(".panel_comprobantes").css({height: pantalla - 75});
-</script>

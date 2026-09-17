@@ -24,10 +24,18 @@ var phuyu_operacion = new Vue({
 			}
 		},
 		phuyu_comprobantes: function(){
+			this.campos.codpersona = $("#codpersona").val();
+			var fecha = $("#fechacomprobante_ref").val();
+			var serie = (this.campos.seriecomprobante || "-").toUpperCase();
+			var numero = this.campos.nrocomprobante || "-";
+
 			if (this.campos.codpersona!="") {
 				this.estado = 1;
-				this.$http.get(url+phuyu_controller+"/comprobantes/"+this.campos.codpersona+"/"+$("#fechacomprobante_ref").val()).then(function(data){
+				this.$http.get(url+phuyu_controller+"/comprobantes/"+this.campos.codpersona+"/"+fecha+"/"+serie+"/"+numero).then(function(data){
 					this.comprobantes = data.body.comprobantes; this.estado = 0;
+					if (this.comprobantes.length==0) {
+						phuyu_sistema.phuyu_noti("NO SE ENCONTRARON COMPROBANTES","REVISA PROVEEDOR, FECHA REF., SERIE O NUMERO","error");
+					}
 				},function(){
 					phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED","error");
 				});
@@ -46,8 +54,8 @@ var phuyu_operacion = new Vue({
 				this.campos.codmoneda = datos.codmoneda; this.campos.tipocambio = datos.tipocambio;
 
 				this.$http.get(url+phuyu_controller+"/detalle/"+datos.codkardex).then(function(data){
-					this.detalle = data.body.detalle; var datos = eval(data.body.totales);
-					this.totales.valorventa = datos[0]["valorventa"]; this.totales.igv = datos[0]["igv"]; this.totales.importe = datos[0]["importe"];
+					this.detalle = data.body.detalle;
+					this.phuyu_totales();
 				},function(){
 					phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED","error");
 				});
@@ -57,25 +65,42 @@ var phuyu_operacion = new Vue({
 		},
 		
 		phuyu_calcular: function(dato){
-			this.totales.valorventa = Number((this.totales.valorventa - dato.valorventa ).toFixed(2));
-			this.totales.igv = Number((this.totales.igv - dato.igv ).toFixed(2));
-			this.totales.importe = Number((this.totales.importe - dato.subtotal ).toFixed(2));
-
-			dato.subtotal = Number((dato.cantidad * dato.precio ).toFixed(2));
+			dato.cantidad = Number(dato.cantidad || 0);
+			dato.precio = Number(dato.precio || 0);
+			dato.subtotal = Number((dato.cantidad * dato.precio).toFixed(2));
+			dato.igv = 0;
 			if (dato.codafectacionigv=="10") {
 				dato.igv = Number(( dato.subtotal - (dato.subtotal / 1.18) ).toFixed(2));
 			}
 			dato.valorventa = Number((dato.subtotal - dato.igv ).toFixed(2));
-			
-			this.totales.valorventa = Number((this.totales.valorventa + dato.valorventa ).toFixed(2));
-			this.totales.igv = Number((this.totales.igv + dato.igv ).toFixed(2));
-			this.totales.importe = Number((this.totales.importe + dato.subtotal ).toFixed(2));
+			this.phuyu_totales();
 		},
 		phuyu_quitardetalle: function(index, dato){
-			this.detalle.splice(index,1); this.phuyu_calcular(dato);
+			this.detalle.splice(index,1);
+			this.phuyu_totales();
+		},
+		phuyu_totales: function(){
+			this.totales.valorventa = 0.00;
+			this.totales.igv = 0.00;
+			this.totales.importe = 0.00;
+
+			for (var i = 0; i < this.detalle.length; i++) {
+				var item = this.detalle[i];
+				item.valorventa = Number(parseFloat(item.valorventa || 0).toFixed(2));
+				item.igv = Number(parseFloat(item.igv || 0).toFixed(2));
+				item.subtotal = Number(parseFloat(item.subtotal || 0).toFixed(2));
+
+				this.totales.valorventa = Number((this.totales.valorventa + item.valorventa).toFixed(2));
+				this.totales.igv = Number((this.totales.igv + item.igv).toFixed(2));
+				this.totales.importe = Number((this.totales.importe + item.subtotal).toFixed(2));
+			}
 		},
 
 		phuyu_guardar: function(){
+			if (this.campos.codkardex_ref==0) {
+				phuyu_sistema.phuyu_noti("DEBE SELECCIONAR UN COMPROBANTE DE REFERENCIA","PARA REGISTRAR LA NOTA ELECTRONICA","error");
+				return false;
+			}
 			if (this.detalle.length==0) {
 				phuyu_sistema.phuyu_noti("DEBE TENER MINIMO UN ITEM LA NOTA","PARA REGISTRAR LA NOTA ELECTRONICA","error"); 
 				return false;
@@ -89,7 +114,8 @@ var phuyu_operacion = new Vue({
 					if (data.body.estado==1) {
 						phuyu_sistema.phuyu_noti("NOTA REGISTRADA CORRECTAMENTE","NOTA REGISTRADA EN EL SISTEMA","success");
 					}else{
-						phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR NOTA ELECTRONICA","ERROR DE RED","error");
+						var mensaje = data.body.mensaje || "ERROR DE RED";
+						phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR NOTA ELECTRONICA", mensaje, "error");
 					}
 				}
 				phuyu_sistema.phuyu_fin(); phuyu_sistema.phuyu_modulo();

@@ -22,10 +22,33 @@ class Vehiculos extends CI_Controller {
 		if ($this->input->is_ajax_request()) {
 			$this->request = json_decode(file_get_contents('php://input'));
 			$limit = 10; $offset = $this->request->pagina * $limit - $limit;
+			$buscar = "%".$this->request->buscar."%";
 
-			$lista = $this->db->query("select * from almacen.vehiculos where UPPER(descripcion) like UPPER('%".$this->request->buscar."%') and UPPER(nroplaca) like UPPER('%".$this->request->buscar."%') AND estado=1 order by codvehiculo desc offset ".$offset." limit ".$limit)->result_array();
+			$lista = $this->db->query("
+				select *
+				from almacen.vehiculos
+				where (
+					UPPER(descripcion) like UPPER(?)
+					or UPPER(nroplaca) like UPPER(?)
+					or UPPER(constancia) like UPPER(?)
+				)
+				and estado=1
+				order by codvehiculo desc
+				offset ".$offset." limit ".$limit,
+				array($buscar, $buscar, $buscar)
+			)->result_array();
 
-			$total = $this->db->query("select count(*) as total from almacen.vehiculos where UPPER(descripcion) like UPPER('%".$this->request->buscar."%') and UPPER(nroplaca) like UPPER('%".$this->request->buscar."%') AND estado=1")->result_array();
+			$total = $this->db->query("
+				select count(*) as total
+				from almacen.vehiculos
+				where (
+					UPPER(descripcion) like UPPER(?)
+					or UPPER(nroplaca) like UPPER(?)
+					or UPPER(constancia) like UPPER(?)
+				)
+				and estado=1",
+				array($buscar, $buscar, $buscar)
+			)->result_array();
 
 			$paginas = floor($total[0]["total"] / $limit);
 			if ( ($total[0]["total"] % $limit)!=0 ) {
@@ -47,7 +70,8 @@ class Vehiculos extends CI_Controller {
 
 	function buscar(){
 		if ($this->input->is_ajax_request()) {
-           $vehiculos = $this->db->query("select v.*,v.codvehiculo as id from almacen.vehiculos v where UPPER(nroplaca) like UPPER('%".$_GET["search"]["value"]."%') AND estado=1 order by codvehiculo desc limit 10")->result_array();
+           $buscar = isset($_GET["search"]["value"]) ? "%".$_GET["search"]["value"]."%" : "%%";
+           $vehiculos = $this->db->query("select v.*,v.codvehiculo as id from almacen.vehiculos v where UPPER(nroplaca) like UPPER(?) AND estado=1 order by codvehiculo desc limit 10", array($buscar))->result_array();
            $data["data"] = $vehiculos;
            echo json_encode($data);
 		}
@@ -55,7 +79,11 @@ class Vehiculos extends CI_Controller {
 
 	function infovehiculo($codvehiculo){
 		if ($this->input->is_ajax_request()) {
-			$info = $this->db->query("select constancia from almacen.vehiculos where codvehiculo=".$codvehiculo)->result_array();
+			$codvehiculo = intval($codvehiculo);
+			$info = $this->db->query("
+			select constancia
+			from almacen.vehiculos
+			where codvehiculo=".$codvehiculo)->result_array();
 			echo json_encode($info);
 		}
 	}
@@ -84,6 +112,55 @@ class Vehiculos extends CI_Controller {
 				$estado = $this->phuyu_model->phuyu_editar("almacen.vehiculos", $campos, $valores, "codvehiculo", $this->request->codregistro);
 			}
 			echo $estado;
+		}else{
+			$this->load->view("phuyu/404");
+		}
+	}
+
+	function guardar_inline(){
+		if ($this->input->is_ajax_request()) {
+			$this->request = json_decode(file_get_contents('php://input'));
+
+			$descripcion = isset($this->request->descripcion) ? strtoupper(trim($this->request->descripcion)) : "";
+			$nroplaca = isset($this->request->nroplaca) ? strtoupper(trim($this->request->nroplaca)) : "";
+			$constancia = isset($this->request->constancia) ? strtoupper(trim($this->request->constancia)) : "";
+
+			if ($descripcion == "" || $nroplaca == "") {
+				echo json_encode(array("estado" => 0, "mensaje" => "Datos incompletos"));
+				return;
+			}
+
+			$vehiculo = $this->db->query("
+				select codvehiculo, descripcion, nroplaca, constancia
+				from almacen.vehiculos
+				where UPPER(nroplaca)=UPPER(".$this->db->escape($nroplaca).")
+				and estado=1
+				limit 1
+			")->result_array();
+
+			if (count($vehiculo) > 0) {
+				echo json_encode(array(
+					"estado" => 1,
+					"existente" => 1,
+					"vehiculo" => $vehiculo[0]
+				));
+				return;
+			}
+
+			$campos = ["descripcion","nroplaca","constancia","estado"];
+			$valores = [$descripcion, $nroplaca, $constancia, 1];
+			$codvehiculo = $this->phuyu_model->phuyu_guardar("almacen.vehiculos", $campos, $valores, "true");
+
+			echo json_encode(array(
+				"estado" => $codvehiculo ? 1 : 0,
+				"existente" => 0,
+				"vehiculo" => array(
+					"codvehiculo" => $codvehiculo,
+					"descripcion" => $descripcion,
+					"nroplaca" => $nroplaca,
+					"constancia" => $constancia
+				)
+			));
 		}else{
 			$this->load->view("phuyu/404");
 		}
