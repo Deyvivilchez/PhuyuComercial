@@ -424,7 +424,54 @@ class Productos extends CI_Controller
         if ($this->input->is_ajax_request()) {
             $this->request = json_decode(file_get_contents('php://input'));
 
-            $campos = ['codfamilia', 'codlinea', 'codmarca', 'codempresa', 'codigo', 'descripcion', 'afectoicbper', 'codatencion', 'paraventa', 'calcular', 'controlstock', 'caracteristicas', 'tipo', 'controlarseries'];
+            $es_venta = isset($this->request->campos->es_venta) ? (int) $this->request->campos->es_venta : 1;
+            $es_insumo = isset($this->request->campos->es_insumo) ? (int) $this->request->campos->es_insumo : 0;
+            $es_preparado = isset($this->request->campos->es_preparado) ? (int) $this->request->campos->es_preparado : 0;
+            $merma_porcentaje = isset($this->request->campos->merma_porcentaje) ? (float) $this->request->campos->merma_porcentaje : 0;
+            $es_restaurante = isset($_SESSION['phuyu_rubro']) && (int) $_SESSION['phuyu_rubro'] == 3;
+
+            $es_venta = $es_venta == 1 ? 1 : 0;
+            $es_insumo = $es_insumo == 1 ? 1 : 0;
+            $es_preparado = $es_preparado == 1 ? 1 : 0;
+
+            if (!$es_restaurante) {
+                $es_venta = 1;
+                $es_insumo = 0;
+                $es_preparado = 0;
+                $merma_porcentaje = 0;
+            }
+
+            if ($es_restaurante && $es_venta == 0 && $es_insumo == 0 && $es_preparado == 0) {
+                echo 0;
+                return;
+            }
+
+            if ($es_restaurante && $es_preparado == 1 && $es_venta == 0 && $es_insumo == 0) {
+                echo 0;
+                return;
+            }
+
+            if (!isset($this->request->unidades) || !is_array($this->request->unidades) || count($this->request->unidades) == 0) {
+                echo 0;
+                return;
+            }
+
+            foreach ($this->request->unidades as $key => $unidad) {
+                if ($es_restaurante && $es_venta == 0) {
+                    $this->request->unidades[$key]->pventapublico = 0;
+                    $this->request->unidades[$key]->pventamin = 0;
+                    $this->request->unidades[$key]->pventacredito = 0;
+                    $this->request->unidades[$key]->pventaxmayor = 0;
+                    $this->request->unidades[$key]->pventaadicional = 0;
+                }
+
+                if ($es_restaurante && $es_venta == 1 && (float) $this->request->unidades[$key]->pventapublico <= 0) {
+                    echo 0;
+                    return;
+                }
+            }
+
+            $campos = ['codfamilia', 'codlinea', 'codmarca', 'codempresa', 'codigo', 'descripcion', 'afectoicbper', 'codatencion', 'paraventa', 'calcular', 'controlstock', 'caracteristicas', 'tipo', 'controlarseries', 'es_venta', 'es_insumo', 'es_preparado', 'merma_porcentaje'];
             $valores = [
                 (int) $this->request->campos->codfamilia,
                 (int) $this->request->campos->codlinea,
@@ -440,6 +487,10 @@ class Productos extends CI_Controller
                 $this->request->campos->caracteristicas,
                 (int) $this->request->campos->tipo,
                 (int) $this->request->campos->controlarseries, //controlarseries
+                $es_venta,
+                $es_insumo,
+                $es_preparado,
+                $merma_porcentaje,
             ];
 
             $campos_1 = ['codproducto', 'codunidad', 'codsucursal', 'factor', 'preciocompra', 'preciocosto', 'pventapublico', 'pventamin', 'pventacredito', 'pventaxmayor', 'pventaadicional', 'codigobarra', 'estado'];
@@ -1010,9 +1061,12 @@ class Productos extends CI_Controller
     function buscar_codigobarra($codigobarra)
     {
         if ($this->input->is_ajax_request()) {
+            $codigobarra = trim((string) $codigobarra);
+            $codalmacen = (int) $_SESSION['phuyu_codalmacen'];
             $info = $this->db
                 ->query(
-                    "select p.codproducto,p.descripcion,p.caracteristicas, p.afectoicbper,p.controlstock, p.afectoigvcompra, p.afectoigvventa, p.codigo,p.calcular,p.foto,p.controlarseries,u.codunidad,u.descripcion as unidad,round(pu.stockactual,3) as stock, m.descripcion as marca, puv.factor, puv.factor as factormaximo, round(puv.pventapublico,2) as precio, round(puv.pventamin,2) as preciomin, round(puv.pventacredito,2) as preciocredito, round(puv.pventaxmayor,2) as preciomayor, round(puv.preciocosto,2) as preciocosto, round(puv.pventaadicional,2) as precioadicional,
+                    "select distinct on (p.codproducto, pu.codunidad)
+                    p.codproducto,p.descripcion,p.caracteristicas, p.afectoicbper,p.controlstock, p.afectoigvcompra, p.afectoigvventa, p.codigo,p.calcular,p.foto,p.controlarseries,u.codunidad,u.descripcion as unidad,round(pu.stockactual,3) as stock, m.descripcion as marca, puv.factor, puv.factor as factormaximo, round(puv.pventapublico,2) as precio, round(puv.pventamin,2) as preciomin, round(puv.pventacredito,2) as preciocredito, round(puv.pventaxmayor,2) as preciomayor, round(puv.preciocosto,2) as preciocosto, round(puv.pventaadicional,2) as precioadicional,
                     COALESCE(
                         (SELECT vpun.unidades
                         FROM almacen.v_productounidades vpun
@@ -1032,13 +1086,24 @@ class Productos extends CI_Controller
                         FROM almacen.series s
                         WHERE s.codproducto = p.codproducto
                         AND s.estado = 'EN_ALMACEN'
-                        AND s.codalmacen = " . $_SESSION['phuyu_codalmacen'] . "),
+                        AND s.codalmacen = ?),
                         '[]'::jsonb
                     ) AS series
-                    from almacen.productos as p inner join almacen.productoubicacion as pu on(p.codproducto=pu.codproducto) inner join almacen.unidades as u on(u.codunidad=pu.codunidad) inner join almacen.marcas as m on(p.codmarca=m.codmarca) inner join almacen.productounidades as puv on(pu.codproducto=puv.codproducto and pu.codunidad=puv.codunidad) where puv.codigobarra='" .
-                        $codigobarra .
-                        "' and p.estado=1 and pu.estado=1 and pu.codalmacen=" .
-                        $_SESSION['phuyu_codalmacen'],
+                    from almacen.productos as p
+                    inner join almacen.productoubicacion as pu on(p.codproducto=pu.codproducto)
+                    inner join almacen.unidades as u on(u.codunidad=pu.codunidad)
+                    inner join almacen.marcas as m on(p.codmarca=m.codmarca)
+                    inner join almacen.productounidades as puv on(pu.codproducto=puv.codproducto and pu.codunidad=puv.codunidad)
+                    where (
+                        upper(trim(coalesce(puv.codigobarra, ''))) = upper(?)
+                        or upper(trim(coalesce(pu.codigobarra, ''))) = upper(?)
+                    )
+                    and p.estado=1
+                    and pu.estado=1
+                    and puv.estado=1
+                    and pu.codalmacen=?
+                    order by p.codproducto, pu.codunidad, puv.factor asc",
+                    [$codalmacen, $codigobarra, $codigobarra, $codalmacen]
                 )
                 ->result_array();
             foreach ($info as &$producto) {
@@ -1149,9 +1214,15 @@ class Productos extends CI_Controller
                         $factores = explode('|', $v);
                         if ($factores[8] == 1) {
                             $lista[$key]['factormaximo'] = $factormaximo[0]['factor'];
+                            $lista[$key]['codunidad'] = $factores[0];
                             $lista[$key]['factor'] = $factores[8];
                             $lista[$key]['precio'] = $factores[5];
                             $lista[$key]['precioventa'] = $factores[5];
+                            $merma = isset($lista[$key]['merma_porcentaje']) ? (float) $lista[$key]['merma_porcentaje'] : 0;
+                            $rendimiento = max(1 + ($merma / 100), 0.0001);
+                            $preciocosto = ((float) $factores[9] > 0 ? (float) $factores[9] : (float) $factores[5]);
+                            $lista[$key]['preciocosto'] = round($preciocosto / $rendimiento, 2);
+                            $lista[$key]['merma_porcentaje'] = $merma;
                             $lista[$key]['preciomin'] = round((float) $factores[6], 2);
                             $lista[$key]['preciocredito'] = round((float) $factores[7], 2);
                             $lista[$key]['preciomayor'] = round((float) $factores[10], 2);

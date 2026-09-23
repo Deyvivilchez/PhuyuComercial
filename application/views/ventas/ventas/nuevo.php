@@ -553,7 +553,7 @@
                       </td>
                       <td>
                         <input type="number" step="0.0001" class="form-control form-control-sm number" v-if="dato.codafectacionigv==21" v-model.number="dato.precio" min="0" readonly>
-                        <input type="number" step="0.0001" class="form-control form-control-sm number" v-if="dato.codafectacionigv!=21" v-model.number="dato.precio" v-on:keyup="phuyu_calcular(dato)" min="0.001" required v-bind:disabled="dato.porcdescuento==100">
+                        <input type="number" step="0.0001" class="form-control form-control-sm number" v-if="dato.codafectacionigv!=21" v-model.number="dato.precio" v-on:keyup="phuyu_calcular(dato)" min="0.001" required v-bind:disabled="!puede_modificar_precio || dato.porcdescuento==100" v-bind:title="!puede_modificar_precio ? 'Solo administrador puede modificar precios' : ''">
                       </td>
                       <td>
                         <input type="number" class="form-control form-control-sm number" v-model.number="dato.igv" min="0" readonly>
@@ -562,11 +562,11 @@
                         <input type="number" class="form-control form-control-sm number" v-model.number="dato.icbper" min="0" readonly>
                       </td>
                       <td v-if="dato.codafectacionigv==21">
-                        <input type="number" step="0.01" class="form-control form-control-sm number" v-model.number="dato.subtotal">
+                        <input type="number" step="0.01" class="form-control form-control-sm number" v-model.number="dato.subtotal" v-bind:disabled="!puede_modificar_precio">
                       </td>
                       <td v-if="dato.codafectacionigv!=21">
                         <input type="number" step="0.01" class="form-control form-control-sm number" v-if="dato.calcular==0" v-model.number="dato.subtotal" readonly>
-                        <input type="number" step="0.01" class="form-control form-control-sm number" v-if="dato.calcular!=0" v-model.number="dato.subtotal" v-on:keyup="phuyu_subtotal(dato)" required v-bind:disabled="dato.porcdescuento==100">
+                        <input type="number" step="0.01" class="form-control form-control-sm number" v-if="dato.calcular!=0" v-model.number="dato.subtotal" v-on:keyup="phuyu_subtotal(dato)" required v-bind:disabled="!puede_modificar_precio || dato.porcdescuento==100">
                       </td>
                       <td>
                         <button type="button" class="btn btn-danger btn-xs w-100" v-on:click="phuyu_deleteitem(index,dato)">
@@ -674,25 +674,25 @@
           <div class="row form-group">
             <div class="col-md-4 col-xs-12">
               <label>PRECIO BRUTO</label>
-              <input type="number" class="form-control number" v-model.number="item.preciobruto" v-on:keyup="phuyu_itemcalcular(item,0)" v-bind:disabled="item.codafectacionigv==21">
+              <input type="number" class="form-control number" v-model.number="item.preciobruto" v-on:keyup="phuyu_itemcalcular(item,0)" v-bind:disabled="item.codafectacionigv==21 || !puede_modificar_precio">
             </div>
             <div class="col-md-4 col-xs-12">
               <label>DESCUENTO (S/.)</label>
-              <input type="number" class="form-control number" v-model.number="item.descuento" v-on:keyup="phuyu_itemcalcular(item,-1)" v-bind:disabled="item.codafectacionigv==21">
+              <input type="number" class="form-control number" v-model.number="item.descuento" v-on:keyup="phuyu_itemcalcular(item,-1)" v-bind:disabled="item.codafectacionigv==21 || !puede_modificar_precio">
             </div>
             <div class="col-md-4 col-xs-12">
               <label>DESCUENTO (%)</label>
-              <input type="number" class="form-control number" v-model.number="item.porcdescuento" v-on:keyup="phuyu_itemcalcular(item,-2)" v-bind:disabled="item.codafectacionigv==21">
+              <input type="number" class="form-control number" v-model.number="item.porcdescuento" v-on:keyup="phuyu_itemcalcular(item,-2)" v-bind:disabled="item.codafectacionigv==21 || !puede_modificar_precio">
             </div>
           </div>
           <div class="row form-group">
             <div class="col-md-4">
               <label>PRECIO SIN I.G.V.</label>
-              <input type="number" class="form-control number" v-model.number="item.preciosinigv" v-on:keyup="phuyu_itemcalcular(item,1)" v-bind:disabled="item.codafectacionigv==21">
+              <input type="number" class="form-control number" v-model.number="item.preciosinigv" v-on:keyup="phuyu_itemcalcular(item,1)" v-bind:disabled="item.codafectacionigv==21 || !puede_modificar_precio">
             </div>
             <div class="col-md-3">
               <label>PRECIO UNITARIO</label>
-              <input type="number" class="form-control number" v-model.number="item.precio" v-on:keyup="phuyu_itemcalcular(item,2)" v-bind:disabled="item.codafectacionigv==21">
+              <input type="number" class="form-control number" v-model.number="item.precio" v-on:keyup="phuyu_itemcalcular(item,2)" v-bind:disabled="item.codafectacionigv==21 || !puede_modificar_precio">
             </div>
             <div class="col-md-3">
               <label>TIPO AFECTACION</label>
@@ -821,7 +821,21 @@
               </div>
               <div class="col-6" v-if="inicialActivado">
                 <label>Inicial</label>
-                <input type="number" step="0.01" class="form-control number" min="0" v-model.number="campos.inicial" @input="calcular_credito()" placeholder="S/. 0.00">
+                <input type="number" step="0.01" class="form-control number" min="0" v-model.number="campos.inicial" @input="onInicialInput()" placeholder="S/. 0.00">
+              </div>
+            </div>
+            <div class="row form-group" v-if="campos.condicionpago==2 && inicialActivado && campos.inicial>0">
+              <div class="col-md-6 col-xs-12">
+                <label>TIPO PAGO INICIAL</label>
+                <select class="form-select" v-model="pagos.inicial_codtipopago" v-on:change="phuyu_tipopago_inicial()" required>
+                  <?php foreach ($tipopagos as $value) { ?>
+                    <option value="<?php echo $value['codtipopago']; ?>"><?php echo $value['descripcion']; ?></option>
+                  <?php } ?>
+                </select>
+              </div>
+              <div class="col-md-6 col-xs-12">
+                <label>NRO OPERACION / VOUCHER</label>
+                <input type="text" class="form-control" v-model.trim="pagos.inicial_nrodocbanco" v-bind:readonly="pagos.inicial_codtipopago==1" v-bind:required="pagos.inicial_codtipopago!=1" autocomplete="off" placeholder="Operacion, voucher, referencia">
               </div>
             </div>
 
@@ -947,6 +961,13 @@
   </div>
 </div>
 
+<script>
+  var phuyu_puede_modificar_precio = <?php
+    $perfilPrecio = strtoupper((string)($_SESSION['phuyu_perfil'] ?? ''));
+    $puedePrecio = ((int)($_SESSION['phuyu_codperfil'] ?? 0) === 1 || strpos($perfilPrecio, 'ADMIN') !== false) ? 1 : 0;
+    echo $puedePrecio;
+  ?>;
+</script>
 <!-- Scripts: se mantienen exactamente igual -->
 <script src="<?php echo base_url(); ?>phuyu/phuyu_ventas/nuevo.js?v=<?php echo filemtime(FCPATH . 'phuyu/phuyu_ventas/nuevo.js'); ?>"></script>
 <script src="<?php echo base_url(); ?>phuyu/phuyu_personas_2.js"></script>

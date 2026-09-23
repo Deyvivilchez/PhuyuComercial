@@ -93,6 +93,51 @@ var phuyu_form = new Vue({
 			this.campos.codafectacionigvcompra = $("#codafectoigv").val()
 			this.campos.codafectacionigvventa = $("#codafectoigv").val();
 		},
+		phuyu_normalizar_clasificacion_restaurante: function () {
+			this.campos.es_venta = parseInt(this.campos.es_venta) == 1 ? "1" : "0";
+			this.campos.es_insumo = parseInt(this.campos.es_insumo) == 1 ? "1" : "0";
+			this.campos.es_preparado = parseInt(this.campos.es_preparado) == 1 ? "1" : "0";
+
+			if (this.campos.es_venta != "1") {
+				for (var i = 0; i < this.unidades.length; i++) {
+					this.unidades[i].pventapublico = 0;
+					this.unidades[i].pventamin = 0;
+					this.unidades[i].pventacredito = 0;
+					this.unidades[i].pventaxmayor = 0;
+					this.unidades[i].pventaadicional = 0;
+				}
+			}
+		},
+		phuyu_validar_clasificacion_restaurante: function () {
+			var esRestaurante = typeof phuyu_rubro !== "undefined" && parseInt(phuyu_rubro) == 3;
+
+			if (!esRestaurante) {
+				return true;
+			}
+
+			this.phuyu_normalizar_clasificacion_restaurante();
+
+			if (this.campos.es_venta != "1" && this.campos.es_insumo != "1" && this.campos.es_preparado != "1") {
+				phuyu_sistema.phuyu_noti("Seleccione la clasificacion del producto", "Debe ser para venta, insumo/componente o preparado/subreceta", "error");
+				return false;
+			}
+
+			if (this.campos.es_preparado == "1" && this.campos.es_venta != "1" && this.campos.es_insumo != "1") {
+				phuyu_sistema.phuyu_noti("Preparado incompleto", "Un preparado debe ser para venta o servir como componente de otra receta", "error");
+				return false;
+			}
+
+			if (this.campos.es_venta == "1") {
+				for (var i = 0; i < this.unidades.length; i++) {
+					if (parseFloat(this.unidades[i].pventapublico || 0) <= 0) {
+						phuyu_sistema.phuyu_noti("Ingrese precio de venta", "Los productos para venta deben tener P.VENTA mayor a cero", "error");
+						return false;
+					}
+				}
+			}
+
+			return true;
+		},
 		phuyu_guardar: function () {
 			if (this.unidades.length == 0) {
 				phuyu_sistema.phuyu_noti("REGISTRAR MINIMO UNA UNIDAD", "CON SUS PRECIOS DEL PRODUCTO", "error"); return false;
@@ -127,6 +172,9 @@ var phuyu_form = new Vue({
 				return false;
 			}
 
+			if (!this.phuyu_validar_clasificacion_restaurante()) {
+				return false;
+			}
 
 			this.campos.afectoigvcompra = 0;
 			if ($("#afectoigvcompra_check").is(":checked")) {

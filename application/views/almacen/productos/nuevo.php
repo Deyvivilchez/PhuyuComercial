@@ -19,6 +19,12 @@
       <input type="hidden" id="calcular" v-model="campos.calcular">
       <input type="hidden" id="afectoicbper" v-model="campos.afectoicbper">
       <input type="hidden" id="codafectoigv" value="<?php echo $_SESSION['phuyu_afectacionigv']; ?>">
+      <?php if ((int)$_SESSION['phuyu_rubro'] != 3) { ?>
+        <input type="hidden" v-model="campos.es_venta">
+        <input type="hidden" v-model="campos.es_insumo">
+        <input type="hidden" v-model="campos.es_preparado">
+        <input type="hidden" v-model="campos.merma_porcentaje">
+      <?php } ?>
 
       <div class="row g-3 mb-3">
         <div class="col-md-2 col-6">
@@ -85,6 +91,36 @@
           <input type="text" v-model="campos.caracteristicas" class="form-control" autocomplete="off" placeholder="Características ..." maxlength="255">
         </div>
       </div>
+
+      <?php if ((int)$_SESSION['phuyu_rubro'] == 3) { ?>
+        <div class="row g-3 mb-3">
+          <div class="col-md-3 col-12">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="es_venta" v-model="campos.es_venta" true-value="1" false-value="0">
+              <label class="form-check-label" for="es_venta">PARA VENTA</label>
+            </div>
+            <small class="text-muted">Visible para vender y exige precio de venta.</small>
+          </div>
+          <div class="col-md-3 col-12">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="es_insumo" v-model="campos.es_insumo" true-value="1" false-value="0">
+              <label class="form-check-label" for="es_insumo">INSUMO / COMPONENTE</label>
+            </div>
+            <small class="text-muted">Se usa en recetas o subrecetas.</small>
+          </div>
+          <div class="col-md-3 col-12">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="es_preparado" v-model="campos.es_preparado" true-value="1" false-value="0">
+              <label class="form-check-label" for="es_preparado">PREPARADO / SUBRECETA</label>
+            </div>
+            <small class="text-muted">Plato armado con receta.</small>
+          </div>
+          <div class="col-md-3 col-12">
+            <label class="form-label">MERMA / RENDIMIENTO (%)</label>
+            <input type="number" step="0.0001" class="form-control" v-model="campos.merma_porcentaje" placeholder="Ej: -20 o 15">
+          </div>
+        </div>
+      <?php } ?>
 
       <div class="row g-3 mb-3">
         <div class="col-md-3">
@@ -166,11 +202,11 @@
               </td>
               <td><input type="number" step="0.1" class="form-control number" v-model.number="uni.factor" min="1" required></td>
               <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.preciocompra" min="0" required></td>
-              <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventapublico" min="0.1" required></td>
-              <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventamin" min="0" required></td>
-              <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventacredito" min="0" required></td>
-              <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventaxmayor" min="0" required></td>
-              <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventaadicional" min="0" required></td>
+              <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventapublico" v-bind:min="campos.es_venta == 1 ? 0.1 : 0" v-bind:required="campos.es_venta == 1" v-bind:disabled="campos.es_venta != 1"></td>
+              <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventamin" min="0" v-bind:required="campos.es_venta == 1" v-bind:disabled="campos.es_venta != 1"></td>
+              <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventacredito" min="0" v-bind:required="campos.es_venta == 1" v-bind:disabled="campos.es_venta != 1"></td>
+              <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventaxmayor" min="0" v-bind:required="campos.es_venta == 1" v-bind:disabled="campos.es_venta != 1"></td>
+              <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventaadicional" min="0" v-bind:required="campos.es_venta == 1" v-bind:disabled="campos.es_venta != 1"></td>
               <td><input type="text" class="form-control number" v-model="uni.codigobarra"></td>
               <td>
                 <button type="button" class="btn btn-danger btn-sm" v-on:click="phuyu_deleteunidad(index,uni)" v-bind:disabled="editar==1 && uni.factor==1">
@@ -309,6 +345,7 @@
 </script>
 
 <script>
+  var phuyu_rubro = <?php echo isset($_SESSION['phuyu_rubro']) ? (int) $_SESSION['phuyu_rubro'] : 0; ?>;
   var campos = {
     codregistro: "",
     descripcion: "",
@@ -328,6 +365,10 @@
     caracteristicas: "",
     comisionvendedor: 0,
     controlarseries: 0,
+    es_venta: "1",
+    es_insumo: "0",
+    es_preparado: "0",
+    merma_porcentaje: "0",
   };
   var campos_1 = {
     codunidad: "",

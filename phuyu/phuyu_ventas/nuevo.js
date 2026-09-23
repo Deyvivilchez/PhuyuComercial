@@ -3,6 +3,7 @@ var phuyu_operacion = new Vue({
     data: {
         afectacionigv: $("#afectacionigv").val(),
         estado: 0,
+        puede_modificar_precio: (typeof phuyu_puede_modificar_precio !== "undefined" && parseInt(phuyu_puede_modificar_precio) === 1),
         importetotalcredito: 0,
         importecredito: 0,
         interescredito: 0,
@@ -10,6 +11,10 @@ var phuyu_operacion = new Vue({
         producto_rapido_seleccionado: null,
         producto_rapido_procesando: false,
         producto_rapido_feedback_timer: null,
+        producto_rapido_ultimo: {
+            clave: "",
+            tiempo: 0
+        },
         series_rapidas: [],
         serie_rapida_buscar: "",
         rubro: $("#rubro").val(),
@@ -88,7 +93,9 @@ var phuyu_operacion = new Vue({
             vuelto_efectivo: 0,
             codtipopago_tarjeta: 0,
             monto_tarjeta: 0,
-            nrovoucher: ""
+            nrovoucher: "",
+            inicial_codtipopago: 1,
+            inicial_nrodocbanco: ""
         },
         operaciones: {
             gravadas: 0.00,
@@ -130,19 +137,16 @@ var phuyu_operacion = new Vue({
 
             if (!this.inicialActivado) {
                 this.campos.inicial = 0;
+                this.pagos.inicial_codtipopago = 1;
+                this.pagos.inicial_nrodocbanco = "";
                 // Recalcula importes y crédito sin inicial
                 this.phuyu_cuotas();
                 this.calcular_credito();
                 return;
             }
 
-            // Activado: primera cuota hoy y su importe = inicial
-            if (this.cuotas && this.cuotas.length > 0) {
-                this.cuotas[0].fechavence = this.fechaHoy();
-            }
-
-            this.aplicarInicialYDistribuirImportes();
-            this.calcular_credito();
+            // Activado: agrega una letra inicial y mantiene las cuotas indicadas por el usuario.
+            this.phuyu_cuotas();
         },
         fechaHoy() {
             const hoy = new Date();
@@ -212,8 +216,10 @@ var phuyu_operacion = new Vue({
                 return;
             }
 
-            // Asegura cuota 1
+            // Asegura cuota inicial
             this.cuotas[0].fechavence = this.fechaHoy();
+            this.cuotas[0].nroletra = "INI";
+            this.cuotas[0].nrounicodepago = `V${parseInt(this.campos.nro || 0)}-INI`;
             this.cuotas[0].importe = Number(inicial.toFixed(2));
             this.cuotas[0].interes = 0;
             this.cuotas[0].total = Number(inicial.toFixed(2));
@@ -362,20 +368,44 @@ var phuyu_operacion = new Vue({
         /* DETALLE DE LA VENTA Y TOTALES */
 
         phuyu_codigobarra: function() {
-            if (this.codigobarra != "") {
-                this.$http.get(url + "almacen/productos/buscar_codigobarra/" + this.codigobarra).then(function(data) {
+            var codigo = String(this.codigobarra || "").trim();
+            if (codigo != "" && !this.producto_rapido_procesando) {
+                this.producto_rapido_procesando = true;
+                this.$http.get(url + "almacen/productos/buscar_codigobarra/" + encodeURIComponent(codigo)).then(function(data) {
                     if (data.body.cantidad == 0) {
                         phuyu_sistema.phuyu_alerta("NO EXISTE CODIGO DE BARRA", "REGISTRA EL CODIGO DE BARRA", "danger");
+                        this.producto_rapido_procesando = false;
                     } else {
                         if (data.body.cantidad == 1) {
-                            this.phuyu_additem(data.body.info[0], data.body.precio);
+                            this.phuyu_agregar_producto_rapido_desde_barra(data.body.info[0], data.body.precio, codigo);
                             this.codigobarra = "";
+                            this.producto_rapido_procesando = false;
                         } else {
                             phuyu_sistema.phuyu_alerta("EL CODIGO DE BARRA EXISTE EN MÁS DE UN PRODUCTO", "REGISTRADO MAS DE UNA VEZ", "danger");
+                            this.producto_rapido_procesando = false;
                         }
                     }
+                }, function() {
+                    this.producto_rapido_procesando = false;
+                    phuyu_sistema.phuyu_error();
                 });
             }
+        },
+        phuyu_es_lectura_duplicada: function(producto, codigo) {
+            var ahora = Date.now();
+            var clave = [
+                producto.codproducto || "",
+                producto.codunidad || "",
+                String(codigo || "").trim().toUpperCase()
+            ].join("-");
+
+            if (this.producto_rapido_ultimo.clave == clave && (ahora - this.producto_rapido_ultimo.tiempo) < 900) {
+                return true;
+            }
+
+            this.producto_rapido_ultimo.clave = clave;
+            this.producto_rapido_ultimo.tiempo = ahora;
+            return false;
         },
         phuyu_clase_stock_rapido: function(stock) {
             var cantidad = parseFloat(stock);
@@ -590,7 +620,7 @@ var phuyu_operacion = new Vue({
                     var producto = data.body.info[0];
                     producto.precio = data.body.precio;
                     $("#producto_rapido_select").select2("close");
-                    this.phuyu_agregar_producto_rapido(producto);
+                    this.phuyu_agregar_producto_rapido(producto, termino);
                     this.producto_rapido_procesando = false;
                     return;
                 }
@@ -647,7 +677,12 @@ var phuyu_operacion = new Vue({
                 this.producto_rapido_procesando = false;
             });
         },
-        phuyu_agregar_producto_rapido: function(producto) {
+        phuyu_agregar_producto_rapido: function(producto, codigo_lectura) {
+            var codigoLectura = typeof codigo_lectura == "undefined" ? producto.codigo : codigo_lectura;
+            if (this.phuyu_es_lectura_duplicada(producto, codigoLectura)) {
+                return false;
+            }
+
             var validaStock = parseInt(this.stockalmacen) === 1 && parseInt(producto.controlstock) === 1;
             if (validaStock && parseFloat(producto.stock) <= 0) {
                 phuyu_sistema.phuyu_alerta(
@@ -689,6 +724,10 @@ var phuyu_operacion = new Vue({
 
             this.phuyu_additem(producto, producto.precio);
             this.phuyu_limpiar_producto_rapido();
+        },
+        phuyu_agregar_producto_rapido_desde_barra: function(producto, precio, codigo) {
+            producto.precio = precio;
+            this.phuyu_agregar_producto_rapido(producto, codigo);
         },
         phuyu_seleccionar_serie_rapida: function(serie) {
             if (!this.producto_rapido_seleccionado) {
@@ -1089,7 +1128,6 @@ var phuyu_operacion = new Vue({
             $("#modal_itemdetalle").modal('show');
         },
         phuyu_itemcalcular: function(item, tipoprecio) {
-
             var porcentaje = 1;
             if (item.codafectacionigv == 21) {
                 item.preciobruto = 0;
@@ -1152,6 +1190,9 @@ var phuyu_operacion = new Vue({
             $("#modal_itemdetalle").modal("hide");
         },
         phuyu_calcular: function(producto) {
+            if (!this.puede_modificar_precio && arguments.length <= 1) {
+                producto.precio = producto.preciooriginal || producto.preciorefunitario || producto.precio;
+            }
             producto.preciooriginal = producto.precio;
             var porcentaje = 1;
             if (producto.codafectacionigv == 10) {
@@ -1404,6 +1445,11 @@ var phuyu_operacion = new Vue({
                 $("#nrovoucher").attr("required", "true");
             }
         },
+        phuyu_tipopago_inicial: function() {
+            if (parseInt(this.pagos.inicial_codtipopago) == 1) {
+                this.pagos.inicial_nrodocbanco = "";
+            }
+        },
         phuyu_vuelto: function(flag) {
             if (flag == 1) {
                 this.pagos.monto_efectivo = parseFloat(this.totales.importe) - parseFloat(this.pagos.monto_tarjeta);
@@ -1492,9 +1538,15 @@ var phuyu_operacion = new Vue({
             fecha.setHours(0, 0, 0, 0);
 
             this.cuotas = [];
-            for (let i = 1; i <= nrocuotas; i++) {
+            const totalFilas = this.inicialActivado ? nrocuotas + 1 : nrocuotas;
+
+            for (let i = 1; i <= totalFilas; i++) {
                 const dias = parseInt(this.campos.nrodias || 0);
-                if (dias > 0) fecha.setDate(fecha.getDate() + dias);
+                if (this.inicialActivado && i === 1) {
+                    fecha = this.parseYMD(this.fechaHoy());
+                } else if (dias > 0) {
+                    fecha.setDate(fecha.getDate() + dias);
+                }
 
                 let year = fecha.getFullYear();
                 let month = String(fecha.getMonth() + 1).padStart(2, '0');
@@ -1503,7 +1555,7 @@ var phuyu_operacion = new Vue({
 
                 // Número de letra tipo 01, 02...
                 let nroVenta = parseInt(this.campos.nro || 0);
-                let nroletra = String(i).padStart(2, '0');
+                let nroletra = this.inicialActivado && i === 1 ? "INI" : String(this.inicialActivado ? i - 1 : i).padStart(2, '0');
                 let nrounicodepago = `V${nroVenta}-${nroletra}`;
 
                 this.cuotas.push({
@@ -1685,6 +1737,10 @@ var phuyu_operacion = new Vue({
                     phuyu_sistema.phuyu_noti("ATENCION USUARIO: LA VENTA NO SE PUEDE REALIZAR PORQUE EL CLIENTE SELECCIONADO NO CUENTA CON UNA LINEA DE CREDITO VÁLIDA", "", "danger");
                     return false;
                 }
+                if (this.inicialActivado && parseFloat(this.campos.inicial) > 0 && parseInt(this.pagos.inicial_codtipopago) != 1 && String(this.pagos.inicial_nrodocbanco || "").trim() == "") {
+                    phuyu_sistema.phuyu_noti("INGRESE NRO DE OPERACION", "EL PAGO INICIAL REQUIERE VOUCHER U OPERACION", "danger");
+                    return false;
+                }
             }
 
             if ($("#conleyendaamazonia").is(":checked")) {
@@ -1744,14 +1800,14 @@ var phuyu_operacion = new Vue({
                             cobrado: 0,
                             codcomprobantetipo: 1,
                             codctacte: 0,
-                            codtipopago: 1,
+                            codtipopago: parseInt(this.pagos.inicial_codtipopago) || 1,
                             descripcion: "ABONO INICIAL - VENTA KARDEX #" + data.codkardex,
                             fechadocbanco: this.campos.fechacomprobante,
                             fechamovimiento: this.campos.fechacomprobante,
                             importe: parseFloat(this.campos.inicial),
                             total: parseFloat(this.campos.inicial),
                             vuelto: 0,
-                            nrodocbanco: this.pagos.nrovoucher || "S/D"
+                            nrodocbanco: this.pagos.inicial_nrodocbanco || "S/D"
                         };
 
                         let cuotasInicial = [{

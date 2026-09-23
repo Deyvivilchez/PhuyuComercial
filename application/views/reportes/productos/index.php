@@ -1,5 +1,30 @@
 <?php include("application/views/phuyu/phuyu_velzon_module.php");?>
 
+<style>
+	#phuyu_datos .phuyu-product-filter label {
+		color: #475569;
+		font-size: 11px;
+		font-weight: 900;
+		letter-spacing: .03em;
+		margin-bottom: 6px;
+		text-transform: uppercase;
+	}
+
+	#phuyu_datos .phuyu-consultar-productos {
+		align-items: center;
+		box-shadow: 0 10px 22px rgba(64, 81, 137, .18);
+		display: inline-flex;
+		font-weight: 900;
+		gap: 7px;
+		justify-content: center;
+		min-height: 38px;
+	}
+
+	#phuyu_datos .phuyu-consultar-productos i {
+		font-size: 15px;
+	}
+</style>
+
 <div id="phuyu_datos" class="phuyu-reportes-velzon phuyu-velzon-list">
 	<div class="phuyu_body">
 		<div class="card">
@@ -59,7 +84,7 @@
 						</div>
 					</div>
 				</div>
-				<div class="row g-2 align-items-end mb-2" >
+				<div class="row g-2 align-items-end mb-2 phuyu-product-filter" >
 					<div class="col-lg-3 col-md-6">
 						<label>ALMACEN</label>
 						<select class="form-select" v-model="campos.codalmacen">
@@ -99,7 +124,7 @@
 					</div>
 				</div>
 
-				<div class="row g-2 align-items-end mb-2" >
+				<div class="row g-2 align-items-end mb-2 phuyu-product-filter" >
 					<div class="col-lg-4 col-md-6">
 						<label>BUSCAR</label>
 						<input type="text" class="form-control" v-model="campos.buscar" placeholder="BUSCAR PRODUCTO . . ." v-on:keyup.13="buscar_productos()">
@@ -113,7 +138,7 @@
 					</div>
 					<div class="col-lg-2 col-md-3">
 						<label>&nbsp;</label>
-						<button type="button" class="btn btn-white btn-icon w-100" v-on:click="buscar_productos()">
+						<button type="button" class="btn btn-primary w-100 phuyu-consultar-productos" v-on:click="buscar_productos()">
 							<i class="bi bi-search"></i>
 							Consultar
 						</button>

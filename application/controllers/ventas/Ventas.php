@@ -21,6 +21,68 @@ class Ventas extends CI_Controller
         return is_numeric($valor) ? (float)$valor : null;
     }
 
+    private function phuyu_usuario_puede_modificar_precio()
+    {
+        $perfil = strtoupper((string)($_SESSION['phuyu_perfil'] ?? ''));
+        return ((int)($_SESSION['phuyu_codperfil'] ?? 0) === 1 || strpos($perfil, 'ADMIN') !== false);
+    }
+
+    private function phuyu_precio_venta_producto($codproducto, $codunidad)
+    {
+        return $this->db->query(
+            "select pventapublico from almacen.productounidades where codproducto=? and codunidad=? and estado=1 limit 1",
+            [(int)$codproducto, (int)$codunidad]
+        )->row_array();
+    }
+
+    private function phuyu_normalizar_precios_venta($request)
+    {
+        if ($this->phuyu_usuario_puede_modificar_precio()) {
+            return ['estado' => 1, 'request' => $request];
+        }
+
+        if (!isset($request->detalle) || !is_array($request->detalle)) {
+            return ['estado' => 0, 'informacion' => 'Debe registrar al menos un producto en la venta.'];
+        }
+
+        $igvSunat = (float)($_SESSION['phuyu_igv'] ?? 18);
+        $icbperSunat = (float)($_SESSION['phuyu_icbper'] ?? 0);
+
+        foreach ($request->detalle as $index => $item) {
+            $precioBase = $this->phuyu_precio_venta_producto($item->codproducto ?? 0, $item->codunidad ?? 0);
+            if (empty($precioBase)) {
+                return [
+                    'estado' => 0,
+                    'informacion' => 'No se encontro precio de venta para el item '.($index + 1).'. Revise producto y unidad.'
+                ];
+            }
+
+            $cantidad = (float)($item->cantidad ?? 0);
+            $precio = round((float)$precioBase['pventapublico'], 4);
+            $afectacion = (int)($item->codafectacionigv ?? 0);
+            $porcentaje = $afectacion === 10 ? (1 + $igvSunat) / 100 : 1;
+            $preciosinigv = $afectacion === 21 ? 0 : round($precio / $porcentaje, 4);
+            $subtotal = $afectacion === 21 ? 0 : round($cantidad * $precio, 2);
+            $valorventa = $afectacion === 21 ? 0 : round($cantidad * $preciosinigv, 2);
+            $igv = $afectacion === 10 ? round($subtotal - $valorventa, 2) : 0;
+            $icbper = ((int)($item->conicbper ?? 0) === 1) ? round($cantidad * $icbperSunat, 2) : 0;
+
+            $item->precio = $precio;
+            $item->preciorefunitario = $precio;
+            $item->preciobruto = $preciosinigv;
+            $item->preciosinigv = $preciosinigv;
+            $item->descuento = 0;
+            $item->porcdescuento = 0;
+            $item->valorventa = $valorventa;
+            $item->subtotal = $subtotal;
+            $item->subtotal_tem = $subtotal;
+            $item->igv = $igv;
+            $item->icbper = $icbper;
+        }
+
+        return ['estado' => 1, 'request' => $request];
+    }
+
     private function phuyu_validar_totales_venta($request)
     {
         if (!is_object($request) || !isset($request->campos) || !isset($request->totales)) {
@@ -1288,6 +1350,13 @@ class Ventas extends CI_Controller
         if ($this->input->is_ajax_request()) {
             if (isset($_SESSION['phuyu_codusuario'])) {
                 $this->request = json_decode(file_get_contents('php://input'));
+
+                $validacionPrecios = $this->phuyu_normalizar_precios_venta($this->request);
+                if ((int)$validacionPrecios['estado'] !== 1) {
+                    echo json_encode($validacionPrecios);
+                    return;
+                }
+                $this->request = $validacionPrecios['request'];
 
                 $validacionTotales = $this->phuyu_validar_totales_venta($this->request);
                 if ((int)$validacionTotales['estado'] !== 1) {

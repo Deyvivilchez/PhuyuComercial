@@ -313,6 +313,8 @@ class Nuevaventa extends CI_Controller {
 					$persona = $this->db->query("select documento,d.abreviatura as tipo from public.personas p inner join public.documentotipos d on(p.coddocumentotipo=d.coddocumentotipo) where p.codpersona=".$this->request->campos->codpersona)->result_array();
 
 					$estado = $this->Caja_model->phuyu_credito($codkardex, $codmovimiento, 1, $this->request->campos, $this->request->totales, $this->request->cuotas,$persona[0]["tipo"].'-'.$persona[0]["documento"]);
+					$credito_info = $this->db->query("select codcredito from kardex.creditos where codkardex=".$codkardex." and codmovimiento=".$codmovimiento." order by codcredito desc limit 1")->row_array();
+					$data["info_credito"] = $credito_info;
 				}
 
 				/* COMPROBANTE ELECTRONICO PARA SUNAT: REGISTRO EN KARDEX SUNAT */
@@ -402,6 +404,41 @@ class Nuevaventa extends CI_Controller {
 		}
 	}
 
+	private function actualizar_stock_desde_almacen_detalle($codkardexalmacen, $sentido)
+	{
+		$estado = 1;
+		$info = $this->db->query("select *from kardex.kardexalmacendetalle where codkardexalmacen=".(int)$codkardexalmacen." and estado=1")->result_array();
+		foreach ($info as $key => $value) {
+			$existe = $this->db->query("select *from almacen.productoubicacion where codalmacen=".$_SESSION["phuyu_codalmacen"]." and codproducto=".$value["codproducto"]." and codunidad=".$value["codunidad"])->result_array();
+			if (count($existe) == 0) {
+				continue;
+			}
+
+			$stock = (float)$existe[0]["stockactual"] + ((float)$value["cantidad"] * (float)$sentido);
+			$campos = ["stockactual"]; $valores = [(double)$stock];
+			$f = ["codalmacen","codproducto","codunidad"];
+			$v = [(int)$_SESSION["phuyu_codalmacen"],(int)$value["codproducto"],(int)$value["codunidad"]];
+			$estado = $this->phuyu_model->phuyu_editar_1("almacen.productoubicacion", $campos, $valores, $f, $v);
+
+			$stockconvertido = $this->db->query("select *from almacen.productoubicacion where codalmacen=".$_SESSION["phuyu_codalmacen"]." and codproducto=".$value["codproducto"])->result_array();
+			$factor = $this->db->query("select coalesce(nullif(factor,0),1) as factor from almacen.productounidades where codproducto=".$value["codproducto"]." and codunidad=".$value["codunidad"])->result_array();
+			$factor_movimiento = count($factor) == 0 ? 1 : (float)$factor[0]["factor"];
+
+			foreach ($stockconvertido as $k => $val) {
+				$productounidad = $this->db->query("select coalesce(nullif(factor,0),1) as factor from almacen.productounidades where codproducto=".$value["codproducto"]." and codunidad=".$val["codunidad"])->result_array();
+				$factor_unidad = count($productounidad) == 0 ? 1 : (float)$productounidad[0]["factor"];
+				$stockc = ((float)$value["cantidad"] * $factor_movimiento) / $factor_unidad;
+				$stockc = (float)$val["stockactualconvertido"] + ($stockc * (float)$sentido);
+				$campos = ["stockactualconvertido"]; $valores = [(double)$stockc];
+				$f = ["codalmacen","codproducto","codunidad"];
+				$v = [(int)$_SESSION["phuyu_codalmacen"],(int)$value["codproducto"],(int)$val["codunidad"]];
+				$estado = $this->phuyu_model->phuyu_editar_1("almacen.productoubicacion", $campos, $valores, $f, $v);
+			}
+		}
+
+		return $estado;
+	}
+
 	function eliminar(){
 		if ($this->input->is_ajax_request()) {
 			$this->request = json_decode(file_get_contents('php://input'));
@@ -450,33 +487,8 @@ class Nuevaventa extends CI_Controller {
 			// ACTUALIZAMOS PRODUCTOS UBICACION //
 			$kardexalmacen = $this->db->query("select codkardexalmacen from kardex.kardexalmacen where codkardex=".$this->request->codregistro)->result_array();
 
-			$info = $this->db->query("select *from kardex.kardexdetalle where codkardex=".$this->request->codregistro)->result_array();
-			foreach ($info as $key => $value) {
-				$existe = $this->db->query("select *from almacen.productoubicacion where codalmacen=".$_SESSION["phuyu_codalmacen"]." and codproducto=".$value["codproducto"]." and codunidad=".$value["codunidad"])->result_array();
-				$stock = $existe[0]["stockactual"] + $value["cantidad"];
-
-				$campos = ["stockactual"]; $valores = [(double)$stock];
-				$f = ["codalmacen","codproducto","codunidad"];
-				$v = [(int)$_SESSION["phuyu_codalmacen"],(int)$value["codproducto"],(int)$value["codunidad"]];
-				$estado = $this->phuyu_model->phuyu_editar_1("almacen.productoubicacion", $campos, $valores, $f, $v);
-
-				// AUMENTAMOS EL STOCKACTUALCONVERTIDO
-
-				$stockconvertido = $this->db->query("select *from almacen.productoubicacion where codalmacen=".$_SESSION["phuyu_codalmacen"]." and codproducto=".$value["codproducto"])->result_array();
-
-				$factor = $this->db->query("select *from almacen.productounidades where codproducto=".$value["codproducto"]." and codunidad=".$value["codunidad"])->result_array();
-
-				foreach ($stockconvertido as $k => $val) {
-					$stockc = 0;
-					$productounidad = $this->db->query("select *from almacen.productounidades where codproducto=".$value["codproducto"]." and codunidad=".$val["codunidad"])->result_array();
-
-					$stockc = ((float)$value["cantidad"]*(float)$factor[0]["factor"])/(float)$productounidad[0]["factor"];
-					$stockc = $stockc + $val["stockactualconvertido"];
-                    $campos = ["stockactualconvertido"]; $valores = [(double)$stockc];
-					$f = ["codalmacen","codproducto","codunidad"];
-					$v = [(int)$_SESSION["phuyu_codalmacen"],(int)$value["codproducto"],(int)$val["codunidad"]];
-					$estado = $this->phuyu_model->phuyu_editar_1("almacen.productoubicacion", $campos, $valores, $f, $v);
-				}
+			if(count($kardexalmacen) > 0){
+				$estado = $this->actualizar_stock_desde_almacen_detalle($kardexalmacen[0]["codkardexalmacen"], 1);
 			}
 			$estado = $this->phuyu_model->phuyu_eliminar("kardex.kardex", "codkardex", $this->request->codregistro);
             if(count($kardexalmacen) > 0){
@@ -561,33 +573,8 @@ class Nuevaventa extends CI_Controller {
 			// ACTUALIZAMOS PRODUCTOS UBICACION //
 			$kardexalmacen = $this->db->query("select codkardexalmacen from kardex.kardexalmacen where codkardex=".$this->request->codregistro)->result_array();
 
-			$info = $this->db->query("select *from kardex.kardexdetalle where codkardex=".$this->request->codregistro)->result_array();
-			foreach ($info as $key => $value) {
-				$existe = $this->db->query("select *from almacen.productoubicacion where codalmacen=".$_SESSION["phuyu_codalmacen"]." and codproducto=".$value["codproducto"]." and codunidad=".$value["codunidad"])->result_array();
-				$stock = $existe[0]["stockactual"] + $value["cantidad"];
-
-				$campos = ["stockactual"]; $valores = [(double)$stock];
-				$f = ["codalmacen","codproducto","codunidad"];
-				$v = [(int)$_SESSION["phuyu_codalmacen"],(int)$value["codproducto"],(int)$value["codunidad"]];
-				$estado = $this->phuyu_model->phuyu_editar_1("almacen.productoubicacion", $campos, $valores, $f, $v);
-
-				// AUMENTAMOS EL STOCKACTUALCONVERTIDO
-
-				$stockconvertido = $this->db->query("select *from almacen.productoubicacion where codalmacen=".$_SESSION["phuyu_codalmacen"]." and codproducto=".$value["codproducto"])->result_array();
-
-				$factor = $this->db->query("select *from almacen.productounidades where codproducto=".$value["codproducto"]." and codunidad=".$value["codunidad"])->result_array();
-
-				foreach ($stockconvertido as $k => $val) {
-					$stockc = 0;
-					$productounidad = $this->db->query("select *from almacen.productounidades where codproducto=".$value["codproducto"]." and codunidad=".$val["codunidad"])->result_array();
-
-					$stockc = ((float)$value["cantidad"]*(float)$factor[0]["factor"])/(float)$productounidad[0]["factor"];
-					$stockc = $stockc + $val["stockactualconvertido"];
-                    $campos = ["stockactualconvertido"]; $valores = [(double)$stockc];
-					$f = ["codalmacen","codproducto","codunidad"];
-					$v = [(int)$_SESSION["phuyu_codalmacen"],(int)$value["codproducto"],(int)$val["codunidad"]];
-					$estado = $this->phuyu_model->phuyu_editar_1("almacen.productoubicacion", $campos, $valores, $f, $v);
-				}
+			if(count($kardexalmacen) > 0){
+				$estado = $this->actualizar_stock_desde_almacen_detalle($kardexalmacen[0]["codkardexalmacen"], 1);
 			}
 			$estado = $this->phuyu_model->phuyu_eliminar("kardex.kardex", "codkardex", $this->request->codregistro);
             if(count($kardexalmacen) > 0){
@@ -653,33 +640,8 @@ class Nuevaventa extends CI_Controller {
 			// ACTUALIZAMOS PRODUCTOS UBICACION //
 			$kardexalmacen = $this->db->query("select codkardexalmacen from kardex.kardexalmacen where codkardex=".$this->request->codregistro)->result_array();
 
-			$info = $this->db->query("select *from kardex.kardexdetalle where codkardex=".$this->request->codregistro)->result_array();
-			foreach ($info as $key => $value) {
-				$existe = $this->db->query("select *from almacen.productoubicacion where codalmacen=".$_SESSION["phuyu_codalmacen"]." and codproducto=".$value["codproducto"]." and codunidad=".$value["codunidad"])->result_array();
-				$stock = $existe[0]["stockactual"] - $value["cantidad"];
-
-				$campos = ["stockactual"]; $valores = [(double)$stock];
-				$f = ["codalmacen","codproducto","codunidad"];
-				$v = [(int)$_SESSION["phuyu_codalmacen"],(int)$value["codproducto"],(int)$value["codunidad"]];
-				$estado = $this->phuyu_model->phuyu_editar_1("almacen.productoubicacion", $campos, $valores, $f, $v);
-
-				// DISMINUIMOS EL STOCKACTUALCONVERTIDO
-
-				$stockconvertido = $this->db->query("select *from almacen.productoubicacion where codalmacen=".$_SESSION["phuyu_codalmacen"]." and codproducto=".$value["codproducto"])->result_array();
-
-				$factor = $this->db->query("select *from almacen.productounidades where codproducto=".$value["codproducto"]." and codunidad=".$value["codunidad"])->result_array();
-
-				foreach ($stockconvertido as $k => $val) {
-					$stockc = 0;
-					$productounidad = $this->db->query("select *from almacen.productounidades where codproducto=".$value["codproducto"]." and codunidad=".$val["codunidad"])->result_array();
-
-					$stockc = ((float)$value["cantidad"]*(float)$factor[0]["factor"])/(float)$productounidad[0]["factor"];
-					$stockc = $val["stockactualconvertido"] - $stockc;
-                    $campos = ["stockactualconvertido"]; $valores = [(double)$stockc];
-					$f = ["codalmacen","codproducto","codunidad"];
-					$v = [(int)$_SESSION["phuyu_codalmacen"],(int)$value["codproducto"],(int)$val["codunidad"]];
-					$estado = $this->phuyu_model->phuyu_editar_1("almacen.productoubicacion", $campos, $valores, $f, $v);
-				}
+			if(count($kardexalmacen) > 0){
+				$estado = $this->actualizar_stock_desde_almacen_detalle($kardexalmacen[0]["codkardexalmacen"], -1);
 			}
 			$estado = $this->phuyu_model->phuyu_restaurar("kardex.kardex", "codkardex", $this->request->codregistro);
 			$estado = $this->phuyu_model->phuyu_restaurar("kardex.kardexalmacen", "codkardexalmacen", $kardexalmacen[0]["codkardexalmacen"]);
