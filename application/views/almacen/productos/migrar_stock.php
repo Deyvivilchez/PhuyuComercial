@@ -20,6 +20,44 @@
 		line-height: 1.5;
 		margin: 10px 0 0;
 	}
+	#phuyu_form.stock-migrador-wrap .quick-steps {
+		display: grid;
+		gap: 12px;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		margin: 18px auto 0;
+		max-width: 1380px;
+	}
+	#phuyu_form.stock-migrador-wrap .quick-step {
+		align-items: center;
+		background: #fff;
+		border: 1px solid #e2e8f0;
+		border-radius: 16px;
+		display: flex;
+		gap: 12px;
+		min-height: 76px;
+		padding: 13px 14px;
+	}
+	#phuyu_form.stock-migrador-wrap .quick-step i {
+		align-items: center;
+		background: #eff6ff;
+		border-radius: 14px;
+		color: #1d4ed8;
+		display: inline-flex;
+		flex: 0 0 auto;
+		font-size: 20px;
+		height: 42px;
+		justify-content: center;
+		width: 42px;
+	}
+	#phuyu_form.stock-migrador-wrap .quick-step strong {
+		display: block;
+		font-size: 13px;
+	}
+	#phuyu_form.stock-migrador-wrap .quick-step small {
+		color: #6b7280;
+		display: block;
+		line-height: 1.3;
+	}
 	#phuyu_form.stock-migrador-wrap .migrador-container {
 		margin: 0 auto;
 		max-width: 1380px;
@@ -109,6 +147,41 @@
 		font-weight: 700;
 		padding: 9px 13px;
 	}
+	#phuyu_form.stock-migrador-wrap .step-list {
+		display: grid;
+		gap: 10px;
+		margin-top: 14px;
+	}
+	#phuyu_form.stock-migrador-wrap .step-item {
+		align-items: flex-start;
+		background: #f8fafc;
+		border: 1px solid #e2e8f0;
+		border-radius: 14px;
+		display: flex;
+		gap: 10px;
+		padding: 12px;
+	}
+	#phuyu_form.stock-migrador-wrap .step-num {
+		align-items: center;
+		background: #1d4ed8;
+		border-radius: 999px;
+		color: #fff;
+		display: inline-flex;
+		flex: 0 0 auto;
+		font-size: 12px;
+		font-weight: 800;
+		height: 24px;
+		justify-content: center;
+		width: 24px;
+	}
+	#phuyu_form.stock-migrador-wrap .step-item strong {
+		display: block;
+		font-size: 13px;
+	}
+	#phuyu_form.stock-migrador-wrap .step-item small {
+		color: #6b7280;
+		line-height: 1.35;
+	}
 	#phuyu_form.stock-migrador-wrap .mode-options {
 		display: grid;
 		gap: 10px;
@@ -138,6 +211,56 @@
 		gap: 10px;
 		margin-top: 18px;
 	}
+	#phuyu_form.stock-migrador-wrap .action-panel {
+		display: grid;
+		gap: 12px;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		margin-top: 20px;
+	}
+	#phuyu_form.stock-migrador-wrap .action-group {
+		background: #f8fafc;
+		border: 1px solid #e2e8f0;
+		border-radius: 16px;
+		padding: 13px;
+	}
+	#phuyu_form.stock-migrador-wrap .action-group.full {
+		grid-column: 1 / -1;
+	}
+	#phuyu_form.stock-migrador-wrap .action-group.primary {
+		background: #eef6ff;
+		border-color: #bfdbfe;
+	}
+	#phuyu_form.stock-migrador-wrap .action-group.danger-zone {
+		background: #fff7ed;
+		border-color: #fed7aa;
+	}
+	#phuyu_form.stock-migrador-wrap .action-group-title {
+		align-items: center;
+		color: #475569;
+		display: flex;
+		font-size: 12px;
+		font-weight: 800;
+		gap: 7px;
+		letter-spacing: .02em;
+		margin-bottom: 10px;
+		text-transform: uppercase;
+	}
+	#phuyu_form.stock-migrador-wrap .action-buttons {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
+	}
+	#phuyu_form.stock-migrador-wrap .action-buttons .btn {
+		align-items: center;
+		display: inline-flex;
+		gap: 6px;
+		justify-content: center;
+		min-height: 42px;
+	}
+	#phuyu_form.stock-migrador-wrap .btn-main-migrate {
+		font-weight: 800;
+		min-width: 210px;
+	}
 	#phuyu_form.stock-migrador-wrap .alert-soft {
 		background: #fff7ed;
 		border: 1px solid #fdba74;
@@ -145,6 +268,14 @@
 		color: #9a3412;
 		line-height: 1.5;
 		padding: 16px 18px;
+	}
+	#phuyu_form.stock-migrador-wrap .alert-info-soft {
+		background: #eff6ff;
+		border: 1px solid #93c5fd;
+		border-radius: 16px;
+		color: #1e40af;
+		line-height: 1.5;
+		padding: 14px 16px;
 	}
 	#phuyu_form.stock-migrador-wrap .confirm-backdrop {
 		align-items: center;
@@ -258,6 +389,25 @@
 		color: #b91c1c;
 		font-weight: 800;
 	}
+	#phuyu_form.stock-migrador-wrap .not-selectable {
+		align-items: center;
+		color: #9ca3af;
+		display: inline-flex;
+		font-size: 12px;
+		font-weight: 700;
+		gap: 5px;
+		white-space: nowrap;
+	}
+	#phuyu_form.stock-migrador-wrap .not-selectable small {
+		color: #6b7280;
+		font-weight: 600;
+		max-width: 180px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	#phuyu_form.stock-migrador-wrap tr.table-warning .form-check-input {
+		opacity: .35;
+	}
 	#phuyu_form.stock-migrador-wrap .summary-item .label {
 		color: #6b7280;
 		font-size: 12px;
@@ -340,30 +490,66 @@
 		#phuyu_form.stock-migrador-wrap .summary-grid {
 			grid-template-columns: 1fr;
 		}
+		#phuyu_form.stock-migrador-wrap .action-panel {
+			grid-template-columns: 1fr;
+		}
+		#phuyu_form.stock-migrador-wrap .quick-steps {
+			grid-template-columns: 1fr;
+		}
 	}
 </style>
 
 <div id="phuyu_form" class="stock-migrador-wrap">
 	<div class="hero">
-		<h1>Migrar / actualizar stock</h1>
+		<h1>Migrar productos / actualizar stock</h1>
 		<p>
-			Carga tu Excel, elige el almacen destino, detecta columnas, revisa una vista previa y aplica la cantidad como suma o como reemplazo del stock actual.
+			Use este modulo para revisar un Excel antes de aplicarlo: puede crear productos faltantes como productos para venta y actualizar el stock solo de las filas seleccionadas.
 		</p>
+		<div class="quick-steps">
+			<div class="quick-step">
+				<i class="bi bi-file-earmark-spreadsheet"></i>
+				<div>
+					<strong>1. Cargar Excel</strong>
+					<small>Elija archivo y almacen destino.</small>
+				</div>
+			</div>
+			<div class="quick-step">
+				<i class="bi bi-ui-checks-grid"></i>
+				<div>
+					<strong>2. Validar</strong>
+					<small>Revise columnas, nombres y cantidades.</small>
+				</div>
+			</div>
+			<div class="quick-step">
+				<i class="bi bi-check2-square"></i>
+				<div>
+					<strong>3. Seleccionar</strong>
+					<small>Marque solo filas listas y correctas.</small>
+				</div>
+			</div>
+			<div class="quick-step">
+				<i class="bi bi-cloud-arrow-up"></i>
+				<div>
+					<strong>4. Migrar</strong>
+					<small>Se migra solo lo seleccionado.</small>
+				</div>
+			</div>
+		</div>
 	</div>
 
 	<div class="migrador-container">
 		<div class="migrador-grid">
 			<div class="migrador-card">
 				<div class="section-title">
-					<h2>Configuracion de migracion</h2>
+					<h2>1. Configurar archivo</h2>
 					<span class="tag">{{ campos.modo_stock == 'reemplazar' ? 'Reemplazar stock' : 'Sumar stock' }}</span>
 				</div>
 
 				<div class="subgrid">
 					<div class="field">
-						<label>Archivo Excel</label>
+						<label>Excel a revisar</label>
 						<input type="file" class="form-control" accept=".xls,.xlsx,.csv" v-on:change="np_leer_archivo_migrarstock">
-						<small>Se usara la primera hoja del archivo y podras mapear sus columnas.</small>
+						<small>Primero cargue el Excel. Luego revise el mapeo y valide antes de aplicar.</small>
 					</div>
 
 					<div class="field">
@@ -378,18 +564,18 @@
 					</div>
 
 					<div class="field">
-						<label>Buscar producto por</label>
+						<label>Como reconocer productos existentes</label>
 						<select class="form-select" v-model="campos.buscar_por" v-on:change="np_cambio_buscar_por_migrarstock()">
 							<option value="auto">Automatico: codigo, ID, barra o nombre</option>
 							<option value="codigo">Codigo / ID producto</option>
 							<option value="barra">Codigo de barra</option>
 							<option value="nombre">Descripcion / nombre exacto</option>
 						</select>
-						<small>Para accesorios sin codigo de barra usa Descripcion / nombre exacto.</small>
+						<small>Si el archivo no trae codigos confiables, use Descripcion / nombre exacto.</small>
 					</div>
 
 					<div class="field">
-						<label>Modo de actualizacion</label>
+						<label>Que hacer con la cantidad del Excel</label>
 						<div class="mode-options">
 							<label class="mode-option">
 								<input type="radio" value="sumar" v-model="campos.modo_stock" v-on:change="np_cambio_crear_productos_migrarstock()">
@@ -409,25 +595,29 @@
 					</div>
 
 					<div class="field">
-						<label>Reglas</label>
+						<label>Reglas antes de validar</label>
 						<div class="two-col">
 							<div class="form-check form-switch">
 								<input class="form-check-input" type="checkbox" id="ignorar_stock_cero" v-model="campos.ignorar_stock_cero">
 								<label class="form-check-label" for="ignorar_stock_cero">Omitir productos con stock actual 0</label>
 							</div>
 							<div class="form-check form-switch">
+								<input class="form-check-input" type="checkbox" id="permitir_cantidad_cero" v-model="campos.permitir_cantidad_cero" v-on:change="np_cambio_crear_productos_migrarstock()">
+								<label class="form-check-label" for="permitir_cantidad_cero">Permitir cantidad 0 del Excel</label>
+							</div>
+							<div class="form-check form-switch">
 								<input class="form-check-input" type="checkbox" id="crear_productos" v-model="campos.crear_productos" v-on:change="np_cambio_crear_productos_migrarstock()">
-								<label class="form-check-label" for="crear_productos">Crear productos no encontrados</label>
+								<label class="form-check-label" for="crear_productos">Crear productos faltantes del Excel</label>
 							</div>
 							<div class="form-check form-switch">
 								<input class="form-check-input" type="checkbox" id="reemplazar_nombre" v-model="campos.reemplazar_nombre" v-on:change="np_cambio_crear_productos_migrarstock()">
-								<label class="form-check-label" for="reemplazar_nombre">Reemplazar nombre del producto</label>
+								<label class="form-check-label" for="reemplazar_nombre">Actualizar nombre con el Excel</label>
 							</div>
 						</div>
 					</div>
 
 					<div class="field">
-						<label>Productos no seleccionados</label>
+						<label>Que hacer con productos no aplicados</label>
 						<select class="form-select" v-model="campos.limpieza_almacen">
 							<option value="conservar">Conservar como estan</option>
 							<option value="cero">Poner stock en 0</option>
@@ -444,59 +634,107 @@
 					<div class="pill">Seleccionadas: {{ np_filas_migrarstock_seleccionadas() }}</div>
 				</div>
 
-				<div class="actions">
-					<button type="button" class="btn btn-dark" v-on:click="np_preparar_catalogo_migrarstock()" v-bind:disabled="estado==1">
-						Preparar catalogo
-					</button>
-					<button type="button" class="btn btn-outline-danger" v-on:click="np_poner_almacen_cero_migrarstock()" v-bind:disabled="estado==1 || !campos.codalmacen">
-						Poner almacen en 0
-					</button>
-					<button type="button" class="btn btn-light" v-on:click="np_autodetectar_migrarstock()" v-bind:disabled="!campos.columnas.length">
-						Autodetectar columnas
-					</button>
-					<button type="button" class="btn btn-primary" v-on:click="np_previsualizar_migrarstock()" v-bind:disabled="estado==1 || !campos.filas.length">
-						Validar / Previsualizar
-					</button>
-					<button type="button" class="btn btn-warning" v-on:click="np_procesar_migrarstock()" v-bind:disabled="estado==1 || np_filas_migrarstock_seleccionadas()==0">
-						Aplicar stock seleccionado
-					</button>
-					<button type="button" class="btn btn-outline-primary" v-on:click="np_toggle_migrarstock_todos()" v-bind:disabled="!campos.preview.length">
-						{{ campos.seleccionar_todo ? 'Quitar seleccion' : 'Seleccionar todo' }}
-					</button>
-					<button type="button" class="btn btn-success" v-on:click="np_formato_migrarstock()">
-						Descargar formato
-					</button>
-					<button type="button" class="btn btn-secondary" v-on:click="np_limpiar_migrarstock()">
-						Limpiar
-					</button>
-					<button type="button" class="btn btn-danger" v-on:click="np_volver_migrarstock_productos()">
-						Volver a Productos
-					</button>
+				<div class="action-panel">
+					<div class="action-group">
+						<div class="action-group-title"><i class="bi bi-file-earmark-spreadsheet"></i> Archivo y plantilla</div>
+						<div class="action-buttons">
+							<button type="button" class="btn btn-success" v-on:click="np_formato_migrarstock()">
+								<i class="bi bi-download"></i> Descargar plantilla Excel
+							</button>
+							<button type="button" class="btn btn-light" v-on:click="np_autodetectar_migrarstock()" v-bind:disabled="!campos.columnas.length">
+								<i class="bi bi-magic"></i> Detectar columnas otra vez
+							</button>
+						</div>
+					</div>
+
+					<div class="action-group primary">
+						<div class="action-group-title"><i class="bi bi-search"></i> Revision antes de migrar</div>
+						<div class="action-buttons">
+							<button type="button" class="btn btn-primary" v-on:click="np_previsualizar_migrarstock()" v-bind:disabled="estado==1 || !campos.filas.length">
+								<i class="bi bi-ui-checks-grid"></i> 2. Validar y mostrar filas
+							</button>
+							<button type="button" class="btn btn-outline-primary" v-on:click="np_toggle_migrarstock_todos()" v-bind:disabled="!campos.preview.length">
+								<i v-bind:class="campos.seleccionar_todo ? 'bi bi-x-square' : 'bi bi-check2-square'"></i>
+								{{ campos.seleccionar_todo ? 'No migrar ninguna lista' : 'Migrar filas listas' }}
+							</button>
+						</div>
+					</div>
+
+					<div class="action-group full primary">
+						<div class="action-group-title"><i class="bi bi-cloud-arrow-up"></i> Migracion final</div>
+						<div class="action-buttons">
+							<button type="button" class="btn btn-warning btn-main-migrate" v-on:click="np_procesar_migrarstock()" v-bind:disabled="estado==1 || np_filas_migrarstock_seleccionadas()==0">
+								<i class="bi bi-cloud-arrow-up"></i> 3. Migrar seleccionados
+							</button>
+							<button type="button" class="btn btn-secondary" v-on:click="np_limpiar_migrarstock()">
+								<i class="bi bi-arrow-clockwise"></i> Limpiar pantalla
+							</button>
+							<button type="button" class="btn btn-danger" v-on:click="np_volver_migrarstock_productos()">
+								<i class="bi bi-arrow-left-circle"></i> Volver a Productos
+							</button>
+						</div>
+					</div>
+
+					<div class="action-group full danger-zone">
+						<div class="action-group-title"><i class="bi bi-tools"></i> Herramientas avanzadas</div>
+						<div class="action-buttons">
+							<button type="button" class="btn btn-dark" v-on:click="np_preparar_catalogo_migrarstock()" v-bind:disabled="estado==1">
+								<i class="bi bi-boxes"></i> Preparar catalogo base
+							</button>
+							<button type="button" class="btn btn-outline-danger" v-on:click="np_poner_almacen_cero_migrarstock()" v-bind:disabled="estado==1 || !campos.codalmacen">
+								<i class="bi bi-eraser"></i> Poner almacen en 0
+							</button>
+						</div>
+					</div>
 				</div>
 			</div>
 
 			<div class="migrador-card">
 				<div class="section-title">
-					<h2>Formato esperado</h2>
+					<h2>Como usar este migrador</h2>
 				</div>
 
-				<div class="two-col">
-					<div>
-						<strong>Campos clave</strong>
-						<p class="muted mb-0">Codigo/SKU y cantidad de stock.</p>
+				<div class="step-list">
+					<div class="step-item">
+						<span class="step-num">1</span>
+						<div>
+							<strong>Cargue el Excel y elija almacen</strong>
+							<small>El sistema solo toca el almacen seleccionado.</small>
+						</div>
 					</div>
-					<div>
-						<strong>Opcionales</strong>
-						<p class="muted mb-0">Descripcion, unidad, codigo de barra, precios, marca, linea y familia si quieres crear faltantes.</p>
+					<div class="step-item">
+						<span class="step-num">2</span>
+						<div>
+							<strong>Valide antes de aplicar</strong>
+							<small>Revise nombres, cantidades, errores y productos nuevos.</small>
+						</div>
+					</div>
+					<div class="step-item">
+						<span class="step-num">3</span>
+						<div>
+							<strong>Seleccione solo lo correcto</strong>
+							<small>Las filas con error no se aplican. Puede desmarcar cualquier fila dudosa.</small>
+						</div>
+					</div>
+					<div class="step-item">
+						<span class="step-num">4</span>
+						<div>
+							<strong>Aplique la seleccion</strong>
+							<small>Los productos faltantes se crean como productos para venta si activo esa regla.</small>
+						</div>
 					</div>
 				</div>
 
 				<div class="alert-soft mt-3">
 					El sistema intenta reconocer cabeceras como <strong>codigo</strong>, <strong>SKU</strong>,
-					<strong>cantidad</strong>, <strong>stock</strong>, <strong>stock inicial</strong> o <strong>inventario</strong>.
+					<strong>descripcion</strong>, <strong>cantidad</strong>, <strong>stock</strong>, <strong>codigo_barra</strong>,
+					<strong>precio_compra</strong> y <strong>precio_venta</strong>.
 				</div>
 				<div class="alert-soft mt-3">
-					<strong>Preparar catalogo</strong> asigna GENERAL/GENERAL/GENERICO a los productos, habilita la linea GENERAL para las sucursales activas y consolida duplicados por codigo de barra.
+					Si el Excel trae productos con cantidad <strong>0</strong>, active <strong>Permitir cantidad 0 del Excel</strong>. Si no, esas filas quedan en Revisar para evitar migrar movimientos sin efecto.
+				</div>
+				<div class="alert-soft mt-3">
+					<strong>Preparar catalogo base</strong> solo se usa si necesita ordenar catalogos generales y duplicados antes de migrar.
 				</div>
 			</div>
 		</div>
@@ -579,17 +817,22 @@
 				</div>
 			</div>
 
+			<div class="alert-info-soft mb-3" v-if="np_hay_productos_no_existen_migrarstock() && !campos.crear_productos">
+				Hay productos que no existen en el sistema. Esas filas no se pueden seleccionar todavia. Active <strong>Crear productos faltantes del Excel</strong> y vuelva a validar para migrarlos como productos para venta.
+			</div>
+
 			<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
 				<div class="form-check">
-					<input class="form-check-input" type="checkbox" id="marcar_migrarstock" v-model="campos.seleccionar_todo" v-on:change="np_marcar_migrarstock_todos()">
-					<label class="form-check-label" for="marcar_migrarstock">Seleccionar todas las filas validas</label>
+					<input class="form-check-input" type="checkbox" id="marcar_migrarstock" v-bind:checked="campos.seleccionar_todo" v-on:change="np_marcar_migrarstock_todos($event)" v-on:click.stop>
+					<label class="form-check-label" for="marcar_migrarstock">Migrar todas las filas listas</label>
+					<small class="text-muted d-block">Se migraran {{ np_filas_migrarstock_seleccionadas() }} de {{ np_filas_migrarstock_validas() }} filas listas. Las filas en Revisar no se migran.</small>
 				</div>
 				<div class="actions mt-0">
 					<button type="button" class="btn btn-outline-primary" v-on:click="np_toggle_migrarstock_todos()">
-						{{ campos.seleccionar_todo ? 'Quitar seleccion' : 'Seleccionar todo' }}
+						{{ campos.seleccionar_todo ? 'No migrar ninguna lista' : 'Migrar filas listas' }}
 					</button>
 					<button type="button" class="btn btn-primary" v-bind:disabled="estado==1 || np_filas_migrarstock_seleccionadas()==0" v-on:click="np_procesar_migrarstock()">
-						Aplicar stock seleccionado
+						<i class="bi bi-cloud-arrow-up me-1"></i> Migrar seleccionados
 					</button>
 				</div>
 			</div>
@@ -613,14 +856,20 @@
 					<tbody>
 						<tr v-for="fila in campos.preview" v-bind:class="fila.valido ? '' : 'table-warning'">
 							<td class="text-center">
-								<input type="checkbox" class="form-check-input" v-model="fila.seleccionado" v-bind:disabled="!fila.valido">
+								<input v-if="fila.valido" type="checkbox" class="form-check-input" v-bind:checked="fila.seleccionado" title="Usar esta fila" v-on:change="np_cambiar_fila_migrarstock(fila, $event)" v-on:click.stop>
+								<span v-else class="not-selectable" v-bind:title="fila.mensaje">
+									<i class="bi bi-exclamation-circle"></i>
+									Revisar
+									<small>{{ fila.mensaje }}</small>
+								</span>
 							</td>
 							<td>{{ fila.fila }}</td>
 							<td>{{ fila.codigo }}</td>
 							<td>{{ fila.producto }}</td>
 							<td>
-								<span class="badge bg-info" v-if="fila.nuevo">Nuevo</span>
-								<span class="badge bg-secondary" v-else>Actualizar</span>
+								<span class="badge bg-warning text-dark" v-if="!fila.valido">Revisar</span>
+								<span class="badge bg-info" v-else-if="fila.nuevo">Crear producto</span>
+								<span class="badge bg-secondary" v-else>Actualizar stock</span>
 							</td>
 							<td>{{ fila.unidad }}</td>
 							<td class="text-end">{{ fila.stock_actual }}</td>
@@ -685,6 +934,7 @@
 		seleccionar_todo: true,
 		limite_excel: 80,
 		ignorar_stock_cero: false,
+		permitir_cantidad_cero: false,
 		crear_productos: false,
 		reemplazar_nombre: false,
 		limpieza_almacen: "conservar",
