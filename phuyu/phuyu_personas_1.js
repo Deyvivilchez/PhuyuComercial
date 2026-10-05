@@ -89,6 +89,29 @@ var phuyu_form = new Vue({
 				$("#documento").removeAttr('readonly');
 				$(".btn-consultar").removeAttr('disabled');
 			}
+			this.phuyu_sincronizar_tipo_persona();
+		},
+		phuyu_documento: function(){
+			this.phuyu_sincronizar_tipo_persona();
+		},
+		phuyu_sincronizar_tipo_persona: function(){
+			var documento = String(this.campos.documento || "").trim();
+			var esEmpresa = documento.indexOf("20") === 0;
+			if (esEmpresa) {
+				this.campos.sexo = "E";
+				return;
+			}
+
+			if (documento.indexOf("10") === 0) {
+				if (this.campos.sexo === "E") {
+					this.campos.sexo = "";
+				}
+				return;
+			}
+
+			if (parseInt(this.campos.coddocumentotipo || 0) === 2 && this.campos.sexo === "E") {
+				this.campos.sexo = "M";
+			}
 		},
 		phuyu_consultar: function(){
 			if (this.campos.coddocumentotipo=="") {
@@ -162,12 +185,13 @@ var phuyu_form = new Vue({
 						if (this.campos.coddocumentotipo==4) {
 							this.$http.get(url+"web/phuyu_ruc/"+this.campos.documento).then(function(data){
 								if(data.body.persona){
-									this.campos.razonsocial = data.body.persona.razonSocial;
-									this.campos.direccion = data.body.persona.direccion+' '+data.body.persona.departamento+' - '+data.body.persona.provincia+' - '+data.body.persona.distrito;
-									this.campos.nombrecomercial = data.body.persona.razonSocial;
-								}else{
-									phuyu_sistema.phuyu_noti("NO SE ENCONTRARON DATOS","DOCUMENTO NO EXISTE","danger");
-								}
+								this.campos.razonsocial = data.body.persona.razonSocial;
+								this.campos.direccion = data.body.persona.direccion+' '+data.body.persona.departamento+' - '+data.body.persona.provincia+' - '+data.body.persona.distrito;
+								this.campos.nombrecomercial = data.body.persona.razonSocial;
+								this.phuyu_sincronizar_tipo_persona();
+							}else{
+								phuyu_sistema.phuyu_noti("NO SE ENCONTRARON DATOS","DOCUMENTO NO EXISTE","danger");
+							}
 								$(".btn-consultar").removeAttr("disabled");
 							});
 						}else{

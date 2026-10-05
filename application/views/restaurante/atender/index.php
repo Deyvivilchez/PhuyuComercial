@@ -730,7 +730,7 @@ $icbperSunat = $_SESSION['phuyu_icbper'] ?? 0;
 		</div>
 	</div>
 
-	<div id="modal_pago" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+	<div id="modal_pago" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false" data-bs-focus="false">
 		<div class="modal-dialog modal-lg">
 			<div class="modal-content">
 				<div class="modal-header">
