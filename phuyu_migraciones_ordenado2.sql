@@ -138,5 +138,252 @@ AND NOT EXISTS (
 -- GROUP BY m.url;
 
 -- ============================================================
+-- 004. USUARIOS: PERMISOS OPERATIVOS Y CAJAS ASIGNADAS
+-- Fecha: 2026-10-05
+-- Validado: idempotente; puede ejecutarse mas de una vez.
+-- Que hace:
+-- - Asegura el permiso por usuario para modificar precio en ventas.
+-- - Crea la asignacion de cajas permitidas por usuario y sucursal.
+-- - Inicializa accesos a cajas existentes segun las sucursales ya asignadas,
+--   para mantener el comportamiento actual despues de migrar.
+-- ============================================================
+
+ALTER TABLE seguridad.usuarios
+    ADD COLUMN IF NOT EXISTS editar_pventa integer NOT NULL DEFAULT 0;
+
+UPDATE seguridad.usuarios u
+SET editar_pventa = 1
+FROM seguridad.perfiles p
+WHERE p.codperfil = u.codperfil
+AND (
+    u.codperfil = 1
+    OR UPPER(p.descripcion) LIKE '%ADMIN%'
+    OR UPPER(p.descripcion) LIKE '%PROGRAMADOR%'
+)
+AND COALESCE(u.editar_pventa, 0) = 0;
+
+CREATE TABLE IF NOT EXISTS seguridad.cajausuarios (
+    codcajausuario serial PRIMARY KEY,
+    codusuario integer NOT NULL,
+    codsucursal integer NOT NULL,
+    codcaja integer NOT NULL,
+    estado integer NOT NULL DEFAULT 1
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_cajausuarios_usuario_sucursal_caja
+    ON seguridad.cajausuarios (codusuario, codsucursal, codcaja);
+
+CREATE INDEX IF NOT EXISTS idx_cajausuarios_usuario_sucursal
+    ON seguridad.cajausuarios (codusuario, codsucursal);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'fk_cajausuarios_usuario'
+    ) THEN
+        ALTER TABLE seguridad.cajausuarios
+        ADD CONSTRAINT fk_cajausuarios_usuario
+        FOREIGN KEY (codusuario)
+        REFERENCES seguridad.usuarios(codusuario);
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'fk_cajausuarios_sucursal'
+    ) THEN
+        ALTER TABLE seguridad.cajausuarios
+        ADD CONSTRAINT fk_cajausuarios_sucursal
+        FOREIGN KEY (codsucursal)
+        REFERENCES public.sucursales(codsucursal);
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'fk_cajausuarios_caja'
+    ) THEN
+        ALTER TABLE seguridad.cajausuarios
+        ADD CONSTRAINT fk_cajausuarios_caja
+        FOREIGN KEY (codcaja)
+        REFERENCES caja.cajas(codcaja);
+    END IF;
+END $$;
+
+INSERT INTO seguridad.cajausuarios (codusuario, codsucursal, codcaja)
+SELECT su.codusuario, su.codsucursal, c.codcaja
+FROM seguridad.sucursalusuarios su
+INNER JOIN caja.cajas c ON c.codsucursal = su.codsucursal
+WHERE c.estado = 1
+AND NOT EXISTS (
+    SELECT 1
+    FROM seguridad.cajausuarios cu
+    WHERE cu.codusuario = su.codusuario
+    AND cu.codsucursal = su.codsucursal
+    AND cu.codcaja = c.codcaja
+);
+
+-- ============================================================
+-- 005. USUARIOS: PERMISO ESPECIAL PARA ELIMINAR VENTAS
+-- Fecha: 2026-10-05
+-- Validado: idempotente; puede ejecutarse mas de una vez.
+-- Que hace:
+-- - Agrega permiso por usuario para anular/eliminar ventas.
+-- - Inicializa administradores/programadores con el permiso activo.
+-- ============================================================
+
+ALTER TABLE seguridad.usuarios
+    ADD COLUMN IF NOT EXISTS eliminar_venta integer NOT NULL DEFAULT 0;
+
+UPDATE seguridad.usuarios u
+SET eliminar_venta = 1
+FROM seguridad.perfiles p
+WHERE p.codperfil = u.codperfil
+AND (
+    u.codperfil = 1
+    OR UPPER(p.descripcion) LIKE '%ADMIN%'
+    OR UPPER(p.descripcion) LIKE '%PROGRAMADOR%'
+)
+AND COALESCE(u.eliminar_venta, 0) = 0;
+
+-- ============================================================
+-- 006. RESTAURANTE: SERVICIOS POR TIPO DE PEDIDO
+-- Fecha: 2026-10-05
+-- Validado: idempotente; puede ejecutarse mas de una vez.
+-- Que hace:
+-- - Crea productos de servicio para Delivery y Para llevar si no existen.
+-- - Agrega configuracion por sucursal para saber que producto usar.
+-- - Crea unidad y ubicacion de almacen con stock no controlado y precio cero.
+-- - Evita que el tipo de pedido use codigos de productos reales por accidente.
+-- ============================================================
+
+ALTER TABLE public.sucursales
+    ADD COLUMN IF NOT EXISTS codproducto_delivery integer NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS codunidad_delivery integer NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS codproducto_llevar integer NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS codunidad_llevar integer NOT NULL DEFAULT 0;
+
+DO $$
+DECLARE
+    v_coddelivery integer;
+    v_codllevar integer;
+    v_codunidad integer;
+BEGIN
+    SELECT codunidad INTO v_codunidad
+    FROM almacen.unidades
+    WHERE estado = 1
+    ORDER BY CASE WHEN UPPER(descripcion) LIKE 'UNIDAD%' THEN 0 ELSE 1 END, codunidad
+    LIMIT 1;
+
+    IF v_codunidad IS NULL THEN
+        RAISE EXCEPTION 'No existe una unidad activa para crear servicios de tipo pedido.';
+    END IF;
+
+    INSERT INTO almacen.productos (
+        codfamilia, codlinea, codmarca, codempresa, codigo, descripcion,
+        afectoicbper, controlstock, afectoigvcompra, afectoigvventa,
+        estado, calcular, paraventa, tipo
+    )
+    SELECT
+        0, 3, 1, 1, 'SERV_DELIVERY', 'SERVICIO DELIVERY',
+        0, 0, 0, 0,
+        1, 0, 1, 1
+    WHERE NOT EXISTS (
+        SELECT 1 FROM almacen.productos WHERE UPPER(codigo) = 'SERV_DELIVERY'
+    );
+
+    INSERT INTO almacen.productos (
+        codfamilia, codlinea, codmarca, codempresa, codigo, descripcion,
+        afectoicbper, controlstock, afectoigvcompra, afectoigvventa,
+        estado, calcular, paraventa, tipo
+    )
+    SELECT
+        0, 3, 1, 1, 'SERV_LLEVAR', 'SERVICIO PARA LLEVAR',
+        0, 0, 0, 0,
+        1, 0, 1, 1
+    WHERE NOT EXISTS (
+        SELECT 1 FROM almacen.productos WHERE UPPER(codigo) = 'SERV_LLEVAR'
+    );
+
+    SELECT codproducto INTO v_coddelivery
+    FROM almacen.productos
+    WHERE UPPER(codigo) = 'SERV_DELIVERY'
+    ORDER BY codproducto
+    LIMIT 1;
+
+    SELECT codproducto INTO v_codllevar
+    FROM almacen.productos
+    WHERE UPPER(codigo) = 'SERV_LLEVAR'
+    ORDER BY codproducto
+    LIMIT 1;
+
+    UPDATE almacen.productos
+    SET controlstock = 0,
+        paraventa = 1,
+        estado = 1
+    WHERE codproducto IN (v_coddelivery, v_codllevar);
+
+    INSERT INTO almacen.productounidades (
+        codproducto, codunidad, codsucursal, factor,
+        preciocompra, pventapublico, pventamin, pventacredito, pventaxmayor,
+        pventaadicional, preciocosto, gastos, codigobarra, estado
+    )
+    SELECT p.codproducto, v_codunidad, 0, 1,
+           0, 0, 0, 0, 0,
+           0, 0, 0, p.codigo, 1
+    FROM almacen.productos p
+    WHERE p.codproducto IN (v_coddelivery, v_codllevar)
+    AND NOT EXISTS (
+        SELECT 1
+        FROM almacen.productounidades pu
+        WHERE pu.codproducto = p.codproducto
+        AND pu.codunidad = v_codunidad
+    );
+
+    UPDATE almacen.productounidades
+    SET estado = 1
+    WHERE codproducto IN (v_coddelivery, v_codllevar)
+    AND codunidad = v_codunidad;
+
+    INSERT INTO almacen.productoubicacion (
+        codalmacen, codproducto, codunidad, codsucursal, stockactual,
+        stockactualreal, preciostockvalorizado, ventarecogo, comprarecogo,
+        stockminimo, stockmaximo, estado, stockactualconvertido, factor,
+        preciocompra, pventapublico, pventamin, pventacredito, pventaxmayor,
+        pventaadicional, preciocosto, gastos, codigobarra, codafectacionigvcompra,
+        codafectacionigvventa
+    )
+    SELECT a.codalmacen, p.codproducto, v_codunidad, a.codsucursal, 0,
+           0, 0, 0, 0,
+           0, 0, 1, 0, 1,
+           0, 0, 0, 0, 0,
+           0, 0, 0, p.codigo, 1,
+           20
+    FROM almacen.almacenes a
+    CROSS JOIN almacen.productos p
+    WHERE a.estado = 1
+    AND p.codproducto IN (v_coddelivery, v_codllevar)
+    AND NOT EXISTS (
+        SELECT 1
+        FROM almacen.productoubicacion pu
+        WHERE pu.codalmacen = a.codalmacen
+        AND pu.codproducto = p.codproducto
+        AND pu.codunidad = v_codunidad
+    );
+
+    UPDATE public.sucursales
+    SET codproducto_delivery = v_coddelivery,
+        codunidad_delivery = v_codunidad
+    WHERE COALESCE(codproducto_delivery, 0) = 0;
+
+    UPDATE public.sucursales
+    SET codproducto_llevar = v_codllevar,
+        codunidad_llevar = v_codunidad
+    WHERE COALESCE(codproducto_llevar, 0) = 0;
+END $$;
+
+-- ============================================================
 -- FIN MIGRACIONES ORDENADAS 2
 -- ============================================================

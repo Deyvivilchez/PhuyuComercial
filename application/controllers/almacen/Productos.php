@@ -1628,6 +1628,96 @@ class Productos extends CI_Controller
         }
     }
 
+    function servicio_tipopedido($tipopedido)
+    {
+        if (!$this->input->is_ajax_request()) {
+            $this->load->view('phuyu/404');
+            return;
+        }
+
+        $this->output->set_content_type('application/json', 'utf-8');
+
+        $tipopedido = (int) $tipopedido;
+        if (!in_array($tipopedido, [1, 2], true)) {
+            echo json_encode(['estado' => 0, 'mensaje' => 'Tipo de pedido sin servicio configurado.']);
+            return;
+        }
+
+        $codsucursal = (int) ($_SESSION['phuyu_codsucursal'] ?? 0);
+        $codalmacen = (int) ($_SESSION['phuyu_codalmacen'] ?? 0);
+        if ($codsucursal <= 0 || $codalmacen <= 0) {
+            echo json_encode(['estado' => 0, 'mensaje' => 'Seleccione sucursal y almacen antes de cargar el servicio.']);
+            return;
+        }
+
+        $campoProducto = $tipopedido === 2 ? 'codproducto_delivery' : 'codproducto_llevar';
+        $campoUnidad = $tipopedido === 2 ? 'codunidad_delivery' : 'codunidad_llevar';
+        $servicio = $this->db->query(
+            "select {$campoProducto} as codproducto, {$campoUnidad} as codunidad
+             from public.sucursales
+             where codsucursal=?
+             limit 1",
+            [$codsucursal]
+        )->row_array();
+
+        if (
+            !$servicio
+            || (int) ($servicio['codproducto'] ?? 0) <= 0
+            || (int) ($servicio['codunidad'] ?? 0) <= 0
+        ) {
+            echo json_encode(['estado' => 0, 'mensaje' => 'No hay servicio configurado para este tipo de pedido.']);
+            return;
+        }
+
+        $producto = $this->db->query(
+            "select
+                p.codproducto,
+                p.descripcion,
+                p.afectoicbper,
+                p.afectoigvventa,
+                p.calcular,
+                p.controlstock,
+                u.codunidad,
+                u.descripcion as unidad,
+                coalesce(pu.stockactualconvertido, 0) as stock,
+                coalesce(pun.pventapublico, 0) as precio
+             from almacen.productos p
+             inner join almacen.productounidades pun on(pun.codproducto=p.codproducto and pun.codunidad=? and pun.estado=1)
+             inner join almacen.unidades u on(u.codunidad=pun.codunidad)
+             left join almacen.productoubicacion pu on(
+                pu.codproducto=p.codproducto
+                and pu.codunidad=pun.codunidad
+                and pu.codalmacen=?
+                and pu.estado=1
+             )
+             where p.codproducto=?
+             and p.estado=1
+             limit 1",
+            [(int) $servicio['codunidad'], $codalmacen, (int) $servicio['codproducto']]
+        )->row_array();
+
+        if (!$producto) {
+            echo json_encode(['estado' => 0, 'mensaje' => 'El producto de servicio no esta disponible en este almacen.']);
+            return;
+        }
+
+        $producto['precio'] = round((float) $producto['precio'], 2);
+        $producto['stock'] = round((float) $producto['stock'], 2);
+        $producto['control'] = 0;
+        $producto['controlstock'] = 0;
+        $producto['servicio_tipopedido'] = 1;
+        $producto['tipo_servicio_pedido'] = $tipopedido === 2 ? 'delivery' : 'llevar';
+        $producto['unidades'] = [[
+            'codunidad' => (int) $producto['codunidad'],
+            'unidad' => $producto['unidad'],
+            'stock' => $producto['stock'],
+            'precio' => $producto['precio'],
+            'factor' => 1,
+        ]];
+
+        echo json_encode(['estado' => 1, 'producto' => $producto]);
+    }
+
 	    public function stockextra()
 	    {
 	        if (!$this->input->is_ajax_request() || !isset($_SESSION['phuyu_codusuario'])) {

@@ -730,7 +730,7 @@ $icbperSunat = $_SESSION['phuyu_icbper'] ?? 0;
 		</div>
 	</div>
 
-	<div id="modal_pago" class="modal fade" tabindex="-1" aria-hidden="true">
+	<div id="modal_pago" class="modal fade" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
 		<div class="modal-dialog modal-lg">
 			<div class="modal-content">
 				<div class="modal-header">
@@ -740,21 +740,17 @@ $icbperSunat = $_SESSION['phuyu_icbper'] ?? 0;
 				<form v-on:submit.prevent="phuyu_pagar()">
 					<div class="modal-body">
 						<div class="payment-total mb-3">TOTAL VENTA S/. {{ totales.importe }}</div>
+						<div class="alert py-2 px-3 mb-3 d-flex align-items-start gap-2"
+							v-if="alerta_pago.mostrar"
+							v-bind:class="alerta_pago.tipo == 'error' ? 'alert-danger' : 'alert-warning'">
+							<i class="bi bi-exclamation-triangle mt-1"></i>
+							<div>
+								<div class="fw-semibold">{{ alerta_pago.titulo }}</div>
+								<div class="small">{{ alerta_pago.mensaje }}</div>
+							</div>
+						</div>
 
 						<div class="row g-3">
-							<div class="col-md-8">
-								<label class="form-label">Cliente de la venta</label>
-								<select class="form-select" name="codpersona" v-model="campos.codpersona" id="codpersona" required>
-									<option value="2">CLIENTES VARIOS</option>
-								</select>
-							</div>
-							<div class="col-md-4">
-								<label class="form-label">Condicion pago</label>
-								<select class="form-select" name="condicionpago" v-model="campos.condicionpago" v-on:change="phuyu_condicionpago()">
-									<option value="1">CONTADO</option>
-									<option value="2">CREDITO</option>
-								</select>
-							</div>
 							<div class="col-md-5">
 								<label class="form-label">Tipo comprobante</label>
 								<select class="form-select" name="codcomprobantetipo" v-model="campos.codcomprobantetipo" required v-on:change="phuyu_series()">
@@ -768,6 +764,24 @@ $icbperSunat = $_SESSION['phuyu_icbper'] ?? 0;
 								<select class="form-select" id="seriecomprobante" v-model="campos.seriecomprobante" v-on:change="phuyu_correlativo()" required>
 									<option value="">SERIE</option>
 									<option v-for="dato in series" v-bind:value="dato.seriecomprobante">{{ dato.seriecomprobante }}</option>
+								</select>
+							</div>
+							<div class="col-md-4">
+								<label class="form-label">Condicion pago</label>
+								<select class="form-select" name="condicionpago" v-model="campos.condicionpago" v-on:change="phuyu_condicionpago()">
+									<option value="1">CONTADO</option>
+									<option value="2">CREDITO</option>
+								</select>
+							</div>
+							<div class="col-md-8">
+								<label class="form-label d-flex justify-content-between align-items-center">
+									<span>Cliente de la venta</span>
+									<button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" v-on:click="phuyu_addcliente()" title="Registrar cliente">
+										<i class="bi bi-person-plus"></i>
+									</button>
+								</label>
+								<select class="form-select" name="codpersona" v-model="campos.codpersona" id="codpersona" required>
+									<option value="2">CLIENTES VARIOS</option>
 								</select>
 							</div>
 							<div class="col-md-4">

@@ -371,6 +371,7 @@ var phuyu_operacion = new Vue({
             var codigo = String(this.codigobarra || "").trim();
             if (codigo != "" && !this.producto_rapido_procesando) {
                 this.producto_rapido_procesando = true;
+                this.codigobarra = "";
                 this.$http.get(url + "almacen/productos/buscar_codigobarra/" + encodeURIComponent(codigo)).then(function(data) {
                     if (data.body.cantidad == 0) {
                         phuyu_sistema.phuyu_alerta("NO EXISTE CODIGO DE BARRA", "REGISTRA EL CODIGO DE BARRA", "danger");
@@ -378,7 +379,6 @@ var phuyu_operacion = new Vue({
                     } else {
                         if (data.body.cantidad == 1) {
                             this.phuyu_agregar_producto_rapido_desde_barra(data.body.info[0], data.body.precio, codigo);
-                            this.codigobarra = "";
                             this.producto_rapido_procesando = false;
                         } else {
                             phuyu_sistema.phuyu_alerta("EL CODIGO DE BARRA EXISTE EN MÁS DE UN PRODUCTO", "REGISTRADO MAS DE UNA VEZ", "danger");
@@ -386,6 +386,7 @@ var phuyu_operacion = new Vue({
                         }
                     }
                 }, function() {
+                    this.codigobarra = codigo;
                     this.producto_rapido_procesando = false;
                     phuyu_sistema.phuyu_error();
                 });
@@ -553,8 +554,7 @@ var phuyu_operacion = new Vue({
                         }
 
                         var termino = String($(this).val() || "").trim();
-                        var hayResultados = $(".select2-container--open .select2-results__option[aria-selected]").length > 0;
-                        if (termino != "" && !hayResultados) {
+                        if (termino != "") {
                             evento.preventDefault();
                             evento.stopPropagation();
                             vm.phuyu_buscar_agregar_producto_rapido(termino);
@@ -615,6 +615,8 @@ var phuyu_operacion = new Vue({
             }
 
             this.producto_rapido_procesando = true;
+            $("#producto_rapido_select").val(null).trigger("change");
+            $(".select2-container--open .select2-search__field").val("");
             this.$http.get(url + "almacen/productos/buscar_codigobarra/" + encodeURIComponent(termino)).then(function(data) {
                 if (data.body.cantidad == 1) {
                     var producto = data.body.info[0];
@@ -656,7 +658,7 @@ var phuyu_operacion = new Vue({
 
                 if (producto) {
                     $("#producto_rapido_select").select2("close");
-                    this.phuyu_agregar_producto_rapido(producto);
+                    this.phuyu_agregar_producto_rapido(producto, termino);
                     this.producto_rapido_procesando = false;
                     return;
                 }

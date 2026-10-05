@@ -300,6 +300,11 @@
                 <span>Imprimir</span>
               </button>
 
+              <button type="button" class="btn btn-dark btn-sm phuyu-btn" title="Cambiar fecha de venta" data-bs-toggle="tooltip" v-on:click="phuyu_editar()">
+                <i class="bi bi-calendar-event"></i>
+                <span>Fecha venta</span>
+              </button>
+
               <button type="button" class="btn btn-warning btn-sm phuyu-btn" title="Restaurar venta anulada" data-bs-toggle="tooltip" v-on:click="restaurar_venta()">
                 <i class="bi bi-arrow-counterclockwise"></i>
                 <span>Restaurar</span>
@@ -559,6 +564,7 @@
 </div>
 
 <script>
+  var phuyu_puede_eliminar_venta = <?php echo (int)($_SESSION["phuyu_eliminar_venta"] ?? 0); ?>;
   var pantalla = jQuery(document).height();
   $("#reportes_modal").css({height: pantalla - 65});
 

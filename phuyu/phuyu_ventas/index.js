@@ -2,6 +2,7 @@ var phuyu_ventas = new Vue({
 	el: "#phuyu_ventas",
 	data: {
 		cargando: true, registro:0, estado:0, buscar: "", formato_impresion: $("#formato").val(), datos: [], fechas:{"filtro":1,"desde":"","hasta":""},
+		puede_eliminar_venta: (typeof phuyu_puede_eliminar_venta !== "undefined" && parseInt(phuyu_puede_eliminar_venta) === 1),
 		paginacion: {"total":0, "actual":1, "ultima":0, "desde":0, "hasta":0}, offset: 3,
 		whatsapp: {codkardex:0, codigo:'+51', tipo_envio:'link', telefono:"", comprobante:"", enviando:false, error:""}
 	},
@@ -182,6 +183,10 @@ var phuyu_ventas = new Vue({
 			if (this.registro==0) {
 				phuyu_sistema.phuyu_alerta("DEBE SELECCIONAR UN REGISTRO", "PARA ELIMINAR EN EL SISTEMA UN REGISTRO!!!","error");
 			}else{
+				if (!this.puede_eliminar_venta) {
+					phuyu_sistema.phuyu_alerta("SIN PERMISO", "No tiene permiso para eliminar ventas.", "error");
+					return false;
+				}
 				if(this.estado==0){
 					return false;
 				}
@@ -201,7 +206,12 @@ var phuyu_ventas = new Vue({
 					},
 				}).then((willDelete) => {
 					if (willDelete) {
-						this.$http.post(url+phuyu_controller+"/eliminar",{"codregistro":this.registro,"observaciones":$(".swal-content__input").val()}).then(function(data){
+						var motivo = String($(".swal-content__input").val() || "").trim();
+						if (motivo === "") {
+							phuyu_sistema.phuyu_alerta("MOTIVO REQUERIDO", "Ingrese el motivo para anular la venta.", "warning");
+							return false;
+						}
+						this.$http.post(url+phuyu_controller+"/eliminar",{"codregistro":this.registro,"observaciones":motivo}).then(function(data){
 							if (data.body.estado==1) {
 								phuyu_sistema.phuyu_alerta("ELIMINADO CORRECTAMENTE", "UN REGISTRO ELIMINADO EN EL SISTEMA","success");
 								this.phuyu_datos();
