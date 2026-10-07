@@ -836,7 +836,12 @@ $icbperSunat = $_SESSION['phuyu_icbper'] ?? 0;
 												<?php }
 											} ?>
 										</select>
-										<label class="form-label mt-2">S/. monto</label>
+										<div class="d-flex justify-content-between align-items-center mt-2">
+											<label class="form-label mb-0">S/. monto</label>
+											<button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" v-on:click="phuyu_jalar_total_tarjeta()" title="Jalar total">
+												<i class="bi bi-arrow-down-circle me-1"></i>Total
+											</button>
+										</div>
 										<input type="number" step="0.01" class="form-control number phuyu-money-success" min="0.01" id="monto_tarjeta" v-model="pagos.monto_tarjeta" placeholder="S/. 0.00" v-on:keyup="phuyu_recalcular_pago()" v-on:change="phuyu_recalcular_pago()" readonly>
 										<label class="form-label mt-2">Nro voucher</label>
 										<input type="text" class="form-control phuyu-money-default" id="nrovoucher" v-model.trim="pagos.nrovoucher" autocomplete="off" readonly>
@@ -1015,6 +1020,9 @@ $icbperSunat = $_SESSION['phuyu_icbper'] ?? 0;
 	</div>
 </div>
 
+<script>
+	var comprobantes = <?php echo json_encode($comprobantes ?? []); ?>;
+</script>
 <script src="<?php echo base_url(); ?>phuyu/phuyu_restaurante/atender.js"></script>
 <script src="<?php echo base_url(); ?>phuyu/phuyu_personas_2.js"></script>
 <script>

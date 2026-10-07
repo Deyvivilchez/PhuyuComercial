@@ -1125,10 +1125,10 @@ class Pedidos extends CI_Controller {
 						return;
 					}
 
-					if ($codTipoTarjeta > 0 && ($tarjeta <= 0 || $voucher === "")) {
+					if ($codTipoTarjeta > 0 && $tarjeta <= 0) {
 						echo json_encode([
 							"estado" => 0,
-							"mensaje" => "EL PAGO CON TARJETA/CHEQUE REQUIERE MONTO Y NRO DE VOUCHER"
+							"mensaje" => "EL PAGO CON TARJETA/CHEQUE REQUIERE MONTO"
 						]);
 						return;
 					}

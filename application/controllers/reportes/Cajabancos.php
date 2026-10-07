@@ -214,12 +214,17 @@ class Cajabancos extends CI_Controller {
 					}
 				}
 
-				$this->load->library('Pdf2'); $pdf = new Pdf2(); $pdf->AddPage('L','A4',0);
-				$pdf->pdf_header($titulo,"");
+				$this->load->library('Pdf2'); $pdf = new Pdf2();
+				$pdf->SetMargins(8, 8, 8);
+				$pdf->AddPage('L','A4',0);
+				$subtitulo = $this->request->reporte==1
+					? "Caja detallado al ".$this->request->fecha_detallado
+					: "Movimientos desde ".$this->request->fecha_desde." hasta ".$this->request->fecha_hasta;
+				$pdf->pdf_header($titulo,$subtitulo);
 
 				if ($this->request->reporte==1) {
-					$columnas = array("N°","N° RECIBO","CONCEPTO","DOC.REFEREN","RAZON SOCIAL","REFERENCIA","INGRESOS","EGRESOS");
-					$w = array(10,20,35,30,70,65,20,20); $pdf->pdf_tabla_head($columnas,$w,9);
+					$columnas = array("N°","RECIBO","CONCEPTO","DOC. REF.","RAZON SOCIAL","REFERENCIA","INGRESOS","EGRESOS");
+					$w = array(10,25,45,30,62,65,20,20); $pdf->pdf_tabla_head($columnas,$w,8);
 
 					$item = 0; $ingresos = 0; $egresos = 0;
 
@@ -231,13 +236,14 @@ class Cajabancos extends CI_Controller {
 						$egresos = $egresos + $resultado_e;
 					}
 
-					$pdf->Cell(230,5,"SALDO ANTERIOR",1,0,'R');
-				    $pdf->Cell(20,5,$resultado_i,1,"R");
-				    $pdf->Cell(20,5,$resultado_e,1,"R"); $pdf->Ln();
+					$pdf->SetFont('Arial','B',8);
+					$pdf->Cell(array_sum($w)-40,6,"SALDO ANTERIOR",1,0,'R');
+				    $pdf->Cell(20,6,$resultado_i,1,0,"R");
+				    $pdf->Cell(20,6,$resultado_e,1,0,"R"); $pdf->Ln();
 
 				    $pdf->SetWidths($w);
-		            $pdf->SetLineHeight(5);
-					$pdf->SetFont('Arial','',7);
+		            $pdf->SetLineHeight(6);
+					$pdf->SetFont('Arial','',8);
 
 					foreach ($lista as $key => $value) { 
 						$item = $item + 1;
@@ -261,20 +267,20 @@ class Cajabancos extends CI_Controller {
 					$pdf->Cell(array_sum($w),0,'','T'); $pdf->Ln();
 
 					$pdf->SetFont('Arial','B',8);
-					$pdf->Cell(230,5,"TOTALES",1,0,'R');
-				    $pdf->Cell(20,5,number_format($ingresos,2),1,"R");
-				    $pdf->Cell(20,5,number_format($egresos,2),1,"R"); $pdf->Ln();
+					$pdf->Cell(array_sum($w)-40,6,"TOTALES",1,0,'R');
+				    $pdf->Cell(20,6,number_format($ingresos,2),1,0,"R");
+				    $pdf->Cell(20,6,number_format($egresos,2),1,0,"R"); $pdf->Ln();
 
-					$pdf->Cell(270,5,"SALDO (INGRESOS - EGRESOS): ".number_format($ingresos - $egresos,2),1,0,'R');
+					$pdf->Cell(array_sum($w),6,"SALDO (INGRESOS - EGRESOS): ".number_format($ingresos - $egresos,2),1,0,'R');
 				}else{
-					$columnas = array("FECHA","N° RECIBO","CONCEPTO","DOC.REFER","RAZON SOCIAL","REFERENCIA","INGRESOS","EGRESOS");
-					$w = array(15,20,40,22,70,70,20,20); $pdf->pdf_tabla_head($columnas,$w,9);
+					$columnas = array("FECHA","RECIBO","CONCEPTO","DOC. REF.","RAZON SOCIAL","REFERENCIA","INGRESOS","EGRESOS");
+					$w = array(18,25,45,30,62,57,20,20); $pdf->pdf_tabla_head($columnas,$w,8);
 
 					$ingresos = 0; $egresos = 0;
 
 					$pdf->SetWidths($w);
-		            $pdf->SetLineHeight(5);
-					$pdf->SetFont('Arial','',7);
+		            $pdf->SetLineHeight(6);
+					$pdf->SetFont('Arial','',8);
 
 					foreach ($lista as $key => $value) {
 						$datos = array($value["fechamovimiento"]);
@@ -295,11 +301,11 @@ class Cajabancos extends CI_Controller {
 					$pdf->Cell(array_sum($w),0,'','T'); $pdf->Ln();
 
 					$pdf->SetFont('Arial','B',8);
-					$pdf->Cell(237,5,"TOTALES",1,0,'R');
-				    $pdf->Cell(20,5,number_format($ingresos,2),1,"R");
-				    $pdf->Cell(20,5,number_format($egresos,2),1,"R"); $pdf->Ln();
+					$pdf->Cell(array_sum($w)-40,6,"TOTALES",1,0,'R');
+				    $pdf->Cell(20,6,number_format($ingresos,2),1,0,"R");
+				    $pdf->Cell(20,6,number_format($egresos,2),1,0,"R"); $pdf->Ln();
 
-					$pdf->Cell(277,5,"SALDO (INGRESOS - EGRESOS): ".number_format($ingresos - $egresos,2),1,0,'R');
+					$pdf->Cell(array_sum($w),6,"SALDO (INGRESOS - EGRESOS): ".number_format($ingresos - $egresos,2),1,0,'R');
 				}
 
 				$pdf->SetTitle("phuyu Peru - Reporte de Caja"); $pdf->Output();
