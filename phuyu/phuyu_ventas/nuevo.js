@@ -958,17 +958,27 @@ var phuyu_operacion = new Vue({
                 var arreglo = [];
                 unidades = (producto.unidades).split(";");
                 var codunidadSeleccionada = producto.codunidad;
+                var unidadMenor = null;
 
                 for (var i = 0; i < unidades.length; i++) {
                     factores = (unidades[i]).split("|");
                     logo = { descripcion: factores[1], codunidad: factores[0], factor: factores[8] };
                     this.putunidades.push(logo)
-                    if ((codunidadSeleccionada && factores[0] == codunidadSeleccionada) || (!codunidadSeleccionada && factores[8] == 1)) {
+                    if (factores.length > 8 && (!unidadMenor || parseFloat(factores[8]) < parseFloat(unidadMenor[8]))) {
+                        unidadMenor = factores;
+                    }
+                    if (codunidadSeleccionada && factores[0] == codunidadSeleccionada) {
                         producto.codunidad = factores[0];
                         producto.unidad = factores[1];
                         producto.afectacionigv = factores[14];
                         producto.factor = factores[8];
                     }
+                }
+                if (!codunidadSeleccionada && unidadMenor) {
+                    producto.codunidad = unidadMenor[0];
+                    producto.unidad = unidadMenor[1];
+                    producto.afectacionigv = unidadMenor[14];
+                    producto.factor = unidadMenor[8];
                 }
 
                 producto.preciooriginal = precio;

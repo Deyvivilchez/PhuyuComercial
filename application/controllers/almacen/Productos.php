@@ -1065,8 +1065,8 @@ class Productos extends CI_Controller
             $codalmacen = (int) $_SESSION['phuyu_codalmacen'];
             $info = $this->db
                 ->query(
-                    "select distinct on (p.codproducto, pu.codunidad)
-                    p.codproducto,p.descripcion,p.caracteristicas, p.afectoicbper,p.controlstock, p.afectoigvcompra, p.afectoigvventa, p.codigo,p.calcular,p.foto,p.controlarseries,u.codunidad,u.descripcion as unidad,round(pu.stockactual,3) as stock, m.descripcion as marca, puv.factor, puv.factor as factormaximo, round(puv.pventapublico,2) as precio, round(puv.pventamin,2) as preciomin, round(puv.pventacredito,2) as preciocredito, round(puv.pventaxmayor,2) as preciomayor, round(puv.preciocosto,2) as preciocosto, round(puv.pventaadicional,2) as precioadicional,
+                    "select distinct on (p.codproducto)
+                    p.codproducto,p.descripcion,p.caracteristicas, p.afectoicbper,p.controlstock, p.afectoigvcompra, p.afectoigvventa, p.codigo,p.calcular,p.foto,p.controlarseries,u.codunidad,u.descripcion as unidad,round(pu.stockactualconvertido,3) as stock, m.descripcion as marca, puv.factor, puv.factor as factormaximo, round(puv.pventapublico,2) as precio, round(puv.pventamin,2) as preciomin, round(puv.pventacredito,2) as preciocredito, round(puv.pventaxmayor,2) as preciomayor, round(puv.preciocosto,2) as preciocosto, round(puv.pventaadicional,2) as precioadicional,
                     COALESCE(
                         (SELECT vpun.unidades
                         FROM almacen.v_productounidades vpun
@@ -1095,14 +1095,37 @@ class Productos extends CI_Controller
                     inner join almacen.marcas as m on(p.codmarca=m.codmarca)
                     inner join almacen.productounidades as puv on(pu.codproducto=puv.codproducto and pu.codunidad=puv.codunidad)
                     where (
-                        upper(trim(coalesce(puv.codigobarra, ''))) = upper(?)
-                        or upper(trim(coalesce(pu.codigobarra, ''))) = upper(?)
+                        exists (
+                            select 1
+                            from almacen.productounidades pub
+                            where pub.codproducto = p.codproducto
+                            and pub.estado = 1
+                            and upper(trim(coalesce(pub.codigobarra, ''))) = upper(?)
+                        )
+                        or exists (
+                            select 1
+                            from almacen.productoubicacion pubi
+                            where pubi.codproducto = p.codproducto
+                            and pubi.codalmacen = pu.codalmacen
+                            and pubi.estado = 1
+                            and upper(trim(coalesce(pubi.codigobarra, ''))) = upper(?)
+                        )
                     )
                     and p.estado=1
                     and pu.estado=1
                     and puv.estado=1
                     and pu.codalmacen=?
-                    order by p.codproducto, pu.codunidad, puv.factor asc",
+                    and pu.codunidad = (
+                        select pu0.codunidad
+                        from almacen.productoubicacion pu0
+                        inner join almacen.productounidades puv0 on(puv0.codproducto=pu0.codproducto and puv0.codunidad=pu0.codunidad and puv0.estado=1)
+                        where pu0.codproducto = p.codproducto
+                        and pu0.codalmacen = pu.codalmacen
+                        and pu0.estado = 1
+                        order by puv0.factor asc, pu0.codunidad asc
+                        limit 1
+                    )
+                    order by p.codproducto, puv.factor asc",
                     [$codalmacen, $codigobarra, $codigobarra, $codalmacen]
                 )
                 ->result_array();
@@ -1210,26 +1233,30 @@ class Productos extends CI_Controller
 
                 if ($value['unidades'] != '' || $value['unidades'] != null) {
                     $unidades = explode(';', $value['unidades']);
+                    $unidadMenor = null;
                     foreach ($unidades as $k => $v) {
                         $factores = explode('|', $v);
-                        if ($factores[8] == 1) {
-                            $lista[$key]['factormaximo'] = $factormaximo[0]['factor'];
-                            $lista[$key]['codunidad'] = $factores[0];
-                            $lista[$key]['factor'] = $factores[8];
-                            $lista[$key]['precio'] = $factores[5];
-                            $lista[$key]['precioventa'] = $factores[5];
-                            $merma = isset($lista[$key]['merma_porcentaje']) ? (float) $lista[$key]['merma_porcentaje'] : 0;
-                            $rendimiento = max(1 + ($merma / 100), 0.0001);
-                            $preciocosto = ((float) $factores[9] > 0 ? (float) $factores[9] : (float) $factores[5]);
-                            $lista[$key]['preciocosto'] = round($preciocosto / $rendimiento, 2);
-                            $lista[$key]['merma_porcentaje'] = $merma;
-                            $lista[$key]['preciomin'] = round((float) $factores[6], 2);
-                            $lista[$key]['preciocredito'] = round((float) $factores[7], 2);
-                            $lista[$key]['preciomayor'] = round((float) $factores[10], 2);
-                            $lista[$key]['stock'] = $factores[3];
-                            $lista[$key]['stockproveedor'] = $factores[4];
-                            $lista[$key]['unidad'] = $factores[1];
+                        if (count($factores) > 8 && ($unidadMenor === null || (float) $factores[8] < (float) $unidadMenor[8])) {
+                            $unidadMenor = $factores;
                         }
+                    }
+                    if ($unidadMenor !== null) {
+                        $lista[$key]['factormaximo'] = $factormaximo[0]['factor'];
+                        $lista[$key]['codunidad'] = $unidadMenor[0];
+                        $lista[$key]['factor'] = $unidadMenor[8];
+                        $lista[$key]['precio'] = $unidadMenor[5];
+                        $lista[$key]['precioventa'] = $unidadMenor[5];
+                        $merma = isset($lista[$key]['merma_porcentaje']) ? (float) $lista[$key]['merma_porcentaje'] : 0;
+                        $rendimiento = max(1 + ($merma / 100), 0.0001);
+                        $preciocosto = ((float) $unidadMenor[9] > 0 ? (float) $unidadMenor[9] : (float) $unidadMenor[5]);
+                        $lista[$key]['preciocosto'] = round($preciocosto / $rendimiento, 2);
+                        $lista[$key]['merma_porcentaje'] = $merma;
+                        $lista[$key]['preciomin'] = round((float) $unidadMenor[6], 2);
+                        $lista[$key]['preciocredito'] = round((float) $unidadMenor[7], 2);
+                        $lista[$key]['preciomayor'] = round((float) $unidadMenor[10], 2);
+                        $lista[$key]['stock'] = $unidadMenor[3];
+                        $lista[$key]['stockproveedor'] = $unidadMenor[4];
+                        $lista[$key]['unidad'] = $unidadMenor[1];
                     }
                 }
             }
@@ -1358,15 +1385,19 @@ class Productos extends CI_Controller
 
                 if ($value['unidades'] != '') {
                     $unidades = explode(';', $value['unidades']);
+                    $unidadMenor = null;
                     foreach ($unidades as $k => $v) {
                         $factores = explode('|', $v);
-                        if ($factores[8] == 1) {
-                            $lista[$key]['factormaximo'] = $factormaximo[0]['factor'];
-                            $lista[$key]['factor'] = $factores[8];
-                            $lista[$key]['precio'] = $factores[9];
-                            $lista[$key]['stock'] = $factores[3];
-                            $lista[$key]['preciomayor'] = round((float) $factores[10], 2);
+                        if (count($factores) > 8 && ($unidadMenor === null || (float) $factores[8] < (float) $unidadMenor[8])) {
+                            $unidadMenor = $factores;
                         }
+                    }
+                    if ($unidadMenor !== null) {
+                        $lista[$key]['factormaximo'] = $factormaximo[0]['factor'];
+                        $lista[$key]['factor'] = $unidadMenor[8];
+                        $lista[$key]['precio'] = $unidadMenor[9];
+                        $lista[$key]['stock'] = $unidadMenor[3];
+                        $lista[$key]['preciomayor'] = round((float) $unidadMenor[10], 2);
                     }
                 }
             }
