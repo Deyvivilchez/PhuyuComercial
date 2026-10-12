@@ -963,8 +963,7 @@
 
 <script>
   var phuyu_puede_modificar_precio = <?php
-    $perfilPrecio = strtoupper((string)($_SESSION['phuyu_perfil'] ?? ''));
-    $puedePrecio = ((int)($_SESSION['phuyu_codperfil'] ?? 0) === 1 || strpos($perfilPrecio, 'ADMIN') !== false) ? 1 : 0;
+    $puedePrecio = ((int)($_SESSION['phuyu_editar_pventa'] ?? 0) === 1) ? 1 : 0;
     echo $puedePrecio;
   ?>;
 </script>

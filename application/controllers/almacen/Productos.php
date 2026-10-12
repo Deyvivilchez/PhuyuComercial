@@ -74,9 +74,9 @@ class Productos extends CI_Controller
                     $codunidad = 0;
                     $lista[$key]['costo'] = 0.0;
                 } else {
-                    $lista[$key]['precio'] = number_format(round($precio[0]['pventapublico'], 2), 2);
+                    $lista[$key]['precio'] = number_format(round($precio[0]['pventapublico'], 4), 4);
                     $codunidad = $precio[0]['codunidad'];
-                    $lista[$key]['costo'] = number_format(round($precio[0]['preciocosto'], 2), 2);
+                    $lista[$key]['costo'] = number_format(round($precio[0]['preciocosto'], 4), 4);
                 }
 
                 $stock = $this->db->query('select pu.stockactualconvertido,u.descripcion as unidad from almacen.productoubicacion as pu inner join almacen.unidades as u on(pu.codunidad=u.codunidad) where pu.codproducto=' . $value['codproducto'] . ' and pu.codunidad=' . $codunidad . ' and pu.codalmacen=' . $codalmacen . ' and pu.estado=1')->result_array();
@@ -1065,8 +1065,8 @@ class Productos extends CI_Controller
             $codalmacen = (int) $_SESSION['phuyu_codalmacen'];
             $info = $this->db
                 ->query(
-                    "select distinct on (p.codproducto, pu.codunidad)
-                    p.codproducto,p.descripcion,p.caracteristicas, p.afectoicbper,p.controlstock, p.afectoigvcompra, p.afectoigvventa, p.codigo,p.calcular,p.foto,p.controlarseries,u.codunidad,u.descripcion as unidad,round(pu.stockactual,3) as stock, m.descripcion as marca, puv.factor, puv.factor as factormaximo, round(puv.pventapublico,2) as precio, round(puv.pventamin,2) as preciomin, round(puv.pventacredito,2) as preciocredito, round(puv.pventaxmayor,2) as preciomayor, round(puv.preciocosto,2) as preciocosto, round(puv.pventaadicional,2) as precioadicional,
+                    "select distinct on (p.codproducto)
+                    p.codproducto,p.descripcion,p.caracteristicas, p.afectoicbper,p.controlstock, p.afectoigvcompra, p.afectoigvventa, p.codigo,p.calcular,p.foto,p.controlarseries,u.codunidad,u.descripcion as unidad,round(pu.stockactualconvertido,3) as stock, m.descripcion as marca, puv.factor, puv.factor as factormaximo, round(puv.pventapublico,2) as precio, round(puv.pventamin,2) as preciomin, round(puv.pventacredito,2) as preciocredito, round(puv.pventaxmayor,2) as preciomayor, round(puv.preciocosto,2) as preciocosto, round(puv.pventaadicional,2) as precioadicional,
                     COALESCE(
                         (SELECT vpun.unidades
                         FROM almacen.v_productounidades vpun
@@ -1095,14 +1095,37 @@ class Productos extends CI_Controller
                     inner join almacen.marcas as m on(p.codmarca=m.codmarca)
                     inner join almacen.productounidades as puv on(pu.codproducto=puv.codproducto and pu.codunidad=puv.codunidad)
                     where (
-                        upper(trim(coalesce(puv.codigobarra, ''))) = upper(?)
-                        or upper(trim(coalesce(pu.codigobarra, ''))) = upper(?)
+                        exists (
+                            select 1
+                            from almacen.productounidades pub
+                            where pub.codproducto = p.codproducto
+                            and pub.estado = 1
+                            and upper(trim(coalesce(pub.codigobarra, ''))) = upper(?)
+                        )
+                        or exists (
+                            select 1
+                            from almacen.productoubicacion pubi
+                            where pubi.codproducto = p.codproducto
+                            and pubi.codalmacen = pu.codalmacen
+                            and pubi.estado = 1
+                            and upper(trim(coalesce(pubi.codigobarra, ''))) = upper(?)
+                        )
                     )
                     and p.estado=1
                     and pu.estado=1
                     and puv.estado=1
                     and pu.codalmacen=?
-                    order by p.codproducto, pu.codunidad, puv.factor asc",
+                    and pu.codunidad = (
+                        select pu0.codunidad
+                        from almacen.productoubicacion pu0
+                        inner join almacen.productounidades puv0 on(puv0.codproducto=pu0.codproducto and puv0.codunidad=pu0.codunidad and puv0.estado=1)
+                        where pu0.codproducto = p.codproducto
+                        and pu0.codalmacen = pu.codalmacen
+                        and pu0.estado = 1
+                        order by puv0.factor asc, pu0.codunidad asc
+                        limit 1
+                    )
+                    order by p.codproducto, puv.factor asc",
                     [$codalmacen, $codigobarra, $codigobarra, $codalmacen]
                 )
                 ->result_array();
@@ -1210,26 +1233,30 @@ class Productos extends CI_Controller
 
                 if ($value['unidades'] != '' || $value['unidades'] != null) {
                     $unidades = explode(';', $value['unidades']);
+                    $unidadMenor = null;
                     foreach ($unidades as $k => $v) {
                         $factores = explode('|', $v);
-                        if ($factores[8] == 1) {
-                            $lista[$key]['factormaximo'] = $factormaximo[0]['factor'];
-                            $lista[$key]['codunidad'] = $factores[0];
-                            $lista[$key]['factor'] = $factores[8];
-                            $lista[$key]['precio'] = $factores[5];
-                            $lista[$key]['precioventa'] = $factores[5];
-                            $merma = isset($lista[$key]['merma_porcentaje']) ? (float) $lista[$key]['merma_porcentaje'] : 0;
-                            $rendimiento = max(1 + ($merma / 100), 0.0001);
-                            $preciocosto = ((float) $factores[9] > 0 ? (float) $factores[9] : (float) $factores[5]);
-                            $lista[$key]['preciocosto'] = round($preciocosto / $rendimiento, 2);
-                            $lista[$key]['merma_porcentaje'] = $merma;
-                            $lista[$key]['preciomin'] = round((float) $factores[6], 2);
-                            $lista[$key]['preciocredito'] = round((float) $factores[7], 2);
-                            $lista[$key]['preciomayor'] = round((float) $factores[10], 2);
-                            $lista[$key]['stock'] = $factores[3];
-                            $lista[$key]['stockproveedor'] = $factores[4];
-                            $lista[$key]['unidad'] = $factores[1];
+                        if (count($factores) > 8 && ($unidadMenor === null || (float) $factores[8] < (float) $unidadMenor[8])) {
+                            $unidadMenor = $factores;
                         }
+                    }
+                    if ($unidadMenor !== null) {
+                        $lista[$key]['factormaximo'] = $factormaximo[0]['factor'];
+                        $lista[$key]['codunidad'] = $unidadMenor[0];
+                        $lista[$key]['factor'] = $unidadMenor[8];
+                        $lista[$key]['precio'] = $unidadMenor[5];
+                        $lista[$key]['precioventa'] = $unidadMenor[5];
+                        $merma = isset($lista[$key]['merma_porcentaje']) ? (float) $lista[$key]['merma_porcentaje'] : 0;
+                        $rendimiento = max(1 + ($merma / 100), 0.0001);
+                        $preciocosto = ((float) $unidadMenor[9] > 0 ? (float) $unidadMenor[9] : (float) $unidadMenor[5]);
+                        $lista[$key]['preciocosto'] = round($preciocosto / $rendimiento, 2);
+                        $lista[$key]['merma_porcentaje'] = $merma;
+                        $lista[$key]['preciomin'] = round((float) $unidadMenor[6], 2);
+                        $lista[$key]['preciocredito'] = round((float) $unidadMenor[7], 2);
+                        $lista[$key]['preciomayor'] = round((float) $unidadMenor[10], 2);
+                        $lista[$key]['stock'] = $unidadMenor[3];
+                        $lista[$key]['stockproveedor'] = $unidadMenor[4];
+                        $lista[$key]['unidad'] = $unidadMenor[1];
                     }
                 }
             }
@@ -1358,15 +1385,19 @@ class Productos extends CI_Controller
 
                 if ($value['unidades'] != '') {
                     $unidades = explode(';', $value['unidades']);
+                    $unidadMenor = null;
                     foreach ($unidades as $k => $v) {
                         $factores = explode('|', $v);
-                        if ($factores[8] == 1) {
-                            $lista[$key]['factormaximo'] = $factormaximo[0]['factor'];
-                            $lista[$key]['factor'] = $factores[8];
-                            $lista[$key]['precio'] = $factores[9];
-                            $lista[$key]['stock'] = $factores[3];
-                            $lista[$key]['preciomayor'] = round((float) $factores[10], 2);
+                        if (count($factores) > 8 && ($unidadMenor === null || (float) $factores[8] < (float) $unidadMenor[8])) {
+                            $unidadMenor = $factores;
                         }
+                    }
+                    if ($unidadMenor !== null) {
+                        $lista[$key]['factormaximo'] = $factormaximo[0]['factor'];
+                        $lista[$key]['factor'] = $unidadMenor[8];
+                        $lista[$key]['precio'] = $unidadMenor[9];
+                        $lista[$key]['stock'] = $unidadMenor[3];
+                        $lista[$key]['preciomayor'] = round((float) $unidadMenor[10], 2);
                     }
                 }
             }
@@ -1626,6 +1657,96 @@ class Productos extends CI_Controller
             }
             echo json_encode($lista);
         }
+    }
+
+    function servicio_tipopedido($tipopedido)
+    {
+        if (!$this->input->is_ajax_request()) {
+            $this->load->view('phuyu/404');
+            return;
+        }
+
+        $this->output->set_content_type('application/json', 'utf-8');
+
+        $tipopedido = (int) $tipopedido;
+        if (!in_array($tipopedido, [1, 2], true)) {
+            echo json_encode(['estado' => 0, 'mensaje' => 'Tipo de pedido sin servicio configurado.']);
+            return;
+        }
+
+        $codsucursal = (int) ($_SESSION['phuyu_codsucursal'] ?? 0);
+        $codalmacen = (int) ($_SESSION['phuyu_codalmacen'] ?? 0);
+        if ($codsucursal <= 0 || $codalmacen <= 0) {
+            echo json_encode(['estado' => 0, 'mensaje' => 'Seleccione sucursal y almacen antes de cargar el servicio.']);
+            return;
+        }
+
+        $campoProducto = $tipopedido === 2 ? 'codproducto_delivery' : 'codproducto_llevar';
+        $campoUnidad = $tipopedido === 2 ? 'codunidad_delivery' : 'codunidad_llevar';
+        $servicio = $this->db->query(
+            "select {$campoProducto} as codproducto, {$campoUnidad} as codunidad
+             from public.sucursales
+             where codsucursal=?
+             limit 1",
+            [$codsucursal]
+        )->row_array();
+
+        if (
+            !$servicio
+            || (int) ($servicio['codproducto'] ?? 0) <= 0
+            || (int) ($servicio['codunidad'] ?? 0) <= 0
+        ) {
+            echo json_encode(['estado' => 0, 'mensaje' => 'No hay servicio configurado para este tipo de pedido.']);
+            return;
+        }
+
+        $producto = $this->db->query(
+            "select
+                p.codproducto,
+                p.descripcion,
+                p.afectoicbper,
+                p.afectoigvventa,
+                p.calcular,
+                p.controlstock,
+                u.codunidad,
+                u.descripcion as unidad,
+                coalesce(pu.stockactualconvertido, 0) as stock,
+                coalesce(pun.pventapublico, 0) as precio
+             from almacen.productos p
+             inner join almacen.productounidades pun on(pun.codproducto=p.codproducto and pun.codunidad=? and pun.estado=1)
+             inner join almacen.unidades u on(u.codunidad=pun.codunidad)
+             left join almacen.productoubicacion pu on(
+                pu.codproducto=p.codproducto
+                and pu.codunidad=pun.codunidad
+                and pu.codalmacen=?
+                and pu.estado=1
+             )
+             where p.codproducto=?
+             and p.estado=1
+             limit 1",
+            [(int) $servicio['codunidad'], $codalmacen, (int) $servicio['codproducto']]
+        )->row_array();
+
+        if (!$producto) {
+            echo json_encode(['estado' => 0, 'mensaje' => 'El producto de servicio no esta disponible en este almacen.']);
+            return;
+        }
+
+        $producto['precio'] = round((float) $producto['precio'], 2);
+        $producto['stock'] = round((float) $producto['stock'], 2);
+        $producto['control'] = 0;
+        $producto['controlstock'] = 0;
+        $producto['servicio_tipopedido'] = 1;
+        $producto['tipo_servicio_pedido'] = $tipopedido === 2 ? 'delivery' : 'llevar';
+        $producto['unidades'] = [[
+            'codunidad' => (int) $producto['codunidad'],
+            'unidad' => $producto['unidad'],
+            'stock' => $producto['stock'],
+            'precio' => $producto['precio'],
+            'factor' => 1,
+        ]];
+
+        echo json_encode(['estado' => 1, 'producto' => $producto]);
     }
 
 	    public function stockextra()

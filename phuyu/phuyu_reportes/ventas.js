@@ -83,11 +83,11 @@ var phuyu_datos = new Vue({
 		},
 		excel_ventas_vendedor: function(){
 			this.phuyu_fecha();
-			window.open(url+phuyu_controller+"/excel_ventas_vendedor?tipo='resumen'&datos="+encodeURIComponent(JSON.stringify(this.campos)),"_blank");
+			window.open(url+phuyu_controller+"/excel_ventas_vendedor?datos="+encodeURIComponent(JSON.stringify(this.campos)),"_blank");
 		},
 		excel_ventas_vendedor_resumen: function(){
 			this.phuyu_fecha();
-			window.open(url+phuyu_controller+"/excel_ventas_vendedor?datos="+encodeURIComponent(JSON.stringify(this.campos)),"_blank");
+			window.open(url+phuyu_controller+"/excel_ventas_vendedor?tipo='resumen'&datos="+encodeURIComponent(JSON.stringify(this.campos)),"_blank");
 		},
 		pdf_ventas_cliente: function(){
 			this.phuyu_fecha();

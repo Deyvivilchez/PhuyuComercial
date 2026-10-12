@@ -7,13 +7,17 @@ var phuyu_operacion = new Vue({
 		filtro_producto: "preparados",
 		filtro_ingrediente: "insumos",
 		buscar_ingrediente: "",
+		ingrediente_seleccionado: "",
 		buscando_productos: null,
 		buscando_ingredientes: null,
 		productos:[],
 		ingredientes: [],
 		paginacion: {actual: 1, limit: 25, total: 0, ultima: 1},
 		campos:[],
-		detalle: []
+		detalle: [],
+		modo_receta: "editar",
+		margen_utilidad: 0,
+		precio_sugerido_manual: 0
 	},
 	computed: {
         buscar_productos: function () {
@@ -35,16 +39,62 @@ var phuyu_operacion = new Vue({
 			this.detalle.forEach(function(dato){
 				total += (parseFloat(dato.cantidad) || 0) * (parseFloat(dato.preciocosto) || 0);
 			});
-			return total.toFixed(2);
+			return total.toFixed(4);
 		},
 		utilidad_receta: function(){
 			var venta = parseFloat(this.campos.precioventa) || 0;
-			return (venta - (parseFloat(this.costo_receta) || 0)).toFixed(2);
+			return (venta - (parseFloat(this.costo_receta) || 0)).toFixed(4);
+		},
+		utilidad_sugerida: function(){
+			return ((parseFloat(this.precio_sugerido_manual) || 0) - (parseFloat(this.costo_receta) || 0)).toFixed(4);
+		},
+		margen_real_sugerido: function(){
+			var venta = parseFloat(this.precio_sugerido_manual) || 0;
+			if (venta <= 0) {
+				return "0.0000";
+			}
+			var utilidad = venta - (parseFloat(this.costo_receta) || 0);
+			return ((utilidad / venta) * 100).toFixed(4);
 		}
     },
 	methods: {
 		phuyu_moneda: function(valor){
 			return (parseFloat(valor) || 0).toFixed(2);
+		},
+		phuyu_decimal4: function(valor){
+			return (parseFloat(valor) || 0).toFixed(4);
+		},
+		phuyu_porcentaje_utilidad_producto: function(producto){
+			var venta = parseFloat(producto.precioventa) || 0;
+			var costo = parseFloat(producto.costo_receta) || 0;
+			if (venta <= 0) {
+				return "0.0000";
+			}
+			return (((venta - costo) / venta) * 100).toFixed(4);
+		},
+		phuyu_calcular_precio_sugerido: function(){
+			var costo = parseFloat(this.costo_receta) || 0;
+			var margen = parseFloat(this.margen_utilidad) || 0;
+			this.precio_sugerido_manual = Number((costo * (1 + (margen / 100))).toFixed(4));
+		},
+		phuyu_calcular_margen_desde_precio: function(){
+			var costo = parseFloat(this.costo_receta) || 0;
+			var precio = parseFloat(this.precio_sugerido_manual) || 0;
+			if (costo <= 0) {
+				this.margen_utilidad = 0;
+				return false;
+			}
+			this.margen_utilidad = Number((((precio - costo) / costo) * 100).toFixed(4));
+			return true;
+		},
+		phuyu_inicializar_calculo_precio: function(){
+			this.precio_sugerido_manual = parseFloat(this.campos.precioventa) || 0;
+			if (this.precio_sugerido_manual > 0) {
+				this.phuyu_calcular_margen_desde_precio();
+			} else {
+				this.margen_utilidad = 0;
+				this.phuyu_calcular_precio_sugerido();
+			}
 		},
 		phuyu_unidades_producto: function(producto){
 			if (Array.isArray(producto.unidades_lista)) {
@@ -139,6 +189,8 @@ var phuyu_operacion = new Vue({
 					tipo: this.filtro_ingrediente
 				}).then(function(data){
 					this.ingredientes = data.body || [];
+					this.ingrediente_seleccionado = "";
+					this.phuyu_preparar_select_ingrediente();
 				},function(){
 					phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED","error");
 				});
@@ -151,6 +203,35 @@ var phuyu_operacion = new Vue({
 				return true;
 			}
 			this.buscando_ingredientes = setTimeout(cargar, 250);
+		},
+		phuyu_preparar_select_ingrediente: function(){
+			this.$nextTick(function(){
+				var $select = $("#ingrediente_seleccionado_receta");
+				if (!$select.length || typeof $select.select2 !== "function") {
+					return false;
+				}
+				if ($select.hasClass("select2-hidden-accessible")) {
+					$select.select2("destroy");
+				}
+				$select.select2({
+					theme: "bootstrap4",
+					width: "100%",
+					dropdownParent: $("#modal_receta"),
+					placeholder: "Buscar ingrediente",
+					allowClear: true
+				});
+				$select.off("select2:select.phuyuReceta select2:clear.phuyuReceta change.phuyuReceta");
+				$select.on("select2:select.phuyuReceta", (e) => {
+					this.ingrediente_seleccionado = $select.val();
+					this.phuyu_agregar_ingrediente_seleccionado();
+				});
+				$select.on("change.phuyuReceta", (e) => {
+					this.ingrediente_seleccionado = $select.val();
+				});
+				$select.on("select2:clear.phuyuReceta", () => {
+					this.ingrediente_seleccionado = "";
+				});
+			});
 		},
 		phuyu_additem: function(producto){
 			var unidades = this.phuyu_unidades_producto(producto);
@@ -170,7 +251,31 @@ var phuyu_operacion = new Vue({
 					"unidad":unidadBase.unidad,"cantidad":1,"preciocosto":parseFloat(unidadBase.preciocosto) || 0,
 					"unidades":unidades
 				});
+				phuyu_sistema.phuyu_noti("INGREDIENTE AGREGADO", producto.descripcion+" SE AGREGO A LA RECETA", "success");
+		    }else{
+				phuyu_sistema.phuyu_noti("CANTIDAD ACTUALIZADA", producto.descripcion+" YA ESTABA EN LA RECETA, SE AUMENTO LA CANTIDAD", "success");
 		    }
+			this.ingrediente_seleccionado = "";
+			this.$nextTick(function(){
+				var $select = $("#ingrediente_seleccionado_receta");
+				if ($select.length && $select.hasClass("select2-hidden-accessible")) {
+					$select.val("").trigger("change.select2");
+				}
+			});
+		},
+		phuyu_agregar_ingrediente_seleccionado: function(){
+			var index = parseInt(this.ingrediente_seleccionado);
+			if (isNaN(index) || index < 0) {
+				phuyu_sistema.phuyu_alerta("SELECCIONA UN INGREDIENTE", "ELIGE UN INSUMO PARA AGREGARLO A LA RECETA", "warning");
+				return false;
+			}
+			var producto = this.ingredientes[index];
+			if (!producto) {
+				phuyu_sistema.phuyu_alerta("INGREDIENTE NO ENCONTRADO", "VUELVE A BUSCAR EL INSUMO", "warning");
+				return false;
+			}
+			this.phuyu_additem(producto);
+			return true;
 		},
 		phuyu_deleteitem: function(index,producto){
 			this.detalle.splice(index,1);
@@ -183,7 +288,8 @@ var phuyu_operacion = new Vue({
 			phuyu_sistema.phuyu_inicio_guardar("ACTUALIZANDO COSTO DEL PLATO . . .");
 			this.$http.post(url+phuyu_controller+"/actualizar_costo_plato", {
 				"campos": this.campos,
-				"preciocosto": this.costo_receta
+				"preciocosto": this.costo_receta,
+				"actualizar_venta": 0
 			}).then(function(data){
 				if (data.body==1) {
 					this.campos.preciocosto = this.costo_receta;
@@ -197,13 +303,68 @@ var phuyu_operacion = new Vue({
 				phuyu_sistema.phuyu_alerta("ERROR AL ACTUALIZAR COSTO", "ERROR DE RED", "error"); phuyu_sistema.phuyu_fin();
 			});
 		},
-		phuyu_receta: function(producto){
+		phuyu_actualizar_costo_precio_plato: function(){
+			if (this.detalle.length == 0) {
+				phuyu_sistema.phuyu_alerta("AGREGA INGREDIENTES A LA RECETA", "NO HAY COSTO PARA ACTUALIZAR", "warning");
+				return false;
+			}
+			var precioVenta = parseFloat(this.precio_sugerido_manual) || 0;
+			if (precioVenta <= 0) {
+				phuyu_sistema.phuyu_alerta("INGRESA PRECIO DE VENTA", "CALCULA O ESCRIBE UN PRECIO SUGERIDO", "warning");
+				return false;
+			}
+			if (precioVenta < (parseFloat(this.costo_receta) || 0)) {
+				phuyu_sistema.phuyu_alerta("PRECIO MENOR AL COSTO", "EL PRECIO DE VENTA NO DEBERIA SER MENOR AL COSTO", "warning");
+				return false;
+			}
+			phuyu_sistema.phuyu_inicio_guardar("ACTUALIZANDO COSTO Y PRECIO DEL PLATO . . .");
+			this.$http.post(url+phuyu_controller+"/actualizar_costo_plato", {
+				"campos": this.campos,
+				"preciocosto": this.costo_receta,
+				"precioventa": precioVenta,
+				"actualizar_venta": 1
+			}).then(function(data){
+				if (data.body==1) {
+					this.campos.preciocosto = this.costo_receta;
+					this.campos.precioventa = precioVenta.toFixed(4);
+					phuyu_sistema.phuyu_noti("COSTO Y PRECIO ACTUALIZADOS", "EL PLATO SE ACTUALIZO CORRECTAMENTE", "success");
+					this.phuyu_productos();
+				}else{
+					phuyu_sistema.phuyu_alerta("NO SE PUDO ACTUALIZAR", "VERIFICA LA UNIDAD DEL PRODUCTO", "error");
+					phuyu_sistema.phuyu_fin();
+				}
+			}, function(){
+				phuyu_sistema.phuyu_alerta("ERROR AL ACTUALIZAR", "ERROR DE RED", "error"); phuyu_sistema.phuyu_fin();
+			});
+		},
+		phuyu_ver_receta: function(producto){
+			this.phuyu_receta(producto, "ver");
+		},
+		phuyu_editar_receta: function(producto){
+			this.phuyu_receta(producto, "editar");
+		},
+		phuyu_imprimir_receta: function(producto){
+			if (!producto || !producto.codproducto || !producto.codunidad) {
+				phuyu_sistema.phuyu_alerta("NO SE PUEDE IMPRIMIR", "SELECCIONE UNA RECETA VALIDA", "warning");
+				return false;
+			}
+			var phuyu_url = url+phuyu_controller+"/receta_pdf/"+producto.codproducto+"/"+producto.codunidad;
+			$("#phuyu_pdf").attr("src", phuyu_url);
+			$("#modal_reportes").modal("show");
+		},
+		phuyu_receta: function(producto, modo){
 			this.campos = producto; this.estado = 0;
+			this.modo_receta = modo || "editar";
 			this.buscar_ingrediente = "";
+			this.ingrediente_seleccionado = "";
 			this.filtro_ingrediente = "insumos";
-			$("#titulo_receta").text("RECETA DE: "+producto.descripcion+" - UNIDAD: "+producto.unidad); this.phuyu_item();
+			var accion = this.modo_receta == "ver" ? "VER RECETA DE: " : "RECETA DE: ";
+			$("#titulo_receta").text(accion+producto.descripcion+" - UNIDAD: "+producto.unidad); this.phuyu_item();
 			this.$http.get(url+phuyu_controller+"/detalle_receta/"+producto.codproducto+"/"+producto.codunidad).then(function(data){
-				this.detalle = data.body; $("#modal_receta").modal("show");
+				this.detalle = data.body;
+				this.phuyu_inicializar_calculo_precio();
+				this.phuyu_preparar_select_ingrediente();
+				$("#modal_receta").modal("show");
 			},function(){
 				phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED","error");
 			});

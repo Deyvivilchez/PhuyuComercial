@@ -50,6 +50,9 @@ var phuyu_operacion = new Vue({
 		totales:{
 			flete:0.00, gastos:0.00, bruto:0.00, descuentos:0.00, descglobal:0.00, valorventa:0.00, igv:0.00, isc:0.00, icbper:0.00, 
 			subtotal:0.00, importe:0.00
+		},
+		alerta_pago:{
+			mostrar:false, tipo:"warning", titulo:"", mensaje:""
 		}
 	},
 	methods: {
@@ -258,6 +261,8 @@ var phuyu_operacion = new Vue({
 					valorventa: producto.valorventa, subtotal:producto.subtotal, subtotal_tem:producto.subtotal, 
 					descripcion:"", calcular: producto.calcular, atendido:0, item:0,
 					afectoigvventa: producto.afectoigvventa, unidades: producto.unidades || [],
+					servicio_tipopedido: producto.servicio_tipopedido || 0,
+					tipo_servicio_pedido: producto.tipo_servicio_pedido || "",
 				});
 				this.phuyu_calcular(producto,1);
 		    }else{
@@ -369,14 +374,50 @@ var phuyu_operacion = new Vue({
 				var item = this.detalle[i];
 				this.phuyu_recalcular_item(item);
 
-				valorventa = Number((valorventa + item.valorventa).toFixed(2));
-				igv = Number((igv + item.igv).toFixed(2));
-				importe = Number((importe + item.subtotal).toFixed(2));
+				valorventa = Number((valorventa + (parseFloat(item.valorventa) || 0)).toFixed(2));
+				igv = Number((igv + (parseFloat(item.igv) || 0)).toFixed(2));
+				importe = Number((importe + (parseFloat(item.subtotal) || 0)).toFixed(2));
 			}
 
 			this.totales.valorventa = valorventa;
 			this.totales.igv = igv;
 			this.totales.importe = importe;
+		},
+		phuyu_quitar_servicio_tipopedido: function(){
+			this.detalle = this.detalle.filter(function(item){
+				return parseInt(item.servicio_tipopedido || 0) !== 1;
+			});
+		},
+		phuyu_agregar_servicio_tipopedido: function(){
+			var tipopedido = parseInt(this.campos.tipopedido || 0);
+			if (tipopedido !== 1 && tipopedido !== 2) {
+				this.phuyu_recalcular_totales_detalle();
+				return;
+			}
+
+			this.$http.post(url+"almacen/productos/servicio_tipopedido/"+tipopedido).then(function(data){
+				var respuesta = data.body || {};
+				if (parseInt(respuesta.estado || 0) !== 1 || !respuesta.producto) {
+					phuyu_sistema.phuyu_noti(
+						"SERVICIO NO CONFIGURADO",
+						respuesta.mensaje || "Configure el servicio del tipo de pedido.",
+						"warning"
+					);
+					this.phuyu_recalcular_totales_detalle();
+					return;
+				}
+
+				var producto = respuesta.producto;
+				var precio = parseFloat(producto.precio) || 0;
+				producto.precio = precio;
+				producto.servicio_tipopedido = 1;
+				producto.tipo_servicio_pedido = tipopedido === 2 ? "delivery" : "llevar";
+				this.phuyu_additem(producto, precio);
+				this.phuyu_recalcular_totales_detalle();
+			}, function(){
+				phuyu_sistema.phuyu_alerta("NO SE PUDO CARGAR EL SERVICIO", "ERROR DE RED", "error");
+				this.phuyu_recalcular_totales_detalle();
+			});
 		},
 
 		phuyu_guardar_pedido: function(){
@@ -573,14 +614,18 @@ var phuyu_operacion = new Vue({
 				this.pagos.codtipopago_tarjeta = 0;
 				this.pagos.monto_tarjeta = 0;
 				this.pagos.nrovoucher = "";
+				this.phuyu_limpiar_alerta_pago();
 				$("#modal_pago").modal('show');
+				this.phuyu_inicializar_cliente_pago();
 			}
 		},
 
 		// GUARDAR EL PEDIDO COMO VENTA //
 
 		phuyu_addcliente: function(){
-			$(".compose").slideToggle(); phuyu_sistema.phuyu_loader("phuyu_formulario",180); 
+			$(".compose").removeClass("col-md-4 col-md-6 col-md-7").addClass("col-md-5").css("z-index", 1070).slideDown();
+			$("#phuyu_tituloform").text("REGISTRAR CLIENTE");
+			phuyu_sistema.phuyu_loader("phuyu_formulario",180); 
 			this.$http.post(url+"ventas/clientes/nuevo_1").then(function(data){
 				$("#phuyu_formulario").empty().html(data.body);
 				phuyu_sistema.phuyu_finloader("phuyu_formulario");
@@ -595,8 +640,96 @@ var phuyu_operacion = new Vue({
 			this.campos.cliente = cliente;
 			this.$http.get(url+"ventas/clientes/infocliente/"+this.campos.codpersona).then(function(data){
 				this.codtipodocumento = data.body[0].coddocumentotipo; this.campos.direccion = data.body[0].direccion;
+				this.phuyu_validar_alertas_comprobante("warning");
 			});
         },
+		phuyu_mostrar_alerta_pago: function(titulo, mensaje, tipo){
+			this.alerta_pago = {
+				mostrar:true,
+				tipo:tipo || "warning",
+				titulo:titulo,
+				mensaje:mensaje
+			};
+		},
+		phuyu_limpiar_alerta_pago: function(){
+			this.alerta_pago = {mostrar:false, tipo:"warning", titulo:"", mensaje:""};
+		},
+		phuyu_inicializar_cliente_pago: function(){
+			var vm = this;
+			this.$nextTick(function(){
+				var $select = $("#codpersona");
+				if (!$select.length || typeof $select.select2 !== "function") {
+					return;
+				}
+
+				if ($select.hasClass("select2-hidden-accessible")) {
+					$select.select2("destroy");
+				}
+
+				$select.empty().append(new Option(vm.campos.cliente || "CLIENTES VARIOS", vm.campos.codpersona || 2, true, true));
+				$select.select2({
+					ajax: {
+						url: url+"ventas/clientes/buscar",
+						dataType: "json",
+						delay: 250,
+						data: function(params){
+							return {
+								search: {
+									value: params.term || "",
+									tipo: 1
+								},
+								page: params.page
+							};
+						},
+						processResults: function(data){
+							return {
+								results: (data.data || []).map(function(cliente){
+									return {
+										id: cliente.codpersona,
+										text: cliente.razonsocial,
+										cliente: cliente
+									};
+								})
+							};
+						},
+						cache: true
+					},
+					placeholder: "Buscar cliente...",
+					minimumInputLength: 1,
+					width: "100%",
+					dropdownParent: $("#modal_pago"),
+					templateResult: function(resultado){
+						if (resultado.loading) {
+							return resultado.text;
+						}
+
+						var cliente = resultado.cliente || {};
+						var documento = cliente.documento || "";
+						var razon = cliente.razonsocial || resultado.text || "";
+						return $(
+							'<div class="clearfix">' +
+								'<div>' + razon + '</div>' +
+								'<div class="text-muted small">' + documento + '</div>' +
+							'</div>'
+						);
+					},
+					templateSelection: function(resultado){
+						return resultado.text || vm.campos.cliente || "CLIENTES VARIOS";
+					}
+				});
+
+				if (typeof phuyu_select2_velzon === "function") {
+					phuyu_select2_velzon("#codpersona");
+				}
+
+				$select.off("select2:select.phuyuClientePago").on("select2:select.phuyuClientePago", function(e){
+					var data = e.params.data || {};
+					$select.select2("close");
+					$(".select2-container--open .select2-search__field").blur();
+					vm.phuyu_infocliente(data.id, data.text);
+				});
+			});
+		},
 
 		phuyu_series: function(){
 			if (this.campos.codcomprobantetipo!=undefined) {
@@ -607,12 +740,88 @@ var phuyu_operacion = new Vue({
 					this.campos.seriecomprobante = data.body.serie; this.phuyu_correlativo();
 				});
 
-				if (this.campos.codcomprobantetipo==10) {
+				if (this.phuyu_es_factura() || this.phuyu_es_boleta()) {
 					this.$http.get(url+"ventas/clientes/infocliente/"+this.campos.codpersona).then(function(data){
 						this.codtipodocumento = data.body[0].coddocumentotipo;
+						this.phuyu_validar_alertas_comprobante("warning");
 					});
 				}
+
+				this.phuyu_validar_alertas_comprobante("warning");
 			}
+		},
+		phuyu_es_factura: function(){
+			var descripcion = this.phuyu_comprobante_descripcion();
+			return this.campos.codcomprobantetipo==10 || this.campos.codcomprobantetipo==25 || descripcion.indexOf("FACTURA") >= 0;
+		},
+		phuyu_es_boleta: function(){
+			var descripcion = this.phuyu_comprobante_descripcion();
+			return this.campos.codcomprobantetipo==12 || this.campos.codcomprobantetipo==26 || descripcion.indexOf("BOLETA") >= 0;
+		},
+		phuyu_comprobante_descripcion: function(){
+			var codigo = String(this.campos.codcomprobantetipo || "");
+			var lista = typeof comprobantes !== "undefined" ? comprobantes : [];
+			var comprobante = (lista || []).find(function(item){
+				return String(item.codcomprobantetipo || item.codigo || "") == codigo;
+			});
+			return String((comprobante && comprobante.descripcion) || "").toUpperCase();
+		},
+		phuyu_cliente_tiene_dni_o_ruc: function(){
+			var tipoDocumento = parseInt(this.codtipodocumento || 0);
+			return parseInt(this.campos.codpersona || 0)!=2 && (tipoDocumento==2 || tipoDocumento==4);
+		},
+		phuyu_validar_cliente_factura: function(tipo){
+			if (!this.phuyu_es_factura()) {
+				return true;
+			}
+
+			if (parseInt(this.campos.codpersona || 0) == 2 || parseInt(this.codtipodocumento || 0) != 4) {
+				this.phuyu_mostrar_alerta_pago("Factura requiere RUC", "Seleccione un cliente con RUC antes de guardar.", tipo || "error");
+				if ((tipo || "error") == "error") {
+					this.$nextTick(function(){
+						var $select = $("#codpersona");
+						if ($select.length && $select.hasClass("select2-hidden-accessible")) {
+							$select.select2("open");
+						}
+					});
+				}
+				return false;
+			}
+
+			return true;
+		},
+		phuyu_validar_boleta_mayor_700: function(tipo){
+			if (this.phuyu_es_boleta()) {
+				var totalMayor700 = parseFloat(this.totales.importe)>=700;
+				if (totalMayor700 && !this.phuyu_cliente_tiene_dni_o_ruc()) {
+					this.phuyu_mostrar_alerta_pago("Boleta mayor a S/. 700", "Seleccione un cliente con DNI o RUC antes de guardar.", tipo || "error");
+				} else {
+					this.phuyu_mostrar_alerta_pago("Recuerda validar DNI", "Si la boleta supera S/. 700, debe seleccionar un cliente con DNI o RUC.", "warning");
+				}
+
+				if (totalMayor700 && !this.phuyu_cliente_tiene_dni_o_ruc() && (tipo || "error") == "error") {
+					this.$nextTick(function(){
+						var $select = $("#codpersona");
+						if ($select.length && $select.hasClass("select2-hidden-accessible")) {
+							$select.select2("open");
+						}
+					});
+					return false;
+				}
+				return true;
+			}
+
+			return true;
+		},
+		phuyu_validar_alertas_comprobante: function(tipo){
+			if (!this.phuyu_validar_cliente_factura(tipo)) {
+				return false;
+			}
+			if (!this.phuyu_validar_boleta_mayor_700(tipo)) {
+				return false;
+			}
+			this.phuyu_limpiar_alerta_pago();
+			return true;
 		},
 		phuyu_correlativo: function(){
 			if (this.campos.codcomprobantetipo!=undefined) {
@@ -631,7 +840,7 @@ var phuyu_operacion = new Vue({
 				$("#nrovoucher").attr("readonly","true"); $("#nrovoucher").removeAttr("required");
 			}else{
 				$("#monto_tarjeta").removeAttr("readonly"); $("#monto_tarjeta").attr("required","true");
-				$("#nrovoucher").removeAttr("readonly"); $("#nrovoucher").attr("required","true");
+				$("#nrovoucher").removeAttr("readonly"); $("#nrovoucher").removeAttr("required");
 			}
 			this.phuyu_recalcular_pago();
 		},
@@ -687,6 +896,17 @@ var phuyu_operacion = new Vue({
 			this.pagos.monto_efectivo = restante > 0 ? restante : 0;
 			this.pagos.vuelto_efectivo = 0;
 		},
+		phuyu_jalar_total_tarjeta: function(){
+			if (this.phuyu_numero_pago(this.pagos.codtipopago_tarjeta)==0) {
+				this.phuyu_mostrar_alerta_pago("Seleccione metodo de pago", "Elija Yape, tarjeta o cheque antes de jalar el total.", "warning");
+				return false;
+			}
+
+			this.pagos.monto_tarjeta = this.phuyu_total_venta();
+			this.pagos.monto_efectivo = 0;
+			this.pagos.vuelto_efectivo = 0;
+			return true;
+		},
 		phuyu_vuelto: function(){
 			var total = this.phuyu_total_venta();
 			var tarjeta = this.phuyu_numero_pago(this.pagos.monto_tarjeta);
@@ -715,32 +935,27 @@ var phuyu_operacion = new Vue({
 			var usaTarjeta = this.phuyu_numero_pago(this.pagos.codtipopago_tarjeta) > 0;
 
 			if (resumen.total <= 0) {
-				phuyu_sistema.phuyu_noti("TOTAL DE VENTA INVALIDO", "REVISE EL PEDIDO ANTES DE COBRAR", "error");
+				this.phuyu_mostrar_alerta_pago("Total invalido", "Revise el pedido antes de cobrar.", "error");
 				return false;
 			}
 
 			if (usaTarjeta && resumen.tarjeta <= 0) {
-				phuyu_sistema.phuyu_noti("MONTO DE TARJETA INVALIDO", "INGRESE UN MONTO MAYOR A CERO", "error");
-				return false;
-			}
-
-			if (usaTarjeta && String(this.pagos.nrovoucher || "").trim() == "") {
-				phuyu_sistema.phuyu_noti("FALTA NRO VOUCHER", "REGISTRE EL NUMERO DE OPERACION", "error");
+				this.phuyu_mostrar_alerta_pago("Monto de pago invalido", "Ingrese un monto mayor a cero para el metodo seleccionado.", "error");
 				return false;
 			}
 
 			if (resumen.tarjeta > resumen.total) {
-				phuyu_sistema.phuyu_noti("EL PAGO NO PUEDE SER MAYOR AL TOTAL", "REVISE EL MONTO DE TARJETA", "error");
+				this.phuyu_mostrar_alerta_pago("Pago mayor al total", "Revise el monto del metodo seleccionado.", "error");
 				return false;
 			}
 
 			if (resumen.falta > 0) {
-				phuyu_sistema.phuyu_noti("EL IMPORTE DEBE CUBRIR EL TOTAL DE LA VENTA", "FALTAN S/. " + resumen.falta, "error");
+				this.phuyu_mostrar_alerta_pago("Importe insuficiente", "Faltan S/. " + resumen.falta, "error");
 				return false;
 			}
 
 			if (Math.abs(resumen.aplicado - resumen.total) > 0.01) {
-				phuyu_sistema.phuyu_noti("PAGO DESCUADRADO", "EL PAGO APLICADO NO COINCIDE CON EL TOTAL", "error");
+				this.phuyu_mostrar_alerta_pago("Pago descuadrado", "El pago aplicado no coincide con el total.", "error");
 				return false;
 			}
 
@@ -794,17 +1009,45 @@ var phuyu_operacion = new Vue({
 			}
 		},
 
-		phuyu_pagar: function(){
+		phuyu_confirmar_pago_sin_voucher: function(){
+			return this.phuyu_numero_pago(this.pagos.codtipopago_tarjeta) > 0 && String(this.pagos.nrovoucher || "").trim() == "";
+		},
+		phuyu_confirmar_impresion_venta: function(codkardex, avisoSinOperacion){
+			var imprimir = () => {
+				swal({
+					title: "DESEA IMPRIMIR LA VENTA ?",   
+					text: "DESEA IMPRIMIR EL COMPROBANTE REGISTRADO", 
+					icon: "warning",
+					dangerMode: true,
+					buttons: ["CANCELAR", "SI, IMPRIMIR"],
+				}).then((willDelete) => {
+					if (willDelete){
+						window.open(url+"facturacion/formato/ticket/"+codkardex,"_blank");
+					}
+				});
+			};
+
+			if (avisoSinOperacion) {
+				swal({
+					title: "Cobro sin codigo de operacion",
+					text: "La venta fue registrada, pero el pago con tarjeta/Yape no tiene Nro Voucher. Recuerde regularizarlo si corresponde.",
+					icon: "warning",
+					button: "Entendido",
+				}).then(() => {
+					imprimir();
+				});
+			} else {
+				imprimir();
+			}
+		},
+		phuyu_pagar: function(confirmarSinVoucher){
 			this.phuyu_recalcular_totales_detalle();
-			if ((this.campos.codcomprobantetipo==10 || this.campos.codcomprobantetipo==25) && this.codtipodocumento!=4) {
-				phuyu_sistema.phuyu_noti("PARA EMITIR UNA FACTURA", "DEBE SELECCIONAR UN CLIENTE CON RUC","error"); return false;
+			if (!this.phuyu_validar_cliente_factura("error")) {
+				return false;
 			}
 
-			if (parseFloat(this.totales.importe)>=700) {
-				if ((this.campos.codcomprobantetipo==12 || this.campos.codcomprobantetipo==26) && this.codtipodocumento==0) {
-					phuyu_sistema.phuyu_noti("PARA EMITIR UNA BOLETA CON MONTO MAYOR A 700.00 SOLES","DEBE SELECCIONAR UN CLIENTE CON DNI o RUC","error");
-					return false;
-				}
+			if (!this.phuyu_validar_boleta_mayor_700("error")) {
+				return false;
 			}
 
 			if (this.campos.condicionpago==1) {
@@ -813,40 +1056,49 @@ var phuyu_operacion = new Vue({
 				}
 			}else{
 				if (this.campos.codpersona==2) {
-					phuyu_sistema.phuyu_noti("ATENCION USUARIO: EL SISTEMA NO PERMITE REGISTRAR UN CREDITO A CLIENTES VARIOS","","error");
+					this.phuyu_mostrar_alerta_pago("Credito no permitido", "Seleccione un cliente registrado para vender al credito.", "error");
 					return false;
 				}
 			}
+
+			if (!confirmarSinVoucher && this.phuyu_confirmar_pago_sin_voucher()) {
+				swal({
+					title: "Continuar sin operacion?",
+					text: "Selecciono un metodo distinto a efectivo, pero no ingreso Nro Voucher. Puede continuar si el cliente no tiene el codigo a la mano.",
+					icon: "warning",
+					dangerMode: false,
+					buttons: ["Revisar", "Continuar"],
+				}).then((continuar) => {
+					if (continuar) {
+						this.phuyu_pagar(true);
+					}
+				});
+				return false;
+			}
 			
-			this.estado = 1; $("#modal_pago").modal("hide"); phuyu_sistema.phuyu_inicio_guardar("GUARDANDO VENTA . . .");
+			this.estado = 1; phuyu_sistema.phuyu_inicio_guardar("GUARDANDO VENTA . . .");
 
 			this.$http.post(url+"ventas/pedidos/cobrar_pedido", {"campos":this.campos,"detalle":this.detalle,"cuotas":this.cuotas,"pagos":this.pagos,"totales":this.totales}).then(function(data){
 				if (data.body=="e") {
 					phuyu_sistema.phuyu_alerta("SESION DEL USUARIO TERMINADA","DEBE INICIAR SESION NUEVAMENTE","error");
 				}else{
 					if (data.body.estado==1) {
-						swal({
-							title: "DESEA IMPRIMIR LA VENTA ?",   
-							text: "DESEA IMPRIMIR EL COMPROBANTE REGISTRADO", 
-							icon: "warning",
-							dangerMode: true,
-							buttons: ["CANCELAR", "SI, IMPRIMIR"],
-						}).then((willDelete) => {
-							if (willDelete){
-								window.open(url+"facturacion/formato/ticket/"+data.body.codkardex,"_blank");
-
-								// $("#phuyu_pdf").attr("src",url+"restaurante/caja/cobrar_pedido/"+data.body.codkardex);
-							}
-						});
+						$("#modal_pago").modal("hide");
+						this.phuyu_confirmar_impresion_venta(data.body.codkardex, this.phuyu_confirmar_pago_sin_voucher());
 						phuyu_sistema.phuyu_noti("VENTA REGISTRADA CORRECTAMENTE","VENTA REGISTRADA EN EL SISTEMA","success");
 					}else{
-						phuyu_sistema.phuyu_alerta(data.body.mensaje || "ERROR AL REGISTRAR VENTA","REVISE EL PEDIDO","error");
+						this.phuyu_mostrar_alerta_pago("No se pudo guardar la venta", data.body.mensaje || "Revise el pedido y vuelva a intentar.", "error");
+						this.estado = 0;
 					}
 				}
-				phuyu_sistema.phuyu_fin(); phuyu_sistema.phuyu_modulo();
+				phuyu_sistema.phuyu_fin();
+				if (data.body.estado==1) {
+					phuyu_sistema.phuyu_modulo();
+				}
 			}, function(){
-				phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR VENTA","ERROR DE RED","error");
-				phuyu_sistema.phuyu_fin(); phuyu_sistema.phuyu_modulo();
+				this.phuyu_mostrar_alerta_pago("Error de red", "No se pudo registrar la venta. Revise la conexion e intente nuevamente.", "error");
+				phuyu_sistema.phuyu_fin();
+				this.estado = 0;
 			});
 		},
 		
@@ -896,14 +1148,8 @@ var phuyu_operacion = new Vue({
 			});
 		},
 		phuyu_tipopedido: function(){
-			if (this.campos.tipopedido > 0) {
-				this.$http.post(url+"almacen/productos/producto_tipopedido/"+this.campos.tipopedido).then(function(data){
-					var producto = {"codproducto":data.body[0].codproducto,"descripcion":data.body[0].descripcion,"codunidad":data.body[0].codunidad,
-					"unidad":data.body[0].unidad,"stockdisponible":0,"control":0,"precio":data.body[0].precio,"preciorefunitario":data.body[0].precio,
-					"calcular":0,"subtotal":data.body[0].precio};
-					this.phuyu_additem(producto);
-				});
-			}
+			this.phuyu_quitar_servicio_tipopedido();
+			this.phuyu_agregar_servicio_tipopedido();
 		}
 	},
 	created: function(){
