@@ -176,7 +176,7 @@
       </div>
 
       <div class="table-responsive producto-table-wrap">
-        <table class="table table-bordered align-middle" style="min-width: 1000px;">
+        <table class="table table-bordered align-middle" style="min-width: 1080px;">
           <thead>
             <tr>
               <th>UNIDAD</th>
@@ -188,6 +188,7 @@
               <th>P.MAYOR</th>
               <th>P.OTROS</th>
               <th>C.BARRA</th>
+              <th>CALCULAR</th>
               <th>ELIMINAR</th>
             </tr>
           </thead>
@@ -200,14 +201,19 @@
                   <?php } ?>
                 </select>
               </td>
-              <td><input type="number" step="0.1" class="form-control number" v-model.number="uni.factor" min="1" required></td>
+              <td><input type="number" step="0.000001" class="form-control number" v-model.number="uni.factor" min="0.000001" required></td>
               <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.preciocompra" min="0" required></td>
-              <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventapublico" v-bind:min="campos.es_venta == 1 ? 0.1 : 0" v-bind:required="campos.es_venta == 1" v-bind:disabled="campos.es_venta != 1"></td>
+              <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventapublico" v-bind:min="campos.es_venta == 1 ? 0.0001 : 0" v-bind:required="campos.es_venta == 1" v-bind:disabled="campos.es_venta != 1"></td>
               <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventamin" min="0" v-bind:required="campos.es_venta == 1" v-bind:disabled="campos.es_venta != 1"></td>
               <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventacredito" min="0" v-bind:required="campos.es_venta == 1" v-bind:disabled="campos.es_venta != 1"></td>
               <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventaxmayor" min="0" v-bind:required="campos.es_venta == 1" v-bind:disabled="campos.es_venta != 1"></td>
               <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventaadicional" min="0" v-bind:required="campos.es_venta == 1" v-bind:disabled="campos.es_venta != 1"></td>
               <td><input type="text" class="form-control number" v-model="uni.codigobarra"></td>
+              <td>
+                <button type="button" class="btn btn-primary btn-sm" v-on:click="phuyu_calcular_precios_desde(index)" title="Calcular precios desde esta unidad">
+                  <i class="bi bi-calculator"></i>
+                </button>
+              </td>
               <td>
                 <button type="button" class="btn btn-danger btn-sm" v-on:click="phuyu_deleteunidad(index,uni)" v-bind:disabled="editar==1 && uni.factor==1">
                   <i class="bi bi-trash3"></i>

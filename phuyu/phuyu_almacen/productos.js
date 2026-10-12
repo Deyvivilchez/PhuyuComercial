@@ -62,6 +62,75 @@ var phuyu_form = new Vue({
 				eliminar: 0
 			});
 		},
+		phuyu_numero_limpio: function (valor, decimales) {
+			var numero = parseFloat(valor || 0);
+			if (isNaN(numero)) {
+				numero = 0;
+			}
+			return parseFloat(numero.toFixed(decimales));
+		},
+		phuyu_normalizar_unidad: function (unidad) {
+			unidad.factor = this.phuyu_numero_limpio(unidad.factor, 6);
+			unidad.preciocompra = this.phuyu_numero_limpio(unidad.preciocompra, 4);
+			unidad.pventapublico = this.phuyu_numero_limpio(unidad.pventapublico, 4);
+			unidad.pventamin = this.phuyu_numero_limpio(unidad.pventamin, 4);
+			unidad.pventacredito = this.phuyu_numero_limpio(unidad.pventacredito, 4);
+			unidad.pventaxmayor = this.phuyu_numero_limpio(unidad.pventaxmayor, 4);
+			unidad.pventaadicional = this.phuyu_numero_limpio(unidad.pventaadicional, 4);
+			return unidad;
+		},
+		phuyu_normalizar_unidades: function () {
+			for (var i = 0; i < this.unidades.length; i++) {
+				this.phuyu_normalizar_unidad(this.unidades[i]);
+			}
+		},
+		phuyu_calcular_precios_desde: function (index) {
+			if (!this.unidades[index]) {
+				return false;
+			}
+
+			this.phuyu_normalizar_unidades();
+
+			var base = this.unidades[index];
+			var factorBase = parseFloat(base.factor || 0);
+			if (factorBase <= 0) {
+				phuyu_sistema.phuyu_noti("Factor invalido", "La unidad base debe tener un factor mayor a cero", "error");
+				return false;
+			}
+
+			var camposPrecio = ["preciocompra"];
+			if (parseInt(this.campos.es_venta || 0) == 1) {
+				camposPrecio = ["preciocompra", "pventapublico", "pventamin", "pventacredito", "pventaxmayor", "pventaadicional"];
+			}
+			var tienePrecio = false;
+			for (var c = 0; c < camposPrecio.length; c++) {
+				if (parseFloat(base[camposPrecio[c]] || 0) > 0) {
+					tienePrecio = true;
+					break;
+				}
+			}
+
+			if (!tienePrecio) {
+				phuyu_sistema.phuyu_noti("Ingrese un precio", "Primero coloque el precio en la unidad que usara como base", "error");
+				return false;
+			}
+
+			for (var i = 0; i < this.unidades.length; i++) {
+				var factorDestino = parseFloat(this.unidades[i].factor || 0);
+				if (factorDestino <= 0) {
+					continue;
+				}
+
+				for (var k = 0; k < camposPrecio.length; k++) {
+					var campo = camposPrecio[k];
+					var precioBase = parseFloat(base[campo] || 0);
+					this.unidades[i][campo] = this.phuyu_numero_limpio(precioBase * factorDestino / factorBase, 4);
+				}
+			}
+
+			phuyu_sistema.phuyu_noti("Precios calculados", "Se actualizaron las unidades segun el factor", "success");
+			return true;
+		},
 		phuyu_ediunidad: function (index, unidad) {
 			this.campos_1.codunidad = unidad.codunidad; this.campos_1.factor = unidad.factor;
 			this.campos_1.preciocompra = unidad.preciocompra; this.campos_1.pventapublico = unidad.pventapublico;
@@ -77,6 +146,7 @@ var phuyu_form = new Vue({
 		phuyu_unidades: function (unidad) {
 			this.$http.post(url + phuyu_controller + "/unidades", { "codregistro": phuyu_datos.registro }).then(function (data) {
 				this.unidades = data.body.unidades;
+				this.phuyu_normalizar_unidades();
 				if (this.campos.afectoicbper == "1") {
 					$("#afectoicbper_check").attr("checked", "true");
 				} else {
@@ -175,6 +245,7 @@ var phuyu_form = new Vue({
 			if (!this.phuyu_validar_clasificacion_restaurante()) {
 				return false;
 			}
+			this.phuyu_normalizar_unidades();
 
 			this.campos.afectoigvcompra = 0;
 			if ($("#afectoigvcompra_check").is(":checked")) {

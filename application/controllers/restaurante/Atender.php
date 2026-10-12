@@ -97,7 +97,7 @@ class Atender extends CI_Controller
 	{
 		if ($this->input->is_ajax_request()) {
 			if (isset($_SESSION['phuyu_usuario'])) {
-				$this->load->view('restaurante/atender/atender', $this->phuyu_datos_atender());
+				$this->load->view('restaurante/atender/index', $this->phuyu_datos_atender());
 			} else {
 				$this->load->view('phuyu/505');
 			}

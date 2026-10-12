@@ -74,9 +74,9 @@ class Productos extends CI_Controller
                     $codunidad = 0;
                     $lista[$key]['costo'] = 0.0;
                 } else {
-                    $lista[$key]['precio'] = number_format(round($precio[0]['pventapublico'], 2), 2);
+                    $lista[$key]['precio'] = number_format(round($precio[0]['pventapublico'], 4), 4);
                     $codunidad = $precio[0]['codunidad'];
-                    $lista[$key]['costo'] = number_format(round($precio[0]['preciocosto'], 2), 2);
+                    $lista[$key]['costo'] = number_format(round($precio[0]['preciocosto'], 4), 4);
                 }
 
                 $stock = $this->db->query('select pu.stockactualconvertido,u.descripcion as unidad from almacen.productoubicacion as pu inner join almacen.unidades as u on(pu.codunidad=u.codunidad) where pu.codproducto=' . $value['codproducto'] . ' and pu.codunidad=' . $codunidad . ' and pu.codalmacen=' . $codalmacen . ' and pu.estado=1')->result_array();
