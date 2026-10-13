@@ -269,6 +269,7 @@ DO $$
 DECLARE
     v_coddelivery integer;
     v_codllevar integer;
+    v_codlinea integer;
     v_codunidad integer;
 BEGIN
     SELECT codunidad INTO v_codunidad
@@ -281,13 +282,25 @@ BEGIN
         RAISE EXCEPTION 'No existe una unidad activa para crear servicios de tipo pedido.';
     END IF;
 
+    -- Mantener la linea 3 cuando exista; usar SIN LINEA en instalaciones
+    -- que no tienen ese catalogo, sin crear referencias inexistentes.
+    SELECT codlinea INTO v_codlinea
+    FROM almacen.lineas
+    WHERE codlinea IN (3, 0)
+    ORDER BY CASE WHEN codlinea = 3 THEN 0 ELSE 1 END
+    LIMIT 1;
+
+    IF v_codlinea IS NULL THEN
+        RAISE EXCEPTION 'No existe la linea 3 ni SIN LINEA (0) para crear servicios de tipo pedido.';
+    END IF;
+
     INSERT INTO almacen.productos (
         codfamilia, codlinea, codmarca, codempresa, codigo, descripcion,
         afectoicbper, controlstock, afectoigvcompra, afectoigvventa,
         estado, calcular, paraventa, tipo
     )
     SELECT
-        0, 3, 1, 1, 'SERV_DELIVERY', 'SERVICIO DELIVERY',
+        0, v_codlinea, 1, 1, 'SERV_DELIVERY', 'SERVICIO DELIVERY',
         0, 0, 0, 0,
         1, 0, 1, 1
     WHERE NOT EXISTS (
@@ -300,7 +313,7 @@ BEGIN
         estado, calcular, paraventa, tipo
     )
     SELECT
-        0, 3, 1, 1, 'SERV_LLEVAR', 'SERVICIO PARA LLEVAR',
+        0, v_codlinea, 1, 1, 'SERV_LLEVAR', 'SERVICIO PARA LLEVAR',
         0, 0, 0, 0,
         1, 0, 1, 1
     WHERE NOT EXISTS (
