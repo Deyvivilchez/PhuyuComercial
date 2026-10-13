@@ -18,7 +18,7 @@
 
 ALTER TABLE almacen.productos
     ADD COLUMN IF NOT EXISTS es_venta smallint NOT NULL DEFAULT 1,
-    ADD COLUMN IF NOT EXISTS es_insumo smallint NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS es_insumo smallint NOT NULL DEFAULT 0, 
     ADD COLUMN IF NOT EXISTS es_preparado smallint NOT NULL DEFAULT 0;
 
 ALTER TABLE kardex.kardexalmacendetalle
