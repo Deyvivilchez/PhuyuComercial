@@ -161,8 +161,11 @@ class Ventas extends CI_Controller
             return ['estado' => 0, 'informacion' => 'Los datos de pago llegaron incompletos.'];
         }
 
+        if ((int)$request->campos->condicionpago === 2) {
+            return $this->Caja_model->phuyu_validar_cuotas_venta($request->campos, $request->totales, $request->cuotas ?? null);
+        }
         if ((int)$request->campos->condicionpago !== 1) {
-            return ['estado' => 1];
+            return ['estado' => 0, 'informacion' => 'Seleccione una condicion de pago valida.'];
         }
 
         $total = round((float)$request->totales->importe, 2);

@@ -896,7 +896,7 @@
                       <td><input type="date" class="form-control" v-model="dato.fechavence" @change="recalcular_fechas_desde(index)"></td>
                       <td><input type="text" class="form-control" v-model="dato.nroletra" maxlength="10"></td>
                       <td><input type="text" class="form-control" v-model="dato.nrounicodepago"></td>
-                      <td><input type="number" class="form-control" v-model="dato.importe" step="0.001" v-on:keyup="calcular_credito()"></td>
+                      <td><input type="number" class="form-control" v-model.number="dato.importe" step="0.01" min="0.01" required :readonly="!inicialActivado && cuotas.length === 1" @input="calcular_credito()"></td>
                       <td><input type="number" disabled="disabled" class="form-control" v-model="dato.interes"></td>
                       <td>{{ dato.total }}</td>
                     </tr>

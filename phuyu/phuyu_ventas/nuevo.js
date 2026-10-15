@@ -1401,6 +1401,23 @@ var phuyu_operacion = new Vue({
 
             this.phuyu_vuelto();
             this.phuyu_lineascredito();
+            if (this.campos.condicionpago == 2) {
+                if (!this.cuotas.length) {
+                    this.phuyu_cuotas();
+                } else if (this.cuotas.every(c => this.toNum(c.importe) === 0)) {
+                    // Las cuotas pudieron crearse antes de agregar productos.
+                    // Completar capital sin cambiar las fechas elegidas.
+                    if (this.inicialActivado) {
+                        this.aplicarInicialYDistribuirImportes();
+                    } else {
+                        const centavos = Math.round(this.toNum(this.totales.importe) * 100);
+                        const base = Math.floor(centavos / this.cuotas.length);
+                        this.cuotas.forEach((c, i) => {
+                            c.importe = (i === this.cuotas.length - 1 ? centavos - base * i : base) / 100;
+                        });
+                    }
+                }
+            }
             this.calcular_credito();
             $("#modal_finventa").modal('show');
         },
@@ -1647,6 +1664,11 @@ var phuyu_operacion = new Vue({
                 return;
             }
 
+            // Una unica cuota contiene todo el capital, sin pedir digitacion manual.
+            if (!this.inicialActivado && this.cuotas.length === 1) {
+                this.cuotas[0].importe = Number(totalVenta.toFixed(2));
+            }
+
             // Si está activo inicial, cuota 0 = HOY, interés 0 (solo abono)
             if (this.inicialActivado) {
                 this.cuotas[0].fechavence = this.fechaHoy();
@@ -1706,6 +1728,28 @@ var phuyu_operacion = new Vue({
             this.campos.totalcredito = Number(totalCredito.toFixed(2));
             this.importetotalcredito = Number(totalCredito.toFixed(2)).toFixed(2);
         },
+        phuyu_validar_cuotas: function() {
+            if (this.campos.condicionpago != 2) return true;
+            if (!this.cuotas.length) {
+                phuyu_sistema.phuyu_noti("REVISE LAS CUOTAS", "Debe generar al menos una cuota.", "danger");
+                return false;
+            }
+            let capital = 0;
+            for (let i = 0; i < this.cuotas.length; i++) {
+                const c = this.cuotas[i];
+                const importe = Number(c.importe);
+                if (!Number.isFinite(importe) || Math.round(importe * 100) <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(c.fechavence || "")) {
+                    phuyu_sistema.phuyu_noti("REVISE LA CUOTA " + (i + 1), "Ingrese una fecha y un importe mayor a cero. Si no dará inicial, pulse Quitar inicial.", "danger");
+                    return false;
+                }
+                capital += Math.round(importe * 100);
+            }
+            if (capital !== Math.round(this.toNum(this.totales.importe) * 100)) {
+                phuyu_sistema.phuyu_noti("REVISE LAS CUOTAS", "La suma de los importes debe coincidir con el total de la venta.", "danger");
+                return false;
+            }
+            return true;
+        },
         phuyu_pagar: async function() {
             if (this.estado == 1) {
                 return false;
@@ -1714,6 +1758,9 @@ var phuyu_operacion = new Vue({
             if (!this.phuyu_validar_consistencia_venta()) {
                 return false;
             }
+
+            if (!this.phuyu_validar_cuotas()) return false;
+            this.calcular_credito();
 
             if (this.campos.condicionpago == 1) {
                 if (this.pagos.codtipopago_tarjeta == 0) {

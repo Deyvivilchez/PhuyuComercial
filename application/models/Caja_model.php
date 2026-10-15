@@ -97,6 +97,44 @@ class Caja_model extends CI_Model {
 		return $estado;
 	}
 
+    public function phuyu_validar_cuotas_venta($campos, $totales, $cuotas)
+    {
+        if ((int)($campos->condicionpago ?? 1) !== 2) return ['estado' => 1];
+        if (!is_array($cuotas) || count($cuotas) === 0) {
+            return ['estado' => 0, 'informacion' => 'Debe registrar al menos una cuota para la venta a credito.'];
+        }
+        $capital = 0;
+        $intereses = 0;
+        $total = 0;
+        foreach ($cuotas as $i => $cuota) {
+            $importe = $cuota->importe ?? null;
+            $interes = $cuota->interes ?? null;
+            $importeTotal = $cuota->total ?? null;
+            $fecha = $cuota->fechavence ?? '';
+            $fechaValida = is_string($fecha) ? DateTime::createFromFormat('!Y-m-d', $fecha) : false;
+            if (!is_numeric($importe) || !is_finite((float)$importe) || round((float)$importe, 2) <= 0
+                || !is_numeric($interes) || !is_finite((float)$interes) || (float)$interes < 0
+                || !is_numeric($importeTotal) || !is_finite((float)$importeTotal)
+                || !$fechaValida || $fechaValida->format('Y-m-d') !== $fecha) {
+                return ['estado' => 0, 'informacion' => 'La cuota ' . ($i + 1) . ' requiere una fecha valida y un importe mayor a cero.'];
+            }
+            $centavos = (int)round((float)$importe * 100);
+            $centavosInteres = (int)round((float)$interes * 100);
+            if ((int)round((float)$importeTotal * 100) !== $centavos + $centavosInteres) {
+                return ['estado' => 0, 'informacion' => 'El total de la cuota ' . ($i + 1) . ' no coincide con su importe e interes.'];
+            }
+            $capital += $centavos;
+            $intereses += $centavosInteres;
+            $total += $centavos + $centavosInteres;
+        }
+        if ($capital !== (int)round((float)($totales->importe ?? 0) * 100)
+            || $intereses !== (int)round((float)($totales->interes ?? 0) * 100)
+            || $total !== (int)round((float)($campos->totalcredito ?? 0) * 100)) {
+            return ['estado' => 0, 'informacion' => 'La suma de las cuotas debe coincidir con el importe de la venta y sus intereses.'];
+        }
+        return ['estado' => 1];
+    }
+
 	function phuyu_credito($codkardex, $codmovimiento, $tipocredito, $campos, $totales, $cuotas,$documento){
 
 		$campos->codlote = (isset($campos->codlote) || !empty($campos->codlote)) ? $campos->codlote : 0;

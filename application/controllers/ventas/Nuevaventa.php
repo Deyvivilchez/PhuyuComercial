@@ -215,6 +215,14 @@ class Nuevaventa extends CI_Controller {
 		if ($this->input->is_ajax_request()) {
 			if (isset( $_SESSION["phuyu_codusuario"]) ) {
 				$this->request = json_decode(file_get_contents('php://input'));
+                $validacionCuotas = $this->Caja_model->phuyu_validar_cuotas_venta(
+                    $this->request->campos, $this->request->totales, $this->request->cuotas ?? null
+                );
+                if ((int)$validacionCuotas['estado'] !== 1) {
+                    echo json_encode($validacionCuotas);
+                    return;
+                }
+
 
 				//echo 1;exit;
 				//REVISAMOS SI EL PEDIDO SIGUE ACTIVO
