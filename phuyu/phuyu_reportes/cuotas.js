@@ -88,11 +88,11 @@ var phuyu_datos = new Vue({
 
 		pdf_cuotas: function () {
 			this.phuyu_fecha();
-			window.open(url + phuyu_controller + "/pdf_cuotas?datos=" + JSON.stringify(this.campos), "_blank");
+			window.open(url + phuyu_controller + "/pdf_cuotas?datos=" + encodeURIComponent(JSON.stringify(this.campos)), "_blank");
 		},
 		excel_cuotas: function () {
 			this.phuyu_fecha();
-			window.open(url + phuyu_controller + "/excel_cuotas?datos=" + JSON.stringify(this.campos), "_blank");
+			window.open(url + phuyu_controller + "/excel_cuotas?datos=" + encodeURIComponent(JSON.stringify(this.campos)), "_blank");
 		}
 	},
 	created: function () {

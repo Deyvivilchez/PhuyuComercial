@@ -308,31 +308,31 @@ var phuyu_migrarstock = new Vue({
 		},
 		np_previsualizar_migrarstock: function(){
 			if (!this.campos.codalmacen) {
-				phuyu_sistema.phuyu_alerta("Seleccione almacen", "Debe elegir el almacen destino para validar el stock", "error");
+				phuyu_sistema.phuyu_alerta("Falta elegir almacen", "Seleccione el almacen donde se aplicara esta migracion.", "error");
 				return;
 			}
 			if (!this.campos.mapeo.cantidad) {
-				phuyu_sistema.phuyu_alerta("Mapeo incompleto", "Seleccione en el mapeo la columna Cantidad", "error");
+				phuyu_sistema.phuyu_alerta("Falta columna de cantidad", "En Mapeo de columnas, indique que columna del Excel contiene el stock o cantidad.", "error");
 				return;
 			}
 			if ((this.campos.buscar_por === "auto" || this.campos.buscar_por === "codigo") && !this.campos.mapeo.codigo) {
-				phuyu_sistema.phuyu_alerta("Mapeo incompleto", "Seleccione en el mapeo la columna Codigo / SKU", "error");
+				phuyu_sistema.phuyu_alerta("Falta columna de codigo", "Indique que columna identifica al producto, o cambie la busqueda a nombre exacto.", "error");
 				return;
 			}
 			if (this.campos.buscar_por === "barra" && !this.campos.mapeo.codigo_barra && !this.campos.mapeo.codigo) {
-				phuyu_sistema.phuyu_alerta("Mapeo incompleto", "Seleccione Codigo de barra o Codigo / SKU", "error");
+				phuyu_sistema.phuyu_alerta("Falta codigo de barra", "Mapee Codigo de barra o Codigo / SKU para reconocer el producto.", "error");
 				return;
 			}
 			if (this.campos.buscar_por === "nombre" && !this.campos.mapeo.descripcion) {
-				phuyu_sistema.phuyu_alerta("Mapeo incompleto", "Seleccione en el mapeo la columna Descripcion / nombre", "error");
+				phuyu_sistema.phuyu_alerta("Falta columna de nombre", "Mapee la columna Descripcion / nombre para buscar por nombre exacto.", "error");
 				return;
 			}
 			if (this.campos.crear_productos && !this.campos.mapeo.descripcion) {
-				phuyu_sistema.phuyu_alerta("Mapeo incompleto", "Para crear productos faltantes debe asignar Descripcion / nombre", "error");
+				phuyu_sistema.phuyu_alerta("Falta nombre para crear productos", "Para crear productos faltantes debe mapear Descripcion / nombre.", "error");
 				return;
 			}
 			if (!this.campos.filas.length) {
-				phuyu_sistema.phuyu_alerta("Seleccione un Excel", "No hay filas cargadas para previsualizar", "error");
+				phuyu_sistema.phuyu_alerta("Falta cargar Excel", "Seleccione un archivo Excel o CSV antes de validar.", "error");
 				return;
 			}
 
@@ -345,20 +345,21 @@ var phuyu_migrarstock = new Vue({
 				mapeo: this.campos.mapeo,
 				codalmacen: this.campos.codalmacen,
 				ignorar_stock_cero: this.campos.ignorar_stock_cero,
+				permitir_cantidad_cero: this.campos.permitir_cantidad_cero,
 				crear_productos: this.campos.crear_productos,
 				reemplazar_nombre: this.campos.reemplazar_nombre,
 				buscar_por: this.campos.buscar_por,
 				modo_stock: this.campos.modo_stock
 			}).then(function(response){
 				if (response.body.estado == 1) {
-					self.campos.preview = response.body.preview || [];
+					self.campos.preview = self.np_normalizar_preview_migrarstock(response.body.preview || []);
 					self.campos.resumen = response.body.resumen || null;
-					self.campos.seleccionar_todo = true;
-					phuyu_sistema.phuyu_alerta("Previsualizacion lista", response.body.mensaje || "Revise las filas antes de aplicar", "success");
+					self.np_sincronizar_seleccion_todo_migrarstock();
+					phuyu_sistema.phuyu_alerta("Revision lista", response.body.mensaje || "Revise las filas y aplique solo las seleccionadas", "success");
 				} else {
 					self.campos.preview = [];
 					self.campos.resumen = null;
-					phuyu_sistema.phuyu_alerta("No se pudo previsualizar", response.body.mensaje || "Revise el mapeo e intente nuevamente", "error");
+					phuyu_sistema.phuyu_alerta("No se pudo validar", response.body.mensaje || "Revise el mapeo de columnas e intente nuevamente", "error");
 				}
 				self.estado = 0;
 				phuyu_sistema.phuyu_fin();
@@ -455,14 +456,54 @@ var phuyu_migrarstock = new Vue({
 				return fila.valido && fila.seleccionado;
 			}).length;
 		},
-		np_marcar_migrarstock_todos: function(){
-			var marcar = this.campos.seleccionar_todo;
+		np_filas_migrarstock_validas: function(){
+			if (!this.campos.preview) {
+				return 0;
+			}
+			return this.campos.preview.filter(function(fila){
+				return fila.valido;
+			}).length;
+		},
+		np_hay_productos_no_existen_migrarstock: function(){
+			if (!this.campos.preview) {
+				return false;
+			}
+			return this.campos.preview.some(function(fila){
+				return !fila.valido && String(fila.mensaje || "").toLowerCase().indexOf("producto no existe") !== -1;
+			});
+		},
+		np_normalizar_preview_migrarstock: function(preview){
+			return preview.map(function(fila){
+				fila.valido = fila.valido === true || fila.valido === 1 || fila.valido === "1";
+				fila.seleccionado = fila.valido && (fila.seleccionado === true || fila.seleccionado === 1 || fila.seleccionado === "1");
+				return fila;
+			});
+		},
+		np_sincronizar_seleccion_todo_migrarstock: function(){
+			var validas = (this.campos.preview || []).filter(function(fila){
+				return fila.valido;
+			});
+			this.campos.seleccionar_todo = validas.length > 0 && validas.every(function(fila){
+				return fila.seleccionado;
+			});
+		},
+		np_cambiar_fila_migrarstock: function(fila, event){
+			if (!fila || !fila.valido) {
+				return;
+			}
+			this.$set(fila, "seleccionado", !!event.target.checked);
+			this.np_sincronizar_seleccion_todo_migrarstock();
+		},
+		np_marcar_migrarstock_todos: function(event){
+			var marcar = event && event.target ? !!event.target.checked : !!this.campos.seleccionar_todo;
+			this.campos.seleccionar_todo = marcar;
 			if (!this.campos.preview) {
 				return;
 			}
+			var self = this;
 			this.campos.preview.forEach(function(fila){
 				if (fila.valido) {
-					fila.seleccionado = marcar;
+					self.$set(fila, "seleccionado", marcar);
 				}
 			});
 		},
@@ -478,17 +519,17 @@ var phuyu_migrarstock = new Vue({
 				return fila.valido && fila.seleccionado;
 			});
 			if (filas.length == 0) {
-				phuyu_sistema.phuyu_alerta("Debe seleccionar filas", "No hay filas validas seleccionadas para aplicar", "error");
+				phuyu_sistema.phuyu_alerta("No hay filas para aplicar", "Seleccione filas listas. Las filas con error no se pueden aplicar.", "error");
 				return;
 			}
 			if (this.campos.limpieza_almacen && this.campos.limpieza_almacen !== "conservar") {
 				var accion = this.campos.limpieza_almacen === "inactivar" ? "poner en 0 e inhabilitar" : "poner en 0";
 				var self = this;
 				this.np_confirmar_accion_migrarstock({
-					titulo: "Aplicar stock seleccionado",
+					titulo: "Migrar filas seleccionadas",
 					mensaje: "Se va a " + accion + " los productos no seleccionados.",
 					detalle: "La limpieza se aplicara solo en " + this.np_nombre_almacen_migrarstock() + ". Los otros almacenes no se tocaran.",
-					confirmar: "Aplicar stock",
+					confirmar: "Migrar seleccionados",
 					tipo: "warning",
 					callback: function(){
 						self.np_aplicar_stock_migrarstock(filas);
@@ -501,13 +542,14 @@ var phuyu_migrarstock = new Vue({
 		},
 		np_aplicar_stock_migrarstock: function(filas){
 			this.estado = 1;
-			phuyu_sistema.phuyu_inicio_guardar("Aplicando stock seleccionado...");
+			phuyu_sistema.phuyu_inicio_guardar("Migrando filas seleccionadas...");
 
 			var self = this;
 			this.$http.post(url+"almacen/migrarstock/procesar_previsualizacion", {
 				filas: filas,
 				codalmacen: this.campos.codalmacen,
 				ignorar_stock_cero: this.campos.ignorar_stock_cero,
+				permitir_cantidad_cero: this.campos.permitir_cantidad_cero,
 				crear_productos: this.campos.crear_productos,
 				reemplazar_nombre: this.campos.reemplazar_nombre,
 				limpieza_almacen: this.campos.limpieza_almacen,
@@ -515,11 +557,11 @@ var phuyu_migrarstock = new Vue({
 				modo_stock: this.campos.modo_stock
 			}).then(function(response){
 				if (response.body.estado == 1) {
-					phuyu_sistema.phuyu_alerta("Stock actualizado correctamente !!!", response.body.mensaje || "Actualizacion realizada correctamente", "success");
+					phuyu_sistema.phuyu_alerta("Migracion realizada correctamente", response.body.mensaje || "Filas seleccionadas migradas correctamente", "success");
 					self.campos.preview = [];
 					self.campos.resumen = null;
 				} else {
-					phuyu_sistema.phuyu_alerta("No se pudo actualizar stock !!!", response.body.mensaje || "Revise las filas e intente nuevamente", "error");
+					phuyu_sistema.phuyu_alerta("No se pudo migrar", response.body.mensaje || "Revise las filas e intente nuevamente", "error");
 				}
 				self.estado = 0;
 				phuyu_sistema.phuyu_fin();

@@ -116,6 +116,86 @@
 		padding: 6px 10px;
 	}
 
+	#phuyu_datos .phuyu-filter-band {
+		background: #ffffff;
+		border: 1px solid rgba(64, 81, 137, .12);
+		border-radius: 12px;
+		box-shadow: 0 10px 28px rgba(15, 23, 42, .05);
+		margin-bottom: 16px;
+		padding: 14px;
+	}
+
+	#phuyu_datos .phuyu-filter-title {
+		align-items: center;
+		color: #111827;
+		display: flex;
+		font-size: 13px;
+		font-weight: 900;
+		gap: 7px;
+		margin-bottom: 12px;
+		text-transform: uppercase;
+	}
+
+	#phuyu_datos .phuyu-filter-title i {
+		color: #405189;
+		font-size: 16px;
+	}
+
+	#phuyu_datos .phuyu-filter-label {
+		color: #475569;
+		font-size: 11px;
+		font-weight: 900;
+		letter-spacing: .03em;
+		margin-bottom: 6px;
+		text-transform: uppercase;
+	}
+
+	#phuyu_datos .phuyu-filter-band .form-control,
+	#phuyu_datos .phuyu-filter-band .form-select {
+		border-color: #dbe3ef;
+		border-radius: 8px;
+		font-size: 12px;
+		min-height: 38px;
+	}
+
+	#phuyu_datos .phuyu-filter-actions {
+		align-items: end;
+		display: grid;
+		grid-template-columns: 46px minmax(150px, 1fr);
+		gap: 8px;
+		height: 100%;
+	}
+
+	#phuyu_datos .phuyu-filter-actions .btn {
+		align-items: center;
+		border-radius: 8px;
+		display: inline-flex;
+		font-size: 12px;
+		font-weight: 800;
+		gap: 6px;
+		justify-content: center;
+		min-height: 38px;
+	}
+
+	#phuyu_datos .phuyu-results-title {
+		align-items: center;
+		border-top: 1px solid #edf2f7;
+		color: #111827;
+		display: flex;
+		font-size: 14px;
+		font-weight: 900;
+		gap: 8px;
+		justify-content: center;
+		margin: 14px 0 12px;
+		padding-top: 14px;
+		text-transform: uppercase;
+	}
+
+	#phuyu_datos .phuyu-results-title i {
+		color: #405189;
+		font-size: 16px;
+	}
+
 	@media (max-width: 767.98px) {
 		#phuyu_datos .phuyu-report-header {
 			padding: 15px;
@@ -129,6 +209,10 @@
 		#phuyu_datos .phuyu-report-actions .btn {
 			flex: 1 1 145px;
 			justify-content: center;
+		}
+
+		#phuyu_datos .phuyu-filter-actions {
+			grid-template-columns: 1fr;
 		}
 	}
 </style>
@@ -164,46 +248,77 @@
 						<span class="phuyu-report-pill"><i class="bi bi-shield-check"></i> Estados SUNAT incluidos</span>
 					</div>
 				</div>
-				<div class="row form-group">
-					<div class="col-md-3">
-						<label>SUCURSAL</label>
-						<select class="form-select" v-model="campos.codsucursal" v-on:change="phuyu_cajas()">
-							<option value="0">TODAS SUCURSALES</option>
-							<?php 
-								foreach ($sucursales as $key => $value) { ?>
-									<option value="<?php echo $value["codsucursal"];?>"><?php echo $value["descripcion"];?></option>	
-								<?php }
-							?>
-						</select>
+				<div class="phuyu-filter-band">
+					<div class="phuyu-filter-title">
+						<i class="ri-filter-3-line"></i>
+						Filtros de consulta
 					</div>
-					<div class="col-md-2">
-						<label>CAJA</label>	
-						<select class="form-select" v-model="campos.codcaja" disabled>
-							<option value="0">TODAS CAJAS</option>
-							<option v-for="dato in cajas" v-bind:value="dato.codcaja"> {{dato.descripcion}} </option>
-						</select>
+					<div class="row g-3 align-items-end">
+						<div class="col-xl-3 col-lg-4 col-md-6">
+							<label class="phuyu-filter-label">Sucursal</label>
+							<select class="form-select" v-model="campos.codsucursal" v-on:change="phuyu_cajas()">
+								<option value="0">TODAS SUCURSALES</option>
+								<?php
+									foreach ($sucursales as $key => $value) { ?>
+										<option value="<?php echo $value["codsucursal"];?>"><?php echo $value["descripcion"];?></option>
+									<?php }
+								?>
+							</select>
+						</div>
+						<div class="col-xl-2 col-lg-4 col-md-6">
+							<label class="phuyu-filter-label">Caja</label>
+							<select class="form-select" v-model="campos.codcaja" disabled>
+								<option value="0">TODAS CAJAS</option>
+								<option v-for="dato in cajas" v-bind:value="dato.codcaja"> {{dato.descripcion}} </option>
+							</select>
+						</div>
+						<div class="col-xl-2 col-lg-4 col-md-6">
+							<label class="phuyu-filter-label">Almacen</label>
+							<select class="form-select input-sm" v-model="campos.codalmacen">
+								<option value="0">TODOS ALMACENES</option>
+								<option v-for="dato in almacenes" v-bind:value="dato.codalmacen"> {{dato.descripcion}} </option>
+							</select>
+						</div>
+						<div class="col-xl-2 col-lg-4 col-md-6">
+							<label class="phuyu-filter-label">Comprobante</label>
+							<select class="form-select input-sm" v-model="campos.codcomprobantetipo">
+								<option value="0">TODOS</option>
+								<?php foreach ($comprobantes as $value) { ?>
+									<option value="<?php echo $value["codcomprobantetipo"];?>"><?php echo $value["descripcion"];?></option>
+								<?php } ?>
+							</select>
+						</div>
+						<div class="col-xl-3 col-lg-4 col-md-6">
+							<label class="phuyu-filter-label">Formato PDF para ZIP</label>
+							<select class="form-select input-sm" v-model="campos.formato_pdf">
+								<option value="ticket">TICKET</option>
+								<option value="a5">A5</option>
+								<option value="a4">A4</option>
+							</select>
+						</div>
+						<div class="col-xl-2 col-lg-4 col-md-6">
+							<label class="phuyu-filter-label"><i class="bi bi-calendar3"></i> Desde</label>
+							<input type="date" class="form-control" id="fechadesde" value="<?php echo date('Y-m-d');?>" autocomplete="off">
+						</div>
+						<div class="col-xl-2 col-lg-4 col-md-6">
+							<label class="phuyu-filter-label"><i class="bi bi-calendar3"></i> Hasta</label>
+							<input type="date" class="form-control" id="fechahasta" value="<?php echo date('Y-m-d');?>" autocomplete="off">
+						</div>
+						<div class="col-xl-4 col-lg-5 col-md-6">
+							<div class="phuyu-filter-actions">
+								<button type="button" class="btn btn-warning" title="Consultar ventas" v-on:click="ver_consulta()">
+									<i class="bi bi-search"></i>
+								</button>
+								<button type="button" class="btn btn-primary" v-on:click="zip_tickets_ventas()">
+									<i class="ri-file-zip-line"></i> Tickets ZIP
+								</button>
+							</div>
+						</div>
 					</div>
-					<div class="col-md-2">
-						<label>ALMACEN</label>
-						<select class="form-select input-sm" v-model="campos.codalmacen">
-							<option value="0">TODOS ALMACENES</option>
-							<option v-for="dato in almacenes" v-bind:value="dato.codalmacen"> {{dato.descripcion}} </option>
-						</select>
+					<div class="phuyu-results-title" id="consulta">
+						<i class="ri-table-line"></i>
+						Informacion generada
 					</div>
-					<div class="col-md-2">
-						<label><i class="bi bi-calendar3"></i> DESDE</label>
-						<input type="date" class="form-control" id="fechadesde" value="<?php echo date('Y-m-d');?>" autocomplete="off">
-					</div>
-					<div class="col-md-2">
-						<label><i class="bi bi-calendar3"></i> HASTA</label>
-						<input type="date" class="form-control" id="fechahasta" value="<?php echo date('Y-m-d');?>" autocomplete="off">
-					</div>
-					<div class="col-md-1" style="margin-top: 1.2rem">
-						<button type="button" class="btn btn-warning btn-icon" v-on:click="ver_consulta()"><i class="bi bi-search"></i></button>
-					</div>
-				</div>
-				<div class="row form-group mt-4" id="consulta">
-					<div class="col-md-12 text-center"><h5><b>INFORMACION GENERADA</b></h5></div>
 				</div>
 				<div class="row form-group">
 					<div class="table-responsive">
@@ -488,10 +603,26 @@
 
 </div>
 
+<div class="modal fade" id="modal_zip_tickets" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+	<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-content border-0 shadow">
+			<div class="modal-body text-center p-4">
+				<div class="spinner-border text-primary mb-3" role="status" aria-hidden="true"></div>
+				<h5 class="fw-bold mb-2">Generando ZIP de comprobantes</h5>
+				<p class="text-muted mb-2">Estamos preparando los PDFs filtrados. Esto puede tomar unos segundos.</p>
+				<div class="fw-bold text-primary" id="zip_tickets_progreso">Iniciando proceso...</div>
+				<div class="progress mt-3" style="height: 8px;">
+					<div class="progress-bar progress-bar-striped progress-bar-animated" id="zip_tickets_barra" style="width: 0%"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
 <script> 
-	var campos = {"codsucursal":'<?php echo $_SESSION['phuyu_codsucursal'];?>',"codcaja":0,"codalmacen":0,"codpersona":0,"codvendedor":"","fechadesde":"","fechahasta":"","estado":1};
+	var campos = {"codsucursal":'<?php echo $_SESSION['phuyu_codsucursal'];?>',"codcaja":0,"codalmacen":0,"codcomprobantetipo":0,"formato_pdf":"ticket","codpersona":0,"codvendedor":"","fechadesde":"","fechahasta":"","estado":1};
 
 	var pantalla = jQuery(document).height(); $("#reporte_ventas").css({height: pantalla - 250});
 </script>
-<script src="<?php echo base_url();?>phuyu/phuyu_reportes/ventas.js"> </script>
-<script src="<?php echo base_url();?>phuyu/phuyu_reportes/selects.js"> </script>
+<script src="<?php echo base_url();?>phuyu/phuyu_reportes/ventas.js?v=<?php echo filemtime(FCPATH.'phuyu/phuyu_reportes/ventas.js');?>"> </script>
+<script src="<?php echo base_url();?>phuyu/phuyu_reportes/selects.js?v=<?php echo filemtime(FCPATH.'phuyu/phuyu_reportes/selects.js');?>"> </script>

@@ -1,21 +1,27 @@
 <?php
 $modo_pdf = isset($modo_pdf) ? (bool)$modo_pdf : false;
 
-function texto_doc($texto)
-{
-    return htmlspecialchars((string)$texto, ENT_QUOTES, 'UTF-8');
+if (!function_exists('texto_doc')) {
+    function texto_doc($texto)
+    {
+        return htmlspecialchars((string)$texto, ENT_QUOTES, 'UTF-8');
+    }
 }
 
-function numero_doc($monto)
-{
-    return number_format((float)$monto, 2);
+if (!function_exists('numero_doc')) {
+    function numero_doc($monto)
+    {
+        return number_format((float)$monto, 2);
+    }
 }
 
-function fecha_doc($fecha)
-{
-    if (empty($fecha) || $fecha === '0000-00-00') return '-';
-    $ts = strtotime($fecha);
-    return $ts ? date('d/m/Y', $ts) : $fecha;
+if (!function_exists('fecha_doc')) {
+    function fecha_doc($fecha)
+    {
+        if (empty($fecha) || $fecha === '0000-00-00') return '-';
+        $ts = strtotime($fecha);
+        return $ts ? date('d/m/Y', $ts) : $fecha;
+    }
 }
 
 $fechaEmision = fecha_doc($venta['fechacomprobante'] ?? '');
