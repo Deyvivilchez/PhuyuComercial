@@ -2296,7 +2296,7 @@ class Formato extends CI_Controller
         $estilo = 'border-left:1px solid #000; border-right:1px solid #000;';
         $estilo1 = 'border-top:1px solid #000; border-left:1px solid #000; border-right:1px solid #000;text-align:right';
 
-        $empresa = $this->db->query('select documento,razonsocial,nombrecomercial from public.personas where codpersona=1')->result_array();
+        $empresa = $this->db->query('select documento,razonsocial,nombrecomercial,foto from public.personas where codpersona=1')->result_array();
         $sucursal = $this->db->query('select *from public.sucursales where codsucursal=' . $_SESSION['phuyu_codsucursal'])->result_array();
         $principal = $this->db->query('select *from public.sucursales where principal=1 and estado=1')->result_array();
         $parametros = $this->db->query('select *from public.empresas limit 1')->result_array();
@@ -2323,19 +2323,31 @@ class Formato extends CI_Controller
             ];
         }
 
-        $nombreProforma = $formatoData['nombrecomercial'];
+        $nombreProforma = trim((string)($formatoData['nombrecomercial'] ?? ''));
         if ($nombreProforma === '') {
             $nombreProforma = !empty($empresa[0]['nombrecomercial']) ? $empresa[0]['nombrecomercial'] : $empresa[0]['razonsocial'];
         }
 
-        $logoArchivo = !empty($formatoData['logo'])
-            ? FCPATH . 'public/img/empresa/' . $formatoData['logo']
-            : FCPATH . 'public/img/' . ($_SESSION['phuyu_logo'] ?? '');
+        // Usa el logo configurado y recupera el de la empresa si el archivo ya no existe.
+        $logosCandidatos = [
+            FCPATH . 'public/img/empresa/' . ($formatoData['logo'] ?? ''),
+            FCPATH . 'public/img/empresa/' . ($empresa[0]['foto'] ?? ''),
+            FCPATH . 'public/img/' . ($_SESSION['phuyu_logo'] ?? ''),
+        ];
         $logoSrc = '';
-        if (!empty($logoArchivo) && file_exists($logoArchivo)) {
-            $extension = strtolower(pathinfo($logoArchivo, PATHINFO_EXTENSION));
-            $mime = ($extension === 'jpg' || $extension === 'jpeg') ? 'jpeg' : 'png';
-            $logoSrc = 'data:image/' . $mime . ';base64,' . base64_encode(file_get_contents($logoArchivo));
+        foreach ($logosCandidatos as $logoArchivo) {
+            if (!is_file($logoArchivo) || !is_readable($logoArchivo)) {
+                continue;
+            }
+            $imagenInfo = @getimagesize($logoArchivo);
+            if (!$imagenInfo || !in_array($imagenInfo['mime'], ['image/png', 'image/jpeg', 'image/gif'], true)) {
+                continue;
+            }
+            $imagenContenido = file_get_contents($logoArchivo);
+            if ($imagenContenido !== false) {
+                $logoSrc = 'data:' . $imagenInfo['mime'] . ';base64,' . base64_encode($imagenContenido);
+                break;
+            }
         }
 
         $vendedorData = $this->db->query('select razonsocial from public.personas where codpersona=' . (int)$venta[0]['codempleado'])->row_array();
