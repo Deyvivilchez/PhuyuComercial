@@ -1,26 +1,211 @@
-<div id="phuyu_datos">
-	<div class="phuyu_header">
-		<div class="row phuyu_header_title">
-			<div class="col-md-5 col-xs-12"> <h5>FACTURACION ELECTRONICA</h5> </div>
-			<div class="col-md-2 col-xs-12">
-				<a href="https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm" class="btn btn-warning btn-block" target="_blank">
-					<i class="fa fa-flag-o"></i> PORTAL DE SUNAT
-				</a>
-			</div>
-			<div class="col-md-3 col-xs-12">
-				<button type="button" class="btn btn-success btn-block" v-on:click="phuyu_consultas()">
-					<i class="fa fa-print"></i> CONSULTA COMPROBANTES
-				</button>
-			</div>
-			<div class="col-md-2 col-xs-12">
-				<div class="input-group">
-					<input type="text" class="form-control datepicker" readonly id="fecha" value="<?php echo date('Y-m-d');?>">
-					<span class="input-group-btn">
-						<button type="button" class="btn btn-default"><i class="fa fa-calendar"></i></button> 
-					</span>
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<style>
+	#phuyu_datos .phuyu-sunat-panel {
+		background: #fff;
+		border: 1px solid rgba(64, 81, 137, .12);
+		border-radius: 14px;
+		box-shadow: 0 10px 28px rgba(15, 23, 42, .06);
+		margin-bottom: 16px;
+		overflow: hidden;
+	}
+
+	#phuyu_datos .phuyu-sunat-panel-head {
+		align-items: center;
+		background: linear-gradient(135deg, #f8f9fc 0%, #eef3ff 100%);
+		border-bottom: 1px solid rgba(64, 81, 137, .1);
+		display: flex;
+		gap: 12px;
+		padding: 16px 18px;
+	}
+
+	#phuyu_datos .phuyu-sunat-panel-icon {
+		align-items: center;
+		background: #405189;
+		border-radius: 12px;
+		color: #fff;
+		display: inline-flex;
+		flex: 0 0 42px;
+		font-size: 20px;
+		height: 42px;
+		justify-content: center;
+		width: 42px;
+	}
+
+	#phuyu_datos .phuyu-sunat-panel-title {
+		color: #111827;
+		font-size: 16px;
+		font-weight: 900;
+		line-height: 1.15;
+		margin: 0;
+	}
+
+	#phuyu_datos .phuyu-sunat-panel-subtitle {
+		color: #64748b;
+		font-size: 12px;
+		font-weight: 600;
+		margin: 4px 0 0;
+	}
+
+	#phuyu_datos .phuyu-sunat-panel-body {
+		padding: 18px;
+	}
+
+	#phuyu_datos .phuyu-sunat-result {
+		background: #f8fafc;
+		border: 1px solid rgba(64, 81, 137, .1);
+		border-radius: 10px;
+		color: #475569;
+		font-size: 12px;
+		font-weight: 700;
+		line-height: 1.5;
+		margin-top: 14px;
+		padding: 10px 12px;
+	}
+
+	#phuyu_datos .phuyu-sunat-result strong {
+		color: #405189;
+	}
+
+	#phuyu_datos .phuyu-sunat-note {
+		background: #fff8e6;
+		border: 1px solid #ffe7a3;
+		border-radius: 10px;
+		color: #8a5a00;
+		font-size: 12px;
+		font-weight: 700;
+		line-height: 1.45;
+		margin-top: 12px;
+		padding: 10px 12px;
+	}
+
+	#phuyu_datos .phuyu-sunat-actions .btn {
+		align-items: center;
+		border-radius: 9px;
+		display: inline-flex;
+		font-weight: 800;
+		gap: 6px;
+		justify-content: center;
+		min-height: 39px;
+		width: 100%;
+	}
+
+	#phuyu_datos .phuyu-sunat-table {
+		border: 1px solid rgba(64, 81, 137, .12);
+		border-radius: 12px;
+		margin-top: 16px;
+		overflow: auto;
+	}
+
+	#phuyu_datos .phuyu-sunat-table table {
+		margin-bottom: 0;
+	}
+
+	#phuyu_datos .phuyu-sunat-table thead th {
+		background: #f3f6f9;
+		font-size: 11px;
+		font-weight: 900;
+		text-transform: uppercase;
+		white-space: nowrap;
+	}
+
+	#phuyu_infosunat .modal-dialog {
+		max-width: 1120px;
+	}
+
+	#phuyu_infosunat .modal-content {
+		border: 0;
+		border-radius: 14px;
+		overflow: hidden;
+	}
+
+	#phuyu_infosunat .modal-header {
+		background: #f8fafc;
+		border-bottom: 1px solid #e5e7eb;
+		padding: 14px 18px;
+	}
+
+	#phuyu_infosunat .modal-body {
+		max-height: 68vh;
+		overflow: auto;
+		padding: 18px;
+	}
+
+	#phuyu_infosunat table {
+		table-layout: fixed;
+	}
+
+	#phuyu_infosunat thead th {
+		background: #f3f6f9;
+		color: #1f2937;
+		position: sticky;
+		top: 0;
+		z-index: 2;
+	}
+
+	#phuyu_infosunat td,
+	#phuyu_infosunat th {
+		vertical-align: middle;
+		white-space: normal;
+		word-break: break-word;
+	}
+
+	#phuyu_infosunat .phuyu-sunat-status {
+		border-radius: 999px;
+		display: inline-block;
+		font-size: 11px;
+		font-weight: 800;
+		line-height: 1.35;
+		padding: 6px 9px;
+		white-space: normal;
+	}
+
+	#phuyu_infosunat .phuyu-sunat-detail {
+		color: #64748b;
+		display: block;
+		font-size: 11px;
+		font-weight: 700;
+		line-height: 1.35;
+		margin-top: 5px;
+	}
+</style>
+
+<div id="phuyu_datos" class="phuyu-velzon-list phuyu-cpe-velzon">
+	<div class="phuyu-page-title">
+		<div class="phuyu-page-icon"><i class="bi bi-file-earmark-arrow-up"></i></div>
+		<div>
+			<div class="text-muted small text-uppercase fw-semibold">CPE</div>
+			<h4 class="mb-0 fw-bold">Envios SUNAT</h4>
+			<nav aria-label="breadcrumb">
+				<ol class="breadcrumb mb-0 mt-1">
+					<li class="breadcrumb-item"><a href="javascript:;">Inicio</a></li>
+					<li class="breadcrumb-item active" aria-current="page">Facturacion electronica</li>
+				</ol>
+			</nav>
+		</div>
+	</div>
+
+	<div class="phuyu_body">
+		<div class="card phuyu-card mb-3">
+			<div class="card-body">
+				<div class="row g-3 align-items-end">
+					<div class="col-12 col-md-3 col-xl-2">
+						<label class="form-label"><i class="bi bi-calendar-date me-1"></i> Fecha resumen</label>
+						<input type="date" class="form-control" id="fecha" value="<?php echo date('Y-m-d');?>">
+					</div>
+					<div class="col-12 col-md-4 col-xl-3">
+						<a href="https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm" class="btn btn-warning btn-block" target="_blank">
+							<i class="bi bi-box-arrow-up-right"></i> Portal de SUNAT
+						</a>
+					</div>
+					<div class="col-12 col-md-5 col-xl-3">
+						<button type="button" class="btn btn-success btn-block" v-on:click="phuyu_consultas()">
+							<i class="bi bi-search"></i> Ver resumen CPE
+						</button>
+					</div>
 				</div>
 			</div>
-		</div><br>
+		</div>
 		<section class="scroll-section" id="responsiveTabs">
             <div class="card mb-3">
                 <div class="card-header border-0 pb-0">
@@ -76,8 +261,9 @@
 											<td> S/. {{dato.importe}} </td>
 											<td>
 												<b v-if="dato.estado==0" style="color:#d43f3a">PENDIENTE</b>
-												<b v-if="dato.estado==3" style="color:#eea236">CON EXCEPCIONES</b> 
-												<b v-if="dato.estado==4" style="color:#eea236">RECHAZADO</b> 
+												<b v-if="dato.estado==2" style="color:#eea236">CON EXCEPCIONES</b> 
+												<b v-if="dato.estado==3" style="color:#d43f3a">RECHAZADO</b> 
+												<b v-if="dato.estado==4" style="color:#eea236">OBSERVADO</b> 
 											</td>
 											<td style="padding-top:5px;"> 
 												<button type="button" class="btn btn-success btn-sm" v-on:click="comprobantes_xml(dato.codkardex,'01')">
@@ -125,8 +311,9 @@
 											<td> {{dato.nombre_xml}} </td>
 											<td>
 												<b v-if="dato.estado==0" style="color:#d43f3a">PENDIENTE</b>
-												<b v-if="dato.estado==3" style="color:#eea236">CON EXCEPCIONES</b> 
-												<b v-if="dato.estado==4" style="color:#eea236">RECHAZADO</b> 
+												<b v-if="dato.estado==2" style="color:#eea236">CON EXCEPCIONES</b> 
+												<b v-if="dato.estado==3" style="color:#d43f3a">RECHAZADO</b> 
+												<b v-if="dato.estado==4" style="color:#eea236">OBSERVADO</b> 
 											</td>
 											<td> 
 												<button type="button" class="btn btn-primary btn-sm" v-on:click="resumenes_ver(dato.codresumentipo,dato.periodo,dato.nrocorrelativo)"><i class="fa fa-file"></i> VER</button>
@@ -189,8 +376,9 @@
 											<td> {{dato.nombre_xml}} </td>
 											<td>
 												<b v-if="dato.estado==0" style="color:#d43f3a">PENDIENTE</b>
-												<b v-if="dato.estado==3" style="color:#eea236">CON EXCEPCIONES</b> 
-												<b v-if="dato.estado==4" style="color:#eea236">RECHAZADO</b> 
+												<b v-if="dato.estado==2" style="color:#eea236">CON EXCEPCIONES</b> 
+												<b v-if="dato.estado==3" style="color:#d43f3a">RECHAZADO</b> 
+												<b v-if="dato.estado==4" style="color:#eea236">OBSERVADO</b> 
 											</td>
 											<td style="padding-top:5px;"> 
 												<button type="button" class="btn btn-success btn-sm" v-on:click="resumenes_xml(dato.codresumentipo,dato.periodo,dato.nrocorrelativo)"> <i class="fa fa-cloud-download"></i> XML</button>
@@ -237,8 +425,9 @@
 											<td> {{dato.motivo}} </td>
 											<td>
 												<b v-if="dato.estado==0" style="color:#d43f3a">PENDIENTE</b>
-												<b v-if="dato.estado==3" style="color:#eea236">CON EXCEPCIONES</b> 
-												<b v-if="dato.estado==4" style="color:#eea236">RECHAZADO</b> 
+												<b v-if="dato.estado==2" style="color:#eea236">CON EXCEPCIONES</b> 
+												<b v-if="dato.estado==3" style="color:#d43f3a">RECHAZADO</b> 
+												<b v-if="dato.estado==4" style="color:#eea236">OBSERVADO</b> 
 											</td>
 											<td style="padding-top:5px;"> 
 												<button type="button" class="btn btn-success btn-sm" v-on:click="guias_xml(dato.codguiar,'09')">
@@ -279,8 +468,9 @@
 											<td> S/. {{dato.importe}} </td>
 											<td>
 												<b v-if="dato.estado==0" style="color:#d43f3a">PENDIENTE</b>
-												<b v-if="dato.estado==3" style="color:#eea236">CON EXCEPCIONES</b> 
-												<b v-if="dato.estado==4" style="color:#eea236">RECHAZADO</b> 
+												<b v-if="dato.estado==2" style="color:#eea236">CON EXCEPCIONES</b> 
+												<b v-if="dato.estado==3" style="color:#d43f3a">RECHAZADO</b> 
+												<b v-if="dato.estado==4" style="color:#eea236">OBSERVADO</b> 
 											</td>
 											<td style="padding-top:5px;"> 
 												<button type="button" class="btn btn-success btn-sm" v-on:click="comprobantes_xml(dato.codkardex,'01')">
@@ -293,68 +483,97 @@
 							</div>
                     	</div>
                     	<div class="tab-pane fade" id="sunat" role="tabpanel">
-                    		<form class="form-horizontal" v-on:submit.prevent="phuyu_consultasunat()" style="padding:10px 30px; border:2px solid #e7eaec;background:#f3f3f4">
-								<div class="row">
-									<div class="col-md-4 col-xs-12">
-										<div class="form-group">
-											<label>TIPO COMPROBANTE</label>
-											<select v-model="sunat.tipo" class="form-select" required>
-												<option value="01">FACTURA ELECTRONICA</option>
-												<option value="03">BOLETA ELECTRONICA</option>
-												<option value="07">NOTA DE CREDITO ELECTRONICA</option>
+                    		<form class="phuyu-sunat-panel" v-on:submit.prevent="phuyu_consultasunat()">
+								<div class="phuyu-sunat-panel-head">
+									<span class="phuyu-sunat-panel-icon"><i class="bi bi-search"></i></span>
+									<div>
+										<h5 class="phuyu-sunat-panel-title">Consulta individual de CPE</h5>
+										<p class="phuyu-sunat-panel-subtitle">Consulta directamente el estado oficial del CPE mediante el webservice de SUNAT.</p>
+									</div>
+								</div>
+								<div class="phuyu-sunat-panel-body">
+									<div class="row g-3 align-items-end">
+										<div class="col-12 col-md-3">
+											<label class="form-label">Tipo comprobante</label>
+											<select id="sunat_tipo" v-model="sunat.tipo" class="form-select" required>
+												<option value="01">Factura electronica</option>
+												<option value="03">Boleta electronica</option>
+												<option value="07">Nota de credito electronica</option>
+												<option value="08">Nota de debito electronica</option>
 											</select>
 										</div>
-									</div>
-									<div class="col-md-2 col-xs-12">
-										<div class="form-group">
-											<label>SERIE</label>
-											<input type="text" v-model.trim="sunat.serie" class="form-control" required autocomplete="off" minlength="4" maxlength="4" style="text-transform: uppercase;" />
+										<div class="col-12 col-md-2">
+											<label class="form-label">Serie</label>
+											<input type="text" v-model.trim="sunat.serie" v-on:blur="phuyu_buscar_comprobante_sunat()" class="form-control" required autocomplete="off" minlength="4" maxlength="4" style="text-transform: uppercase;" />
+										</div>
+										<div class="col-12 col-md-2">
+											<label class="form-label">Numero</label>
+											<input type="text" v-model.trim="sunat.nrocomprobante" v-on:blur="phuyu_buscar_comprobante_sunat()" v-on:keyup.enter="phuyu_buscar_comprobante_sunat()" class="form-control" required autocomplete="off" maxlength="8" />
+										</div>
+										<div class="col-12 col-md-2">
+											<label class="form-label">Fecha emision</label>
+											<input type="date" id="sunat_fechaemision" v-model="sunat.fechaemision" class="form-control" />
+										</div>
+										<div class="col-12 col-md-1">
+											<label class="form-label">Importe</label>
+											<input type="number" id="sunat_importe" v-model="sunat.importe" class="form-control" step="0.01" min="0" />
+										</div>
+										<div class="col-12 col-md-2 phuyu-sunat-actions">
+											<button type="submit" class="btn btn-success"><i class="bi bi-cloud-check"></i> Consultar este CPE</button>
 										</div>
 									</div>
-									<div class="col-md-3 col-xs-12">
-										<div class="form-group">
-											<label>NRO COMPROBANTE</label>
-											<input type="text" v-model.trim="sunat.nrocomprobante" class="form-control" required autocomplete="off" maxlength="8" />
-										</div>
-									</div>
-									<div class="col-md-3 col-xs-12">
-										<div class="form-group">
-											<label>CONSULTAR CPE</label><br>
-											<button type="submit" class="btn btn-success btn-block"><i class="fa fa-filter"></i> EN SUNAT</button>
-										</div>
+									<div class="phuyu-sunat-result">
+										<strong>Respuesta SUNAT:</strong> <span id="sunat_respuesta">SIN RESPUESTA</span>
 									</div>
 								</div>
-								<span><b style="color:#1c84c6;font-weight:bold">RESPUESTA SUNAT:</b> <span id="sunat_respuesta">SIN RESPUESTA</span></span>
-							</form> <br>
+							</form>
 
-							<div class="row">
-								<div class="col-md-3 col-xs-12">
-									<div class="form-group">
-										<label><i class="fa fa-calendar"></i> DESDE</label>
-										<input type="date" class="form-control" id="fecha_desde" value="<?php echo date('Y-m-d');?>">
+							<div class="phuyu-sunat-panel">
+								<div class="phuyu-sunat-panel-head">
+									<span class="phuyu-sunat-panel-icon"><i class="bi bi-calendar-range"></i></span>
+									<div>
+										<h5 class="phuyu-sunat-panel-title">Verificar comprobantes del periodo en SUNAT</h5>
+										<p class="phuyu-sunat-panel-subtitle">Elige un rango y valida cada comprobante directamente en el webservice de SUNAT. No se usa el estado interno.</p>
 									</div>
 								</div>
-								<div class="col-md-3 col-xs-12">
-									<div class="form-group">
-										<label><i class="fa fa-calendar"></i> HASTA</label>
-										<input type="date" class="form-control" id="fecha_hasta" value="<?php echo date('Y-m-d');?>">
+								<div class="phuyu-sunat-panel-body">
+									<div class="row g-3 align-items-end">
+										<div class="col-12 col-md-3">
+											<label class="form-label"><i class="bi bi-receipt me-1"></i> Tipo comprobante</label>
+											<select id="sunat_tipo_periodo" class="form-select">
+												<option value="todos">Todos</option>
+												<option value="facturas">Facturas</option>
+												<option value="boletas">Boletas</option>
+												<option value="notas_credito">Notas de credito</option>
+												<option value="notas_debito">Notas de debito</option>
+											</select>
+										</div>
+										<div class="col-12 col-md-2">
+											<label class="form-label"><i class="bi bi-calendar3 me-1"></i> Desde</label>
+											<input type="date" class="form-control" id="fecha_desde" value="<?php echo date('Y-m-d');?>">
+										</div>
+										<div class="col-12 col-md-2">
+											<label class="form-label"><i class="bi bi-calendar3 me-1"></i> Hasta</label>
+											<input type="date" class="form-control" id="fecha_hasta" value="<?php echo date('Y-m-d');?>">
+										</div>
+										<div class="col-12 col-md-3 phuyu-sunat-actions">
+											<button type="button" class="btn btn-warning" v-on:click="sunat_recepcion()">
+												<i class="bi bi-arrow-repeat"></i> Consultar periodo en SUNAT
+											</button>
+										</div>
+										<div class="col-12 col-md-2 phuyu-sunat-actions">
+											<button type="button" class="btn btn-primary" v-on:click="sunat_quitar_icbper()">
+												<i class="bi bi-tools"></i> Regularizar ICBPER
+											</button>
+										</div>
 									</div>
-								</div>
-								<div class="col-md-3 col-xs-12">
-									<label>&nbsp;</label>
-									<button type="button" class="btn btn-warning btn-sm btn-block" v-on:click="sunat_recepcion()">
-										<i class="fa fa-filter"></i> RECEPCION SUNAT
-									</button>
-								</div>
-								<div class="col-md-3 col-xs-12">
-									<label>&nbsp;</label>
-									<button type="button" class="btn btn-primary btn-sm btn-block" v-on:click="sunat_quitar_icbper()">
-										<i class="fa fa-cog"></i> QUITAR ICBPER DE LOS PENDIENTES
-									</button>
+									<div class="phuyu-sunat-note">
+										No se consulta SUNAT al cambiar las fechas. Al presionar el boton, primero se buscan los comprobantes locales del rango y luego se valida cada uno en SUNAT usando tipo, serie, numero, fecha e importe. Se muestran 10 comprobantes por bloque.
+									</div>
 								</div>
 							</div>
 
-							<div class="table-responsive">
+							<div class="table-responsive phuyu-sunat-table">
 								<table class="table table-bordered" style="font-size: 11px">
 									<thead >
 					                    <tr>
@@ -398,9 +617,8 @@
 		<div class="modal-dialog modal-lg">
 			<div class="modal-content">
 				<div class="modal-header modal-phuyu-titulo">
-					<h4 class="modal-title" align="center"> <b style="letter-spacing:1px;">INFORMACION DEL RESUMEN</b> </h4>
-
-					<button type="button" class="btn-close" data-bs-dismiss="modal"> </button>
+					<h4 class="modal-title">Informacion del resumen</h4>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
 				</div>
 
 				<div class="modal-body" style="height:350px;overflow-y:auto;">
@@ -443,15 +661,13 @@
 	</div>
 
 	<div id="modal_consultas" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
-		<div class="modal-dialog" style="width:100%;margin:0px;">
+		<div class="modal-dialog modal-xl modal-fullscreen-lg-down">
 			<div class="modal-content">
-				<div class="modal-header" style="background:#13a89e;color:#fff;">
-					<button type="button" class="close" data-dismiss="modal" style="font-size:27px;margin-bottom:0px;">
-						<i class="fa fa-times-circle"></i> 
-					</button>
-					<h4 class="modal-title" align="center"> 
-						<b style="letter-spacing:1px;"><?php echo $_SESSION["phuyu_empresa"];?> - CONSULTA COMPROBANTES</b> 
+				<div class="modal-header">
+					<h4 class="modal-title">
+						<?php echo $_SESSION["phuyu_empresa"];?> - Consulta comprobantes
 					</h4>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
 				</div>
 
 				<div class="modal-body" id="consultas_modal">
@@ -639,25 +855,40 @@
 
 
 	<div id="phuyu_infosunat" class="modal fade">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-xl">
 			<div class="modal-content">
 				<div class="modal-header">
-					<button type="button" class="close" data-dismiss="modal"> <i class="fa fa-times-circle"></i> </button>
-					<h4 class="modal-title" align="center"> <b style="letter-spacing:1px;">INFORMACION COMPROBANTES DE SUNAT</b> </h4>
+					<h4 class="modal-title">Informacion comprobantes de SUNAT</h4>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
 				</div>
 
-				<div class="modal-body" style="height:350px;overflow-y:auto;">
+				<div class="modal-body">
+					<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+						<div class="text-muted fw-semibold">
+							Consultando bloque {{sunatpaginacion.actual}} de {{sunatpaginacion.ultima}} 
+							<span v-if="sunatpaginacion.total > 0">({{sunatpaginacion.desde}}-{{sunatpaginacion.hasta}} de {{sunatpaginacion.total}})</span>
+						</div>
+						<div class="btn-group">
+							<button type="button" class="btn btn-light btn-sm" v-on:click="sunat_recepcion_pagina(sunatpaginacion.actual - 1)" v-bind:disabled="sunatpaginacion.actual <= 1">
+								<i class="bi bi-chevron-left"></i> Consultar bloque anterior
+							</button>
+							<button type="button" class="btn btn-light btn-sm" v-on:click="sunat_recepcion_pagina(sunatpaginacion.actual + 1)" v-bind:disabled="sunatpaginacion.actual >= sunatpaginacion.ultima">
+								Consultar siguiente bloque <i class="bi bi-chevron-right"></i>
+							</button>
+						</div>
+					</div>
                     <div class="table-responsive">
-                        <table class="table table-bordered" style="font-size:12px;">
+                        <table class="table table-bordered align-middle" style="font-size:12px;">
                             <thead>
                                 <tr>
-                                    <th class="font-11" width="10px"> <i class="fa fa-align-center"></i></th>
-                                    <th class="font-11"> <i class="fa fa-code"></i> DNI/RUC</th>
-                                    <th class="font-11"> <i class="fa fa-user"></i> RAZON SOCIAL</th>
-                                    <th class="font-11"> <i class="fa fa-calendar-o"></i> FECHA</th>
-                                    <th class="font-11"> <i class="fa fa-dropbox"></i> COMPROBANTE</th>
-                                    <th class="font-11"> <i class="fa fa-dollar"></i> TOTAL</th>
-                                    <th class="font-11"> <i class="fa fa-flag"></i> DESCRIPCION DESDE SUNAT</th>
+                                    <th class="font-11" style="width:68px;"> <i class="fa fa-align-center"></i></th>
+                                    <th class="font-11" style="width:90px;"> <i class="fa fa-code"></i> DNI/RUC</th>
+                                    <th class="font-11" style="width:160px;"> <i class="fa fa-user"></i> RAZON SOCIAL</th>
+                                    <th class="font-11" style="width:90px;"> <i class="fa fa-calendar-o"></i> FECHA</th>
+                                    <th class="font-11" style="width:150px;"> <i class="fa fa-dropbox"></i> TIPO</th>
+                                    <th class="font-11" style="width:130px;">COMPROBANTE</th>
+                                    <th class="font-11" style="width:80px;"> <i class="fa fa-dollar"></i> TOTAL</th>
+                                    <th class="font-11" style="width:260px;"> <i class="fa fa-flag"></i> RESPUESTA SUNAT</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -666,13 +897,24 @@
                                     <td>{{dato.documento}}</td>
                                     <td>{{dato.cliente}}</td>
                                     <td>{{dato.fechacomprobante}}</td>
+                                    <td>{{dato.tipocomprobante}}</td>
                                     <td>{{dato.seriecomprobante}} - {{dato.nrocomprobante}}</td>
                                     <td>{{dato.importe}}</td>
                                     <td>
-                                        <span class="badge badge-secondary" v-if="dato.descripcion=='>El comprobante existe y está aceptado.</'">{{dato.descripcion}}</span>
-                                        <span class="badge badge-warning" v-else="dato.descripcion=='>El comprobante existe pero está de baja.</'">{{dato.descripcion}}</span>
-                                        <span class="badge badge-danger" v-else="dato.descripcion!='>El comprobante existe y está aceptado.</'">{{dato.descripcion}}</span>
+                                        <span class="badge phuyu-sunat-status"
+											v-bind:class="{
+												'bg-success': dato.nivel_sunat=='success',
+												'bg-warning text-dark': dato.nivel_sunat=='warning',
+												'bg-danger': dato.nivel_sunat=='danger',
+												'bg-secondary': dato.nivel_sunat=='secondary'
+											}">
+											{{dato.mensaje_sunat || dato.descripcion || 'Sin respuesta'}}
+										</span>
+										<span class="phuyu-sunat-detail" v-if="dato.detalle_sunat">{{dato.detalle_sunat}}</span>
                                     </td>
+                                </tr>
+                                <tr v-if="sunatrecepcion.length==0">
+                                    <td colspan="8" class="text-center text-muted py-4">No hay comprobantes para consultar en este bloque.</td>
                                 </tr>
                             </tbody>
                         </table>

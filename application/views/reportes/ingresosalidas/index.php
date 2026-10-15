@@ -1,35 +1,45 @@
-<div id="phuyu_datos">
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<style>
+	#phuyu_datos .report-shell { border: 1px solid #e9ebec; border-radius: 10px; box-shadow: 0 1px 2px rgba(56,65,74,.06); }
+	#phuyu_datos .report-title { font-size: 1.05rem; font-weight: 700; margin: 0; }
+	#phuyu_datos .filter-band { background: #f8fafc; border: 1px solid #edf0f2; border-radius: 8px; padding: 14px; }
+	#phuyu_datos label { color: #495057; font-size: .72rem; font-weight: 700; margin-bottom: 6px; text-transform: uppercase; }
+	#phuyu_datos .form-control, #phuyu_datos .form-select { border-color: #d9dee3; border-radius: 6px; min-height: 39px; }
+	#phuyu_datos .action-row { display: flex; flex-wrap: wrap; gap: 8px; }
+	#phuyu_datos .action-row .btn { align-items: center; display: inline-flex; gap: 6px; min-height: 39px; white-space: nowrap; }
+	#phuyu_datos .results-box { border: 1px solid #edf0f2; border-radius: 8px; height: calc(100vh - 390px); min-height: 330px; overflow: auto; }
+	#phuyu_datos .results-box .table { margin-bottom: 16px; }
+	#phuyu_datos .results-box th { background: #f3f6f9; }
+</style>
+
+<div id="phuyu_datos" class="phuyu-reportes-velzon phuyu-velzon-list">
 	<div class="phuyu_body">
-		<div class="card">
+		<div class="card report-shell">
 			<div class="card-body">
-				<div class="row form-group">
-					<div class="col-md-5">
-						<h5> <b>REPORTE DE INGRESO Y SALIDAS DE ALMACEN</b> </h5> 
-					</div>
-					<div class="col-md-7" align="right">
-						<button type="button" class="btn btn-danger btn-icon" v-on:click="generar_pdf()">
-							<i data-acorn-icon="print"></i> Generar PDF
-						</button>
-						<button type="button" class="btn btn-success btn-icon" v-on:click="generar_excel()">
-							<i data-acorn-icon="file-text"></i> Generar EXCEL
-						</button>
-						<button type="button" class="btn btn-warning btn-icon" v-on:click="phuyu_modalprestamos()"><i data-acorn-icon="search"></i> CONSULTAR PRESTAMOS</button>
+				<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+					<h5 class="report-title">REPORTE DE INGRESOS Y SALIDAS DE ALMACEN</h5>
+					<div class="action-row">
+						<button type="button" class="btn btn-warning" v-on:click="phuyu_modalprestamos()"><i class="bi bi-search"></i> Prestamos</button>
+						<button type="button" class="btn btn-danger" v-on:click="generar_pdf()"><i class="bi bi-printer"></i> PDF</button>
+						<button type="button" class="btn btn-success" v-on:click="generar_excel()"><i class="bi bi-file-earmark-excel"></i> Excel</button>
 					</div>
 				</div>
 
-				<div class="row form-group">
-					<div class="col-md-2">
+				<div class="filter-band mb-3">
+					<div class="row g-3 align-items-end">
+					<div class="col-xl-2 col-lg-4 col-md-6">
 						<label>ALMACENES</label>
 						<select class="form-select input-sm" v-model="campos.codalmacen">
 							<option value="0">TODOS ALMACENES</option>
-							<?php 
+							<?php
 								foreach ($almacenes as $key => $value) { ?>
-									<option value="<?php echo $value["codalmacen"];?>"><?php echo $value["descripcion"];?></option>	
+									<option value="<?php echo $value["codalmacen"];?>"><?php echo $value["descripcion"];?></option>
 								<?php }
 							?>
 						</select>
 					</div>
-					<div class="col-md-2">
+					<div class="col-xl-2 col-lg-4 col-md-6">
 						<label>TIPO MOVIMIENTO</label>
 						<select class="form-select" id="tipo" v-model="campos.tipo" v-on:change="phuyu_movimientos()" required>
 							<option value="0">TODOS</option>
@@ -37,30 +47,34 @@
 							<option value="2">SALIDAS</option>
 						</select>
 					</div>
-					<div class="col-md-2">
+					<div class="col-xl-2 col-lg-4 col-md-6">
 						<label>MOVIMIENTO</label>
 						<select class="form-select" id="codmovimientotipo" v-model="campos.codmovimientotipo">
 							<option value="0">TODOS</option>
 						</select>
 					</div>
-					<div class="col-md-2">
+					<div class="col-xl-2 col-lg-4 col-md-6">
 						<label>DESDE</label>
 						<input type="date" class="form-control" id="fechadesde" value="<?php echo date('Y-m-01');?>" autocomplete="off">
 					</div>
-					<div class="col-md-2">
+					<div class="col-xl-2 col-lg-4 col-md-6">
 						<label>HASTA</label>
 						<input type="date" class="form-control" id="fechahasta" value="<?php echo date('Y-m-d');?>" autocomplete="off">
 					</div>
-					<div class="col-md-2" style="margin-top: 1.3rem">
-						<button type="button" class="btn btn-white btn-icon" v-on:click="generar_reporte()">
-							<i data-acorn-icon="search"></i> Consultar
+					<div class="col-xl-2 col-lg-4 col-md-6">
+						<label>Accion</label>
+						<button type="button" class="btn btn-primary w-100" v-on:click="generar_reporte()">
+							<i class="bi bi-search"></i> Consultar
 						</button>
-					</div>	
+					</div>
+					</div>
 				</div>
-				<hr>
-				<div class="row form-group detalle mt-3">
+				<div class="results-box detalle">
+					<div class="h-100 d-flex align-items-center justify-content-center text-muted" v-if="datos.length==0">
+						Seleccione filtros y consulte movimientos.
+					</div>
 					<div v-for="dato in datos">
-						<table class="table table-striped" style="font-size: 11px">
+						<table class="table table-striped table-hover align-middle" style="font-size: 11px">
 							<tr>
 								<th colspan="9">{{dato.descripcion}} | DIRECCION: {{dato.direccion}}</th>
 							</tr>
@@ -79,8 +93,8 @@
 								<td>{{d.codkardex}}</td>
 								<td>{{d.fechacomprobante}}</td>
 								<td>
-									<span class="label label-primary" v-if="d.tipomov==1">INGRESO</span>
-									<span class="label label-danger" v-if="d.tipomov==2">SALIDA</span>
+									<span class="badge bg-primary" v-if="d.tipomov==1">INGRESO</span>
+									<span class="badge bg-danger" v-if="d.tipomov==2">SALIDA</span>
 								</td>
 								<td>{{d.motivo}}</td>
 								<td>{{d.seriecomprobante}}-{{d.nrocomprobante}}</td>
@@ -102,8 +116,8 @@
 					<div class="modal-dialog modal-lg">
 						<div class="modal-content">
 							<div class="modal-header">
-								<button type="button" class="close" data-dismiss="modal" style="font-size:30px;margin-bottom:0px;">
-									<i class="fa fa-times-circle"></i> 
+								<button type="button" class="close" data-bs-dismiss="modal" style="font-size:30px;margin-bottom:0px;">
+									<i class="bi bi-x-circle"></i>
 								</button>
 								<h4 class="modal-title">REPORTE DE PRESTAMOS RECIBIDOS Y OTORGADOS</h4>
 							</div>
@@ -142,7 +156,7 @@
 								<div class="row">
 									<div class="col-md-4"></div>
 									<div class="col-md-8">
-										<button type="button" style="margin-top: 2rem" class="btn btn-primary" v-on:click="phuyu_listaprestamos()"><i class="fa fa-search"></i> CONSULTAR</button>
+										<button type="button" style="margin-top: 2rem" class="btn btn-primary" v-on:click="phuyu_listaprestamos()"><i class="bi bi-search"></i> CONSULTAR</button>
 										<button type="button" style="margin-top: 2rem" class="btn btn-danger" v-on:click="pdf_reporte_prestamo()">PDF</button>
 										<button type="button" style="margin-top: 2rem" class="btn btn-success" v-on:click="excel_reporte_prestamo()">EXCEL</button>
 									</div>
@@ -157,10 +171,10 @@
 													<th>COMPROB. REF.</th>
 													<th>IMPORTE</th>
 													<th colspan="2">OBSERVACION</th>
-													<th>ESTADO</th>	
+													<th>ESTADO</th>
 												</thead>
 												<tbody>
-													<template v-for="dato in detalleprestamo">	
+													<template v-for="dato in detalleprestamo">
 														<tr>
 															<td colspan="2">{{dato.persona}}</td>
 															<td>{{dato.fechakardex}}</td>
@@ -170,11 +184,11 @@
 															</td>
 															<td colspan="2">{{dato.descripcion}}</td>
 															<td>
-																<span class="label label-success" v-if="dato.procesoprestamo==1">DEVUELTO</span>	
-																<span class="label label-danger" v-if="dato.procesoprestamo!=1">PENDIENTE</span>	
-															</td>	
+																<span class="badge bg-success" v-if="dato.procesoprestamo==1">DEVUELTO</span>
+																<span class="badge bg-danger" v-if="dato.procesoprestamo!=1">PENDIENTE</span>
+															</td>
 														</tr>
-														<template v-if="filtro.formato==2">	
+														<template v-if="filtro.formato==2">
 															<tr>
 																<th>#</th>
 																<th class="detalle">PRODUCTO</th>
@@ -182,16 +196,16 @@
 																<th class="detalle">CODIGO</th>
 																<th class="detalle">UNIDAD</th>
 																<th class="detalle">CANT. PRESTADA</th>
-																<th class="detalle">CANT. DEVUELTA</th>		
+																<th class="detalle">CANT. DEVUELTA</th>
 															</tr>
 															<tr v-for="(item,i) in dato.detalle"  v-bind:class="[item.cantidadxdevolver>0 ? 'faltante':'devuelto']">
-																<td>{{i+1}}</td>		
+																<td>{{i+1}}</td>
 																<td class="detalle">{{item.producto}}</td>
 																<td class="detalle">{{item.codproducto}}</td>
 																<td class="detalle">{{item.codigo}}</td>
 																<td class="detalle">{{item.unidad}}</td>
 																<td class="detalle">{{item.cantidad}}</td>
-																<td class="detalle">{{item.cantidaddevuelta}}</td>		
+																<td class="detalle">{{item.cantidaddevuelta}}</td>
 															</tr>
 														</template>
 													</template>
@@ -209,7 +223,7 @@
 	</div>
 </div>
 
-<script> 
+<script>
 	var campos = {"codalmacen":'<?php echo $_SESSION['phuyu_codalmacen'];?>',"tipo":0,"codmovimientotipo":0,"stock":0,"fecha":"<?php echo date("Y-m-d");?>","controlstock":1,"estado":1,"buscar":""};
 
 	if (typeof AcornIcons !== 'undefined') {

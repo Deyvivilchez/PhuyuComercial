@@ -14,7 +14,7 @@
 class Ciqrcode
 {
 	var $cacheable = true;
-	var $cachedir = 'application/cache_errors/';
+	var $cachedir = 'application/cache/qrcode/';
 	var $errorlog = 'application/logs/';
 	var $quality = true;
 	var $size = 1024;
@@ -27,8 +27,18 @@ class Ciqrcode
 		$this->cacheable = (isset($config['cacheable'])) ? $config['cacheable'] : $this->cacheable;
 		$this->cachedir = (isset($config['cachedir'])) ? $config['cachedir'] : FCPATH.$this->cachedir;
 		$this->errorlog = (isset($config['errorlog'])) ? $config['errorlog'] : FCPATH.$this->errorlog;
+		$this->cachedir = rtrim($this->cachedir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+		$this->errorlog = rtrim($this->errorlog, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 		$this->quality = (isset($config['quality'])) ? $config['quality'] : $this->quality;
 		$this->size = (isset($config['size'])) ? $config['size'] : $this->size;
+
+		if (!is_dir($this->cachedir)) {
+			@mkdir($this->cachedir, 0775, true);
+		}
+
+		if (!is_dir($this->errorlog)) {
+			@mkdir($this->errorlog, 0775, true);
+		}
 		
 		// use cache - more disk reads but less CPU power, masks and format templates are stored there
 		if (!defined('QR_CACHEABLE')) define('QR_CACHEABLE', $this->cacheable);

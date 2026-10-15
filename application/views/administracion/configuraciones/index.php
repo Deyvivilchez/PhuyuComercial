@@ -1,598 +1,733 @@
-<!--
-Phuyu – Configuración de Empresa (UI renovada v2)
-- Mantiene los mismos name/id/v-model y eventos para no romper lógica.
-- Estilo completamente distinto: encabezado glass + gradientes, tarjetas neumórficas,
-  tipografía compacta, campos con bordes fluidos, switch y file-drop custom.
-- Paleta corporativa tomada del logo (azules/navy) y aplicada con CSS vars.
-- Responsive mejorado y sticky bar con botón Guardar siempre visible.
--->
+<?php include("application/views/phuyu/phuyu_velzon_module.php"); ?>
 
+<div id="phuyu_datos">
+    <form id="formulario" v-on:submit.prevent="phuyu_guardar()" enctype="multipart/form-data">
 
+        <input type="hidden" name="codpersona" v-model="campos.codpersona">
+        <input type="hidden" name="codempresa" v-model="campos.codempresa">
+        <input type="hidden" name="itemrepetircomprobante" v-model="campos.itemrepetircomprobante">
+        <input type="hidden" name="cerrar_inactividad" v-model="campos.cerrar_inactividad">
+        <input type="hidden" name="mostrar_aviso" v-model="campos.mostrar_aviso">
 
-<div id="phuyu_datos" class="phuyu-theme">
-	<!-- Top bar -->
+        <div class="container-fluid">
 
+            <!-- TITULO -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3 phuyu-page-head">
+                            <div>
+                                <h4 class="mb-1 fw-bold">
+                                    <i class="ri-settings-3-line me-1"></i>
+                                    Configuración de Empresa
+                                </h4>
+                                <p class="text-muted mb-0">
+                                    Administra datos principales, parámetros SUNAT, logos, mensajes y datos visibles para tus clientes.
+                                </p>
+                            </div>
 
-	<main class="container-xxl py-4">
-		<header class="phuyu-topbar">
-			<div class="phuyu-topbar__inner container-xxl">
-				<div class="d-flex align-items-center gap-3">
-					<div class="brand d-flex align-items-center gap-2">
-						<img src="<?php echo base_url(); ?>public/img/phuyu2024-bk.png" alt="Phuyu System" class="brand-logo" />
-						<div class="brand-title">
-							<span class="kicker">Panel</span>
-							<h1 class="h6 mb-0">Configuraciones de tu empresa</h1>
-						</div>
-					</div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="ri-save-3-line me-1"></i>
+                                Guardar configuración
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-				</div>
-			</div>
-		</header>
-		<form id="formulario" class="form-horizontal" v-on:submit.prevent="phuyu_guardar()">
-			<input type="hidden" name="codpersona" v-model="campos.codpersona" />
-			<input type="hidden" name="codempresa" v-model="campos.codempresa" />
-			<input type="hidden" name="itemrepetircomprobante" v-model="campos.itemrepetircomprobante" />
+            <div class="row">
 
-			<div class="row g-4">
-				<!-- Izquierda -->
-				<div class="col-12 col-lg-6">
-					<section class="phy-card">
-						<div class="phy-card__head">
-							<h2 class="title">Datos de la empresa</h2>
-						</div>
-						<div class="phy-card__body">
-							<div class="row g-3 row-ruc">
-  <div class="col-12 col-md-7">
-    <label class="form-label">RUC empresa</label>
-    <input type="text" class="phy-input" name="documento" v-model="campos.documento" 
-           id="documento" placeholder="11 dígitos" required autocomplete="off" 
-           minlength="11" maxlength="11" />
-    <div class="hint">Solo números</div>
-  </div>
-  <div class="col-12 col-md-5">
-    <label class="form-label d-none d-md-block">&nbsp;</label> <!-- espacio para alinear -->
-    <button type="button"
-            class="btn phy-btn-sunat w-100"
-            v-on:click="phuyu_consultar()">
-      <i data-acorn-icon="search"></i>
-      <span class="ms-1">Consultar SUNAT</span>
-    </button>
-  </div>
+                <!-- COLUMNA IZQUIERDA -->
+                <div class="col-xl-7">
+
+                    <!-- DATOS EMPRESA -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="ri-building-4-line me-1"></i>
+                                Datos de la empresa
+                            </h5>
+                        </div>
+
+                        <div class="card-body">
+
+                            <div class="row g-3">
+                                <div class="col-md-7">
+                                    <label class="form-label">RUC empresa</label>
+                                    <input type="text"
+                                           class="form-control"
+                                           name="documento"
+                                           id="documento"
+                                           v-model="campos.documento"
+                                           placeholder="11 dígitos"
+                                           minlength="11"
+                                           maxlength="11"
+                                           autocomplete="off"
+                                           required>
+                                    <small class="text-muted">Solo números.</small>
+                                </div>
+
+                                <div class="col-md-5 d-flex align-items-end">
+                                    <button type="button"
+                                            class="btn btn-info w-100 btn-consultar"
+                                            v-on:click="phuyu_consultar()">
+                                        <i class="ri-search-line me-1"></i>
+                                        Consultar SUNAT
+                                    </button>
+                                </div>
+
+                                <div class="col-md-12">
+                                    <label class="form-label">Razón social</label>
+                                    <input type="text"
+                                           class="form-control"
+                                           name="razonsocial"
+                                           v-model="campos.razonsocial"
+                                           placeholder="Razón social"
+                                           autocomplete="off"
+                                           required>
+                                </div>
+
+                                <div class="col-md-12">
+                                    <label class="form-label">Nombre comercial</label>
+                                    <input type="text"
+                                           class="form-control"
+                                           name="nombrecomercial"
+                                           v-model="campos.nombrecomercial"
+                                           placeholder="Nombre comercial"
+                                           autocomplete="off">
+                                </div>
+
+                                <div class="col-md-8">
+                                    <label class="form-label">Dirección</label>
+                                    <input type="text"
+                                           class="form-control"
+                                           name="direccion"
+                                           v-model="campos.direccion"
+                                           placeholder="Av./Jr./Mz./Lt."
+                                           autocomplete="off"
+                                           required>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label">Clave seguridad</label>
+                                    <input type="password"
+                                           class="form-control"
+                                           name="claveseguridad"
+                                           v-model="campos.claveseguridad"
+                                           placeholder="••••••"
+                                           autocomplete="off"
+                                           maxlength="50">
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label">Departamento</label>
+                                    <select class="form-select"
+                                            name="departamento"
+                                            v-model="campos.departamento"
+                                            v-on:change="phuyu_provincias()"
+                                            required>
+                                        <option value="">Seleccione</option>
+                                        <?php foreach ($departamentos as $value) { ?>
+                                            <option value="<?php echo $value['ubidepartamento']; ?>">
+                                                <?php echo $value['departamento']; ?>
+                                            </option>
+                                        <?php } ?>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label">Provincia</label>
+                                    <select class="form-select"
+                                            name="provincia"
+                                            id="provincia"
+                                            v-model="campos.provincia"
+                                            v-on:change="phuyu_distritos()"
+                                            required>
+                                        <option value="">Seleccione</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label">Distrito</label>
+                                    <select class="form-select"
+                                            name="codubigeo"
+                                            id="codubigeo"
+                                            v-model="campos.codubigeo"
+                                            required>
+                                        <option value="">Seleccione</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">Email empresa</label>
+                                    <input type="email"
+                                           class="form-control"
+                                           name="email"
+                                           v-model="campos.email"
+                                           placeholder="correo@empresa.com"
+                                           autocomplete="off">
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">Telf./Cel.</label>
+                                    <input type="text"
+                                           class="form-control"
+                                           name="telefono"
+                                           v-model="campos.telefono"
+                                           placeholder="Ej. 942 000 000"
+                                           autocomplete="off"
+                                           maxlength="100">
+                                </div>
+
+                                <div class="col-md-12">
+                                    <label class="form-label">Slogan empresa</label>
+                                    <textarea class="form-control"
+                                              name="slogan"
+                                              v-model="campos.slogan"
+                                              rows="2"
+                                              placeholder="Una frase corta que identifique a la empresa"></textarea>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- LEYENDAS AMAZONIA -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="ri-file-text-line me-1"></i>
+                                Leyendas para comprobantes
+                            </h5>
+                        </div>
+
+                        <div class="card-body">
+                            <div class="row g-3">
+
+                                <div class="col-md-4">
+                                    <label class="form-label">Código bienes</label>
+                                    <input type="text"
+                                           class="form-control"
+                                           name="codleyendapamazonia"
+                                           v-model="campos.codleyendapamazonia"
+                                           placeholder="Código">
+                                </div>
+
+                                <div class="col-md-8">
+                                    <label class="form-label">Leyenda de bienes</label>
+                                    <textarea class="form-control"
+                                              name="leyendapamazonia"
+                                              v-model="campos.leyendapamazonia"
+                                              rows="2"
+                                              placeholder="Leyenda de bienes"></textarea>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label">Código servicios</label>
+                                    <input type="text"
+                                           class="form-control"
+                                           name="codleyendasamazonia"
+                                           v-model="campos.codleyendasamazonia"
+                                           placeholder="Código">
+                                </div>
+
+                                <div class="col-md-8">
+                                    <label class="form-label">Leyenda de servicios</label>
+                                    <textarea class="form-control"
+                                              name="leyendasamazonia"
+                                              v-model="campos.leyendasamazonia"
+                                              rows="2"
+                                              placeholder="Leyenda de servicios"></textarea>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- COLUMNA DERECHA -->
+                <div class="col-xl-5">
+
+                    <!-- PARAMETROS SUNAT -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="ri-percent-line me-1"></i>
+                                Parámetros SUNAT
+                            </h5>
+                        </div>
+
+                        <div class="card-body">
+                            <div class="row g-3">
+
+                                <div class="col-md-4">
+                                    <label class="form-label">IGV (%)</label>
+                                    <input type="number"
+                                           step="0.01"
+                                           class="form-control text-end"
+                                           name="igvsunat"
+                                           v-model.number="campos.igvsunat"
+                                           required>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label">ICBPER</label>
+                                    <input type="number"
+                                           step="0.01"
+                                           class="form-control text-end"
+                                           name="icbpersunat"
+                                           v-model.number="campos.icbpersunat"
+                                           required>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label">ISC (%)</label>
+                                    <input type="number"
+                                           step="0.01"
+                                           class="form-control text-end"
+                                           name="iscsunat"
+                                           v-model.number="campos.iscsunat"
+                                           required>
+                                </div>
+
+                                <div class="col-12">
+                                    <div class="form-check form-switch form-switch-md">
+                                        <input class="form-check-input"
+                                               type="checkbox"
+                                               id="itemrepetircomprobante"
+                                               :checked="campos.itemrepetircomprobante == 1"
+                                               @click="phuyu_itemrepetir()">
+                                        <label class="form-check-label" for="itemrepetircomprobante">
+                                            Repetir ítem en comprobante
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">
+                                        Repite el último ítem al agregar productos o servicios.
+                                    </small>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SESION E INACTIVIDAD -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="ri-timer-line me-1"></i>
+                                Sesión e inactividad
+                            </h5>
+                        </div>
+
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label">Aplicar configuración</label>
+                                    <select class="form-select" name="sesion_alcance" v-model="campos.sesion_alcance">
+                                        <option value="global">Global para todo el sistema</option>
+                                        <option value="empresa">Solo para esta empresa</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12">
+                                    <div class="form-check form-switch form-switch-md">
+                                        <input class="form-check-input"
+                                               type="checkbox"
+                                               id="cerrar_inactividad"
+                                               :checked="campos.cerrar_inactividad == 1"
+                                               @click="phuyu_cerrar_inactividad()">
+                                        <label class="form-check-label" for="cerrar_inactividad">
+                                            Cerrar sesión por inactividad
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">
+                                        Si está desactivado, la aplicación no cerrará sesión por inactividad.
+                                    </small>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">Tiempo máximo permitido (minutos)</label>
+                                    <input type="number"
+                                           class="form-control text-end"
+                                           name="tiempo_inactividad_minutos"
+                                           v-model.number="campos.tiempo_inactividad_minutos"
+                                           min="1"
+                                           max="1440"
+                                           required>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">Minutos antes del aviso</label>
+                                    <input type="number"
+                                           class="form-control text-end"
+                                           name="minutos_aviso"
+                                           v-model.number="campos.minutos_aviso"
+                                           min="1"
+                                           v-bind:max="campos.tiempo_inactividad_minutos"
+                                           required>
+                                </div>
+
+                                <div class="col-12">
+                                    <div class="form-check form-switch form-switch-md">
+                                        <input class="form-check-input"
+                                               type="checkbox"
+                                               id="mostrar_aviso"
+                                               :checked="campos.mostrar_aviso == 1"
+                                               @click="phuyu_mostrar_aviso()">
+                                        <label class="form-check-label" for="mostrar_aviso">
+                                            Mostrar aviso antes de cerrar sesión
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">
+                                        El aviso usa el tiempo configurado arriba y no modifica php.ini.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- LOGOS -->
+                    <div class="card phuyu-logos-card">
+                        <div class="card-header d-flex align-items-center justify-content-between">
+                            <div>
+                                <h5 class="card-title mb-0">
+                                    <i class="ri-image-line me-1"></i>
+                                    Logos
+                                </h5>
+                                <small class="text-muted">Estos logos se mostrarán en comprobantes, reportes y documentos.</small>
+                            </div>
+                        </div>
+
+                        <div class="card-body">
+                            <div class="row g-3">
+
+                                <!-- LOGO EMPRESA -->
+                                <div class="col-md-6">
+                                    <div class="logo-upload-card">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <label class="form-label mb-0">Logo empresa</label>
+                                            <span class="badge bg-primary-subtle text-primary">Actual</span>
+                                        </div>
+
+                                        <label class="logo-preview-box" for="logo_empresa_input">
+                                            <?php if (!empty($info[0]["foto"])) { ?>
+                                                <img id="logo_empresa_preview"
+                                                     src="<?php echo base_url('public/img/empresa/' . $info[0]["foto"]); ?>"
+                                                     alt="Logo empresa actual">
+                                            <?php } else { ?>
+                                                <div id="logo_empresa_empty" class="logo-empty">
+                                                    <i class="ri-image-add-line"></i>
+                                                    <span>Sin logo actual</span>
+                                                    <small>Selecciona una imagen</small>
+                                                </div>
+                                                <img id="logo_empresa_preview" src="" alt="Logo empresa" style="display:none;">
+                                            <?php } ?>
+                                        </label>
+
+                                        <input id="logo_empresa_input"
+                                               type="file"
+                                               class="form-control"
+                                               name="logo"
+                                               accept="image/*"
+                                               onchange="previewLogo(this, 'logo_empresa_preview', 'logo_empresa_empty')">
+
+                                        <small class="text-muted d-block mt-2">
+                                            PNG/JPG recomendado. Si no seleccionas archivo, se mantiene el actual.
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <!-- LOGO AUSPICIADOR -->
+                                <div class="col-md-6">
+                                    <div class="logo-upload-card">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <label class="form-label mb-0">Logo auspiciador</label>
+                                            <span class="badge bg-secondary-subtle text-secondary">Opcional</span>
+                                        </div>
+
+                                        <label class="logo-preview-box" for="logo_auspiciador_input">
+                                            <?php if (!empty($empresa[0]["logoauspiciador"])) { ?>
+                                                <img id="logo_auspiciador_preview"
+                                                     src="<?php echo base_url('public/img/empresa/' . $empresa[0]["logoauspiciador"]); ?>"
+                                                     alt="Logo auspiciador actual">
+                                            <?php } else { ?>
+                                                <div id="logo_auspiciador_empty" class="logo-empty">
+                                                    <i class="ri-image-add-line"></i>
+                                                    <span>Sin logo actual</span>
+                                                    <small>Selecciona una imagen</small>
+                                                </div>
+                                                <img id="logo_auspiciador_preview" src="" alt="Logo auspiciador" style="display:none;">
+                                            <?php } ?>
+                                        </label>
+
+                                        <input id="logo_auspiciador_input"
+                                               type="file"
+                                               class="form-control"
+                                               name="auspiciador"
+                                               accept="image/*"
+                                               onchange="previewLogo(this, 'logo_auspiciador_preview', 'logo_auspiciador_empty')">
+
+                                        <small class="text-muted d-block mt-2">
+                                            PNG/JPG recomendado. Si no seleccionas archivo, se mantiene el actual.
+                                        </small>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MENSAJES -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="ri-chat-quote-line me-1"></i>
+                                Mensajes y enlaces
+                            </h5>
+                        </div>
+
+                        <div class="card-body">
+                            <div class="row g-3">
+
+                                <div class="col-12">
+                                    <label class="form-label">Publicidad</label>
+                                    <textarea class="form-control"
+                                              name="publicidad"
+                                              v-model="campos.publicidad"
+                                              rows="2"
+                                              placeholder="Texto de publicidad"></textarea>
+                                </div>
+
+                                <div class="col-12">
+                                    <label class="form-label">Agradecimiento</label>
+                                    <textarea class="form-control"
+                                              name="agradecimiento"
+                                              v-model="campos.agradecimiento"
+                                              rows="2"
+                                              placeholder="Mensaje de agradecimiento"></textarea>
+                                </div>
+
+                                <div class="col-12">
+                                    <label class="form-label">URL consulta comprobantes</label>
+                                    <input type="url"
+                                           class="form-control"
+                                           name="urlconsultacomprobantes"
+                                           v-model="campos.urlconsultacomprobantes"
+                                           placeholder="https://tu-dominio.com/consultas">
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GUARDAR -->
+                    <div class="card">
+                        <div class="card-body text-end">
+                            <button type="submit" class="btn btn-primary btn-lg w-100">
+                                <i class="ri-save-3-line me-1"></i>
+                                Guardar configuración
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+    </form>
 </div>
 
-
-							<div class="mt-3">
-								<label class="form-label">Razón social</label>
-								<input type="text" class="phy-input" name="razonsocial" v-model="campos.razonsocial" placeholder="Razón social" required autocomplete="off" />
-							</div>
-
-							<div class="mt-3">
-								<label class="form-label">Nombre comercial</label>
-								<input type="text" class="phy-input" name="nombrecomercial" v-model="campos.nombrecomercial" placeholder="Nombre comercial" autocomplete="off" />
-							</div>
-
-							<div class="row g-3 mt-1">
-								<div class="col-12 col-md-8">
-									<label class="form-label">Dirección</label>
-									<input type="text" class="phy-input" name="direccion" v-model="campos.direccion" placeholder="Av./Jr./Mz./Lt." required autocomplete="off" />
-								</div>
-								<div class="col-12 col-md-4">
-									<label class="form-label">Clave seguridad</label>
-									<input type="password" class="phy-input" name="claveseguridad" v-model="campos.claveseguridad" placeholder="••••••" autocomplete="off" maxlength="50" />
-								</div>
-							</div>
-
-							<div class="row g-3 mt-1">
-								<div class="col-12 col-md-4">
-									<label class="form-label">Departamento</label>
-									<select class="phy-select" name="departamento" v-model="campos.departamento" required v-on:change="phuyu_provincias()">
-										<option value="">Seleccione</option>
-										<?php foreach ($departamentos as $key => $value) { ?>
-											<option value="<?php echo $value['ubidepartamento']; ?>"><?php echo $value['departamento']; ?></option>
-										<?php } ?>
-									</select>
-								</div>
-								<div class="col-12 col-md-4">
-									<label class="form-label">Provincia</label>
-									<select class="phy-select" name="provincia" v-model="campos.provincia" id="provincia" required v-on:change="phuyu_distritos()">
-										<option value="">Seleccione</option>
-									</select>
-								</div>
-								<div class="col-12 col-md-4">
-									<label class="form-label">Distrito</label>
-									<select class="phy-select" name="codubigeo" v-model="campos.codubigeo" id="codubigeo" required>
-										<option value="">Seleccione</option>
-									</select>
-								</div>
-							</div>
-
-							<div class="row g-3 mt-1">
-								<div class="col-12 col-md-6">
-									<label class="form-label">Email empresa</label>
-									<input type="email" class="phy-input" name="email" v-model="campos.email" placeholder="correo@empresa.com" autocomplete="off" />
-								</div>
-								<div class="col-12 col-md-6">
-									<label class="form-label">Telf./Cel.</label>
-									<input type="text" class="phy-input" name="telefono" v-model="campos.telefono" placeholder="Ej. 942 000 000" autocomplete="off" maxlength="100" />
-								</div>
-							</div>
-
-							<div class="mt-3">
-								<label class="form-label">Slogan empresa</label>
-								<textarea class="phy-input" name="slogan" v-model="campos.slogan" placeholder="Una frase corta que te identifique" rows="2"></textarea>
-							</div>
-
-							<div class="row g-3 mt-1">
-								<div class="col-12 col-md-4">
-									<label class="form-label">Código (Bienes)</label>
-									<input type="text" class="phy-input" v-model="campos.codleyendapamazonia" name="codleyendapamazonia" placeholder="Código" />
-								</div>
-								<div class="col-12 col-md-8">
-									<label class="form-label">Leyenda de bienes</label>
-									<textarea class="phy-input" name="leyendapamazonia" v-model="campos.leyendapamazonia" placeholder="Leyenda de bienes..." rows="1"></textarea>
-								</div>
-								<div class="col-12 col-md-4">
-									<label class="form-label">Código (Servicios)</label>
-									<input type="text" class="phy-input" v-model="campos.codleyendasamazonia" name="codleyendasamazonia" placeholder="Código" />
-								</div>
-								<div class="col-12 col-md-8">
-									<label class="form-label">Leyenda de servicios</label>
-									<textarea class="phy-input" name="leyendasamazonia" v-model="campos.leyendasamazonia" placeholder="Leyenda de servicios..." rows="1"></textarea>
-								</div>
-							</div>
-						</div>
-					</section>
-				</div>
-
-				<!-- Derecha -->
-				<div class="col-12 col-lg-6">
-					<section class="phy-card">
-						<div class="phy-card__head">
-							<h2 class="title">Parámetros SUNAT</h2>
-						</div>
-						<div class="phy-card__body">
-							<div class="row g-3">
-								<div class="col-12 col-md-4">
-									<label class="form-label">IGV SUNAT (%)</label>
-									<input type="number" step="0.01" class="phy-input text-end" name="igvsunat" v-model.number="campos.igvsunat" required />
-								</div>
-								<div class="col-12 col-md-4">
-									<label class="form-label">ICBPER SUNAT (%)</label>
-									<input type="number" step="0.01" class="phy-input text-end" name="icbpersunat" v-model.number="campos.icbpersunat" required />
-								</div>
-								<div class="col-12 col-md-4">
-									<label class="form-label">ISC SUNAT (%)</label>
-									<input type="number" step="0.01" class="phy-input text-end" name="iscsunat" v-model.number="campos.iscsunat" required />
-								</div>
-							</div>
-
-							<div class="mt-3">
-								<label class="form-label d-block mb-1">Repetir ítem en comprobante</label>
-								<label class="phy-switch">
-									<input type="checkbox" :checked="campos.itemrepetircomprobante==1" @click="phuyu_itemrepetir()" />
-									<span class="track"></span>
-									<span class="label ms-2">Activar</span>
-								</label>
-								<div class="hint">Repite el último ítem al agregar más productos/servicios.</div>
-							</div>
-						</div>
-					</section>
-
-					<section class="phy-card mt-4">
-						<div class="phy-card__head">
-							<h2 class="title">Logos y mensajes</h2>
-						</div>
-						<div class="phy-card__body">
-							<div class="row g-3">
-								<div class="col-12 col-md-6">
-									<label class="form-label">Logo empresa</label>
-									<label class="phy-drop">
-										<input type="file" name="logo" accept="image/*" />
-										<span class="ico" aria-hidden>🖼️</span>
-										<span class="txt">Arrastra o <u>selecciona</u> (PNG/JPG 400×400)</span>
-									</label>
-								</div>
-								<div class="col-12 col-md-6">
-									<label class="form-label">Logo auspiciador</label>
-									<label class="phy-drop">
-										<input type="file" name="auspiciador" accept="image/*" />
-										<span class="ico" aria-hidden>🏷️</span>
-										<span class="txt">Arrastra o <u>selecciona</u></span>
-									</label>
-								</div>
-							</div>
-
-							<div class="mt-3">
-								<label class="form-label">Publicidad</label>
-								<textarea class="phy-input" name="publicidad" v-model="campos.publicidad" placeholder="Texto de banner o pie de ticket" rows="1"></textarea>
-							</div>
-
-							<div class="mt-3">
-								<label class="form-label">Agradecimiento</label>
-								<textarea class="phy-input" name="agradecimiento" v-model="campos.agradecimiento" placeholder="Mensaje de agradecimiento" rows="1"></textarea>
-							</div>
-
-							<div class="mt-3">
-								<label class="form-label">URL consulta comprobantes</label>
-								<textarea class="phy-input" name="urlconsultacomprobantes" v-model="campos.urlconsultacomprobantes" placeholder="https://tu-dominio.com/consultas" rows="1"></textarea>
-							</div>
-						</div>
-					</section>
-					<section class="phy-card mt-4">
-						<div class="phy-card__head">
-							<h2 class="title">Actualizar Datos</h2>
-						</div>
-						<div class="phy-card__body">
-							<div class="text-end mt-4">
-								<button form="formulario"
-									type="submit"
-									class="btn phy-btn-primary btn-lg">
-									<i data-acorn-icon="save"></i>
-									<span class="ms-1">Guardar configuración</span>
-								</button>
-							</div>
-
-						</div>
-
-					</section>
-				</div>
-			</div>
-		</form>
-	</main>
-</div>
-
-<!-- ICONS INIT (igual que antes) -->
+<?php
+    $info_configuracion = isset($info[0]) ? $info[0] : array();
+    $empresa_configuracion = isset($empresa[0]) ? $empresa[0] : array();
+    $valor_configuracion = function($datos, $campo, $default = "") {
+        return isset($datos[$campo]) ? $datos[$campo] : $default;
+    };
+    $campos_configuracion = array(
+        "codpersona" => $valor_configuracion($info_configuracion, "codpersona"),
+        "codempresa" => $valor_configuracion($empresa_configuracion, "codempresa"),
+        "documento" => $valor_configuracion($info_configuracion, "documento"),
+        "razonsocial" => $valor_configuracion($info_configuracion, "razonsocial"),
+        "nombrecomercial" => $valor_configuracion($info_configuracion, "nombrecomercial"),
+        "direccion" => $valor_configuracion($info_configuracion, "direccion"),
+        "claveseguridad" => $valor_configuracion($empresa_configuracion, "claveseguridad"),
+        "email" => $valor_configuracion($info_configuracion, "email"),
+        "telefono" => $valor_configuracion($info_configuracion, "telefono"),
+        "slogan" => $valor_configuracion($empresa_configuracion, "slogan"),
+        "igvsunat" => $valor_configuracion($empresa_configuracion, "igvsunat"),
+        "icbpersunat" => $valor_configuracion($empresa_configuracion, "icbpersunat"),
+        "iscsunat" => $valor_configuracion($empresa_configuracion, "iscsunat"),
+        "itemrepetircomprobante" => $valor_configuracion($empresa_configuracion, "itemrepetircomprobante"),
+        "publicidad" => $valor_configuracion($empresa_configuracion, "publicidad"),
+        "agradecimiento" => $valor_configuracion($empresa_configuracion, "agradecimiento"),
+        "departamento" => $valor_configuracion($info_configuracion, "departamento"),
+        "provincia" => $valor_configuracion($info_configuracion, "provincia"),
+        "codubigeo" => $valor_configuracion($info_configuracion, "distrito"),
+        "provinciacod" => $valor_configuracion($info_configuracion, "provincia"),
+        "codubigeocod" => $valor_configuracion($info_configuracion, "codubigeo"),
+        "leyendapamazonia" => $valor_configuracion($empresa_configuracion, "leyendapamazonia"),
+        "codleyendapamazonia" => $valor_configuracion($empresa_configuracion, "codleyendapamazonia"),
+        "leyendasamazonia" => $valor_configuracion($empresa_configuracion, "leyendasamazonia"),
+        "codleyendasamazonia" => $valor_configuracion($empresa_configuracion, "codleyendasamazonia"),
+        "urlconsultacomprobantes" => $valor_configuracion($empresa_configuracion, "urlconsultacomprobantes"),
+        "sesion_alcance" => $valor_configuracion($sesion_config, "alcance", "global"),
+        "cerrar_inactividad" => (int)$valor_configuracion($sesion_config, "cerrar_inactividad", 0),
+        "tiempo_inactividad_minutos" => (int)$valor_configuracion($sesion_config, "tiempo_inactividad_minutos", 120),
+        "mostrar_aviso" => (int)$valor_configuracion($sesion_config, "mostrar_aviso", 1),
+        "minutos_aviso" => (int)$valor_configuracion($sesion_config, "minutos_aviso", 5)
+    );
+?>
 <script>
-	if (typeof AcornIcons !== 'undefined') {
-		new AcornIcons().replace();
-	}
-	if (typeof Icons !== 'undefined') {
-		const icons = new Icons();
-	}
-</script>
+    var campos = <?php echo json_encode($campos_configuracion, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+    function previewLogo(input, previewId, emptyId) {
+        const preview = document.getElementById(previewId);
+        const empty = document.getElementById(emptyId);
+        const file = input.files && input.files[0];
 
-<!-- DATA (sin cambios) -->
-<script>
-	var campos = {
-		codpersona: "<?php echo $info[0]["codpersona"]; ?>",
-		codempresa: "<?php echo $empresa[0]["codempresa"]; ?>",
-		documento: "<?php echo $info[0]["documento"]; ?>",
-		razonsocial: "<?php echo $info[0]["razonsocial"]; ?>",
-		nombrecomercial: "<?php echo $info[0]["nombrecomercial"]; ?>",
-		direccion: "<?php echo $info[0]["direccion"]; ?>",
-		claveseguridad: "<?php echo $empresa[0]["claveseguridad"]; ?>",
-		email: "<?php echo $info[0]["email"]; ?>",
-		telefono: "<?php echo $info[0]["telefono"]; ?>",
-		slogan: "<?php echo $empresa[0]["slogan"]; ?>",
-		igvsunat: "<?php echo $empresa[0]["igvsunat"]; ?>",
-		icbpersunat: "<?php echo $empresa[0]["icbpersunat"]; ?>",
-		iscsunat: "<?php echo $empresa[0]["iscsunat"]; ?>",
-		itemrepetircomprobante: "<?php echo $empresa[0]["itemrepetircomprobante"]; ?>",
-		publicidad: "<?php echo $empresa[0]["publicidad"]; ?>",
-		agradecimiento: "<?php echo $empresa[0]["agradecimiento"]; ?>",
-		departamento: "<?php echo $info[0]["departamento"]; ?>",
-		provincia: "<?php echo $info[0]["provincia"]; ?>",
-		codubigeo: "<?php echo $info[0]["distrito"]; ?>",
-		provinciacod: "<?php echo $info[0]["provincia"]; ?>",
-		codubigeocod: "<?php echo $info[0]["codubigeo"]; ?>",
-		leyendapamazonia: "<?php echo $empresa[0]["leyendapamazonia"]; ?>",
-		codleyendapamazonia: "<?php echo $empresa[0]["codleyendapamazonia"]; ?>",
-		leyendasamazonia: "<?php echo $empresa[0]["leyendasamazonia"]; ?>",
-		codleyendasamazonia: "<?php echo $empresa[0]["codleyendasamazonia"]; ?>",
-		urlconsultacomprobantes: "<?php echo $empresa[0]["urlconsultacomprobantes"]; ?>"
-	};
-</script>
-<script src="<?php echo base_url(); ?>phuyu/phuyu_empresa/configuraciones.js"></script>
+        if (!file) {
+            return;
+        }
 
+        preview.src = URL.createObjectURL(file);
+        preview.style.display = 'block';
+
+        if (empty) {
+            empty.style.display = 'none';
+        }
+    }
+</script>
 <style>
+    #phuyu_datos {
+        padding-bottom: 2rem;
+    }
 
+    #phuyu_datos .card {
+        margin-bottom: 1.5rem;
+        border: 0;
+        border-radius: 12px;
+        box-shadow: 0 1px 2px rgba(56, 65, 74, .12), 0 8px 24px rgba(56, 65, 74, .06);
+    }
 
-/* Igualar altura de input y botón dentro del grupo RUC */
-.row-ruc .phy-input,
-.row-ruc .phy-btn-sunat {
-  height: 48px; /* mismo alto */
-  display: flex;
-  align-items: center;
-}
+    #phuyu_datos .card-header {
+        background-color: #fff;
+        border-bottom: 1px solid #e9ebec;
+        padding: 1rem 1.25rem;
+    }
 
-/* Ajuste visual del botón */
-.phy-btn-sunat {
-  line-height: 1.2;
-}
+    #phuyu_datos .card-body {
+        padding: 1.25rem;
+    }
 
-	/* Botón principal (Guardar) */
-	.phy-btn-primary {
-		background: linear-gradient(135deg, var(--phy-iris), var(--phy-navy));
-		color: #fff !important;
-		border: none;
-		border-radius: 10px;
-		padding: .7rem 1.3rem;
-		font-weight: 600;
-		box-shadow: 0 4px 12px rgba(7, 16, 74, .25);
-		transition: all .2s ease-in-out;
-	}
+    #phuyu_datos .card-title {
+        font-weight: 700;
+        color: #212529;
+    }
 
-	.phy-btn-primary:hover {
-		background: linear-gradient(135deg, var(--phy-navy), var(--phy-indigo));
-		transform: translateY(-1px);
-		box-shadow: 0 6px 16px rgba(7, 16, 74, .35);
-	}
+    #phuyu_datos .form-label {
+        font-weight: 600;
+        color: #343a40;
+    }
 
-	/* Botón Consultar SUNAT */
-	.phy-btn-sunat {
-		background: linear-gradient(135deg, var(--phy-sky), var(--phy-iris));
-		color: #fff !important;
-		border: none;
-		border-radius: 10px;
-		padding: .55rem 1rem;
-		font-weight: 600;
-		box-shadow: 0 3px 8px rgba(75, 99, 255, .25);
-		transition: all .2s ease-in-out;
-	}
+    #phuyu_datos textarea {
+        resize: vertical;
+    }
 
-	.phy-btn-sunat:hover {
-		filter: brightness(1.1);
-		transform: translateY(-1px);
-		box-shadow: 0 4px 12px rgba(75, 99, 255, .35);
-	}
+    #phuyu_datos .form-control,
+    #phuyu_datos .form-select {
+        border-radius: 8px;
+    }
 
-	/* =====================
-   PALETA CORPORATIVA
-   ===================== */
-	.phuyu-theme {
-		--phy-navy: #07104a;
-		/* azul profundo del logotipo */
-		--phy-indigo: #2a37a5;
-		/* acento principal */
-		--phy-iris: #4b63ff;
-		/* botón principal */
-		--phy-sky: #7fb3ff;
-		/* detalles suaves */
-		--phy-cyan: #74d3ff;
-		/* realces */
-		--phy-bg: #f6f8ff;
-		/* fondo */
-		--phy-card: #ffffff;
-		/* tarjeta */
-		--phy-text: #0f172a;
-		/* texto principal */
-		--phy-muted: #5b6475;
-		/* texto secundario */
-		--radius-lg: 18px;
-		--radius-md: 12px;
-		--shadow-soft: 0 12px 30px rgba(7, 16, 74, .08);
-		--shadow-float: 0 18px 40px rgba(7, 16, 74, .12);
-	}
+    #phuyu_datos .form-control:focus,
+    #phuyu_datos .form-select:focus {
+        border-color: #405189;
+        box-shadow: 0 0 0 .15rem rgba(64, 81, 137, .15);
+    }
 
-	/* ===== Topbar glass ===== */
-	.phuyu-topbar {
-		position: sticky;
-		top: 0;
-		z-index: 1040;
-		backdrop-filter: saturate(1.2) blur(10px);
-		background: linear-gradient(90deg, rgba(7, 16, 74, .85), rgba(43, 56, 168, .7));
-		border-bottom: 1px solid rgba(255, 255, 255, .18);
-	}
+    #phuyu_datos .phuyu-page-head h4 {
+        color: #212529;
+    }
 
-	.phuyu-topbar__inner {
-		padding: .9rem 1rem;
-	}
+    #phuyu_datos .phuyu-logos-card .card-header small {
+        display: block;
+        margin-top: .25rem;
+    }
 
-	.phuyu-topbar .brand-logo {
-		height: 28px;
-		filter: drop-shadow(0 2px 10px rgba(0, 0, 0, .2));
-	}
+    #phuyu_datos .logo-upload-card {
+        height: 100%;
+        border: 1px solid #e9ebec;
+        border-radius: 12px;
+        padding: 1rem;
+        background: linear-gradient(180deg, #ffffff, #f8f9fa);
+    }
 
-	.phuyu-topbar .brand-title .kicker {
-		display: block;
-		font-size: .7rem;
-		letter-spacing: .14em;
-		text-transform: uppercase;
-		color: #cfe3ff;
-		opacity: .85
-	}
+    #phuyu_datos .logo-preview-box {
+        position: relative;
+        width: 100%;
+        height: 150px;
+        border: 1px dashed #ced4da;
+        border-radius: 12px;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        cursor: pointer;
+        transition: all .2s ease-in-out;
+        padding: 8px;
+    }
 
-	.phuyu-topbar h1 {
-		color: #fff;
-		font-weight: 700
-	}
+    #phuyu_datos .logo-upload-card {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
 
-	.phyu-btn-primary {
-		background: linear-gradient(135deg, var(--phy-iris), var(--phy-indigo));
-		color: #fff;
-		border: none;
-		border-radius: 999px;
-		padding: .55rem 1rem;
-		box-shadow: var(--shadow-soft);
-	}
+    #phuyu_datos .logo-preview-box:hover {
+        border-color: #405189;
+        background: #f3f6f9;
+    }
 
-	.phyu-btn-primary:hover {
-		filter: brightness(1.08);
-		box-shadow: var(--shadow-float);
-	}
+    #phuyu_datos .logo-preview-box img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        padding: .5rem;
+    }
 
-	/* ===== Layout ===== */
-	.phuyu-theme main {
-		background: radial-gradient(1200px 500px at 10% -10%, rgba(127, 179, 255, .25), transparent 60%),
-			radial-gradient(900px 400px at 110% -20%, rgba(116, 211, 255, .18), transparent 50%), var(--phy-bg);
-	}
+    #phuyu_datos .logo-empty {
+        color: #878a99;
+        text-align: center;
+        font-size: 13px;
+        line-height: 1.4;
+    }
 
-	/* ===== Card ===== */
-	.phy-card {
-		background: var(--phy-card);
-		border-radius: var(--radius-lg);
-		box-shadow: var(--shadow-soft);
-		border: 1px solid rgba(7, 16, 74, .06);
-		overflow: hidden
-	}
+    #phuyu_datos .logo-empty i {
+        display: block;
+        font-size: 34px;
+        margin-bottom: .35rem;
+        color: #405189;
+    }
 
-	.phy-card__head {
-		padding: .9rem 1.1rem;
-		background: linear-gradient(90deg, rgba(43, 56, 168, .08), rgba(127, 179, 255, .08));
-		border-bottom: 1px dashed rgba(7, 16, 74, .12)
-	}
+    #phuyu_datos .logo-empty span {
+        display: block;
+        font-weight: 600;
+        color: #495057;
+    }
 
-	.phy-card__head .title {
-		margin: 0;
-		font-size: .92rem;
-		letter-spacing: .08em;
-		text-transform: uppercase;
-		color: var(--phy-navy);
-		font-weight: 800
-	}
+    #phuyu_datos .logo-empty small {
+        color: #878a99;
+    }
 
-	.phy-card__body {
-		padding: 1.25rem;
-	}
+    @media (max-width: 575.98px) {
+        #phuyu_datos .phuyu-page-head {
+            align-items: flex-start !important;
+        }
 
-	/* ===== Inputs ===== */
-	.form-label {
-		font-weight: 700;
-		color: var(--phy-navy);
-		font-size: .86rem;
-		letter-spacing: .02em
-	}
-
-	.hint {
-		font-size: .78rem;
-		color: var(--phy-muted);
-		margin-top: .25rem
-	}
-
-	.phy-input,
-	.phy-select {
-		width: 100%;
-		border: 1.2px solid rgba(7, 16, 74, .18);
-		border-radius: 12px;
-		padding: .62rem .75rem;
-		outline: none;
-		background: #fff;
-		color: var(--phy-text);
-		transition: box-shadow .2s, border-color .2s
-	}
-
-	.phy-input:focus,
-	.phy-select:focus {
-		border-color: var(--phy-iris);
-		box-shadow: 0 0 0 4px rgba(75, 99, 255, .15)
-	}
-
-	.phy-input.text-end {
-		text-align: right
-	}
-
-	/* Quitar spinners numéricos */
-	input[type=number]::-webkit-outer-spin-button,
-	input[type=number]::-webkit-inner-spin-button {
-		-webkit-appearance: none;
-		margin: 0
-	}
-
-	input[type=number] {
-		-moz-appearance: textfield
-	}
-
-	/* ===== Ghost button ===== */
-	.phy-btn-ghost {
-		background: rgba(75, 99, 255, .08);
-		color: var(--phy-indigo);
-		border: 1px solid rgba(75, 99, 255, .15);
-		border-radius: 12px;
-		padding: .62rem .8rem;
-		font-weight: 600
-	}
-
-	.phy-btn-ghost:hover {
-		background: rgba(75, 99, 255, .12)
-	}
-
-	/* ===== Switch ===== */
-	.phy-switch {
-		display: inline-flex;
-		align-items: center;
-		user-select: none;
-		cursor: pointer
-	}
-
-	.phy-switch input {
-		appearance: none;
-		width: 44px;
-		height: 26px;
-		background: rgba(7, 16, 74, .2);
-		border-radius: 999px;
-		position: relative;
-		outline: none;
-		transition: background .2s
-	}
-
-	.phy-switch input::after {
-		content: "";
-		position: absolute;
-		top: 3px;
-		left: 3px;
-		width: 20px;
-		height: 20px;
-		background: #fff;
-		border-radius: 50%;
-		box-shadow: 0 2px 6px rgba(7, 16, 74, .25);
-		transition: transform .2s
-	}
-
-	.phy-switch input:checked {
-		background: linear-gradient(135deg, var(--phy-iris), var(--phy-cyan))
-	}
-
-	.phy-switch input:checked::after {
-		transform: translateX(18px)
-	}
-
-	.phy-switch .track {
-		display: none
-	}
-
-	.phy-switch .label {
-		font-weight: 600;
-		color: var(--phy-indigo)
-	}
-
-	/* ===== File drop ===== */
-	.phy-drop {
-		position: relative;
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		align-items: center;
-		gap: .35rem;
-		height: 110px;
-		border: 2px dashed rgba(7, 16, 74, .2);
-		border-radius: 14px;
-		background: linear-gradient(180deg, rgba(127, 179, 255, .08), transparent);
-		color: var(--phy-muted);
-		font-weight: 600
-	}
-
-	.phy-drop input {
-		position: absolute;
-		inset: 0;
-		opacity: 0;
-		cursor: pointer
-	}
-
-	.phy-drop .ico {
-		font-size: 1.3rem
-	}
-
-	.phy-drop:hover {
-		border-color: rgba(75, 99, 255, .4);
-		background: linear-gradient(180deg, rgba(127, 179, 255, .14), rgba(116, 211, 255, .08))
-	}
-
-	/* ===== Utilities ===== */
-	.text-end {
-		text-align: right
-	}
-
-	.container-xxl {
-		max-width: 1280px
-	}
+        #phuyu_datos .phuyu-page-head .btn {
+            width: 100%;
+        }
+    }
 </style>
+<script src="<?php echo base_url(); ?>phuyu/phuyu_empresa/configuraciones.js"></script>

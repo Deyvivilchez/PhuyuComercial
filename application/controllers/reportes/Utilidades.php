@@ -31,15 +31,15 @@ class Utilidades extends CI_Controller {
 			$where .= " AND k.fechakardex >= '".$this->request->fechai."' AND k.fechakardex <= '".$this->request->fechaf."' ";
 
 			$data = $this->db->query("SELECT k.codkardex, kd.codproducto, k.fechakardex, k.codcomprobantetipo, c.abreviatura, k.seriecomprobante, k.nrocomprobante, per.razonsocial, kd.codunidad, kd.item, kd.cantidad,  kd.preciocompra, kd.preciounitario, kd.cantidad*kd.preciocompra AS subtotalcompra , kd.subtotal AS subtotalventa, kd.subtotal - (kd.cantidad*kd.preciocosto)  AS ganancia, pro.descripcion AS producto, pro.codigo,
-       kd.porcdescuento, kd.descuento, kd.preciosinigv, kd.preciounitario, kd.preciorefunitario, kd.preciobruto,u.descripcion AS unidad,
-       kd.codafectacionigv, kd.igv, kd.valorventa, kd.subtotal, kd.descripcion, kd.estado, kd.preciocompra, kd.preciocosto
-  FROM kardex.kardex k
-  INNER JOIN  kardex.kardexdetalle kd ON (k.codkardex = kd.codkardex )
-  INNER JOIN  caja.comprobantetipos c ON (k.codcomprobantetipo = c.codcomprobantetipo )
-  INNER JOIN public.personas per ON (k.codpersona = per.codpersona )
-  INNER JOIN almacen.unidades u ON (kd.codunidad = u.codunidad )
-  INNER JOIN almacen.productos pro ON (kd.codproducto = pro.codproducto )
-  WHERE k.codmovimientotipo = 20 AND k.estado = 1 ".$where."
+		kd.porcdescuento, kd.descuento, kd.preciosinigv, kd.preciounitario, kd.preciorefunitario, kd.preciobruto,u.descripcion AS unidad,
+		kd.codafectacionigv, kd.igv, kd.valorventa, kd.subtotal, kd.descripcion, kd.estado, kd.preciocompra, kd.preciocosto
+	FROM kardex.kardex k
+	INNER JOIN  kardex.kardexdetalle kd ON (k.codkardex = kd.codkardex )
+	INNER JOIN  caja.comprobantetipos c ON (k.codcomprobantetipo = c.codcomprobantetipo )
+	INNER JOIN public.personas per ON (k.codpersona = per.codpersona )
+	INNER JOIN almacen.unidades u ON (kd.codunidad = u.codunidad )
+	INNER JOIN almacen.productos pro ON (kd.codproducto = pro.codproducto )
+	WHERE k.codmovimientotipo = 20 AND k.estado = 1 ".$where."
   ORDER BY kd.codproducto")->result_array();
 
 			//echo json_encode($data);exit;

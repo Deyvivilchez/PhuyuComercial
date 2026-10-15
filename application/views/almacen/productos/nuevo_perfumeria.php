@@ -1,5 +1,53 @@
-<div id="phuyu_form">
-	<form id="formulario" class="form-horizontal" v-on:submit.prevent="phuyu_guardar()"> <br>
+<style>
+	#phuyu_form.phuyu-producto-form {
+		color: #212529;
+	}
+	#phuyu_form.phuyu-producto-form label {
+		color: #495057;
+		font-size: 12px;
+		font-weight: 700;
+		margin-bottom: 7px;
+		text-transform: uppercase;
+	}
+	#phuyu_form.phuyu-producto-form .form-control,
+	#phuyu_form.phuyu-producto-form .form-select {
+		border: 1px solid #d9e2ef;
+		border-radius: 6px;
+		box-shadow: none;
+		min-height: 38px;
+	}
+	#phuyu_form.phuyu-producto-form .phuyu-section-title {
+		background: #f3f6f9;
+		border: 1px solid #e9ebec;
+		border-radius: 8px;
+		color: #343a40;
+		font-size: 14px;
+		font-weight: 700;
+		margin: 14px 0;
+		padding: 12px;
+		text-align: center;
+		text-transform: uppercase;
+	}
+	#phuyu_form.phuyu-producto-form .table thead th {
+		background: #f3f6f9;
+		color: #495057;
+		font-size: 11px;
+		text-transform: uppercase;
+		white-space: nowrap;
+	}
+	#phuyu_form.phuyu-producto-form .phuyu-actions {
+		border-top: 1px solid #e9ebec;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		justify-content: center;
+		margin-top: 14px;
+		padding-top: 16px;
+	}
+</style>
+
+<div id="phuyu_form" class="phuyu-producto-form">
+	<form id="formulario" v-on:submit.prevent="phuyu_guardar()">
 		<input type="hidden" name="codregistro" v-model="campos.codregistro">
 
 		<div class="row form-group">
@@ -17,7 +65,7 @@
 			        	<option v-for="dato in familias" v-bind:value="dato.codfamilia"> {{dato.descripcion}} </option>
 			        </select>
 					<span class="input-group-btn">
-						<button type="button" class="btn btn-success" v-on:click="phuyu_nuevo_extencion('almacen/familias')"><i class="fa fa-plus-square"></i></button>
+						<button type="button" class="btn btn-success" v-on:click="phuyu_nuevo_extencion('almacen/familias')"><i class="bi bi-plus-lg"></i></button>
 					</span>
 				</div>
 			</div>
@@ -29,7 +77,7 @@
 			        	<option v-for="dato in lineas" v-bind:value="dato.codlinea"> {{dato.descripcion}} </option>
 			        </select>
 					<span class="input-group-btn">
-						<button type="button" class="btn btn-success" v-on:click="phuyu_nuevo_extencion('almacen/lineas')"><i class="fa fa-plus-square"></i></button>
+						<button type="button" class="btn btn-success" v-on:click="phuyu_nuevo_extencion('almacen/lineas')"><i class="bi bi-plus-lg"></i></button>
 					</span>
 				</div>
 			</div>
@@ -43,7 +91,7 @@
 			        	<option v-for="dato in marcas" v-bind:value="dato.codmarca"> {{dato.descripcion}} </option>
 			        </select>
 					<span class="input-group-btn">
-						<button type="button" class="btn btn-success" v-on:click="phuyu_nuevo_extencion('almacen/marcas')"><i class="fa fa-plus-square"></i></button>
+						<button type="button" class="btn btn-success" v-on:click="phuyu_nuevo_extencion('almacen/marcas')"><i class="bi bi-plus-lg"></i></button>
 					</span>
 				</div>
 			</div>
@@ -68,7 +116,7 @@
 				<span class="foto">
 					<input type="file" name="foto" id="foto" accept="image/*" class="upload" />
 				</span>
-				<label for="foto"> <span><i class="fa fa-upload"></i> CARGAR IMAGEN</span> </label>
+				<label for="foto"> <span><i class="bi bi-upload me-1"></i> CARGAR IMAGEN</span> </label>
 			</div>
 			<div class="col-md-6 col-xs-6">
 				<label>PARA VENDER</label>
@@ -123,7 +171,7 @@
 	    	<div class="col-md-3"> <label style="padding-top:3px;">ICBPER</label> </div>
 	    </div> 
 
-	    <h5 class="text-center" style="background:#1ab394;color:#fff;padding:15px 0px;"> <b>UNIDADES DE MEDIDA Y PRECIOS</b> </h5>
+	    <h5 class="phuyu-section-title">UNIDADES DE MEDIDA Y PRECIOS</h5>
 		<div class="row form-group">
         	<div class="col-md-8 col-xs-6">
 	    		<label>UNIDAD PRODUCTO</label>
@@ -160,12 +208,12 @@
 		    </div>
 			<div class="col-md-4 col-xs-12">
 		    	<label><br></label>
-                <button type="button" class="btn btn-success btn-block" v-on:click="phuyu_addunidad()"><i class="fa fa-plus-circle"></i> AGREGAR</button>
+                <button type="button" class="btn btn-success w-100" v-on:click="phuyu_addunidad()"><i class="bi bi-plus-circle me-1"></i> AGREGAR</button>
 	    	</div>
 		</div>
 		<div class="table-responsive">
-			<table class="table table-bordered table-condensed">
-				<thead style="background:#2f4050;color: #fff;">
+			<table class="table table-hover align-middle mb-0">
+				<thead>
 					<tr>
 						<th>EDITAR</th>
 						<th>ELIMINAR</th>
@@ -194,9 +242,9 @@
 			</table>
 		</div>
 
-		<div class="form-group text-center"> <br>
-			<button type="submit" class="btn btn-success" v-bind:disabled="estado==1"> <i class="fa fa-save"></i> GUARDAR </button>
-			<button type="button" class="btn btn-danger" v-on:click="phuyu_cerrar()">CERRAR</button>
+		<div class="phuyu-actions">
+			<button type="submit" class="btn btn-success" v-bind:disabled="estado==1"> <i class="bi bi-save me-1"></i> GUARDAR </button>
+			<button type="button" class="btn btn-light" v-on:click="phuyu_cerrar()">CERRAR</button>
 		</div>
 	</form>
 

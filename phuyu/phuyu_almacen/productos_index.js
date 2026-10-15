@@ -2,9 +2,24 @@ var phuyu_datos = new Vue({
 	el: "#phuyu_datos",
 	data: {
 		cargando: true, registro: 0, buscar: "", datos: [],
+		mostrarDuplicados: false, cargandoDuplicados: false, tipoDuplicado: "todos", filtroDuplicado: "", duplicados: [],
 		paginacion: { "total": 0, "actual": 1, "ultima": 0, "desde": 0, "hasta": 0 }, offset: 3
 	},
 	computed: {
+		duplicadosFiltrados: function () {
+			var filtro = (this.filtroDuplicado || "").toString().trim().toUpperCase();
+			if (filtro === "") {
+				return this.duplicados;
+			}
+
+			return this.duplicados.filter(function (grupo) {
+				var texto = ((grupo.tipo_nombre || "") + " " + (grupo.valor || "")).toUpperCase();
+				(grupo.productos || []).forEach(function (producto) {
+					texto += " " + producto.codproducto + " " + (producto.codigo || "") + " " + (producto.descripcion || "");
+				});
+				return texto.toUpperCase().indexOf(filtro) >= 0;
+			});
+		},
 		phuyu_actual: function () {
 			return this.paginacion.actual;
 		},
@@ -43,6 +58,76 @@ var phuyu_datos = new Vue({
 				$("#phuyu_formulario").empty().html(data.body);
 			}, function () {
 				phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED", "error"); phuyu_sistema.phuyu_fin();
+			});
+		},
+		phuyu_migrar_stock: function () {
+			phuyu_controller = "almacen/migrarstock";
+			phuyu_sistema.phuyu_modulo();
+		},
+		phuyu_duplicados: function () {
+			this.mostrarDuplicados = true;
+			this.$nextTick(function () {
+				var modal = document.getElementById("modal_duplicados_productos");
+				if (modal && typeof bootstrap !== "undefined" && bootstrap.Modal) {
+					bootstrap.Modal.getOrCreateInstance(modal).show();
+				} else if ($("#modal_duplicados_productos").length && $.fn.modal) {
+					$("#modal_duplicados_productos").modal("show");
+				}
+			});
+			this.phuyu_cargar_duplicados();
+		},
+		phuyu_cargar_duplicados: function () {
+			this.cargandoDuplicados = true;
+			this.$http.post(url + "almacen/productos/duplicados", { "tipo": this.tipoDuplicado }).then(function (data) {
+				var respuesta = data.body;
+				if (typeof respuesta === "string") {
+					try {
+						respuesta = JSON.parse(respuesta);
+					} catch (e) {
+						respuesta = null;
+					}
+				}
+				if (!respuesta || !Array.isArray(respuesta.lista)) {
+					this.duplicados = [];
+					phuyu_sistema.phuyu_alerta("NO SE PUDO LEER DUPLICADOS", "Revise la sesion o la respuesta del servidor.", "error");
+					this.cargandoDuplicados = false;
+					return;
+				}
+				this.duplicados = respuesta.lista;
+				this.cargandoDuplicados = false;
+			}, function () {
+				phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS", "ERROR DE RED", "error");
+				this.cargandoDuplicados = false;
+			});
+		},
+		phuyu_unir_duplicado: function (grupo) {
+			var maestro = grupo.productos && grupo.productos.length > 0 ? grupo.productos[0].codproducto : 0;
+			swal({
+				title: "UNIR PRODUCTOS DUPLICADOS?",
+				text: "Se conservara el producto #" + maestro + " y los demas quedaran deshabilitados. No se borrara historial.",
+				icon: "warning",
+				dangerMode: true,
+				buttons: ["CANCELAR", "SI, UNIR"],
+			}).then((unir) => {
+				if (unir) {
+					this.cargandoDuplicados = true;
+					this.$http.post(url + "almacen/productos/unir_duplicados", {
+						"tipo": grupo.tipo,
+						"valor": grupo.valor
+					}).then(function (data) {
+						if (data.body.estado == 1) {
+							phuyu_sistema.phuyu_alerta("DUPLICADOS UNIDOS", data.body.mensaje, "success");
+							this.phuyu_cargar_duplicados();
+							this.phuyu_opcion();
+						} else {
+							phuyu_sistema.phuyu_alerta("NO SE PUDO UNIR", data.body.mensaje, "error");
+							this.cargandoDuplicados = false;
+						}
+					}, function () {
+						phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS", "ERROR DE RED", "error");
+						this.cargandoDuplicados = false;
+					});
+				}
 			});
 		},
 		phuyu_datos_1: function () {

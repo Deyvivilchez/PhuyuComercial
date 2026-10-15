@@ -1,0 +1,29 @@
+PERMISOS NECESARIOS EN PRODUCCION
+
+Carpetas que deben poder escribir PHP/Apache:
+
+sunat                  775 www-data:www-data
+sunat/comprobantes     775 www-data:www-data
+sunat/resumenes        775 www-data:www-data
+sunat/webphuyu         775 www-data:www-data
+application/logs       775 www-data:www-data
+application/cache      775 www-data:www-data
+public/img/empresa     2775 www-data:www-data
+
+Comandos para corregir permisos:
+
+sudo chown -R www-data:www-data sunat application/logs application/cache public/img/empresa
+sudo find sunat application/logs application/cache public/img/empresa -type d -exec chmod 775 {} \;
+sudo find sunat application/logs application/cache public/img/empresa -type f -exec chmod 664 {} \;
+sudo chmod 2775 public/img/empresa
+
+Comandos para verificar:
+
+stat -c '%A %a %U:%G %n' sunat sunat/comprobantes sunat/resumenes sunat/webphuyu application/logs application/cache public/img/empresa
+sudo -u www-data sh -c 'touch sunat/.perm_test && rm sunat/.perm_test'
+sudo -u www-data sh -c 'touch public/img/empresa/.perm_test && rm public/img/empresa/.perm_test'
+
+Composer con PHP 7.4:
+
+/usr/bin/php7.4 $(which composer) install
+/usr/bin/php7.4 $(which composer) dump-autoload -o

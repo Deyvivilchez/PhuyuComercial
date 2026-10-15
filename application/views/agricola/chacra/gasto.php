@@ -1,14 +1,19 @@
-<div id="phuyu_nuevogasto">
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<div id="phuyu_nuevogasto" class="phuyu-velzon-form phuyu-agricola-velzon">
 	<form id="formulario" v-on:submit.prevent="phuyu_guardar()">
 		<div class="phuyu_body">
-			<div class="card">
+			<div class="phuyu-form-title">
+				<div class="phuyu-form-icon"><i class="bi bi-cash-coin"></i></div>
+				<div>
+					<div class="text-muted small text-uppercase fw-semibold">Agricola</div>
+					<h4 class="mb-0 fw-bold">Registro de gasto</h4>
+				</div>
+			</div>
+
+			<div class="card phuyu-card">
 				<div class="card-body">
 					<input type="hidden" id="rubro" value="<?php echo $_SESSION["phuyu_rubro"]?>" name="">
-					<div class="row form-group">
-						<div class="col-md-8"> 
-							<h5> <b>REGISTRO DE GASTO</b> </h5> 
-						</div>
-					</div>
 		        	<div class="row form-group">
 				    	<div class="col-md-3 col-xs-12">
 					    	<label>SOCIO DEL CREDITO</label>

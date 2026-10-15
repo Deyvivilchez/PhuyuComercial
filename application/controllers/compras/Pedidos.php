@@ -787,7 +787,7 @@ class Pedidos extends CI_Controller {
 				$campos = ["codsucursal","codalmacen","codkardex","codusuario","codmovimientotipo","fechakardex","codcomprobantetipo","seriecomprobante"];
 				$valores = [
 					(int)$_SESSION["phuyu_codsucursal"], (int)$_SESSION["phuyu_codalmacen"], (int)$codkardex, (int)$_SESSION["phuyu_codusuario"],
-					(int)$this->request->campos->codmovimientotipo, $this->request->campos->fechakardex,(int)$serie[0]["codcomprobantetipo"],
+					(int)28, $this->request->campos->fechakardex,(int)$serie[0]["codcomprobantetipo"],
 					$serie[0]["seriecomprobante"]
 				];
 				$codkardexalmacen = $this->phuyu_model->phuyu_guardar("kardex.kardexalmacen", $campos, $valores, "true");
@@ -827,8 +827,17 @@ class Pedidos extends CI_Controller {
 						$estado = $this->phuyu_model->phuyu_editar_1("almacen.productoubicacion", $campos, $valores, $f, $v);
 					}
 				}
-				$campos = ["valorventa","igv","importe"]; $valores = [round($totalsalida,2),18,round($totalsalida,2)];
-				$estado = $this->phuyu_model->phuyu_editar("kardex.kardex", $campos, $valores, "codkardex", $codkardex);
+				if ($totalsalida > 0) {
+					$campos = ["valorventa","igv","importe"]; $valores = [round($totalsalida,2),18,round($totalsalida,2)];
+					$estado = $this->phuyu_model->phuyu_editar("kardex.kardex", $campos, $valores, "codkardex", $codkardex);
+				} else {
+					// No dejamos cabeceras vacias cuando el plato vendido no tiene receta/insumos configurados.
+					$this->db->where("codkardexalmacen", (int)$codkardexalmacen);
+					$this->db->delete("kardex.kardexalmacen");
+					$this->db->where("codkardex", (int)$codkardex);
+					$this->db->delete("kardex.kardex");
+					$estado = 1;
+				}
 
 				if ($this->db->trans_status() === FALSE){
 				    $this->db->trans_rollback(); $estado = 0;

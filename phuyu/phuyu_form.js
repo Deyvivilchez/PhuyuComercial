@@ -143,30 +143,69 @@ var phuyu_form = new Vue({
 			$(".compose").slideToggle();
 		},
 		np_guardar_cargarproductos: function(){
-            this.estado = 1; const formulario = new FormData($("#formulario_cargarproductos")[0]);
-            this.$http.post(url+"almacen/kardex/cargarproductos", formulario).then(function (response) {
+			if (!this.campos.codsucursal || !this.campos.codalmacen) {
+				phuyu_sistema.phuyu_alerta("Seleccione destino", "Debe seleccionar la sucursal y el almacén donde se migrará la data.", "error");
+				return false;
+			}
+			if ($("#limpiar_almacen_productos").is(":checked") && !confirm("Se limpiarán los productos activos del almacén seleccionado antes de importar. ¿Desea continuar?")) {
+				return false;
+			}
+            this.estado = 1; phuyu_sistema.phuyu_inicio_guardar("Subiendo archivo de productos, espere por favor...");
+            const self = this; const formulario = new FormData($("#formulario_cargarproductos")[0]);
+            this.$http.post(url+"almacen/productos/cargarproductos", formulario).then(function (response) {
                 if (response.body.estado == 1) {
-                    phuyu_sistema.phuyu_alerta("Guardado correctamente !!!", "Carga del archivo realizada correctamente", "success");
-                }else{
-                    phuyu_sistema.phuyu_alerta("Operación no registrada !!!", "Formato del archivo incorrecto", "error");
+                    phuyu_sistema.phuyu_alerta("Guardado correctamente !!!", response.body.mensaje || "Carga del archivo realizada correctamente", "success");
+                    if (typeof phuyu_datos !== "undefined" && phuyu_datos.phuyu_opcion) {
+                        phuyu_datos.phuyu_opcion();
+                    }
+                } else {
+                    phuyu_sistema.phuyu_alerta("Operación no registrada !!!", response.body.mensaje || "Formato del archivo incorrecto", "error");
                 }
-                this.phuyu_cerrar(); this.estado = 0;
+                self.phuyu_cerrar(); self.estado = 0; phuyu_sistema.phuyu_fin();
             }, function(){
-				phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS", "ERROR DE RED","error");
+                phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS", "ERROR DE RED","error");
+                self.estado = 0; phuyu_sistema.phuyu_fin();
+            });
+        },
+        np_formato_cargarproductos: function(){
+            window.open(url+"almacen/productos/formato_cargarproductos", "_blank");
+        },
+		np_sucursal_productos: function(){
+			var codsucursal = String(this.campos.codsucursal || "");
+			var primerAlmacen = "";
+			$("#formulario_cargarproductos select[name='codalmacen'] option").each(function(){
+				var optionSucursal = String($(this).data("codsucursal") || "");
+				var visible = $(this).val() === "" || optionSucursal === codsucursal;
+				$(this).toggle(visible);
+				if (visible && $(this).val() !== "" && primerAlmacen === "") {
+					primerAlmacen = $(this).val();
+				}
 			});
+
+			if ($("#formulario_cargarproductos select[name='codalmacen'] option:selected").is(":hidden")) {
+				this.campos.codalmacen = primerAlmacen;
+			}
+		},
+        np_formato_stockextra: function(){
+            window.open(url+"almacen/productos/formato_stockextra", "_blank");
         },
         np_guardar_stockextra: function(){
-            this.estado = 1; const formulario = new FormData($("#formulario_stockextra")[0]);
+            this.estado = 1; phuyu_sistema.phuyu_inicio_guardar("Subiendo archivo de stock extra, espere por favor...");
+            const self = this; const formulario = new FormData($("#formulario_stockextra")[0]);
             this.$http.post(url+"almacen/productos/stockextra", formulario).then(function (response) {
                 if (response.body.estado == 1) {
-                    phuyu_sistema.phuyu_alerta("Guardado correctamente !!!", "Carga del archivo realizada correctamente", "success");
-                }else{
-                	phuyu_sistema.phuyu_alerta("Operación no registrada !!!", "Formato del archivo incorrecto", "error");
+                    phuyu_sistema.phuyu_alerta("Guardado correctamente !!!", response.body.mensaje || "Carga del archivo realizada correctamente", "success");
+                    if (typeof phuyu_datos !== "undefined" && phuyu_datos.phuyu_opcion) {
+                        phuyu_datos.phuyu_opcion();
+                    }
+                } else {
+                    phuyu_sistema.phuyu_alerta("Operación no registrada !!!", response.body.mensaje || "Formato del archivo incorrecto", "error");
                 }
-                this.phuyu_cerrar(); this.estado = 0;
+                self.phuyu_cerrar(); self.estado = 0; phuyu_sistema.phuyu_fin();
             }, function(){
-				phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS", "ERROR DE RED","error");
-			});
+                phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS", "ERROR DE RED","error");
+                self.estado = 0; phuyu_sistema.phuyu_fin();
+            });
         },
 		phuyu_marcar: function(){
 			if ($("#marcar").is(":checked")) {
@@ -194,6 +233,9 @@ var phuyu_form = new Vue({
 		}
 	},
 	mounted: function(){
+		if (this.campos && this.campos.codsucursal && $("#formulario_cargarproductos").length > 0) {
+			this.np_sucursal_productos();
+		}
 		if (phuyu_datos.registro>0) {
 			if (phuyu_controller=="administracion/almacenes") {
 				this.phuyu_editaralmacen();

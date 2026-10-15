@@ -1,61 +1,66 @@
-<div id="phuyu_ventas">
-	<div class="row">
-		<div class="col-12 col-md-6">			
-        	<input type="hidden" id="sessioncaja" value="<?php echo $_SESSION["phuyu_codcontroldiario"];?>">
-			<input type="hidden" id="comprobante" value="<?php echo $comprobante;?>">
-            <h1 class="mb-0 pb-0 display-4" id="title">Administracion de Chacras</h1>
-            <nav class="breadcrumb-container d-inline-block" aria-label="breadcrumb">
-              <ul class="breadcrumb pt-0">
-                <li class="breadcrumb-item"><a href="javascript:;">Inicio</a></li>
-                <li class="breadcrumb-item"><a href="javascript:;">Chacras</a></li>
-              </ul>
-            </nav>
-        </div>
-        <div class="col-12 col-md-6 d-flex align-items-start justify-content-end" style="font-size: 11px">
-			<div class="col-md-4 col-xs-12">
-				<label><i class="fa fa-calendar"></i> DESDE:</label>
-				<input type="date" class="form-control input-sm" id="fecha_desde" value="" v-on:change="phuyu_buscar()" autocomplete="off">
-			</div>
-			<div class="col-md-4 col-xs-12">
-				<label><i class="fa fa-calendar"></i> HASTA:</label>
-				<input type="date" class="form-control input-sm" id="fecha_hasta" value="<?php echo date('Y-m-d');?>" v-on:change="phuyu_buscar()" autocomplete="off">
-			</div>
-        </div>
-    </div>
+<?php include("application/views/phuyu/phuyu_velzon_module.php");?>
+
+<div id="phuyu_ventas" class="phuyu-velzon-list phuyu-agricola-velzon">
+	<input type="hidden" id="sessioncaja" value="<?php echo $_SESSION["phuyu_codcontroldiario"];?>">
+	<input type="hidden" id="comprobante" value="<?php echo $comprobante;?>">
+
+	<div class="phuyu-page-title">
+		<div class="phuyu-page-icon"><i class="bi bi-flower1"></i></div>
+		<div>
+			<div class="text-muted small text-uppercase fw-semibold">Agricola</div>
+			<h4 class="mb-0 fw-bold" id="title">Administracion de chacras</h4>
+			<nav aria-label="breadcrumb">
+				<ol class="breadcrumb mb-0 mt-1">
+					<li class="breadcrumb-item"><a href="javascript:;">Inicio</a></li>
+					<li class="breadcrumb-item active" aria-current="page">Chacras</li>
+				</ol>
+			</nav>
+		</div>
+	</div>
+
 	<div class="phuyu_body">
-		<div class="card">
+		<div class="card phuyu-card mb-3">
+			<div class="card-body">
+				<div class="row g-3 align-items-end">
+					<div class="col-12 col-md-3 col-xl-2">
+						<label><i class="bi bi-calendar-date me-1"></i> Desde</label>
+						<input type="date" class="form-control" id="fecha_desde" value="" v-on:change="phuyu_buscar()" autocomplete="off">
+					</div>
+					<div class="col-12 col-md-3 col-xl-2">
+						<label><i class="bi bi-calendar-check me-1"></i> Hasta</label>
+						<input type="date" class="form-control" id="fecha_hasta" value="<?php echo date('Y-m-d');?>" v-on:change="phuyu_buscar()" autocomplete="off">
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="card phuyu-card">
 			<div class="card-body">
 				<div class="row">
 					<div class="col-sm-12 col-md-3 col-lg-3 col-xxl-2 mb-1">
-	                    <div class="d-inline-block float-md-start me-1 mb-1 search-input-container w-100 shadow bg-foreground">
-	                      <input class="form-control datatable-search" v-model="buscar" v-on:keyup="phuyu_buscar()" placeholder="BUSCAR REGISTRO . . ." />
-	                      <span class="search-magnifier-icon">
-	                        <i data-acorn-icon="search"></i>
-	                      </span>
-	                      <span class="search-delete-icon d-none">
-	                        <i data-acorn-icon="close"></i>
-	                      </span>
-	                    </div>
-	                </div>
-	                <div class="col-sm-12 col-md-9 col-lg-9 col-xxl-10 text-end mb-1">
-				    	<div class="d-inline-block me-0 me-sm-3 float-start float-md-none">
-
-					    	<button type="button" class="btn btn-success btn-icon" v-on:click="phuyu_nuevo()"> <i data-acorn-icon="plus"></i> Nuevo</button>
-					    	<button type="button" class="btn btn-warning btn-icon btn-icon-only" v-on:click="phuyu_editar()"> <i data-acorn-icon="edit"></i></button>
-						    <button type="button" class="btn btn-danger btn-icon btn-icon-only" v-on:click="phuyu_eliminar()"> <i data-acorn-icon="bin"></i></button>
-					    	<button type="button" class="btn btn-info btn-icon btn-icon-only" v-on:click="phuyu_ver()"> <i data-acorn-icon="eye"></i></button>
-					    	<button type="button" class="btn btn-info btn-icon" v-on:click="phuyu_asignargasto()"> <i data-acorn-icon="plus"></i> Gastos</button>
-					    	<button type="button" class="btn btn-info btn-icon" v-on:click="phuyu_salidaproductos()"> <i data-acorn-icon="plus"></i> Insumos</button>
-					    	<button type="button" class="btn btn-info btn-icon" v-on:click="phuyu_ingresoproductos()"> <i data-acorn-icon="plus"></i> Produccion</button>
-					    	<button type="button" class="btn btn-warning btn-icon" v-on:click="phuyu_historial()"> <i data-acorn-icon="eye"></i> Historial</button>
-				    	</div>
-				    </div>
-			    </div>
+						<div class="phuyu-search">
+							<i class="bi bi-search"></i>
+							<input class="form-control datatable-search" v-model="buscar" v-on:keyup="phuyu_buscar()" placeholder="BUSCAR REGISTRO . . ." />
+						</div>
+					</div>
+					<div class="col-sm-12 col-md-9 col-lg-9 col-xxl-10 text-end mb-1">
+						<div class="phuyu-actions">
+							<button type="button" class="btn btn-success" v-on:click="phuyu_nuevo()"><i class="bi bi-plus-circle me-1"></i> Nuevo</button>
+							<button type="button" class="btn btn-warning" v-on:click="phuyu_editar()"><i class="bi bi-pencil-square me-1"></i> Editar</button>
+							<button type="button" class="btn btn-danger" v-on:click="phuyu_eliminar()"><i class="bi bi-trash3 me-1"></i> Eliminar</button>
+							<button type="button" class="btn btn-info" v-on:click="phuyu_ver()"><i class="bi bi-eye me-1"></i> Ver</button>
+							<button type="button" class="btn btn-info" v-on:click="phuyu_asignargasto()"><i class="bi bi-cash-coin me-1"></i> Gastos</button>
+							<button type="button" class="btn btn-info" v-on:click="phuyu_salidaproductos()"><i class="bi bi-box-seam me-1"></i> Insumos</button>
+							<button type="button" class="btn btn-info" v-on:click="phuyu_ingresoproductos()"><i class="bi bi-flower2 me-1"></i> Produccion</button>
+							<button type="button" class="btn btn-warning" v-on:click="phuyu_historial()"><i class="bi bi-clock-history me-1"></i> Historial</button>
+						</div>
+					</div>
+				</div>
 				<div class="phuyu_cargando" v-if="cargando">
 					<div class="overlay-spinner"></div>
 				</div>
-				<div class="table-responsive">
-					<table class="table table-striped" style="font-size: 11px">
+				<div class="phuyu-table-wrap">
+					<table class="table table-hover table-striped align-middle" style="font-size: 11px">
 						<thead>
 							<tr>
 								<th>ID</th>
@@ -97,14 +102,4 @@
 	</div>
 </div>
 
-<script>
-	var pantalla = jQuery(document).height(); $("#reportes_modal").css({height: pantalla - 65});
-
-	if (typeof AcornIcons !== 'undefined') {
-      new AcornIcons().replace();
-    }
-    if (typeof Icons !== 'undefined') {
-      const icons = new Icons();
-    }
-</script>
 <script src="<?php echo base_url();?>phuyu/phuyu_chacra/index.js"> </script>

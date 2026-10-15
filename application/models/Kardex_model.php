@@ -320,6 +320,125 @@ class Kardex_model extends CI_Model
 		return $informacion;
 	}
 
+	private function phuyu_producto_tiene_receta($codproducto, $codunidad)
+	{
+		$receta = $this->db->query("
+			select 1
+			from restaurante.recetas
+			where codproducto = " . (int)$codproducto . "
+			and codunidad = " . (int)$codunidad . "
+			and estado = 1
+			limit 1
+		")->row_array();
+
+		return !empty($receta);
+	}
+
+	private function phuyu_factor_producto($codproducto, $codunidad)
+	{
+		$factor = $this->db->query("
+			select coalesce(nullif(factor,0),1) as factor
+			from almacen.productounidades
+			where codproducto = " . (int)$codproducto . "
+			and codunidad = " . (int)$codunidad . "
+			and estado = 1
+			limit 1
+		")->row_array();
+
+		return empty($factor) ? 1 : (float)$factor["factor"];
+	}
+
+	private function phuyu_explotar_receta($codproducto, $codunidad, $cantidad, $origen, $visitados = array())
+	{
+		$clave = (int)$codproducto . "-" . (int)$codunidad;
+		if (isset($visitados[$clave])) {
+			return array();
+		}
+		$visitados[$clave] = true;
+
+		$receta = $this->db->query("
+			select r.codproducto_receta as codproducto, r.codunidad_receta as codunidad, r.cantidad,
+			coalesce(rc.rendimiento,1) as rendimiento
+			from restaurante.recetas r
+			left join restaurante.recetas_config rc on(rc.codproducto=r.codproducto and rc.codunidad=r.codunidad and rc.estado=1)
+			where r.codproducto = " . (int)$codproducto . "
+			and r.codunidad = " . (int)$codunidad . "
+			and r.estado = 1
+			order by r.item
+		")->result_array();
+
+		if (count($receta) == 0) {
+			return array(array(
+				"codproducto" => (int)$codproducto,
+				"codunidad" => (int)$codunidad,
+				"cantidad" => (float)$cantidad,
+				"origen" => $origen,
+				"es_receta" => 0
+			));
+		}
+
+		$lineas = array();
+		foreach ($receta as $value) {
+			$rendimiento = (float)$value["rendimiento"] <= 0 ? 1 : (float)$value["rendimiento"];
+			$cantidad_receta = ((float)$value["cantidad"] * (float)$cantidad) / $rendimiento;
+
+			if ($this->phuyu_producto_tiene_receta($value["codproducto"], $value["codunidad"])) {
+				$lineas = array_merge($lineas, $this->phuyu_explotar_receta($value["codproducto"], $value["codunidad"], $cantidad_receta, $origen, $visitados));
+			} else {
+				$lineas[] = array(
+					"codproducto" => (int)$value["codproducto"],
+					"codunidad" => (int)$value["codunidad"],
+					"cantidad" => (float)$cantidad_receta,
+					"origen" => $origen,
+					"es_receta" => 1
+				);
+			}
+		}
+
+		return $lineas;
+	}
+
+	private function phuyu_movimientos_stock_producto($detalle, $item, $operacion)
+	{
+		$origen = array(
+			"codproducto" => (int)$detalle->codproducto,
+			"codunidad" => (int)$detalle->codunidad,
+			"item" => (int)$item,
+			"cantidad" => (float)$detalle->cantidad
+		);
+
+		if ($operacion == 0 && isset($_SESSION["phuyu_rubro"]) && (int)$_SESSION["phuyu_rubro"] == 3 && $this->phuyu_producto_tiene_receta($detalle->codproducto, $detalle->codunidad)) {
+			return $this->phuyu_explotar_receta($detalle->codproducto, $detalle->codunidad, $detalle->cantidad, $origen);
+		}
+
+		return array(array(
+			"codproducto" => (int)$detalle->codproducto,
+			"codunidad" => (int)$detalle->codunidad,
+			"cantidad" => (float)$detalle->cantidad,
+			"origen" => $origen,
+			"es_receta" => 0
+		));
+	}
+
+	private function phuyu_consolidar_movimientos_stock($movimientos)
+	{
+		$consolidados = array();
+
+		foreach ($movimientos as $movimiento) {
+			$clave = (int)$movimiento["codproducto"] . "-" . (int)$movimiento["codunidad"];
+
+			if (!isset($consolidados[$clave])) {
+				$consolidados[$clave] = $movimiento;
+				$consolidados[$clave]["cantidad"] = 0;
+			}
+
+			$consolidados[$clave]["cantidad"] += (float)$movimiento["cantidad"];
+			$consolidados[$clave]["es_receta"] = ((int)$consolidados[$clave]["es_receta"] == 1 || (int)$movimiento["es_receta"] == 1) ? 1 : 0;
+		}
+
+		return array_values($consolidados);
+	}
+
 	/**
 	 * Registra el detalle de un movimiento de kardex (compra/venta) y actualiza stocks/series.
 	 *
@@ -484,143 +603,115 @@ class Kardex_model extends CI_Model
 			// Si $retirar == 1, inserta detalle del kardex por almacén
 			// Si no, usa la cantidad para el acumulado “recogo”
 			// ============================================================
-			$cantidad_recoger = 0;
-			if ($retirar == 1) {
-				$data = array(
-					"codkardexalmacen" => (int)$codkardexalmacen,
-					"codproducto"      => (int)$detalle[$key]->codproducto,
-					"codunidad"        => (int)$detalle[$key]->codunidad,
-					"item"             => $item,
-					"codalmacen"       => (int)$_SESSION["phuyu_codalmacen"],
-					"codsucursal"      => (int)$_SESSION["phuyu_codsucursal"],
-					"cantidad"         => (float)$detalle[$key]->cantidad
-				);
-				$estado = $this->db->insert("kardex.kardexalmacendetalle", $data);
-			} else {
-				$cantidad_recoger = (float)$detalle[$key]->cantidad;
-			}
+			$movimientos_stock = $this->phuyu_consolidar_movimientos_stock(
+				$this->phuyu_movimientos_stock_producto($detalle[$key], $item, $operacion)
+			);
+			foreach ($movimientos_stock as $movimiento_stock) {
+				$cantidad_recoger = ($retirar == 1) ? 0 : (float)$movimiento_stock["cantidad"];
 
-			// ============================================================
-			// Asegura existencia de fila en productoubicacion (por almacén)
-			// Si no existe, la crea en 0
-			// ============================================================
-			$existe = $this->db->query("
-            select * from almacen.productoubicacion
-            where codalmacen = " . $_SESSION["phuyu_codalmacen"] . "
-              and codproducto = " . $detalle[$key]->codproducto . "
-              and codunidad   = " . $detalle[$key]->codunidad . "
-        ")->result_array();
-
-			if (count($existe) == 0) {
-				$data = array(
-					"codalmacen"       => (int)$_SESSION["phuyu_codalmacen"],
-					"codproducto"      => (int)$detalle[$key]->codproducto,
-					"codunidad"        => (int)$detalle[$key]->codunidad,
-					"codsucursal"      => (int)$_SESSION["phuyu_codsucursal"],
-					"stockactual"      => 0,
-					"stockactualreal"  => 0
-				);
-				$estado = $this->db->insert("almacen.productoubicacion", $data);
-
-				// Vuelve a leer para tener la fila recién creada
-				$existe = $this->db->query("
-                select * from almacen.productoubicacion
-                where codalmacen = " . $_SESSION["phuyu_codalmacen"] . "
-                  and codproducto = " . $detalle[$key]->codproducto . "
-                  and codunidad   = " . $detalle[$key]->codunidad . "
-            ")->result_array();
-			}
-
-			// ============================================================
-			// Validación de stock convertido para productos controlados
-			// (si stock convertido es menor a la cantidad pedida, marca error)
-			// ============================================================
-			if (
-				$_SESSION["phuyu_stockalmacen"] == 1 &&
-				$detalle[$key]->control == 1 &&
-				($existe[0]["stockactualconvertido"] < $detalle[$key]->cantidad)
-			) {
-				$informacion['success']      = false;
-				$informacion['stock'][$key]  = $existe[0]["stockactualconvertido"];
-				$informacion['producto'][$key] = $detalle[$key]->producto;
-				$informacion['unidad'][$key] = $producto[0]["unidad"];
-			}
-
-			// ============================================================
-			// Actualización de STOCK BASE (en productoubicacion - unidad actual)
-			// - VENTA (operacion == 0): Resta stock y acumula ventarecogo
-			// - COMPRA (operacion != 0): Suma stock y acumula comprarecogo
-			// ============================================================
-			if ($operacion == 0) {
-				$data = array(
-					"stockactual" => (float)round(($existe[0]["stockactual"] - $detalle[$key]->cantidad), 3),
-					"ventarecogo" => (float)$existe[0]["ventarecogo"] + (float)$cantidad_recoger
-				);
-			} else {
-				$data = array(
-					"stockactual"  => (float)round(($existe[0]["stockactual"] + $detalle[$key]->cantidad), 3),
-					"comprarecogo" => (float)$existe[0]["comprarecogo"] + (float)$cantidad_recoger
-				);
-			}
-			$this->db->where("codalmacen", $_SESSION["phuyu_codalmacen"]);
-			$this->db->where("codproducto", $detalle[$key]->codproducto);
-			$this->db->where("codunidad",   $detalle[$key]->codunidad);
-			$estado = $this->db->update("almacen.productoubicacion", $data);
-
-			// ============================================================
-			// Actualización de STOCK CONVERTIDO (todas las presentaciones)
-			// Convierte la cantidad en función de factores y suma/resta
-			// ============================================================
-			$stockconvertido = $this->db->query("
-            select * from almacen.productoubicacion
-            where codalmacen = " . $_SESSION["phuyu_codalmacen"] . "
-              and codproducto = " . $detalle[$key]->codproducto . "
-        ")->result_array();
-
-			// Factor de la unidad base del ítem actual
-			$factor = $this->db->query("
-            select * from almacen.productounidades
-            where codproducto = " . $detalle[$key]->codproducto . "
-              and codunidad   = " . $detalle[$key]->codunidad . "
-        ")->result_array();
-
-			foreach ($stockconvertido as $k => $value) {
-				// Factor de la unidad de cada presentación
-				$productounidad = $this->db->query("
-                select * from almacen.productounidades
-                where codproducto = " . $detalle[$key]->codproducto . "
-                  and codunidad   = " . $value["codunidad"] . "
-            ")->result_array();
-
-				// Cantidad convertida a la unidad $value["codunidad"]
-				$stockc = (
-					(float)$detalle[$key]->cantidad * (float)$factor[0]["factor"]
-				) / (float)$productounidad[0]["factor"];
-
-				// Cantidad a recoger convertida
-				$stockrecoger = (
-					(float)$cantidad_recoger * (float)$factor[0]["factor"]
-				) / (float)$productounidad[0]["factor"];
-
-				if ($operacion == 0) {
-					// SALIDA/VENTA: resta convertido y acumula ventas recogidas convertidas
+				if ($retirar == 1) {
 					$data = array(
-						"stockactualconvertido" => (float)round(($value["stockactualconvertido"] - $stockc), 3),
-						"ventarecogoconvertido" => (float)$value["ventarecogoconvertido"] + $stockrecoger
+						"codkardexalmacen" => (int)$codkardexalmacen,
+						"codproducto"      => (int)$movimiento_stock["codproducto"],
+						"codunidad"        => (int)$movimiento_stock["codunidad"],
+						"item"             => $item,
+						"codalmacen"       => (int)$_SESSION["phuyu_codalmacen"],
+						"codsucursal"      => (int)$_SESSION["phuyu_codsucursal"],
+						"cantidad"         => (float)$movimiento_stock["cantidad"],
+						"es_receta"        => (int)$movimiento_stock["es_receta"],
+						"codproducto_origen" => (int)$movimiento_stock["origen"]["codproducto"],
+						"codunidad_origen" => (int)$movimiento_stock["origen"]["codunidad"],
+						"item_origen"      => (int)$movimiento_stock["origen"]["item"],
+						"cantidad_origen"  => (float)$movimiento_stock["origen"]["cantidad"]
 					);
-				} else {
-					// ENTRADA/COMPRA: suma convertido y acumula compras recogidas convertidas
-					// (nota: aquí usas $existe[0] para comprarecogoconvertido; dejamos igual)
-					$data = array(
-						"stockactualconvertido"  => (float)round(($value["stockactualconvertido"] + $stockc), 3),
-						"comprarecogoconvertido" => (float)$existe[0]["comprarecogoconvertido"] + (float)$stockrecoger
-					);
+					$estado = $this->db->insert("kardex.kardexalmacendetalle", $data);
 				}
 
+				$codproducto_stock = (int)$movimiento_stock["codproducto"];
+				$codunidad_stock = (int)$movimiento_stock["codunidad"];
+				$cantidad_stock = (float)$movimiento_stock["cantidad"];
+
+				$existe = $this->db->query("
+					select * from almacen.productoubicacion
+					where codalmacen = " . $_SESSION["phuyu_codalmacen"] . "
+					and codproducto = " . $codproducto_stock . "
+					and codunidad = " . $codunidad_stock . "
+				")->result_array();
+
+				if (count($existe) == 0) {
+					$data = array(
+						"codalmacen" => (int)$_SESSION["phuyu_codalmacen"],
+						"codproducto" => $codproducto_stock,
+						"codunidad" => $codunidad_stock,
+						"codsucursal" => (int)$_SESSION["phuyu_codsucursal"],
+						"stockactual" => 0,
+						"stockactualreal" => 0
+					);
+					$estado = $this->db->insert("almacen.productoubicacion", $data);
+					$existe = $this->db->query("
+						select * from almacen.productoubicacion
+						where codalmacen = " . $_SESSION["phuyu_codalmacen"] . "
+						and codproducto = " . $codproducto_stock . "
+						and codunidad = " . $codunidad_stock . "
+					")->result_array();
+				}
+
+				if (
+					$_SESSION["phuyu_stockalmacen"] == 1 &&
+					$detalle[$key]->control == 1 &&
+					($existe[0]["stockactualconvertido"] < $cantidad_stock)
+				) {
+					$informacion['success'] = false;
+					$informacion['stock'][$key] = $existe[0]["stockactualconvertido"];
+					$informacion['producto'][$key] = $detalle[$key]->producto;
+					$informacion['unidad'][$key] = $producto[0]["unidad"];
+				}
+
+				if ($operacion == 0) {
+					$data = array(
+						"stockactual" => (float)round(((float)$existe[0]["stockactual"] - $cantidad_stock), 3),
+						"ventarecogo" => (float)$existe[0]["ventarecogo"] + (float)$cantidad_recoger
+					);
+				} else {
+					$data = array(
+						"stockactual" => (float)round(((float)$existe[0]["stockactual"] + $cantidad_stock), 3),
+						"comprarecogo" => (float)$existe[0]["comprarecogo"] + (float)$cantidad_recoger
+					);
+				}
 				$this->db->where("codalmacen", $_SESSION["phuyu_codalmacen"]);
-				$this->db->where("codproducto", $detalle[$key]->codproducto);
-				$this->db->where("codunidad",   $value["codunidad"]);
+				$this->db->where("codproducto", $codproducto_stock);
+				$this->db->where("codunidad", $codunidad_stock);
 				$estado = $this->db->update("almacen.productoubicacion", $data);
+
+				$stockconvertido = $this->db->query("
+					select * from almacen.productoubicacion
+					where codalmacen = " . $_SESSION["phuyu_codalmacen"] . "
+					and codproducto = " . $codproducto_stock . "
+				")->result_array();
+
+				$factor = $this->phuyu_factor_producto($codproducto_stock, $codunidad_stock);
+				foreach ($stockconvertido as $k => $value) {
+					$productounidad_factor = $this->phuyu_factor_producto($codproducto_stock, $value["codunidad"]);
+					$stockc = ($cantidad_stock * $factor) / $productounidad_factor;
+					$stockrecoger = ((float)$cantidad_recoger * $factor) / $productounidad_factor;
+
+					if ($operacion == 0) {
+						$data = array(
+							"stockactualconvertido" => (float)round(((float)$value["stockactualconvertido"] - $stockc), 3),
+							"ventarecogoconvertido" => (float)$value["ventarecogoconvertido"] + $stockrecoger
+						);
+					} else {
+						$data = array(
+							"stockactualconvertido" => (float)round(((float)$value["stockactualconvertido"] + $stockc), 3),
+							"comprarecogoconvertido" => (float)$value["comprarecogoconvertido"] + (float)$stockrecoger
+						);
+					}
+
+					$this->db->where("codalmacen", $_SESSION["phuyu_codalmacen"]);
+					$this->db->where("codproducto", $codproducto_stock);
+					$this->db->where("codunidad", $value["codunidad"]);
+					$estado = $this->db->update("almacen.productoubicacion", $data);
+				}
 			}
 
 			// ============================================================

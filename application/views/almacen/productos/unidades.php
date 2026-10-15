@@ -1,49 +1,88 @@
-<div id="phuyu_unidades">
-	<div class="row">
-		<div class="col-12 col-md-6">
-            <h1 class="mb-0 pb-0 display-4" id="title">Productos x Unidades</h1>
-            <nav class="breadcrumb-container d-inline-block" aria-label="breadcrumb">
-              <ul class="breadcrumb pt-0">
-                <li class="breadcrumb-item"><a href="javascript:;">Inicio</a></li>
-                <li class="breadcrumb-item"><a href="javascript:;">PXU</a></li>
-              </ul>
+<style>
+	#phuyu_unidades.phuyu-productos-grid .page-title-box {
+		margin-bottom: 18px;
+	}
+	#phuyu_unidades.phuyu-productos-grid .page-title-box h4 {
+		color: #212529;
+		font-weight: 700;
+		margin-bottom: 4px;
+	}
+	#phuyu_unidades.phuyu-productos-grid .phuyu-list-card {
+		border: 1px solid #e9ebec;
+		border-radius: 8px;
+		box-shadow: 0 1px 2px rgba(56, 65, 74, 0.08);
+	}
+	#phuyu_unidades.phuyu-productos-grid .phuyu-toolbar {
+		align-items: center;
+		gap: 8px;
+	}
+	#phuyu_unidades.phuyu-productos-grid .form-control,
+	#phuyu_unidades.phuyu-productos-grid .form-select {
+		border: 1px solid #d9e2ef;
+		border-radius: 6px;
+		box-shadow: none;
+		min-height: 36px;
+	}
+	#phuyu_unidades.phuyu-productos-grid .table {
+		font-size: 12px;
+	}
+	#phuyu_unidades.phuyu-productos-grid .table thead th {
+		background: #f3f6f9;
+		color: #495057;
+		font-size: 11px;
+		text-transform: uppercase;
+		white-space: nowrap;
+	}
+	#phuyu_unidades.phuyu-productos-grid .modal-content {
+		border: 0;
+		border-radius: 8px;
+		box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
+	}
+	#phuyu_unidades.phuyu-productos-grid .modal-header {
+		background: #f3f6f9;
+		border-bottom: 1px solid #e9ebec;
+	}
+</style>
+
+<div id="phuyu_unidades" class="phuyu-productos-grid">
+	<div class="row page-title-box">
+		<div class="col-12">
+            <h4 id="title">Productos x Unidades</h4>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="javascript:;">Inicio</a></li>
+                    <li class="breadcrumb-item active">PXU</li>
+                </ol>
             </nav>
         </div>
 	</div>
 	<div class="phuyu_body">
-		<div class="card">
+		<div class="card phuyu-list-card">
 	
 			<div class="card-body">
-				<div class="row">
+				<div class="row g-2 phuyu-toolbar mb-3">
 					<div class="col-sm-12 col-md-5 col-lg-4 col-xxl-2 mb-1">
-	                    <div class="d-inline-block float-md-start me-1 mb-1 search-input-container w-100 shadow bg-foreground">
-	                      <input class="form-control datatable-search" v-model="buscar" placeholder="BUSCAR REGISTRO . . ." />
-	                      <span class="search-magnifier-icon">
-	                        <i data-acorn-icon="search"></i>
-	                      </span>
-	                      <span class="search-delete-icon d-none">
-	                        <i data-acorn-icon="close"></i>
-	                      </span>
-	                    </div>
+	                    <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
+                            <input class="form-control datatable-search border-start-0" v-model="buscar" placeholder="BUSCAR REGISTRO . . ." />
+                        </div>
 	                </div>
 	                <div class="col-sm-12 col-md-7 col-lg-8 col-xxl-10 text-end mb-1">
-	                    <div class="d-inline-block me-0 me-sm-3 float-start float-md-none">
-	                      <!-- Add Button Start -->
-	                        <button type="button" class="btn btn-info btn-icon" v-on:click="cambiar_unidad()">CAMBIAR UNIDAD</button>
+	                    <div class="d-flex flex-wrap justify-content-end phuyu-toolbar">
+	                        <button type="button" class="btn btn-info" v-on:click="cambiar_unidad()"><i class="bi bi-arrow-left-right me-1"></i> Cambiar unidad</button>
 	                      
-				    		<button type="button" class="btn btn-warning btn-icon" v-on:click="productos_almacen()">ASIGNAR ALMACENES</button>
+							<button type="button" class="btn btn-warning" v-on:click="productos_almacen()"><i class="bi bi-building me-1"></i> Asignar almacenes</button>
 
-				    		<button type="button" class="btn btn-success btn-icon" v-on:click="actualizar_stock()">ACTUALIZAR STOCK</button>
-	                      <!-- Delete Button End -->
+							<button type="button" class="btn btn-success" v-on:click="actualizar_stock()"><i class="bi bi-arrow-repeat me-1"></i> Actualizar stock</button>
 	                    </div>
 	                </div>
-			    </div><br>
+			    </div>
 				<div class="table-responsive lista scroll-phuyu-view" style="height:300px;overflow:auto;overflow-x:hidden;">
-					<table class="table table-striped" style="font-size: 11px;">
+					<table class="table table-hover align-middle mb-0">
 						<thead>
 							<tr>
 								<th width="3%"> # </th>
-								<th width="3%"> <i class="fa fa-circle-o-notch"></i> </th>
+								<th width="3%"> <i class="bi bi-record-circle"></i> </th>
 								<th width="6%">CODIGO</th>
 								<th width="25%">PRODUCTO</th>
 								<th width="7%">UNIDAD</th>
@@ -115,7 +154,7 @@
 					<div class="row">
 						<div class="col-md-6 col-xs-12 text-center">
 							<h5><b>UNIDAD ACTUAL</b></h5> <hr>
-							<h4><span class="label label-danger">UNIDAD MEDIDA: {{campos.unidad}}</span></h4> <br>
+							<h4><span class="badge bg-danger">UNIDAD MEDIDA: {{campos.unidad}}</span></h4> <br>
 
 							<ul class="list-inline widget_tally">
 								<li>
@@ -149,7 +188,7 @@
 							<div class="alert alert-danger text-center">
 								ATENCION USUARIO: AL CAMBIAR LA UNIDAD DE MEDIDA, SE REEMPLAZARA EN LAS VENTAS, COMPRAS, KARDEX E INVENTARIO
 							</div>
-							<button type="button" class="btn btn-primary btn-block" v-on:click="guardar_cambiar_unidad" v-bind:disabled="estado==1">CAMBIAR UNIDAD DE MEDIDA</button>
+							<button type="button" class="btn btn-primary w-100" v-on:click="guardar_cambiar_unidad" v-bind:disabled="estado==1">CAMBIAR UNIDAD DE MEDIDA</button>
 						</div>
 					</div>
 				</div>

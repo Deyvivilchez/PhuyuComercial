@@ -10,6 +10,872 @@ class Ventas extends CI_Controller
         $this->load->model('Kardex_model');
     }
 
+    private function phuyu_json($data)
+    {
+        $this->output->set_content_type('application/json', 'utf-8');
+        echo json_encode($data);
+    }
+
+    private function phuyu_numero($valor)
+    {
+        return is_numeric($valor) ? (float)$valor : null;
+    }
+
+    private function phuyu_usuario_puede_modificar_precio()
+    {
+        return (int)($_SESSION['phuyu_editar_pventa'] ?? 0) === 1;
+    }
+
+    private function phuyu_usuario_puede_eliminar_venta()
+    {
+        return (int)($_SESSION['phuyu_eliminar_venta'] ?? 0) === 1;
+    }
+
+    private function phuyu_precio_venta_producto($codproducto, $codunidad)
+    {
+        return $this->db->query(
+            "select pventapublico from almacen.productounidades where codproducto=? and codunidad=? and estado=1 limit 1",
+            [(int)$codproducto, (int)$codunidad]
+        )->row_array();
+    }
+
+    private function phuyu_normalizar_precios_venta($request)
+    {
+        if ($this->phuyu_usuario_puede_modificar_precio()) {
+            return ['estado' => 1, 'request' => $request];
+        }
+
+        if (!isset($request->detalle) || !is_array($request->detalle)) {
+            return ['estado' => 0, 'informacion' => 'Debe registrar al menos un producto en la venta.'];
+        }
+
+        $igvSunat = (float)($_SESSION['phuyu_igv'] ?? 18);
+        $icbperSunat = (float)($_SESSION['phuyu_icbper'] ?? 0);
+
+        foreach ($request->detalle as $index => $item) {
+            $precioBase = $this->phuyu_precio_venta_producto($item->codproducto ?? 0, $item->codunidad ?? 0);
+            if (empty($precioBase)) {
+                return [
+                    'estado' => 0,
+                    'informacion' => 'No se encontro precio de venta para el item '.($index + 1).'. Revise producto y unidad.'
+                ];
+            }
+
+            $cantidad = (float)($item->cantidad ?? 0);
+            $precio = round((float)$precioBase['pventapublico'], 4);
+            $afectacion = (int)($item->codafectacionigv ?? 0);
+            $porcentaje = $afectacion === 10 ? (1 + $igvSunat) / 100 : 1;
+            $preciosinigv = $afectacion === 21 ? 0 : round($precio / $porcentaje, 4);
+            $subtotal = $afectacion === 21 ? 0 : round($cantidad * $precio, 2);
+            $valorventa = $afectacion === 21 ? 0 : round($cantidad * $preciosinigv, 2);
+            $igv = $afectacion === 10 ? round($subtotal - $valorventa, 2) : 0;
+            $icbper = ((int)($item->conicbper ?? 0) === 1) ? round($cantidad * $icbperSunat, 2) : 0;
+
+            $item->precio = $precio;
+            $item->preciorefunitario = $precio;
+            $item->preciobruto = $preciosinigv;
+            $item->preciosinigv = $preciosinigv;
+            $item->descuento = 0;
+            $item->porcdescuento = 0;
+            $item->valorventa = $valorventa;
+            $item->subtotal = $subtotal;
+            $item->subtotal_tem = $subtotal;
+            $item->igv = $igv;
+            $item->icbper = $icbper;
+        }
+
+        return ['estado' => 1, 'request' => $request];
+    }
+
+    private function phuyu_validar_totales_venta($request)
+    {
+        if (!is_object($request) || !isset($request->campos) || !isset($request->totales)) {
+            return ['estado' => 0, 'informacion' => 'La venta llegó incompleta. Actualice la pantalla y vuelva a intentar.'];
+        }
+
+        if (!isset($request->detalle) || !is_array($request->detalle) || count($request->detalle) === 0) {
+            return ['estado' => 0, 'informacion' => 'Debe registrar al menos un producto en la venta.'];
+        }
+
+        $totales = (object)[
+            'flete' => isset($request->totales->flete) ? (float)$request->totales->flete : 0,
+            'gastos' => isset($request->totales->gastos) ? (float)$request->totales->gastos : 0,
+            'bruto' => 0,
+            'descuentos' => 0,
+            'descglobal' => isset($request->totales->descglobal) ? (float)$request->totales->descglobal : 0,
+            'valorventa' => 0,
+            'igv' => 0,
+            'isc' => isset($request->totales->isc) ? (float)$request->totales->isc : 0,
+            'icbper' => 0,
+            'subtotal' => 0,
+            'importe' => 0,
+            'interes' => isset($request->totales->interes) ? (float)$request->totales->interes : 0,
+        ];
+
+        foreach ($request->detalle as $index => $item) {
+            $cantidad = $this->phuyu_numero($item->cantidad ?? null);
+            $precio = $this->phuyu_numero($item->precio ?? null);
+            $preciobruto = $this->phuyu_numero($item->preciobruto ?? 0);
+            $descuento = $this->phuyu_numero($item->descuento ?? 0);
+            $valorventa = $this->phuyu_numero($item->valorventa ?? null);
+            $igv = $this->phuyu_numero($item->igv ?? 0);
+            $icbper = $this->phuyu_numero($item->icbper ?? 0);
+            $subtotal = $this->phuyu_numero($item->subtotal ?? null);
+            $afectacion = (int)($item->codafectacionigv ?? 0);
+
+            if ($cantidad === null || $precio === null || $valorventa === null || $subtotal === null || $cantidad <= 0 || $precio < 0 || $subtotal < 0) {
+                return ['estado' => 0, 'informacion' => 'La venta tiene cantidades o importes inválidos en el item ' . ($index + 1) . '.'];
+            }
+
+            $subtotalCalculado = round($cantidad * $precio, 2);
+            if (abs(round($subtotal, 2) - $subtotalCalculado) > 0.05) {
+                return ['estado' => 0, 'informacion' => 'El subtotal del item ' . ($index + 1) . ' no coincide con cantidad por precio.'];
+            }
+
+            if ($afectacion === 10 && abs(round($valorventa + $igv, 2) - round($subtotal, 2)) > 0.05) {
+                return ['estado' => 0, 'informacion' => 'El IGV del item ' . ($index + 1) . ' no coincide con el subtotal.'];
+            }
+
+            $totales->bruto = round($totales->bruto + ($cantidad * (float)$preciobruto), 2);
+            $totales->descuentos = round($totales->descuentos + ($cantidad * (float)$descuento), 2);
+            $totales->valorventa = round($totales->valorventa + round($valorventa, 2), 2);
+            $totales->igv = round($totales->igv + round((float)$igv, 2), 2);
+            $totales->icbper = round($totales->icbper + round((float)$icbper, 2), 2);
+            $totales->subtotal = round($totales->subtotal + round($subtotal, 2), 2);
+        }
+
+        $totales->importe = round($totales->subtotal + $totales->icbper, 2);
+        $importeRequest = $this->phuyu_numero($request->totales->importe ?? null);
+
+        if ($importeRequest === null || $totales->importe <= 0 || abs(round($importeRequest, 2) - $totales->importe) > 0.05) {
+            return ['estado' => 0, 'informacion' => 'El total enviado no coincide con el detalle de la venta. Actualice la pantalla y vuelva a cobrar.'];
+        }
+
+        $request->totales = $totales;
+        return ['estado' => 1, 'request' => $request];
+    }
+
+    private function phuyu_validar_pago_venta($request)
+    {
+        if (!isset($request->campos) || !isset($request->pagos)) {
+            return ['estado' => 0, 'informacion' => 'Los datos de pago llegaron incompletos.'];
+        }
+
+        if ((int)$request->campos->condicionpago !== 1) {
+            return ['estado' => 1];
+        }
+
+        $total = round((float)$request->totales->importe, 2);
+        $efectivo = $this->phuyu_numero($request->pagos->monto_efectivo ?? 0);
+        $tarjeta = $this->phuyu_numero($request->pagos->monto_tarjeta ?? 0);
+        $vuelto = $this->phuyu_numero($request->pagos->vuelto_efectivo ?? 0);
+
+        if ($efectivo === null || $tarjeta === null || $vuelto === null || $efectivo < 0 || $tarjeta < 0 || $vuelto < 0) {
+            return ['estado' => 0, 'informacion' => 'El pago tiene importes inválidos.'];
+        }
+
+        $pagado = round($efectivo + $tarjeta - $vuelto, 2);
+        if (abs($pagado - $total) > 0.05) {
+            return ['estado' => 0, 'informacion' => 'El pago no coincide con el total de la venta. Total: S/. ' . number_format($total, 2, '.', '') . '.'];
+        }
+
+        return ['estado' => 1];
+    }
+
+    private function phuyu_whatsapp_secret()
+    {
+        $secret = getenv('WHATSAPP_SHARE_SECRET');
+        if ($secret !== false && $secret !== '') {
+            return $secret;
+        }
+
+        return $this->config->item('encryption_key');
+    }
+
+    private function phuyu_whatsapp_token($codkardex, $formato, $expira)
+    {
+        return hash_hmac('sha256', (int)$codkardex . '|' . $formato . '|' . (int)$expira, $this->phuyu_whatsapp_secret());
+    }
+
+    private function phuyu_whatsapp_formato($formato)
+    {
+        $formato = strtolower(trim((string)$formato));
+        return in_array($formato, ['a4', 'a5', 'ticket'], true) ? $formato : 'a4';
+    }
+
+    private function phuyu_whatsapp_telefono($telefono)
+    {
+        $telefono = preg_replace('/[\s\-\(\)]/', '', (string)$telefono);
+        return preg_match('/^\+[1-9][0-9]{7,14}$/', $telefono) ? $telefono : '';
+    }
+
+    private function phuyu_whatsapp_url($codkardex, $formato)
+    {
+        $expira = time() + 86400;
+        $token = $this->phuyu_whatsapp_token($codkardex, $formato, $expira);
+
+        return base_url('facturacion/formato/' . $formato . '/' . (int)$codkardex) .
+            '?wa=' . rawurlencode($token) . '&exp=' . $expira;
+    }
+
+    private function phuyu_whatsapp_url_publica($url)
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+        if (empty($host)) {
+            return false;
+        }
+
+        if (in_array(strtolower($host), ['localhost', '127.0.0.1', '::1'], true)) {
+            return false;
+        }
+
+        if (preg_match('/(^|\.)local$/i', $host)) {
+            return false;
+        }
+
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            return filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false;
+        }
+
+        return true;
+    }
+
+    private function phuyu_whatsapp_provider()
+    {
+        $provider = strtolower(trim((string)getenv('WHATSAPP_PROVIDER')));
+        if ($provider !== '') {
+            return $provider;
+        }
+
+        if (getenv('WHATSAPP_CLOUD_TOKEN') && getenv('WHATSAPP_CLOUD_PHONE_NUMBER_ID')) {
+            return 'cloud';
+        }
+
+        if (getenv('TWILIO_ACCOUNT_SID') && getenv('TWILIO_AUTH_TOKEN') && getenv('TWILIO_WHATSAPP_FROM')) {
+            return 'twilio';
+        }
+
+        return 'link';
+    }
+
+    private function phuyu_whatsapp_curl_json($url, $headers, $payload)
+    {
+        if (!function_exists('curl_init')) {
+            return ['estado' => 0, 'mensaje' => 'La extensión cURL no está disponible en PHP.'];
+        }
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+
+        $response = curl_exec($ch);
+        $error = curl_error($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($response === false) {
+            return ['estado' => 0, 'mensaje' => 'No se pudo conectar con WhatsApp: ' . $error];
+        }
+
+        $body = json_decode($response, true);
+        if ($httpCode >= 200 && $httpCode < 300) {
+            return ['estado' => 1, 'mensaje' => 'Comprobante enviado por WhatsApp.'];
+        }
+
+        $mensaje = isset($body['error']['message']) ? $body['error']['message'] : $response;
+        return ['estado' => 0, 'mensaje' => 'WhatsApp rechazó el envío: ' . $mensaje];
+    }
+
+    private function phuyu_whatsapp_imagen_base64($path)
+    {
+        if (empty($path) || !file_exists($path)) {
+            return '';
+        }
+
+        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        $mime = ($extension === 'jpg' || $extension === 'jpeg') ? 'jpeg' : 'png';
+
+        return 'data:image/' . $mime . ';base64,' . base64_encode(file_get_contents($path));
+    }
+
+    private function phuyu_mesa_restaurante($codkardex)
+    {
+        $tablas = $this->db->query("
+            SELECT
+                to_regclass('kardex.kardexpedido') AS kardexpedido,
+                to_regclass('restaurante.mesaspedido') AS mesaspedido
+        ")->row_array();
+
+        if (empty($tablas['kardexpedido']) || empty($tablas['mesaspedido'])) {
+            return '';
+        }
+
+        $mesa = $this->db->query("
+            SELECT string_agg(DISTINCT mp.nromesa::text, ' - ') AS numero
+            FROM restaurante.mesaspedido mp
+            WHERE mp.codpedido IN (
+                SELECT p.codpedido
+                FROM kardex.pedidos p
+                WHERE p.codkardex = " . (int)$codkardex . "
+
+                UNION
+
+                SELECT kp.codpedido
+                FROM kardex.kardexpedido kp
+                WHERE kp.codkardex = " . (int)$codkardex . "
+            )
+        ")->row_array();
+
+        return trim((string)($mesa['numero'] ?? ''));
+    }
+
+    private function phuyu_whatsapp_datos_pdf($codkardex, $formato)
+    {
+        $codkardex = (int)$codkardex;
+        $codsucursal = (int)$_SESSION['phuyu_codsucursal'];
+
+        $empresa = $this->db->query("
+            SELECT documento, razonsocial, nombrecomercial
+            FROM public.personas
+            WHERE codpersona = 1
+            LIMIT 1
+        ")->row_array();
+
+        $sucursal = $this->db->query("
+            SELECT sucursal.*, empresa.*
+            FROM public.sucursales AS sucursal
+            INNER JOIN public.empresas AS empresa ON (sucursal.codempresa = empresa.codempresa)
+            WHERE sucursal.codsucursal = {$codsucursal}
+            LIMIT 1
+        ")->row_array();
+
+        $principal = $this->db->query("
+            SELECT *
+            FROM public.sucursales
+            WHERE principal = 1 AND estado = 1
+            LIMIT 1
+        ")->row_array();
+
+        $parametros = $this->db->query("
+            SELECT *
+            FROM public.empresas
+            LIMIT 1
+        ")->row_array();
+
+        $venta = $this->db->query("
+            SELECT
+                k.codkardex,
+                k.fechacomprobante,
+                k.conleyendaamazonia,
+                ct.descripcion AS comprobante,
+                ct.oficial,
+                k.codcomprobantetipo,
+                k.seriecomprobante,
+                k.nrocomprobante,
+                p.documento,
+                k.cliente,
+                k.direccion,
+                k.valorventa,
+                k.descglobal,
+                k.igv,
+                k.importe,
+                k.codempleado,
+                k.condicionpago,
+                k.nroplaca,
+                k.codpersona,
+                k.icbper
+            FROM kardex.kardex AS k
+            INNER JOIN public.personas AS p ON (k.codpersona = p.codpersona)
+            INNER JOIN caja.comprobantetipos AS ct ON (k.codcomprobantetipo = ct.codcomprobantetipo)
+            WHERE k.codkardex = {$codkardex}
+            LIMIT 1
+        ")->row_array();
+
+        if (empty($venta)) {
+            return ['estado' => 0, 'mensaje' => 'No se encontró la venta para generar el PDF.'];
+        }
+
+        $fechavencimiento = $venta['fechacomprobante'];
+        $credito = [];
+        if ((int)$venta['condicionpago'] === 2) {
+            $credito = $this->db->query("
+                SELECT *
+                FROM kardex.creditos
+                WHERE codkardex = {$codkardex}
+                LIMIT 1
+            ")->row_array();
+
+            if (!empty($credito['fechavencimiento'])) {
+                $fechavencimiento = $credito['fechavencimiento'];
+            }
+        }
+
+        $empleado = $this->db->query("
+            SELECT p.razonsocial
+            FROM public.empleados e
+            INNER JOIN public.personas p ON p.codpersona = e.codpersona
+            WHERE e.codpersona = " . (int)$venta['codempleado'] . "
+            LIMIT 1
+        ")->row_array();
+
+        $vendedor = $this->db->query("
+            SELECT razonsocial, telefono
+            FROM public.personas
+            WHERE codpersona = " . (int)$venta['codempleado'] . "
+            LIMIT 1
+        ")->row_array();
+
+        $totales = $this->db->query("
+            SELECT
+                (SELECT COALESCE(SUM(subtotal),0) FROM kardex.kardexdetalle WHERE codkardex = {$codkardex} AND codafectacionigv = '10') AS gravado,
+                (SELECT COALESCE(SUM(subtotal),0) FROM kardex.kardexdetalle WHERE codkardex = {$codkardex} AND codafectacionigv = '20') AS exonerado,
+                (SELECT COALESCE(SUM(subtotal),0) FROM kardex.kardexdetalle WHERE codkardex = {$codkardex} AND codafectacionigv = '30') AS inafecto,
+                (SELECT COALESCE(SUM(subtotal),0) FROM kardex.kardexdetalle WHERE codkardex = {$codkardex} AND codafectacionigv = '21') AS gratuito
+        ")->row_array();
+
+        $detalle = $this->db->query("
+            SELECT
+                kd.item,
+                kd.cantidad,
+                p.descripcion AS producto,
+                u.descripcion AS unidad,
+                kd.preciounitario,
+                kd.subtotal,
+                kd.descripcion
+            FROM kardex.kardexdetalle AS kd
+            INNER JOIN almacen.productos AS p ON (p.codproducto = kd.codproducto)
+            INNER JOIN almacen.unidades AS u ON (u.codunidad = kd.codunidad)
+            WHERE kd.codkardex = {$codkardex}
+            ORDER BY kd.item
+        ")->result_array();
+
+        $cuentascorrientes = $this->db->query("
+            SELECT ct.*, b.descripcion AS banco
+            FROM caja.ctasctes ct
+            INNER JOIN caja.bancos b ON (ct.codbanco = b.codbanco)
+            WHERE ct.codpersona = 1
+        ")->result_array();
+
+        $formatoComprobante = $this->db->query("
+            SELECT *
+            FROM caja.comprobantes
+            WHERE codcomprobantetipo = " . (int)$venta['codcomprobantetipo'] . "
+              AND seriecomprobante = " . $this->db->escape($venta['seriecomprobante']) . "
+              AND codsucursal = {$codsucursal}
+            LIMIT 1
+        ")->row_array();
+
+        if (empty($formatoComprobante)) {
+            $formatoComprobante = [
+                'nombrecomercial' => '',
+                'logo' => '',
+                'slogan' => '',
+                'publicidad' => '',
+                'agradecimiento' => '',
+                'tipoconleyendaamazonia' => 0,
+                'impresionlogo' => 1,
+            ];
+        }
+
+        $nombre = $formatoComprobante['nombrecomercial'];
+        if ($nombre === '') {
+            $nombre = !empty($empresa['nombrecomercial']) ? $empresa['nombrecomercial'] : $empresa['razonsocial'];
+        }
+
+        if ($formatoComprobante['impresionlogo'] === '' || $formatoComprobante['impresionlogo'] === null) {
+            $formatoComprobante['impresionlogo'] = 1;
+        }
+
+        $logoArchivo = !empty($formatoComprobante['logo'])
+            ? FCPATH . 'public/img/empresa/' . $formatoComprobante['logo']
+            : FCPATH . 'public/img/' . ($_SESSION['phuyu_logo'] ?? '');
+        $logoSrc = $this->phuyu_whatsapp_imagen_base64($logoArchivo);
+
+        $slogan = !empty($formatoComprobante['slogan']) ? $formatoComprobante['slogan'] : ($parametros['slogan'] ?? '');
+        $publicidad = !empty($formatoComprobante['publicidad']) ? $formatoComprobante['publicidad'] : ($parametros['publicidad'] ?? '');
+
+        $this->load->library('ciqrcode');
+        $qrDir = FCPATH . 'sunat/webphuyu/';
+        if (!is_dir($qrDir)) {
+            @mkdir($qrDir, 0777, true);
+        }
+
+        $textoqr = $empresa['razonsocial'] . '|' .
+            $venta['seriecomprobante'] . '|' .
+            $venta['nrocomprobante'] . '|' .
+            number_format((float)$venta['igv'], 2, '.', '') . '|' .
+            number_format((float)$venta['importe'], 2, '.', '') . '|' .
+            $venta['fechacomprobante'] . '|' .
+            $venta['documento'];
+
+        $qrFile = $qrDir . 'whatsapp_qr_' . $venta['seriecomprobante'] . '_' . $venta['nrocomprobante'] . '.png';
+        $params = [
+            'data' => $textoqr,
+            'level' => 'H',
+            'size' => 5,
+            'savename' => $qrFile,
+        ];
+        $this->ciqrcode->generate($params);
+        $qrSrc = $this->phuyu_whatsapp_imagen_base64($qrFile);
+
+        $this->load->library('Number');
+        $number = new Number();
+        $totalTexto = $number->convertirNumeroEnLetras(round((float)$venta['importe'], 2));
+
+        $totTotal = (string)number_format((float)$venta['importe'], 2, '.', '');
+        $importeTexto = explode('.', $totTotal);
+        $detalleImporteTexto = $number->convertirNumeroEnLetras($importeTexto[0]);
+        $textoImporte = 'SON ' . strtoupper($detalleImporteTexto) . ' Y ' . $importeTexto[1] . '/100 SOLES';
+
+        $movimiento = $this->db->query("
+            SELECT codmovimiento
+            FROM caja.movimientos
+            WHERE codkardex = {$codkardex}
+            LIMIT 1
+        ")->row_array();
+
+        $detallemovimiento = [];
+        if (!empty($movimiento['codmovimiento'])) {
+            $detallemovimiento = $this->db->query("
+                SELECT importeentregado, vuelto
+                FROM caja.movimientosdetalle
+                WHERE codtipopago = 1
+                  AND codmovimiento = " . (int)$movimiento['codmovimiento'] . "
+            ")->result_array();
+        }
+
+        return [
+            'estado' => 1,
+            'data' => [
+                'modo_pdf' => true,
+                'empresa' => $empresa,
+                'sucursal' => $sucursal,
+                'principal' => $principal,
+                'parametros' => $parametros,
+                'venta' => $venta,
+                'credito' => $credito,
+                'empleado' => $empleado,
+                'vendedor' => $vendedor,
+                'totales' => $totales,
+                'detalle' => $detalle,
+                'cuentascorrientes' => $cuentascorrientes,
+                'formato' => $formatoComprobante,
+                'nombre_empresa' => $nombre,
+                'nombre' => $nombre,
+                'logo_src' => $logoSrc,
+                'qr_src' => $qrSrc,
+                'slogan' => $slogan,
+                'publicidad' => $publicidad,
+                'fechavencimiento' => $fechavencimiento,
+                'total_texto' => $totalTexto,
+                'texto_importe' => $textoImporte,
+                'detallemovimiento' => $detallemovimiento,
+                'efectivo' => !empty($detallemovimiento) ? 1 : 0,
+                'logoEmpresa' => $_SESSION['phuyu_logo'] ?? '',
+                'mesa_restaurante' => $this->phuyu_mesa_restaurante($codkardex),
+            ],
+        ];
+    }
+
+    private function phuyu_whatsapp_generar_pdf($codkardex, $formato, $filename)
+    {
+        $datos = $this->phuyu_whatsapp_datos_pdf($codkardex, $formato);
+        if ($datos['estado'] != 1) {
+            return $datos;
+        }
+
+        if ($formato === 'a5') {
+            $view = 'reportes/ventas/a5venta';
+            $paper = 'A5';
+        } elseif ($formato === 'ticket') {
+            $view = 'facturacion/formato/ticket_Phuyu';
+            $items = count($datos['data']['detalle']);
+            $height = max(650, min(1800, 560 + ($items * 34)));
+            $paper = [0, 0, 226.77, $height];
+        } else {
+            $view = 'reportes/ventas/a4comprobante';
+            $paper = 'A4';
+        }
+
+        $html = $this->load->view($view, $datos['data'], true);
+
+        require_once FCPATH . 'vendor/autoload.php';
+
+        $tempDir = FCPATH . 'application/cache/dompdf';
+        if (!is_dir($tempDir)) {
+            @mkdir($tempDir, 0777, true);
+        }
+
+        $options = new \Dompdf\Options();
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('isRemoteEnabled', true);
+        $options->set('defaultFont', 'DejaVu Sans');
+        $options->set('chroot', FCPATH);
+        $options->set('tempDir', $tempDir);
+        $options->set('fontDir', $tempDir);
+        $options->set('fontCache', $tempDir);
+        $options->set('dpi', 96);
+
+        $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf->loadHtml($html, 'UTF-8');
+        $dompdf->setPaper($paper, 'portrait');
+        $dompdf->render();
+
+        $dir = APPPATH . 'cache/whatsapp/';
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0777, true);
+        }
+
+        if (!is_dir($dir) || !is_writable($dir)) {
+            return ['estado' => 0, 'mensaje' => 'No se puede escribir el PDF temporal de WhatsApp.'];
+        }
+
+        $path = $dir . uniqid('wa_', true) . '_' . preg_replace('/[^A-Za-z0-9._-]/', '_', $filename);
+        file_put_contents($path, $dompdf->output());
+
+        return ['estado' => 1, 'path' => $path];
+    }
+
+    private function phuyu_whatsapp_subir_media_cloud($path, $filename)
+    {
+        if (!function_exists('curl_init')) {
+            return ['estado' => 0, 'mensaje' => 'La extensión cURL no está disponible en PHP.'];
+        }
+
+        $token = getenv('WHATSAPP_CLOUD_TOKEN');
+        $phoneNumberId = getenv('WHATSAPP_CLOUD_PHONE_NUMBER_ID');
+        $apiVersion = getenv('WHATSAPP_CLOUD_API_VERSION');
+        $apiVersion = $apiVersion !== false && $apiVersion !== '' ? $apiVersion : 'v20.0';
+
+        if (!$token || !$phoneNumberId) {
+            return ['estado' => 0, 'mensaje' => 'Faltan WHATSAPP_CLOUD_TOKEN o WHATSAPP_CLOUD_PHONE_NUMBER_ID.'];
+        }
+
+        if (!file_exists($path)) {
+            return ['estado' => 0, 'mensaje' => 'No se encontró el PDF temporal para adjuntar.'];
+        }
+
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'type' => 'application/pdf',
+            'file' => new CURLFile($path, 'application/pdf', $filename),
+        ];
+
+        $ch = curl_init('https://graph.facebook.com/' . $apiVersion . '/' . rawurlencode($phoneNumberId) . '/media');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $token]);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+
+        $response = curl_exec($ch);
+        $error = curl_error($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($response === false) {
+            return ['estado' => 0, 'mensaje' => 'No se pudo subir el PDF a WhatsApp: ' . $error];
+        }
+
+        $body = json_decode($response, true);
+        if ($httpCode >= 200 && $httpCode < 300 && !empty($body['id'])) {
+            return ['estado' => 1, 'media_id' => $body['id']];
+        }
+
+        $mensaje = isset($body['error']['message']) ? $body['error']['message'] : $response;
+        return ['estado' => 0, 'mensaje' => 'WhatsApp rechazó el PDF: ' . $mensaje];
+    }
+
+    private function phuyu_whatsapp_enviar_cloud($telefono, $mensaje, $filename, $pdfPath)
+    {
+        if (!function_exists('curl_init')) {
+            return ['estado' => 0, 'mensaje' => 'La extensión cURL no está disponible en PHP.'];
+        }
+
+        $media = $this->phuyu_whatsapp_subir_media_cloud($pdfPath, $filename);
+        if (!isset($media['estado']) || (int)$media['estado'] !== 1 || empty($media['media_id'])) {
+            return [
+                'estado' => 0,
+                'mensaje' => isset($media['mensaje']) ? $media['mensaje'] : 'No se pudo subir el PDF a WhatsApp.',
+            ];
+        }
+
+        $token = getenv('WHATSAPP_CLOUD_TOKEN');
+        $phoneNumberId = getenv('WHATSAPP_CLOUD_PHONE_NUMBER_ID');
+        $apiVersion = getenv('WHATSAPP_CLOUD_API_VERSION');
+        $apiVersion = $apiVersion !== false && $apiVersion !== '' ? $apiVersion : 'v20.0';
+
+        if (!$token || !$phoneNumberId) {
+            return ['estado' => 0, 'mensaje' => 'Faltan WHATSAPP_CLOUD_TOKEN o WHATSAPP_CLOUD_PHONE_NUMBER_ID.'];
+        }
+
+        $mediaId = trim((string)$media['media_id']);
+        if ($mediaId === '') {
+            return ['estado' => 0, 'mensaje' => 'WhatsApp no devolvió un MEDIA_ID válido para el PDF.'];
+        }
+
+        $url = 'https://graph.facebook.com/' . $apiVersion . '/' . rawurlencode($phoneNumberId) . '/messages';
+
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'recipient_type' => 'individual',
+            'to' => ltrim($telefono, '+'),
+            'type' => 'document',
+            'document' => [
+                'id' => $mediaId,
+                'filename' => $filename,
+                'caption' => $mensaje,
+            ],
+        ];
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Bearer ' . $token,
+            'Content-Type: application/json',
+        ]);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+
+        $response = curl_exec($ch);
+        $error = curl_error($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($response === false) {
+            return ['estado' => 0, 'mensaje' => 'No se pudo conectar con WhatsApp: ' . $error];
+        }
+
+        $body = json_decode($response, true);
+        if ($httpCode >= 200 && $httpCode < 300 && empty($body['error'])) {
+            return [
+                'estado' => 1,
+                'mensaje' => 'Comprobante enviado por WhatsApp.',
+                'meta' => $body,
+                'media_id' => $mediaId,
+            ];
+        }
+
+        $mensajeError = isset($body['error']['message']) ? $body['error']['message'] : $response;
+        return [
+            'estado' => 0,
+            'mensaje' => 'Error WhatsApp: ' . $mensajeError,
+            'media_id' => $mediaId,
+        ];
+    }
+    private function phuyu_whatsapp_enviar_link_cloud($telefono, $mensaje)
+    {
+        if (!function_exists('curl_init')) {
+            return ['estado' => 0, 'mensaje' => 'La extensión cURL no está disponible en PHP.'];
+        }
+
+        $token = getenv('WHATSAPP_CLOUD_TOKEN');
+        $phoneNumberId = getenv('WHATSAPP_CLOUD_PHONE_NUMBER_ID');
+        $apiVersion = getenv('WHATSAPP_CLOUD_API_VERSION');
+        $apiVersion = $apiVersion !== false && $apiVersion !== '' ? $apiVersion : 'v20.0';
+
+        if (!$token || !$phoneNumberId) {
+            return ['estado' => 0, 'mensaje' => 'Faltan WHATSAPP_CLOUD_TOKEN o WHATSAPP_CLOUD_PHONE_NUMBER_ID.'];
+        }
+
+        $url = 'https://graph.facebook.com/' . $apiVersion . '/' . rawurlencode($phoneNumberId) . '/messages';
+
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'recipient_type' => 'individual',
+            'to' => ltrim($telefono, '+'),
+            'type' => 'text',
+            'text' => [
+                'preview_url' => true,
+                'body' => $mensaje,
+            ],
+        ];
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Bearer ' . $token,
+            'Content-Type: application/json',
+        ]);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+
+        $response = curl_exec($ch);
+        $error = curl_error($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($response === false) {
+            return ['estado' => 0, 'mensaje' => 'No se pudo conectar con WhatsApp: ' . $error];
+        }
+
+        $body = json_decode($response, true);
+        if ($httpCode >= 200 && $httpCode < 300 && empty($body['error'])) {
+            return [
+                'estado' => 1,
+                'mensaje' => 'Link enviado por WhatsApp.',
+                'meta' => $body,
+            ];
+        }
+
+        $mensajeError = isset($body['error']['message']) ? $body['error']['message'] : $response;
+        return ['estado' => 0, 'mensaje' => 'Error WhatsApp: ' . $mensajeError];
+    }
+
+    private function phuyu_whatsapp_enviar_twilio($telefono, $mensaje, $mediaUrl, $formato)
+    {
+        if (!function_exists('curl_init')) {
+            return ['estado' => 0, 'mensaje' => 'La extensión cURL no está disponible en PHP.'];
+        }
+
+        $sid = getenv('TWILIO_ACCOUNT_SID');
+        $token = getenv('TWILIO_AUTH_TOKEN');
+        $from = getenv('TWILIO_WHATSAPP_FROM');
+
+        if (!$sid || !$token || !$from) {
+            return ['estado' => 0, 'mensaje' => 'Faltan TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN o TWILIO_WHATSAPP_FROM.'];
+        }
+
+        $post = [
+            'From' => strpos($from, 'whatsapp:') === 0 ? $from : 'whatsapp:' . $from,
+            'To' => 'whatsapp:' . $telefono,
+            'Body' => $mensaje,
+        ];
+
+        if ($formato !== 'ticket') {
+            $post['MediaUrl'] = $mediaUrl;
+        }
+
+        $ch = curl_init('https://api.twilio.com/2010-04-01/Accounts/' . rawurlencode($sid) . '/Messages.json');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_USERPWD, $sid . ':' . $token);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($post));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+
+        $response = curl_exec($ch);
+        $error = curl_error($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($response === false) {
+            return ['estado' => 0, 'mensaje' => 'No se pudo conectar con Twilio: ' . $error];
+        }
+
+        $body = json_decode($response, true);
+        if ($httpCode >= 200 && $httpCode < 300) {
+            return ['estado' => 1, 'mensaje' => 'Comprobante enviado por WhatsApp.'];
+        }
+
+        $mensajeError = isset($body['message']) ? $body['message'] : $response;
+        return ['estado' => 0, 'mensaje' => 'Twilio rechazó el envío: ' . $mensajeError];
+    }
+
     public function index()
     {
         if ($this->input->is_ajax_request()) {
@@ -63,7 +929,14 @@ class Ventas extends CI_Controller
             }
             $lista = $this->db
                 ->query(
-                    'select kardex.hora,personas.documento,kardex.cliente,kardex.codkardex, kardex.codcomprobantetipo, kardex.seriecomprobante,kardex.condicionpago, kardex.nrocomprobante, kardex.fechacomprobante,round(kardex.importe,2) as importe,kardex.estado, comprobantes.descripcion as tipo,comprobantes.abreviatura from kardex.kardex as kardex inner join public.personas as personas on (kardex.codpersona=personas.codpersona) inner join caja.comprobantetipos as comprobantes on(kardex.codcomprobantetipo=comprobantes.codcomprobantetipo) where ' .
+                    "select kardex.hora,personas.documento,personas.telefono,kardex.cliente,kardex.codkardex, kardex.codcomprobantetipo, kardex.seriecomprobante,kardex.condicionpago, kardex.nrocomprobante, kardex.fechacomprobante,round(kardex.importe,2) as importe,kardex.estado, comprobantes.descripcion as tipo,comprobantes.abreviatura,
+                    (
+                        select string_agg(distinct mp.nromesa::text, ' - ')
+                        from kardex.pedidos p
+                        inner join restaurante.mesaspedido mp on mp.codpedido=p.codpedido
+                        where p.codkardex=kardex.codkardex
+                    ) as mesa_restaurante
+                    from kardex.kardex as kardex inner join public.personas as personas on (kardex.codpersona=personas.codpersona) inner join caja.comprobantetipos as comprobantes on(kardex.codcomprobantetipo=comprobantes.codcomprobantetipo) where " .
                         $fechas .
                         " (UPPER(personas.documento) like UPPER('%" .
                         $this->request->buscar .
@@ -474,13 +1347,33 @@ class Ventas extends CI_Controller
         }
     }
 
-    
+
 
     function guardar_100326()
     {
         if ($this->input->is_ajax_request()) {
             if (isset($_SESSION['phuyu_codusuario'])) {
                 $this->request = json_decode(file_get_contents('php://input'));
+
+                $validacionPrecios = $this->phuyu_normalizar_precios_venta($this->request);
+                if ((int)$validacionPrecios['estado'] !== 1) {
+                    echo json_encode($validacionPrecios);
+                    return;
+                }
+                $this->request = $validacionPrecios['request'];
+
+                $validacionTotales = $this->phuyu_validar_totales_venta($this->request);
+                if ((int)$validacionTotales['estado'] !== 1) {
+                    echo json_encode($validacionTotales);
+                    return;
+                }
+                $this->request = $validacionTotales['request'];
+
+                $validacionPago = $this->phuyu_validar_pago_venta($this->request);
+                if ((int)$validacionPago['estado'] !== 1) {
+                    echo json_encode($validacionPago);
+                    return;
+                }
 
                 // REVISAMOS SI EL PEDIDO SIGUE ACTIVO
                 if ($this->request->codpedido != 0) {
@@ -613,10 +1506,10 @@ class Ventas extends CI_Controller
                     /* REGISTRO CREDITO POR COBRAR */
                     if ($this->request->campos->condicionpago == 2) {
                         $persona = $this->db->query(
-                            'select documento,d.abreviatura as tipo 
-                         from public.personas p 
-                         inner join public.documentotipos d on(p.coddocumentotipo=d.coddocumentotipo) 
-                         where p.codpersona=' . (int)$this->request->campos->codpersona
+                            'select documento,d.abreviatura as tipo ' .
+                            'from public.personas p ' .
+                            'inner join public.documentotipos d on(p.coddocumentotipo=d.coddocumentotipo) ' .
+                            'where p.codpersona=' . (int)$this->request->campos->codpersona
                         )->result_array();
 
                         $estado = $this->Caja_model->phuyu_credito(
@@ -720,64 +1613,84 @@ class Ventas extends CI_Controller
 
 
     function guardar()
-{
-    if ($this->input->is_ajax_request()) {
-        if (isset($_SESSION['phuyu_codusuario'])) {
-            $this->request = json_decode(file_get_contents('php://input'));
+    {
+        if ($this->input->is_ajax_request()) {
+            if (isset($_SESSION['phuyu_codusuario'])) {
+                $this->request = json_decode(file_get_contents('php://input'));
 
-            // REVISAMOS SI EL PEDIDO SIGUE ACTIVO
-            if ($this->request->codpedido != 0) {
-                $info = $this->db->query('select *from kardex.pedidos where codpedido=' . (int)$this->request->codpedido)->result_array();
-                if (count($info) > 0 && $info[0]['estado'] == 0) {
-                    echo json_encode('e');
+                $validacionPrecios = $this->phuyu_normalizar_precios_venta($this->request);
+                if ((int)$validacionPrecios['estado'] !== 1) {
+                    echo json_encode($validacionPrecios);
                     return;
                 }
-            }
+                $this->request = $validacionPrecios['request'];
 
-            // REVISAMOS SI LA PROFORMA SIGUE ACTIVA
-            if ($this->request->codproforma != 0) {
-                $info = $this->db->query('select *from kardex.proformas where codproforma=' . (int)$this->request->codproforma)->result_array();
-                if (count($info) > 0 && $info[0]['estado'] == 0) {
-                    echo json_encode('e');
+                $validacionTotales = $this->phuyu_validar_totales_venta($this->request);
+                if ((int)$validacionTotales['estado'] !== 1) {
+                    echo json_encode($validacionTotales);
                     return;
                 }
-            }
+                $this->request = $validacionTotales['request'];
 
-            $this->request->campos->codpersona = $this->request->codpersonapedido == 0
-                ? $this->request->campos->codpersona
-                : $this->request->codpersonapedido;
-
-            // VALIDAMOS SI ES BOLETA Y EL IMPORTE SEA MENOR A 700
-            if ($this->request->campos->codpersona == 2 && $this->request->campos->codcomprobantetipo == 12) {
-                if ($this->request->totales->importe >= 700) {
-                    echo json_encode('e');
+                $validacionPago = $this->phuyu_validar_pago_venta($this->request);
+                if ((int)$validacionPago['estado'] !== 1) {
+                    echo json_encode($validacionPago);
                     return;
                 }
-            }
 
-            $this->request->campos->codlote = !isset($this->request->campos->codlote) || empty($this->request->campos->codlote)
-                ? 0
-                : $this->request->campos->codlote;
+                // REVISAMOS SI EL PEDIDO SIGUE ACTIVO
+                if ($this->request->codpedido != 0) {
+                    $info = $this->db->query('select *from kardex.pedidos where codpedido=' . (int)$this->request->codpedido)->result_array();
+                    if (count($info) > 0 && $info[0]['estado'] == 0) {
+                        echo json_encode('e');
+                        return;
+                    }
+                }
 
-            /*
+                // REVISAMOS SI LA PROFORMA SIGUE ACTIVA
+                if ($this->request->codproforma != 0) {
+                    $info = $this->db->query('select *from kardex.proformas where codproforma=' . (int)$this->request->codproforma)->result_array();
+                    if (count($info) > 0 && $info[0]['estado'] == 0) {
+                        echo json_encode('e');
+                        return;
+                    }
+                }
+
+                $this->request->campos->codpersona = $this->request->codpersonapedido == 0
+                    ? $this->request->campos->codpersona
+                    : $this->request->codpersonapedido;
+
+                // VALIDAMOS SI ES BOLETA Y EL IMPORTE SEA MENOR A 700
+                if ($this->request->campos->codpersona == 2 && $this->request->campos->codcomprobantetipo == 12) {
+                    if ($this->request->totales->importe >= 700) {
+                        echo json_encode('e');
+                        return;
+                    }
+                }
+
+                $this->request->campos->codlote = !isset($this->request->campos->codlote) || empty($this->request->campos->codlote)
+                    ? 0
+                    : $this->request->campos->codlote;
+
+                /*
             |--------------------------------------------------------------------------
             | PREVALIDAR STOCK ANTES DE GUARDAR
             |--------------------------------------------------------------------------
             */
-            $productosSinStock = [];
+                $productosSinStock = [];
 
-            if (
-                isset($_SESSION['phuyu_stockalmacen']) &&
-                (int)$_SESSION['phuyu_stockalmacen'] === 1 &&
-                isset($this->request->detalle) &&
-                is_array($this->request->detalle)
-            ) {
-                foreach ($this->request->detalle as $item) {
-                    $codproducto = (int)$item->codproducto;
-                    $codunidad   = (int)$item->codunidad;
-                    $cantidad    = (float)$item->cantidad;
+                if (
+                    isset($_SESSION['phuyu_stockalmacen']) &&
+                    (int)$_SESSION['phuyu_stockalmacen'] === 1 &&
+                    isset($this->request->detalle) &&
+                    is_array($this->request->detalle)
+                ) {
+                    foreach ($this->request->detalle as $item) {
+                        $codproducto = (int)$item->codproducto;
+                        $codunidad   = (int)$item->codunidad;
+                        $cantidad    = (float)$item->cantidad;
 
-                    $stockInfo = $this->db->query("
+                        $stockInfo = $this->db->query("
                         SELECT 
                             p.descripcion,
                             p.controlstock,
@@ -796,209 +1709,209 @@ class Ventas extends CI_Controller
                         LIMIT 1
                     ")->result_array();
 
-                    if (count($stockInfo) > 0) {
-                        $controlProducto = (int)$stockInfo[0]['controlstock'];
-                        $stockActual     = (float)$stockInfo[0]['stock'];
+                        if (count($stockInfo) > 0) {
+                            $controlProducto = (int)$stockInfo[0]['controlstock'];
+                            $stockActual     = (float)$stockInfo[0]['stock'];
 
-                        if ($controlProducto === 1 && $cantidad > $stockActual) {
-                            $productosSinStock[] = [
-                                'producto' => $stockInfo[0]['descripcion'],
-                                'stock'    => number_format($stockActual, 4, '.', ''),
-                                'unidad'   => $stockInfo[0]['unidad']
-                            ];
+                            if ($controlProducto === 1 && $cantidad > $stockActual) {
+                                $productosSinStock[] = [
+                                    'producto' => $stockInfo[0]['descripcion'],
+                                    'stock'    => number_format($stockActual, 4, '.', ''),
+                                    'unidad'   => $stockInfo[0]['unidad']
+                                ];
+                            }
                         }
                     }
                 }
-            }
 
-            if (count($productosSinStock) > 0) {
-                echo json_encode([
-                    'estado' => 0,
-                    'informacion' => [
-                        'success'  => false,
-                        'stock'    => array_column($productosSinStock, 'stock'),
-                        'producto' => array_column($productosSinStock, 'producto'),
-                        'unidad'   => array_column($productosSinStock, 'unidad')
-                    ]
-                ]);
-                return;
-            }
-
-            $this->db->trans_begin();
-
-            try {
-                /* REGISTRO KARDEX Y KARDEX DETALLE */
-                $codkardex = $this->Kardex_model->phuyu_kardex($this->request->campos, $this->request->totales, 0);
-                $codkardexalmacen = 0;
-                $retirar = $this->request->campos->retirar;
-                $estado = 1;
-
-                if ($retirar == 1) {
-                    $codkardexalmacen = $this->Kardex_model->phuyu_kardexalmacen($codkardex, 4, $this->request->campos);
-                }
-
-                $detalle = $this->Kardex_model->phuyu_kardexdetalle(
-                    $codkardex,
-                    $codkardexalmacen,
-                    $this->request->detalle,
-                    $retirar,
-                    0,
-                    $this->request->codpedido,
-                    $this->request->codproforma
-                );
-
-                if (!isset($detalle['success']) || !$detalle['success']) {
-                    $this->db->trans_rollback();
-
-                    $data = [];
-                    $data['estado'] = 0;
-                    $data['informacion'] = $detalle;
-                    echo json_encode($data);
+                if (count($productosSinStock) > 0) {
+                    echo json_encode([
+                        'estado' => 0,
+                        'informacion' => [
+                            'success'  => false,
+                            'stock'    => array_column($productosSinStock, 'stock'),
+                            'producto' => array_column($productosSinStock, 'producto'),
+                            'unidad'   => array_column($productosSinStock, 'unidad')
+                        ]
+                    ]);
                     return;
                 }
 
-                if ($this->request->codpedido != 0) {
-                    $this->phuyu_model->phuyu_pedidodetalle($this->request->codpedido, $this->request->detalle);
+                $this->db->trans_begin();
 
-                    if ($this->request->campos->terminarpedido == true) {
-                        $campos = ['estadoproceso'];
-                        $valores = [1];
-                        $this->phuyu_model->phuyu_editar('kardex.pedidos', $campos, $valores, 'codpedido', $this->request->codpedido);
+                try {
+                    /* REGISTRO KARDEX Y KARDEX DETALLE */
+                    $codkardex = $this->Kardex_model->phuyu_kardex($this->request->campos, $this->request->totales, 0);
+                    $codkardexalmacen = 0;
+                    $retirar = $this->request->campos->retirar;
+                    $estado = 1;
+
+                    if ($retirar == 1) {
+                        $codkardexalmacen = $this->Kardex_model->phuyu_kardexalmacen($codkardex, 4, $this->request->campos);
                     }
-                }
 
-                if ($this->request->codproforma != 0) {
-                    $this->phuyu_model->phuyu_proformadetalle($this->request->codproforma, $this->request->detalle);
-
-                    if ($this->request->campos->terminarpedido == true) {
-                        $campos = ['estadoproceso'];
-                        $valores = [1];
-                        $this->phuyu_model->phuyu_editar('kardex.proformas', $campos, $valores, 'codproforma', $this->request->codproforma);
-                    }
-                }
-
-                /* REGISTRO MOVIMIENTO DE CAJA */
-                if ($this->request->campos->codmoneda != 1) {
-                    $importe = round($this->request->totales->importe * $this->request->campos->tipocambio, 2);
-                    $importemoneda = $this->request->totales->importe;
-                } else {
-                    $importe = $this->request->totales->importe;
-                    $importemoneda = $this->request->totales->importe;
-                }
-
-                $codmovimiento = $this->Caja_model->phuyu_movimientos(
-                    $codkardex,
-                    1,
-                    1,
-                    $importe,
-                    $this->request->campos,
-                    $importemoneda
-                );
-
-                if ($codmovimiento == 0) {
-                    $this->db->trans_rollback();
-
-                    $data = [];
-                    $data['estado'] = 3;
-                    $data['informacion'] = 'La venta se interrumpió porque la caja que usted está utilizando está cerrada, vuelve a iniciar sesión';
-                    echo json_encode($data);
-                    return;
-                }
-
-                if ($this->request->campos->condicionpago == 1) {
-                    $estado = $this->Caja_model->phuyu_movimientosdetalle($codmovimiento, $this->request->pagos);
-
-                    if ($estado != 1) {
-                        $this->db->trans_rollback();
-
-                        $data = [];
-                        $data['estado'] = 0;
-                        $data['informacion'] = 'No se pudo registrar el detalle del pago.';
-                        echo json_encode($data);
-                        return;
-                    }
-                }
-
-                /* REGISTRO CREDITO POR COBRAR */
-                if ($this->request->campos->condicionpago == 2) {
-                    $persona = $this->db->query(
-                        'select documento,d.abreviatura as tipo 
-                         from public.personas p 
-                         inner join public.documentotipos d on(p.coddocumentotipo=d.coddocumentotipo) 
-                         where p.codpersona=' . (int)$this->request->campos->codpersona
-                    )->result_array();
-
-                    $estado = $this->Caja_model->phuyu_credito(
+                    $detalle = $this->Kardex_model->phuyu_kardexdetalle(
                         $codkardex,
-                        $codmovimiento,
-                        1,
-                        $this->request->campos,
-                        $this->request->totales,
-                        $this->request->cuotas,
-                        $persona[0]['tipo'] . '-' . $persona[0]['documento']
+                        $codkardexalmacen,
+                        $this->request->detalle,
+                        $retirar,
+                        0,
+                        $this->request->codpedido,
+                        $this->request->codproforma
                     );
 
-                    if ($estado != 1) {
+                    if (!isset($detalle['success']) || !$detalle['success']) {
                         $this->db->trans_rollback();
 
                         $data = [];
                         $data['estado'] = 0;
-                        $data['informacion'] = 'No se pudo registrar el crédito.';
+                        $data['informacion'] = $detalle;
                         echo json_encode($data);
                         return;
                     }
-                }
 
-                /* COMPROBANTE ELECTRONICO PARA SUNAT */
-                if ($this->request->campos->codcomprobantetipo == 10 || $this->request->campos->codcomprobantetipo == 12) {
-                    $kardex = $this->db->query('select nrocomprobante from kardex.kardex where codkardex=' . (int)$codkardex)->result_array();
+                    if ($this->request->codpedido != 0) {
+                        $this->phuyu_model->phuyu_pedidodetalle($this->request->codpedido, $this->request->detalle);
 
-                    if ($this->request->campos->codcomprobantetipo == 10) {
-                        $xml = $_SESSION['phuyu_ruc'] . '-01-' . $this->request->campos->seriecomprobante . '-' . $kardex[0]['nrocomprobante'];
+                        if ($this->request->campos->terminarpedido == true) {
+                            $campos = ['estadoproceso'];
+                            $valores = [1];
+                            $this->phuyu_model->phuyu_editar('kardex.pedidos', $campos, $valores, 'codpedido', $this->request->codpedido);
+                        }
+                    }
+
+                    if ($this->request->codproforma != 0) {
+                        $this->phuyu_model->phuyu_proformadetalle($this->request->codproforma, $this->request->detalle);
+
+                        if ($this->request->campos->terminarpedido == true) {
+                            $campos = ['estadoproceso'];
+                            $valores = [1];
+                            $this->phuyu_model->phuyu_editar('kardex.proformas', $campos, $valores, 'codproforma', $this->request->codproforma);
+                        }
+                    }
+
+                    /* REGISTRO MOVIMIENTO DE CAJA */
+                    if ($this->request->campos->codmoneda != 1) {
+                        $importe = round($this->request->totales->importe * $this->request->campos->tipocambio, 2);
+                        $importemoneda = $this->request->totales->importe;
                     } else {
-                        $xml = $_SESSION['phuyu_ruc'] . '-03-' . $this->request->campos->seriecomprobante . '-' . $kardex[0]['nrocomprobante'];
+                        $importe = $this->request->totales->importe;
+                        $importemoneda = $this->request->totales->importe;
                     }
 
-                    $campos = ['codkardex', 'codsucursal', 'codusuario', 'fechacreado', 'nombre_xml'];
-                    $valores = [
-                        (int)$codkardex,
-                        (int)$_SESSION['phuyu_codsucursal'],
-                        (int)$_SESSION['phuyu_codusuario'],
-                        $this->request->campos->fechacomprobante,
-                        $xml
-                    ];
+                    $codmovimiento = $this->Caja_model->phuyu_movimientos(
+                        $codkardex,
+                        1,
+                        1,
+                        $importe,
+                        $this->request->campos,
+                        $importemoneda
+                    );
 
-                    $estadoSunat = $this->phuyu_model->phuyu_guardar('sunat.kardexsunat', $campos, $valores);
+                    if ($codmovimiento == 0) {
+                        $this->db->trans_rollback();
 
-                    if (!$estadoSunat) {
+                        $data = [];
+                        $data['estado'] = 3;
+                        $data['informacion'] = 'La venta se interrumpió porque la caja que usted está utilizando está cerrada, vuelve a iniciar sesión';
+                        echo json_encode($data);
+                        return;
+                    }
+
+                    if ($this->request->campos->condicionpago == 1) {
+                        $estado = $this->Caja_model->phuyu_movimientosdetalle($codmovimiento, $this->request->pagos);
+
+                        if ($estado != 1) {
+                            $this->db->trans_rollback();
+
+                            $data = [];
+                            $data['estado'] = 0;
+                            $data['informacion'] = 'No se pudo registrar el detalle del pago.';
+                            echo json_encode($data);
+                            return;
+                        }
+                    }
+
+                    /* REGISTRO CREDITO POR COBRAR */
+                    if ($this->request->campos->condicionpago == 2) {
+                        $persona = $this->db->query(
+                            'select documento,d.abreviatura as tipo ' .
+                            'from public.personas p ' .
+                            'inner join public.documentotipos d on(p.coddocumentotipo=d.coddocumentotipo) ' .
+                            'where p.codpersona=' . (int)$this->request->campos->codpersona
+                        )->result_array();
+
+                        $estado = $this->Caja_model->phuyu_credito(
+                            $codkardex,
+                            $codmovimiento,
+                            1,
+                            $this->request->campos,
+                            $this->request->totales,
+                            $this->request->cuotas,
+                            $persona[0]['tipo'] . '-' . $persona[0]['documento']
+                        );
+
+                        if ($estado != 1) {
+                            $this->db->trans_rollback();
+
+                            $data = [];
+                            $data['estado'] = 0;
+                            $data['informacion'] = 'No se pudo registrar el crédito.';
+                            echo json_encode($data);
+                            return;
+                        }
+                    }
+
+                    /* COMPROBANTE ELECTRONICO PARA SUNAT */
+                    if ($this->request->campos->codcomprobantetipo == 10 || $this->request->campos->codcomprobantetipo == 12) {
+                        $kardex = $this->db->query('select nrocomprobante from kardex.kardex where codkardex=' . (int)$codkardex)->result_array();
+
+                        if ($this->request->campos->codcomprobantetipo == 10) {
+                            $xml = $_SESSION['phuyu_ruc'] . '-01-' . $this->request->campos->seriecomprobante . '-' . $kardex[0]['nrocomprobante'];
+                        } else {
+                            $xml = $_SESSION['phuyu_ruc'] . '-03-' . $this->request->campos->seriecomprobante . '-' . $kardex[0]['nrocomprobante'];
+                        }
+
+                        $campos = ['codkardex', 'codsucursal', 'codusuario', 'fechacreado', 'nombre_xml'];
+                        $valores = [
+                            (int)$codkardex,
+                            (int)$_SESSION['phuyu_codsucursal'],
+                            (int)$_SESSION['phuyu_codusuario'],
+                            $this->request->campos->fechacomprobante,
+                            $xml
+                        ];
+
+                        $estadoSunat = $this->phuyu_model->phuyu_guardar('sunat.kardexsunat', $campos, $valores);
+
+                        if (!$estadoSunat) {
+                            $this->db->trans_rollback();
+
+                            $data = [];
+                            $data['estado'] = 0;
+                            $data['informacion'] = 'No se pudo registrar el comprobante para SUNAT.';
+                            echo json_encode($data);
+                            return;
+                        }
+                    }
+
+                    if ($this->db->trans_status() === false) {
                         $this->db->trans_rollback();
 
                         $data = [];
                         $data['estado'] = 0;
-                        $data['informacion'] = 'No se pudo registrar el comprobante para SUNAT.';
+                        $data['informacion'] = 'Ocurrió un problema al guardar la venta.';
                         echo json_encode($data);
                         return;
                     }
-                }
 
-                if ($this->db->trans_status() === false) {
-                    $this->db->trans_rollback();
+                    $this->db->trans_commit();
 
                     $data = [];
-                    $data['estado'] = 0;
-                    $data['informacion'] = 'Ocurrió un problema al guardar la venta.';
-                    echo json_encode($data);
-                    return;
-                }
+                    $data['estado'] = 1;
+                    $data['codkardex'] = $codkardex;
 
-                $this->db->trans_commit();
-
-                $data = [];
-                $data['estado'] = 1;
-                $data['codkardex'] = $codkardex;
-
-                if ($this->request->campos->condicionpago == 2 && $this->request->campos->inicial > 0) {
-                    $data['info_credito'] = $this->db->query("
+                    if ($this->request->campos->condicionpago == 2 && $this->request->campos->inicial > 0) {
+                        $data['info_credito'] = $this->db->query("
                         SELECT *
                         FROM kardex.creditos 
                         WHERE codkardex = " . (int)$codkardex . " 
@@ -1006,26 +1919,26 @@ class Ventas extends CI_Controller
                         ORDER BY codcredito DESC 
                         LIMIT 1
                     ")->row_array();
+                    }
+
+                    echo json_encode($data);
+                    return;
+                } catch (Throwable $e) {
+                    $this->db->trans_rollback();
+
+                    $data = [];
+                    $data['estado'] = 0;
+                    $data['informacion'] = $e->getMessage();
+                    echo json_encode($data);
+                    return;
                 }
-
-                echo json_encode($data);
-                return;
-            } catch (Throwable $e) {
-                $this->db->trans_rollback();
-
-                $data = [];
-                $data['estado'] = 0;
-                $data['informacion'] = $e->getMessage();
-                echo json_encode($data);
-                return;
+            } else {
+                echo json_encode('e');
             }
         } else {
-            echo json_encode('e');
+            $this->load->view('phuyu/404');
         }
-    } else {
-        $this->load->view('phuyu/404');
     }
-}
 
     function editar()
     {
@@ -1057,20 +1970,39 @@ class Ventas extends CI_Controller
         if ($this->input->is_ajax_request()) {
             $this->request = json_decode(file_get_contents('php://input'));
 
-            $campos = ['codpersona', 'fechacomprobante', 'fechakardex', 'cliente', 'direccion', 'descripcion', 'nroplaca'];
-            $valores = [$this->request->codpersona, $this->request->fechacomprobante, $this->request->fechakardex, $this->request->cliente, $this->request->direccion, $this->request->descripcion, $this->request->nroplaca];
-            $estado = $this->phuyu_model->phuyu_editar('kardex.kardex', $campos, $valores, 'codkardex', $this->request->codregistro);
+            $codkardex = isset($this->request->codregistro) ? (int)$this->request->codregistro : 0;
+            $fecha = isset($this->request->fechacomprobante) ? trim((string)$this->request->fechacomprobante) : '';
 
-            $campos = ['fechakardex'];
-            $valores = [$this->request->fechakardex];
-            $estado_u = $this->phuyu_model->phuyu_editar('kardex.kardexalmacen', $campos, $valores, 'codkardex', $this->request->codregistro);
+            if ($codkardex <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
+                echo json_encode(['estado' => 0, 'mensaje' => 'Fecha de venta invalida.']);
+                return;
+            }
 
-            $campos = ['codpersona', 'fechacredito'];
-            $valores = [$this->request->codpersona, $this->request->fechacomprobante];
-            $estado_u = $this->phuyu_model->phuyu_editar('kardex.creditos', $campos, $valores, 'codkardex', $this->request->codregistro);
-            $campos = ['codpersona', 'fechamovimiento'];
-            $valores = [$this->request->codpersona, $this->request->fechacomprobante];
-            $estado_u = $this->phuyu_model->phuyu_editar('caja.movimientos', $campos, $valores, 'codkardex', $this->request->codregistro);
+            $venta = $this->db->query(
+                'select codkardex, estado, codsucursal from kardex.kardex where codkardex=? and codmovimientotipo=20 limit 1',
+                [$codkardex]
+            )->row_array();
+            if (empty($venta) || (int)$venta['codsucursal'] !== (int)$_SESSION['phuyu_codsucursal'] || (int)$venta['estado'] === 0) {
+                echo json_encode(['estado' => 0, 'mensaje' => 'La venta no esta disponible para cambiar fecha.']);
+                return;
+            }
+
+            $sunat = $this->db->query('select estado from sunat.kardexsunat where codkardex=? limit 1', [$codkardex])->row_array();
+            if (!empty($sunat) && (int)$sunat['estado'] !== 0) {
+                echo json_encode(['estado' => 0, 'mensaje' => 'El comprobante ya fue enviado a SUNAT.']);
+                return;
+            }
+
+            $nuevaFecha = new DateTime($fecha);
+            $hoy = new DateTime(date('Y-m-d'));
+            $minimo = (clone $hoy)->modify('-3 days');
+            if ($nuevaFecha > $hoy || $nuevaFecha < $minimo) {
+                echo json_encode(['estado' => 0, 'mensaje' => 'La fecha de venta debe estar dentro de los ultimos 3 dias y no puede ser futura.']);
+                return;
+            }
+
+            $estado = $this->phuyu_model->phuyu_editar('kardex.kardex', ['fechacomprobante'], [$fecha], 'codkardex', $codkardex);
+            $this->phuyu_model->phuyu_editar('sunat.kardexsunat', ['fechacreado'], [$fecha], 'codkardex', $codkardex);
 
             echo $estado;
         }
@@ -1080,6 +2012,13 @@ class Ventas extends CI_Controller
     {
         if ($this->input->is_ajax_request()) {
             $this->request = json_decode(file_get_contents('php://input'));
+            if (!$this->phuyu_usuario_puede_eliminar_venta()) {
+                echo json_encode([
+                    'estado' => 0,
+                    'mensaje' => 'No tiene permiso para eliminar ventas.'
+                ]);
+                return;
+            }
             $this->db->trans_begin();
 
             //REVISAMOS SI LA VENTA YA ESTA ELIMINADO
@@ -1245,6 +2184,10 @@ class Ventas extends CI_Controller
     {
         if ($this->input->is_ajax_request()) {
             $this->request = json_decode(file_get_contents('php://input'));
+            if (!$this->phuyu_usuario_puede_eliminar_venta()) {
+                echo json_encode(0);
+                return;
+            }
             $this->db->trans_begin();
 
             // ACTUALIZAMOS PRODUCTOS UBICACION //
@@ -1445,6 +2388,87 @@ class Ventas extends CI_Controller
         } else {
             $this->load->view('phuyu/404');
         }
+    }
+
+    function enviar_whatsapp()
+    {
+        if (!$this->input->is_ajax_request()) {
+            $this->load->view('phuyu/404');
+            return;
+        }
+
+        if (!isset($_SESSION['phuyu_codusuario'])) {
+            $this->phuyu_json(['estado' => 0, 'mensaje' => 'La sesión expiró. Vuelve a iniciar sesión.']);
+            return;
+        }
+
+        $this->request = json_decode(file_get_contents('php://input'));
+        $codkardex = isset($this->request->codkardex) ? (int)$this->request->codkardex : 0;
+        $telefono = isset($this->request->telefono) ? $this->phuyu_whatsapp_telefono($this->request->telefono) : '';
+        $formato = isset($this->request->formato) ? $this->phuyu_whatsapp_formato($this->request->formato) : 'a4';
+
+        $tipoEnvio = isset($this->request->tipo_envio) ? strtolower(trim((string)$this->request->tipo_envio)) : 'pdf';
+        $tipoEnvio = in_array($tipoEnvio, ['pdf', 'link'], true) ? $tipoEnvio : 'pdf';
+
+
+        if ($codkardex <= 0) {
+            $this->phuyu_json(['estado' => 0, 'mensaje' => 'Debe seleccionar un comprobante válido.']);
+            return;
+        }
+
+        if ($telefono === '') {
+            $this->phuyu_json(['estado' => 0, 'mensaje' => 'Ingrese el teléfono con código de país. Ejemplo: +51999999999.']);
+            return;
+        }
+
+        $venta = $this->db->query(
+            "select k.codkardex,k.estado,k.seriecomprobante,k.nrocomprobante,k.cliente,ct.descripcion as comprobante,ct.oficial
+            from kardex.kardex as k
+            inner join caja.comprobantetipos as ct on(k.codcomprobantetipo=ct.codcomprobantetipo)
+            where k.codkardex=? and k.codmovimientotipo=20 and k.codsucursal=? limit 1",
+            [$codkardex, (int)$_SESSION['phuyu_codsucursal']]
+        )->row_array();
+
+        if (empty($venta)) {
+            $this->phuyu_json(['estado' => 0, 'mensaje' => 'No se encontró el comprobante seleccionado.']);
+            return;
+        }
+
+        if ((int)$venta['estado'] === 0) {
+            $this->phuyu_json(['estado' => 0, 'mensaje' => 'No se puede enviar una venta anulada por WhatsApp.']);
+            return;
+        }
+
+        $ruc = isset($_SESSION['phuyu_ruc']) ? $_SESSION['phuyu_ruc'] : 'comprobante';
+        $filename = $ruc . '-' . $venta['oficial'] . '-' . $venta['seriecomprobante'] . '-' . $venta['nrocomprobante'] . '.pdf';
+        $mensajeAdjunto = 'Hola, ' . $venta['cliente'] . '. Adjuntamos su comprobante ' .
+            $venta['comprobante'] . ' ' . $venta['seriecomprobante'] . '-' . $venta['nrocomprobante'] . '.';
+
+        $mediaUrl = $this->phuyu_whatsapp_url($codkardex, $formato);
+        if ($tipoEnvio === 'link') {
+            $mensajeLink = $mensajeAdjunto . "\n\nPuede descargarlo aquí: " . $mediaUrl;
+            $waUrl = 'https://wa.me/' . ltrim($telefono, '+') . '?text=' . rawurlencode($mensajeLink);
+
+            $this->phuyu_json([
+                'estado' => 2,
+                'mensaje' => 'Se abrirá WhatsApp con el link del comprobante listo para enviar.',
+                'url' => $waUrl,
+            ]);
+            return;
+        }
+
+        $pdf = $this->phuyu_whatsapp_generar_pdf($codkardex, $formato, $filename);
+        if ($pdf['estado'] != 1) {
+            $this->phuyu_json($pdf);
+            return;
+        }
+
+        $respuesta = $this->phuyu_whatsapp_enviar_cloud($telefono, $mensajeAdjunto, $filename, $pdf['path']);
+        if (file_exists($pdf['path'])) {
+            @unlink($pdf['path']);
+        }
+
+        $this->phuyu_json($respuesta);
     }
 
     function clonar()

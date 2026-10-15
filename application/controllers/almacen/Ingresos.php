@@ -269,30 +269,21 @@ class Ingresos extends CI_Controller {
 					$estado = $this->phuyu_model->phuyu_guardar("kardex.kardexalmacendetalle", $campos, $valores);
 
 
-					if($this->request->detalle[$key]->controlarseries == 1){
-						// REGISTRAMOS LAS SERIES //
-						foreach ($this->request->detalle[$key]->series as $k => $val) {
-
-
-									// INSERT DIRECTO (sin modelo)
-									$this->db->insert('almacen.series', [
-										'codproducto'   => (int)$this->request->detalle[$key]->codproducto,
-										'serie_codigo'  => $val->serie_codigo,
-										'codsucursal'   => (int)$_SESSION["phuyu_codsucursal"],
-										'codalmacen'    => (int)$_SESSION["phuyu_codalmacen"],
-										'estado'        => 'EN_ALMACEN',
-										'fecha_ingreso' => date('Y-m-d H:i:s'),
-										'codalmacen'    => (int)$_SESSION["phuyu_codalmacen"],
-										'codsucursal'   => (int)$_SESSION["phuyu_codsucursal"],
-										'codkardex'     => (int)$codkardex,
-										'comprobante'   => $this->request->campos->seriecomprobante.'-'.$nro_comprobante,
-										'motivo'        => $this->request->campos->descripcion,
-
-									]);
-
-
+						if($this->request->detalle[$key]->controlarseries == 1){
+							// REGISTRAMOS LAS SERIES //
+							foreach ($this->request->detalle[$key]->series as $k => $val) {
+								$estado = $this->db->insert('almacen.series', [
+									'codproducto'   => (int)$this->request->detalle[$key]->codproducto,
+									'serie_codigo'  => trim($val->serie_codigo),
+									'codalmacen'    => (int)$_SESSION["phuyu_codalmacen"],
+									'estado'        => 'EN_ALMACEN',
+									'fecha_ingreso' => date('Y-m-d H:i:s'),
+									'codkardex'     => (int)$codkardex,
+									'comprobante'   => $this->request->campos->seriecomprobante.'-'.$nro_comprobante,
+									'motivo'        => $this->request->campos->descripcion,
+								]);
+							}
 						}
-					}
 
 
 
@@ -341,14 +332,12 @@ class Ingresos extends CI_Controller {
 					}
 				}
 
-				if ($this->db->trans_status() === FALSE){
-				    $this->db->trans_rollback(); $estado = 0;
-				}else{
-					if ($estado!=1) {
-						$this->db->trans_rollback(); $estado = 0;
+					if ($this->db->trans_status() === FALSE || $estado != 1){
+						$this->db->trans_rollback();
+						$estado = 0;
+					}else{
+						$this->db->trans_commit();
 					}
-					$this->db->trans_commit();
-				}
 				echo $estado;
 			}else{
 				echo "e";
