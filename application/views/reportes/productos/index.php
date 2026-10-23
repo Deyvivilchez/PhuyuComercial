@@ -132,6 +132,14 @@
 						</div>
 					</div>
 				</div>
+				<div class="alert alert-info d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3">
+					<div>
+						<strong>Respaldo para migración de productos</strong><br>
+						Exporta todos los productos del almacén seleccionado, sin aplicar los otros filtros.
+						Incluye códigos de barras, unidades, precios y stock actual; los inactivos van en la hoja de respaldo.
+					</div>
+					<button type="button" class="btn btn-success" v-on:click="exportar_migracion()">Exportar para migración (Excel)</button>
+				</div>
 				<div class="detalle" v-if="consultar.precios==1" style="height:150px;overflow-y:auto;">
 					<div v-for="dato in datos" v-if="dato.tiene!=0">
 						<h6 align="center"> <b>LINEA: {{dato.descripcion}}</b> </h6>
@@ -418,4 +426,4 @@
 	var pantalla = jQuery(document).height(); $("#reportes_modal").css({height: pantalla - 65});
 	$(".detalle").css({height: pantalla - 280});
 </script>
-<script src="<?php echo base_url();?>phuyu/phuyu_reportes/productos.js"> </script>
+<script src="<?php echo base_url();?>phuyu/phuyu_reportes/productos.js?v=migracion1"> </script>

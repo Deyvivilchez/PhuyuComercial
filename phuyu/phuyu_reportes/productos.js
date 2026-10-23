@@ -5,6 +5,9 @@ var phuyu_datos = new Vue({
 		filtro:{"codalmacen":"","codproducto":"","codunidad":"","fechadesde":"","fechahasta":"","fecha":"","operacion":0,"codmoneda":0}, descripcion:""
 	},
 	methods: {
+		exportar_migracion: function(){
+			window.open(url+phuyu_controller+"/exportar_migracion?codalmacen="+encodeURIComponent(this.campos.codalmacen), "_blank");
+		},
 		phuyu_fecha: function(){
 			this.campos.fecha = $("#fecha").val();
 			this.campos.fechad = $("#fechad").val();
