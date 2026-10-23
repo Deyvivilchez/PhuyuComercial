@@ -1,3 +1,6 @@
+-- Actualiza la definicion; este archivo NO ejecuta el reinicio.
+-- f_datosiniciales limpia datos operativos de TODA la base.
+-- ai_codsucursal indica donde crear los datos iniciales, no limita la limpieza.
 CREATE OR REPLACE FUNCTION public.f_datosiniciales(ai_codsucursal INTEGER)
 RETURNS CHARACTER VARYING
 LANGUAGE plpgsql
@@ -6,6 +9,11 @@ DECLARE
     v_codproducto_alojamiento INTEGER;
     v_codunidad_alojamiento INTEGER;
     v_codcaja INTEGER;
+    v_codempresa INTEGER;
+    v_tabla TEXT;
+    v_columna TEXT;
+    v_secuencia TEXT;
+    v_siguiente BIGINT;
 BEGIN
 
     IF ai_codsucursal IS NULL THEN
@@ -19,6 +27,23 @@ BEGIN
           AND s.estado = 1
     ) THEN
         RAISE EXCEPTION 'La sucursal % no existe o no esta activa', ai_codsucursal;
+    END IF;
+
+    SELECT s.codempresa INTO v_codempresa
+    FROM public.sucursales s
+    WHERE s.codsucursal = ai_codsucursal;
+
+    -- Validar lo necesario antes de eliminar registros.
+    IF NOT EXISTS (SELECT 1 FROM seguridad.usuarios WHERE codusuario = 1 AND estado = 1) THEN
+        RAISE EXCEPTION 'No existe el usuario administrador activo #1';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM almacen.almacenes WHERE codsucursal = ai_codsucursal AND estado = 1) THEN
+        RAISE EXCEPTION 'No existe almacen activo para la sucursal %', ai_codsucursal;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM caja.comprobantes WHERE codsucursal = ai_codsucursal AND estado = 1) THEN
+        RAISE EXCEPTION 'No existen comprobantes activos para la sucursal %. Configure caja.comprobantes antes de vender', ai_codsucursal;
     END IF;
 
     TRUNCATE TABLE
@@ -99,10 +124,12 @@ BEGIN
         kardex.proformasdetalle,
 
         -- PUBLIC
+        public.usuariozonas,
         public.lotes,
         public.zonas,
 
         -- RESTAURANTE
+        restaurante.atendidos,
         restaurante.ambientes,
         restaurante.mesas,
         restaurante.mesaskardex,
@@ -126,10 +153,77 @@ BEGIN
 
     RESTART IDENTITY CASCADE;
 
+    -- Conservar las unidades de medida reales y retirar las unidades basura
+    -- que pudieron crearse al interpretar columnas numericas del Excel.
+    DELETE FROM almacen.unidades u
+    WHERE (
+            (u.codunidad > 77 AND trim(u.descripcion) ~ '^[+-]?[0-9]+([.,][0-9]+)?$')
+            OR (
+                upper(trim(u.descripcion)) = 'UNIDAD'
+                AND EXISTS (
+                    SELECT 1
+                    FROM almacen.unidades ub
+                    WHERE ub.codunidad <> u.codunidad
+                      AND upper(trim(ub.descripcion)) = 'UNIDAD (BIENES)'
+                )
+            )
+          )
+      AND NOT EXISTS (
+            SELECT 1
+            FROM almacen.productounidades pu
+            WHERE pu.codunidad = u.codunidad
+          );
+
+    INSERT INTO almacen.unidades(descripcion, oficial, estado)
+    SELECT base.descripcion, base.oficial, 1
+    FROM (VALUES
+        ('UNIDAD (BIENES)', 'NIU'),
+        ('BALDE', 'BJ'),
+        ('BOLSA', 'BG'),
+        ('BOTELLAS', 'BO'),
+        ('CAJA', 'BX'),
+        ('DOCENA', 'DZN'),
+        ('FARDO', 'BE'),
+        ('KILOGRAMO', 'KGM'),
+        ('LITRO', 'LTR'),
+        ('PAQUETE', 'PK'),
+        ('FRASCO', 'NIU'),
+        ('SACO', 'BG'),
+        ('SOBRE', 'NIU'),
+        ('ROLLO', 'NIU')
+    ) AS base(descripcion, oficial)
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM almacen.unidades u
+        WHERE upper(trim(u.descripcion)) = upper(base.descripcion)
+    );
+
+    UPDATE almacen.unidades u
+    SET estado = 1
+    WHERE upper(trim(u.descripcion)) IN (
+        'UNIDAD (BIENES)', 'BALDE', 'BOLSA', 'BOTELLAS', 'CAJA', 'DOCENA',
+        'FARDO', 'KILOGRAMO', 'LITRO', 'PAQUETE', 'FRASCO', 'SACO', 'SOBRE', 'ROLLO'
+    );
+
+    SELECT codunidad
+    INTO v_codunidad_alojamiento
+    FROM almacen.unidades
+    WHERE estado = 1
+      AND upper(trim(descripcion)) = 'UNIDAD (BIENES)'
+    ORDER BY codunidad
+    LIMIT 1;
+
+    IF v_codunidad_alojamiento IS NULL THEN
+        RAISE EXCEPTION 'No existe la unidad base UNIDAD (BIENES) para crear ALOJAMIENTO';
+    END IF;
 
     UPDATE caja.comprobantes
     SET nrocorrelativo = 0,
         nroinicial = 1;
+
+    -- Primero eliminar permisos que dependen de los usuarios a retirar.
+    DELETE FROM seguridad.cajausuarios
+    WHERE codusuario > 1;
 
     DELETE FROM seguridad.sucursalusuarios
     WHERE codusuario > 1;
@@ -137,26 +231,19 @@ BEGIN
     DELETE FROM seguridad.usuarios
     WHERE codusuario > 1;
 
-    PERFORM setval(
-        pg_get_serial_sequence('seguridad.usuarios', 'codusuario'),
-        2,
-        false
-    );
-
-    DELETE FROM public.empleados
-    WHERE codpersona > 2;
+    -- Conservar el empleado real del administrador aunque su ID no sea 1 o 2.
+    DELETE FROM public.empleados e
+    WHERE e.codpersona > 2
+      AND NOT EXISTS (SELECT 1 FROM seguridad.usuarios u WHERE u.codempleado = e.codpersona);
 
     DELETE FROM public.socios
     WHERE codpersona > 2;
 
-    DELETE FROM public.personas
-    WHERE codpersona > 2;
-
-    PERFORM setval(
-        pg_get_serial_sequence('public.personas', 'codpersona'),
-        3,
-        false
-    );
+    -- Las empresas y el administrador pueden apuntar a personas con IDs mayores a 2.
+    DELETE FROM public.personas p
+    WHERE p.codpersona > 2
+      AND NOT EXISTS (SELECT 1 FROM public.empresas e WHERE e.codpersona = p.codpersona)
+      AND NOT EXISTS (SELECT 1 FROM public.empleados e WHERE e.codpersona = p.codpersona);
 
     -- DATOS BASE CAJA / VENTAS
     -- Esta funcion deja el sistema limpio para iniciar operacion en la nube.
@@ -213,23 +300,14 @@ BEGIN
         RETURNING codcaja INTO v_codcaja;
     END IF;
 
-    PERFORM setval(
-        pg_get_serial_sequence('caja.cajas', 'codcaja'),
-        COALESCE((SELECT MAX(codcaja) FROM caja.cajas), 0) + 1,
-        false
-    );
+    -- Mantener acceso del administrador a la sucursal y caja iniciales.
+    INSERT INTO seguridad.sucursalusuarios(codsucursal, codusuario)
+    VALUES (ai_codsucursal, 1)
+    ON CONFLICT DO NOTHING;
 
-    PERFORM setval(
-        pg_get_serial_sequence('caja.monedas', 'codmoneda'),
-        COALESCE((SELECT MAX(codmoneda) FROM caja.monedas), 0) + 1,
-        false
-    );
-
-    PERFORM setval(
-        pg_get_serial_sequence('caja.tipopagos', 'codtipopago'),
-        COALESCE((SELECT MAX(codtipopago) FROM caja.tipopagos), 0) + 1,
-        false
-    );
+    INSERT INTO seguridad.cajausuarios(codusuario, codsucursal, codcaja, estado)
+    VALUES (1, ai_codsucursal, v_codcaja, 1)
+    ON CONFLICT (codusuario, codsucursal, codcaja) DO UPDATE SET estado = 1;
 
     -- Los comprobantes no se inventan porque dependen de serie/tipo/documento de la empresa.
     -- Deben existir en la base plantilla o configurarse antes de vender.
@@ -300,25 +378,6 @@ BEGIN
 
     -- PRODUCTO ALOJAMIENTO
 
-    SELECT codunidad
-    INTO v_codunidad_alojamiento
-    FROM almacen.unidades
-    WHERE estado = 1
-    ORDER BY
-        CASE WHEN UPPER(descripcion) LIKE '%UNIDAD%' THEN 0 ELSE 1 END,
-        codunidad
-    LIMIT 1;
-
-    IF v_codunidad_alojamiento IS NULL THEN
-        RAISE EXCEPTION 'No existe unidad activa en almacen.unidades para crear ALOJAMIENTO';
-    END IF;
-
-    PERFORM setval(
-        pg_get_serial_sequence('almacen.productos', 'codproducto'),
-        COALESCE((SELECT MAX(codproducto) FROM almacen.productos), 0) + 1,
-        false
-    );
-
     INSERT INTO almacen.productos (
         codfamilia,
         codlinea,
@@ -350,7 +409,7 @@ BEGIN
         merma_porcentaje
     )
     VALUES (
-        0, 0, 0, 1,
+        0, 0, 0, v_codempresa,
         'HOTEL-ALOJ',
         'ALOJAMIENTO',
         0, 0, 0, 0,
@@ -490,7 +549,6 @@ BEGIN
         RAISE EXCEPTION 'No existen productos ubicados para la sucursal %. Agregue productos/stock antes de vender', ai_codsucursal;
     END IF;
 
-
     IF NOT EXISTS (
         SELECT 1
         FROM hotel.configuraciones hc
@@ -519,29 +577,31 @@ BEGIN
         RAISE EXCEPTION 'No existe ambiente inicial de hotel para la sucursal %. Revise hotel.ambientes', ai_codsucursal;
     END IF;
 
-    PERFORM setval(
-        pg_get_serial_sequence('hotel.configuraciones', 'codconfiguracion'),
-        COALESCE((SELECT MAX(codconfiguracion) FROM hotel.configuraciones), 0) + 1,
-        false
-    );
-
-    PERFORM setval(
-        pg_get_serial_sequence('hotel.habitacion_tipos', 'codhabitaciontipo'),
-        COALESCE((SELECT MAX(codhabitaciontipo) FROM hotel.habitacion_tipos), 0) + 1,
-        false
-    );
-
-    PERFORM setval(
-        pg_get_serial_sequence('hotel.caracteristicas', 'codcaracteristica'),
-        COALESCE((SELECT MAX(codcaracteristica) FROM hotel.caracteristicas), 0) + 1,
-        false
-    );
-
-    PERFORM setval(
-        pg_get_serial_sequence('hotel.ambientes', 'codambiente'),
-        COALESCE((SELECT MAX(codambiente) FROM hotel.ambientes), 0) + 1,
-        false
-    );
+    -- ALTER SEQUENCE RESTART es transaccional: un error revierte tambien
+    -- los contadores, a diferencia de setval sobre tablas que se conservan.
+    FOR v_tabla, v_columna IN
+        SELECT * FROM (VALUES
+            ('seguridad.usuarios', 'codusuario'),
+            ('public.personas', 'codpersona'),
+            ('caja.cajas', 'codcaja'),
+            ('caja.monedas', 'codmoneda'),
+            ('caja.tipopagos', 'codtipopago'),
+            ('almacen.unidades', 'codunidad'),
+            ('almacen.productos', 'codproducto'),
+            ('seguridad.cajausuarios', 'codcajausuario'),
+            ('hotel.configuraciones', 'codconfiguracion'),
+            ('hotel.habitacion_tipos', 'codhabitaciontipo'),
+            ('hotel.caracteristicas', 'codcaracteristica'),
+            ('hotel.ambientes', 'codambiente')
+        ) AS secuencias(tabla, columna)
+    LOOP
+        v_secuencia := pg_get_serial_sequence(v_tabla, v_columna);
+        IF v_secuencia IS NOT NULL THEN
+            EXECUTE format('SELECT COALESCE(MAX(%I), 0) + 1 FROM %s', v_columna, v_tabla::regclass)
+            INTO v_siguiente;
+            EXECUTE format('ALTER SEQUENCE %s RESTART WITH %s', v_secuencia::regclass, v_siguiente);
+        END IF;
+    END LOOP;
 
     RETURN 'BASE DE DATOS CON DATOS INICIALES';
 

@@ -606,6 +606,14 @@
 								<label class="form-check-label" for="permitir_cantidad_cero">Permitir cantidad 0 del Excel</label>
 							</div>
 							<div class="form-check form-switch">
+								<input class="form-check-input" type="checkbox" id="convertir_negativos_cero" v-model="campos.convertir_negativos_cero" v-on:change="np_cambio_crear_productos_migrarstock()">
+								<label class="form-check-label" for="convertir_negativos_cero">Convertir cantidades negativas del Excel a 0</label>
+							</div>
+							<div class="form-check form-switch">
+								<input class="form-check-input" type="checkbox" id="usar_catalogos_genericos" v-model="campos.usar_catalogos_genericos" v-on:change="np_cambio_crear_productos_migrarstock()">
+								<label class="form-check-label" for="usar_catalogos_genericos">Usar familia, linea y marca genericas</label>
+							</div>
+							<div class="form-check form-switch">
 								<input class="form-check-input" type="checkbox" id="crear_productos" v-model="campos.crear_productos" v-on:change="np_cambio_crear_productos_migrarstock()">
 								<label class="form-check-label" for="crear_productos">Crear productos faltantes del Excel</label>
 							</div>
@@ -732,6 +740,12 @@
 				</div>
 				<div class="alert-soft mt-3">
 					Si el Excel trae productos con cantidad <strong>0</strong>, active <strong>Permitir cantidad 0 del Excel</strong>. Si no, esas filas quedan en Revisar para evitar migrar movimientos sin efecto.
+				</div>
+				<div class="alert-soft mt-3">
+					Si el Excel trae cantidades negativas, active <strong>Convertir cantidades negativas del Excel a 0</strong>. La vista previa mostrara el valor original y el 0 que se aplicara.
+				</div>
+				<div class="alert-soft mt-3">
+					Active <strong>Usar familia, linea y marca genericas</strong> para asignar GENERAL / GENERAL / GENERICO. Las unidades validas del Excel se conservan; las desconocidas usan UNIDAD (BIENES).
 				</div>
 				<div class="alert-soft mt-3">
 					<strong>Preparar catalogo base</strong> solo se usa si necesita ordenar catalogos generales y duplicados antes de migrar.
@@ -873,7 +887,11 @@
 							</td>
 							<td>{{ fila.unidad }}</td>
 							<td class="text-end">{{ fila.stock_actual }}</td>
-							<td class="text-end">{{ fila.cantidad }}</td>
+							<td class="text-end">
+								<span v-if="fila.cantidad_convertida" class="text-muted text-decoration-line-through me-1">{{ fila.cantidad_original }}</span>
+								<strong v-if="fila.cantidad_convertida">0</strong>
+								<span v-else>{{ fila.cantidad }}</span>
+							</td>
 							<td class="text-end fw-bold">{{ fila.stock_final }}</td>
 							<td>
 								<span class="badge bg-success" v-if="fila.valido">OK</span>
@@ -934,12 +952,14 @@
 		seleccionar_todo: true,
 		limite_excel: 80,
 		ignorar_stock_cero: false,
-		permitir_cantidad_cero: false,
-		crear_productos: false,
+		permitir_cantidad_cero: true,
+		convertir_negativos_cero: true,
+		usar_catalogos_genericos: true,
+		crear_productos: true,
 		reemplazar_nombre: false,
 		limpieza_almacen: "conservar",
 		buscar_por: "auto",
-		modo_stock: "sumar",
+		modo_stock: "reemplazar",
 		codalmacen: "<?php echo (int) $codalmacenActual; ?>",
 		mapeo: {
 			codigo: '',
@@ -955,4 +975,4 @@
 		}
 	};
 </script>
-<script src="<?php echo base_url();?>phuyu/phuyu_almacen/migrarstock.js"></script>
+<script src="<?php echo base_url();?>phuyu/phuyu_almacen/migrarstock.js?v=errores-unidad-8"></script>
