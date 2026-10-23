@@ -1,19 +1,25 @@
 <?php
-function texto_ticket($texto)
-{
-    return htmlspecialchars((string)$texto, ENT_QUOTES, 'UTF-8');
+if (!function_exists('texto_ticket')) {
+    function texto_ticket($texto)
+    {
+        return htmlspecialchars((string)$texto, ENT_QUOTES, 'UTF-8');
+    }
 }
 
-function numero_ticket($monto)
-{
-    return number_format((float)$monto, 2);
+if (!function_exists('numero_ticket')) {
+    function numero_ticket($monto)
+    {
+        return number_format((float)$monto, 2);
+    }
 }
 
-function fecha_ticket($fecha)
-{
-    if (empty($fecha) || $fecha === '0000-00-00') return '-';
-    $ts = strtotime($fecha);
-    return $ts ? date('d/m/Y', $ts) : $fecha;
+if (!function_exists('fecha_ticket')) {
+    function fecha_ticket($fecha)
+    {
+        if (empty($fecha) || $fecha === '0000-00-00') return '-';
+        $ts = strtotime($fecha);
+        return $ts ? date('d/m/Y', $ts) : $fecha;
+    }
 }
 
 $empresaData   = is_array($empresa) && isset($empresa['documento']) ? $empresa : ($empresa[0] ?? []);

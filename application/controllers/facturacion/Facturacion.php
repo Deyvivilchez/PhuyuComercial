@@ -96,7 +96,7 @@ class Facturacion extends Sunat {
 						$estado = 0; $mensaje = "NO SE PUEDE FIRMAR EL DOCUMENTO XML: ".$firma["mensaje"]; $alerta = "error";
 					}
 				}else{
-					$estado = 0; $mensaje = "NO SE PUEDE GENERAR EL DOCUMENTO XML"; $alerta = "error";
+					$mensaje = $estado["mensaje"] ?? "NO SE PUEDE GENERAR EL DOCUMENTO XML"; $estado = 0; $alerta = "error";
 				}
 
 				$data["estado"] = $estado; $data["mensaje"] = $mensaje; $data["alerta"] = $alerta;
@@ -123,7 +123,7 @@ class Facturacion extends Sunat {
 						$estado = 0; $mensaje = "NO SE PUEDE FIRMAR EL DOCUMENTO XML: ".$firma["mensaje"]; $alerta = "error";
 					}
 				}else{
-					$estado = 0; $mensaje = "NO SE PUEDE GENERAR EL DOCUMENTO XML"; $alerta = "error";
+					$mensaje = $estado["mensaje"] ?? "NO SE PUEDE GENERAR EL DOCUMENTO XML"; $estado = 0; $alerta = "error";
 				}
 
 				$data["estado"] = $estado; $data["mensaje"] = $mensaje; $data["alerta"] = $alerta;

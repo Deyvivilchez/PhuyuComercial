@@ -6,11 +6,21 @@ class Ventas extends CI_Controller {
 		parent::__construct(); $this->load->model("phuyu_model");
 	}
 
+	private function filtro_comprobante_ventas($alias, $codcomprobantetipo)
+	{
+		$codcomprobantetipo = (int)$codcomprobantetipo;
+		if ($codcomprobantetipo <= 0) {
+			return "";
+		}
+
+		return " and ".$alias.".codcomprobantetipo=".$codcomprobantetipo." ";
+	}
+
 	public function index(){
 		if ($this->input->is_ajax_request()) {
 			$sucursales = $this->db->query("select *from public.sucursales where estado=1")->result_array();
 			$vendedores = $this->db->query("select persona.codpersona,persona.razonsocial from public.personas as persona inner join public.empleados as empleado on(persona.codpersona=empleado.codpersona) where empleado.estado=1 and empleado.codcargo=4")->result_array();
-			$comprobantes = $this->db->query("select distinct(ct.codcomprobantetipo) as codigo, ct.* from caja.comprobantetipos as ct inner join caja.comprobantes as c on(ct.codcomprobantetipo=c.codcomprobantetipo) where c.codsucursal=".$_SESSION["phuyu_codsucursal"]." and c.codcomprobantetipo>=5 and c.estado=1")->result_array();
+			$comprobantes = $this->db->query("select distinct(ct.codcomprobantetipo) as codigo, ct.* from caja.comprobantetipos as ct inner join caja.comprobantes as c on(ct.codcomprobantetipo=c.codcomprobantetipo) where c.codsucursal=".(int)$_SESSION["phuyu_codsucursal"]." and ct.venta=1 and c.estado=1 order by ct.codcomprobantetipo")->result_array();
 			$this->load->view("reportes/ventas/index",compact("sucursales","vendedores","comprobantes"));
 		}else{
 			$this->load->view("phuyu/404");
@@ -500,16 +510,7 @@ class Ventas extends CI_Controller {
 	function consulta_reporte_ventas(){
 		if (isset($_SESSION["phuyu_codusuario"])) {
 			$this->request = json_decode(file_get_contents('php://input'));
-			$this->tipos = $this->request->tipos; $titulo = "";
-
-			$item = 0; $comprobantes = "(";
-			foreach ($this->tipos as $key => $value) { $item = $item + 1;
-				if ($item==count($this->tipos)) {
-					$comprobantes .= "kardex.codcomprobantetipo=".$value->codcomprobantetipo." )";
-				}else{
-					$comprobantes .= "kardex.codcomprobantetipo=".$value->codcomprobantetipo." or ";
-				}
-			}
+			$comprobante = $this->filtro_comprobante_ventas("kardex", isset($this->request->datos->codcomprobantetipo) ? $this->request->datos->codcomprobantetipo : 0);
 
 			$sucursales = '';
 			$almacen = '';
@@ -523,7 +524,7 @@ class Ventas extends CI_Controller {
 
 			$valorventatotal = 0; $igvtotal=0; $icbpertotal=0;$totalgeneral=0;
 
-			$lista = $this->db->query("select personas.documento,kardex.cliente,kardex.codkardex, kardex.codcomprobantetipo, kardex.seriecomprobante,kardex.condicionpago, kardex.nrocomprobante, kardex.fechacomprobante,round(kardex.valorventa,2) AS valorventa,round(kardex.igv,2) AS IGV, kardex.descglobal, round(kardex.icbper,2) AS icbper,round(kardex.importe,2) AS importe,kardex.condicionpago, comprobantes.descripcion as tipo,sunat.estado as estadosunat,sunat.codigorespuesta as codigosunat,sunat.descripcion_cdr as respuestasunat from kardex.kardex as kardex inner join public.personas as personas on (kardex.codpersona=personas.codpersona) inner join caja.comprobantetipos as comprobantes on(kardex.codcomprobantetipo=comprobantes.codcomprobantetipo) left join sunat.kardexsunat as sunat on(kardex.codkardex=sunat.codkardex) where kardex.fechacomprobante>='".$this->request->datos->fechadesde."' and kardex.fechacomprobante<='".$this->request->datos->fechahasta."' and ".$comprobantes." and kardex.codmovimientotipo=20 ".$almacen." ".$sucursales." and kardex.estado=1 order by kardex.codcomprobantetipo, kardex.seriecomprobante, kardex.nrocomprobante")->result_array();
+			$lista = $this->db->query("select personas.documento,kardex.cliente,kardex.codkardex, kardex.codcomprobantetipo, kardex.seriecomprobante,kardex.condicionpago, kardex.nrocomprobante, kardex.fechacomprobante,round(kardex.valorventa,2) AS valorventa,round(kardex.igv,2) AS IGV, kardex.descglobal, round(kardex.icbper,2) AS icbper,round(kardex.importe,2) AS importe,kardex.condicionpago, comprobantes.descripcion as tipo,sunat.estado as estadosunat,sunat.codigorespuesta as codigosunat,sunat.descripcion_cdr as respuestasunat from kardex.kardex as kardex inner join public.personas as personas on (kardex.codpersona=personas.codpersona) inner join caja.comprobantetipos as comprobantes on(kardex.codcomprobantetipo=comprobantes.codcomprobantetipo) left join sunat.kardexsunat as sunat on(kardex.codkardex=sunat.codkardex) where kardex.fechacomprobante>=".$this->db->escape($this->request->datos->fechadesde)." and kardex.fechacomprobante<=".$this->db->escape($this->request->datos->fechahasta)." ".$comprobante." and kardex.codmovimientotipo=20 ".$almacen." ".$sucursales." and kardex.estado=1 order by kardex.codcomprobantetipo, kardex.seriecomprobante, kardex.nrocomprobante")->result_array();
 
 			foreach ($lista as $key => $value) {
 				$valorventatotal = $valorventatotal + (double)$value["valorventa"];
@@ -539,6 +540,412 @@ class Ventas extends CI_Controller {
 
 			echo json_encode(['lista'=>$lista,'totalreporte'=>$totalreporte]);
 		}
+	}
+
+	private function lista_tickets_ventas($request, $limite = 200)
+	{
+		$sucursales = "";
+		$almacen = "";
+		$comprobante = $this->filtro_comprobante_ventas("k", isset($request->codcomprobantetipo) ? $request->codcomprobantetipo : 0);
+
+		if ((int)$request->codsucursal != 0) {
+			$sucursales = " and k.codsucursal=".(int)$request->codsucursal;
+		}
+
+		if ((int)$request->codalmacen != 0) {
+			$almacen = " and k.codalmacen=".(int)$request->codalmacen;
+		}
+
+		return $this->db->query("
+			select k.codkardex, k.fechacomprobante, k.seriecomprobante, k.nrocomprobante, ct.abreviatura as tipo
+			from kardex.kardex as k
+			inner join caja.comprobantetipos as ct on(k.codcomprobantetipo=ct.codcomprobantetipo)
+			where k.fechacomprobante >= ".$this->db->escape($request->fechadesde)."
+			  and k.fechacomprobante <= ".$this->db->escape($request->fechahasta)."
+			  and k.codmovimientotipo = 20
+			  and k.estado = 1
+			  ".$sucursales."
+			  ".$almacen."
+			  ".$comprobante."
+			order by k.fechacomprobante, k.codcomprobantetipo, k.seriecomprobante, k.nrocomprobante
+			limit ".(int)$limite."
+		")->result_array();
+	}
+
+	private function imagen_base64($path)
+	{
+		if (empty($path) || !file_exists($path)) {
+			return "";
+		}
+
+		$extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+		$mime = ($extension === "jpg" || $extension === "jpeg") ? "jpeg" : "png";
+		return "data:image/".$mime.";base64,".base64_encode(file_get_contents($path));
+	}
+
+	private function qr_data_uri($texto, $size = 5)
+	{
+		if ((string)$texto === "") {
+			return "";
+		}
+
+		$this->load->library("ciqrcode");
+		ob_start();
+		$this->ciqrcode->generate(array(
+			"data" => (string)$texto,
+			"level" => "H",
+			"size" => $size
+		));
+		$png = ob_get_clean();
+
+		return $png !== "" ? "data:image/png;base64,".base64_encode($png) : "";
+	}
+
+	private function mesa_restaurante($codkardex)
+	{
+		$tablas = $this->db->query("select to_regclass('kardex.kardexpedido') as kardexpedido, to_regclass('restaurante.mesaspedido') as mesaspedido")->row_array();
+		if (empty($tablas["kardexpedido"]) || empty($tablas["mesaspedido"])) {
+			return "";
+		}
+
+		$mesa = $this->db->query("
+			select string_agg(distinct mp.nromesa::text, ' - ') as numero
+			from restaurante.mesaspedido mp
+			where mp.codpedido in (
+				select p.codpedido from kardex.pedidos p where p.codkardex=".(int)$codkardex."
+				union
+				select kp.codpedido from kardex.kardexpedido kp where kp.codkardex=".(int)$codkardex."
+			)
+		")->row_array();
+
+		return trim((string)($mesa["numero"] ?? ""));
+	}
+
+	private function ticket_pdf_data($codkardex)
+	{
+		$codkardex = (int)$codkardex;
+		$venta = $this->db->query("
+			select k.codkardex, k.fechacomprobante, k.conleyendaamazonia, ct.descripcion as comprobante,
+				   ct.oficial, k.codcomprobantetipo, k.seriecomprobante, k.nrocomprobante, p.documento,
+				   k.cliente, k.direccion, k.valorventa, k.descglobal, k.igv, k.icbper, k.importe,
+				   k.codempleado, k.condicionpago, k.nroplaca, k.codsucursal
+			from kardex.kardex as k
+			inner join public.personas as p on(k.codpersona=p.codpersona)
+			inner join caja.comprobantetipos as ct on(k.codcomprobantetipo=ct.codcomprobantetipo)
+			where k.codkardex=".$codkardex."
+			limit 1
+		")->row_array();
+
+		if (empty($venta)) {
+			return array("estado" => 0, "mensaje" => "No se encontro la venta ".$codkardex);
+		}
+
+		$empresa = $this->db->query("select documento, razonsocial, nombrecomercial from public.personas where codpersona=1 limit 1")->row_array();
+		$sucursal = $this->db->query("select sucursal.*, empresa.* from public.sucursales as sucursal inner join public.empresas as empresa on(sucursal.codempresa=empresa.codempresa) where sucursal.codsucursal=".(int)$venta["codsucursal"]." limit 1")->row_array();
+		$parametros = $this->db->query("select *from public.empresas limit 1")->row_array();
+		$principal = $this->db->query("select *from public.sucursales where principal=1 and estado=1 limit 1")->row_array();
+
+		$totales = $this->db->query("
+			select
+				(select coalesce(sum(subtotal),0) from kardex.kardexdetalle where codkardex=".$codkardex." and codafectacionigv='10') as gravado,
+				(select coalesce(sum(subtotal),0) from kardex.kardexdetalle where codkardex=".$codkardex." and codafectacionigv='20') as exonerado,
+				(select coalesce(sum(subtotal),0) from kardex.kardexdetalle where codkardex=".$codkardex." and codafectacionigv='30') as inafecto,
+				(select coalesce(sum(subtotal),0) from kardex.kardexdetalle where codkardex=".$codkardex." and codafectacionigv='21') as gratuito
+		")->row_array();
+
+		$detalle = $this->db->query("
+			select kd.item, kd.cantidad, p.descripcion as producto, u.descripcion as unidad,
+				   kd.preciounitario, kd.subtotal, kd.descripcion
+			from kardex.kardexdetalle as kd
+			inner join almacen.productos as p on(p.codproducto=kd.codproducto)
+			inner join almacen.unidades as u on(u.codunidad=kd.codunidad)
+			where kd.codkardex=".$codkardex."
+			order by kd.item
+		")->result_array();
+
+		$formato = $this->db->query("
+			select *
+			from caja.comprobantes
+			where codcomprobantetipo=".(int)$venta["codcomprobantetipo"]."
+			  and seriecomprobante=".$this->db->escape($venta["seriecomprobante"])."
+			  and codsucursal=".(int)$venta["codsucursal"]."
+			limit 1
+		")->row_array();
+
+		if (empty($formato)) {
+			$formato = array("nombrecomercial" => "", "logo" => "", "slogan" => "", "publicidad" => "", "agradecimiento" => "", "impresionlogo" => 1);
+		}
+
+		$nombre = !empty($formato["nombrecomercial"]) ? $formato["nombrecomercial"] : (!empty($empresa["nombrecomercial"]) ? $empresa["nombrecomercial"] : $empresa["razonsocial"]);
+		$logoArchivo = !empty($formato["logo"]) ? FCPATH."public/img/empresa/".$formato["logo"] : FCPATH."public/img/".($_SESSION["phuyu_logo"] ?? "");
+		$fechavencimiento = $venta["fechacomprobante"];
+		$credito = array();
+		if ((int)$venta["condicionpago"] === 2) {
+			$credito = $this->db->query("select *from kardex.creditos where codkardex=".$codkardex." limit 1")->row_array();
+			if (!empty($credito["fechavencimiento"])) {
+				$fechavencimiento = $credito["fechavencimiento"];
+			}
+		}
+
+		$vendedor = $this->db->query("select razonsocial, telefono from public.personas where codpersona=".(int)$venta["codempleado"]." limit 1")->row_array();
+		$empleado = $this->db->query("select p.razonsocial from public.empleados e inner join public.personas p on(p.codpersona=e.codpersona) where e.codpersona=".(int)$venta["codempleado"]." limit 1")->row_array();
+		if (empty($empleado) && !empty($vendedor)) {
+			$empleado = array("razonsocial" => $vendedor["razonsocial"]);
+		}
+		$cuentascorrientes = $this->db->query("select ct.*, b.descripcion as banco from caja.ctasctes ct inner join caja.bancos b on(ct.codbanco=b.codbanco) where ct.codpersona=1")->result_array();
+		$movimiento = $this->db->query("select codmovimiento from caja.movimientos where codkardex=".$codkardex." limit 1")->row_array();
+		$detallemovimiento = array();
+		if (!empty($movimiento["codmovimiento"])) {
+			$detallemovimiento = $this->db->query("select importeentregado, vuelto from caja.movimientosdetalle where codtipopago=1 and codmovimiento=".(int)$movimiento["codmovimiento"])->result_array();
+		}
+
+		$this->load->library("Number");
+		$number = new Number();
+		$total = number_format((float)$venta["importe"], 2, ".", "");
+		$partes = explode(".", $total);
+		$total_texto = $number->convertirNumeroEnLetras(round((float)$venta["importe"], 2));
+		$texto_importe = "SON ".strtoupper($number->convertirNumeroEnLetras($partes[0]))." Y ".$partes[1]."/100 SOLES";
+		$texto_qr = ($empresa["razonsocial"] ?? "")."|".$venta["seriecomprobante"]."|".$venta["nrocomprobante"]."|".number_format((float)$venta["igv"], 2, ".", "")."|".number_format((float)$venta["importe"], 2, ".", "")."|".$venta["fechacomprobante"]."|".$venta["documento"];
+
+		return array(
+			"estado" => 1,
+			"data" => array(
+				"modo_pdf" => true,
+				"empresa" => $empresa,
+				"sucursal" => $sucursal,
+				"principal" => $principal,
+				"parametros" => $parametros,
+				"venta" => $venta,
+				"credito" => $credito,
+				"empleado" => $empleado,
+				"vendedor" => $vendedor,
+				"totales" => $totales,
+				"detalle" => $detalle,
+				"cuentascorrientes" => $cuentascorrientes,
+				"formato" => $formato,
+				"nombre_empresa" => $nombre,
+				"nombre" => $nombre,
+				"slogan" => !empty($formato["slogan"]) ? $formato["slogan"] : ($parametros["slogan"] ?? ""),
+				"publicidad" => !empty($formato["publicidad"]) ? $formato["publicidad"] : ($parametros["publicidad"] ?? ""),
+				"logo_src" => $this->imagen_base64($logoArchivo),
+				"qr_src" => $this->qr_data_uri($texto_qr),
+				"fechavencimiento" => $fechavencimiento,
+				"total_texto" => $total_texto,
+				"texto_importe" => $texto_importe,
+				"detallemovimiento" => $detallemovimiento,
+				"efectivo" => !empty($detallemovimiento) ? 1 : 0,
+				"logoEmpresa" => $_SESSION["phuyu_logo"] ?? "",
+				"mesa_restaurante" => $this->mesa_restaurante($codkardex)
+			)
+		);
+	}
+
+	private function generar_comprobante_pdf_binario($codkardex, $formato_pdf = "ticket")
+	{
+		$datos = $this->ticket_pdf_data($codkardex);
+		if ($datos["estado"] != 1) {
+			return $datos;
+		}
+
+		$formato_pdf = strtolower((string)$formato_pdf);
+		if (!in_array($formato_pdf, array("ticket", "a5", "a4"))) {
+			$formato_pdf = "ticket";
+		}
+
+		require_once FCPATH."vendor/autoload.php";
+		if ($formato_pdf === "a4") {
+			$view = "reportes/ventas/a4comprobante";
+			$paper = "A4";
+		} elseif ($formato_pdf === "a5") {
+			$view = "reportes/ventas/a5venta";
+			$paper = "A5";
+		} else {
+			$view = "facturacion/formato/ticket_Phuyu";
+			$items = count($datos["data"]["detalle"]);
+			$height = max(650, min(1800, 560 + ($items * 34)));
+			$paper = array(0, 0, 226.77, $height);
+		}
+
+		$html = $this->load->view($view, $datos["data"], true);
+		$tempDir = APPPATH."cache/dompdf";
+		if (!is_dir($tempDir)) {
+			@mkdir($tempDir, 0777, true);
+		}
+
+		$options = new \Dompdf\Options();
+		$options->set("isHtml5ParserEnabled", true);
+		$options->set("isRemoteEnabled", true);
+		$options->set("defaultFont", "DejaVu Sans");
+		$options->set("chroot", FCPATH);
+		$options->set("tempDir", $tempDir);
+		$options->set("fontDir", $tempDir);
+		$options->set("fontCache", $tempDir);
+		$options->set("dpi", 96);
+
+		$dompdf = new \Dompdf\Dompdf($options);
+		$dompdf->loadHtml($html, "UTF-8");
+		$dompdf->setPaper($paper, "portrait");
+		$dompdf->render();
+
+		return array("estado" => 1, "pdf" => $dompdf->output());
+	}
+
+	private function zip_tickets_progress_path($progress_id)
+	{
+		$progress_id = preg_replace('/[^A-Za-z0-9_-]/', '', (string)$progress_id);
+		if ($progress_id === "") {
+			return "";
+		}
+
+		$dir = APPPATH."cache/tickets_zip_progress/";
+		if (!is_dir($dir)) {
+			@mkdir($dir, 0777, true);
+		}
+
+		return $dir.$progress_id.".json";
+	}
+
+	private function zip_tickets_set_progress($progress_id, $actual, $total, $estado = "procesando", $mensaje = "")
+	{
+		$path = $this->zip_tickets_progress_path($progress_id);
+		if ($path === "") {
+			return;
+		}
+
+		$porcentaje = $total > 0 ? round(($actual / $total) * 100, 2) : 0;
+		file_put_contents($path, json_encode(array(
+			"actual" => (int)$actual,
+			"total" => (int)$total,
+			"porcentaje" => $porcentaje,
+			"estado" => $estado,
+			"mensaje" => $mensaje
+		)));
+	}
+
+	function zip_tickets_ventas_progreso()
+	{
+		if (!isset($_SESSION["phuyu_codusuario"])) {
+			$this->output
+				->set_content_type("application/json", "utf-8")
+				->set_status_header(401)
+				->set_output(json_encode(array("estado" => "error", "mensaje" => "Sesion expirada.")));
+			return;
+		}
+
+		$progress_id = $this->input->get("progress_id", true);
+		$path = $this->zip_tickets_progress_path($progress_id);
+		if ($path === "" || !file_exists($path)) {
+			$this->output
+				->set_content_type("application/json", "utf-8")
+				->set_output(json_encode(array("actual" => 0, "total" => 0, "porcentaje" => 0, "estado" => "iniciando", "mensaje" => "Iniciando proceso...")));
+			return;
+		}
+
+		$this->output
+			->set_content_type("application/json", "utf-8")
+			->set_output(file_get_contents($path));
+	}
+
+	function zip_tickets_ventas()
+	{
+		if (!isset($_SESSION["phuyu_codusuario"])) {
+			$this->output
+				->set_content_type("application/json", "utf-8")
+				->set_status_header(401)
+				->set_output(json_encode(array("estado" => 0, "mensaje" => "Sesion expirada. Vuelva a iniciar sesion.")));
+			return;
+		}
+
+		if (empty($_GET["datos"])) {
+			$this->output
+				->set_content_type("application/json", "utf-8")
+				->set_status_header(400)
+				->set_output(json_encode(array("estado" => 0, "mensaje" => "No se recibieron filtros para generar el ZIP.")));
+			return;
+		}
+
+		if (!class_exists("ZipArchive")) {
+			$this->output
+				->set_content_type("application/json", "utf-8")
+				->set_status_header(500)
+				->set_output(json_encode(array("estado" => 0, "mensaje" => "La extension ZipArchive no esta disponible en PHP.")));
+			return;
+		}
+
+		$request = json_decode($_GET["datos"]);
+		$progress_id = $this->input->get("progress_id", true);
+		$formato_pdf = isset($request->formato_pdf) ? strtolower((string)$request->formato_pdf) : "ticket";
+		if (!in_array($formato_pdf, array("ticket", "a5", "a4"))) {
+			$formato_pdf = "ticket";
+		}
+		$ventas = $this->lista_tickets_ventas($request, 200);
+		$this->zip_tickets_set_progress($progress_id, 0, count($ventas), "procesando", "Preparando comprobantes...");
+		if (empty($ventas)) {
+			$comprobante = "todos los comprobantes";
+			if ((int)($request->codcomprobantetipo ?? 0) > 0) {
+				$tipo = $this->db->query(
+					"select descripcion from caja.comprobantetipos where codcomprobantetipo=? limit 1",
+					array((int)$request->codcomprobantetipo)
+				)->row_array();
+				if (!empty($tipo["descripcion"])) {
+					$comprobante = $tipo["descripcion"];
+				}
+			}
+			$this->output
+				->set_content_type("application/json", "utf-8")
+				->set_status_header(422)
+				->set_output(json_encode(array(
+					"estado" => 0,
+					"mensaje" => "No hay ventas activas para descargar con ".$comprobante." entre ".$request->fechadesde." y ".$request->fechahasta."."
+				)));
+			return;
+		}
+
+		$dir = APPPATH."cache/tickets_zip/";
+		if (!is_dir($dir)) {
+			@mkdir($dir, 0777, true);
+		}
+
+		$nombreZip = "tickets_ventas_".$request->fechadesde."_".$request->fechahasta."_".date("His").".zip";
+		$rutaZip = $dir.$nombreZip;
+		$zip = new ZipArchive();
+		if ($zip->open($rutaZip, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+			$this->output
+				->set_content_type("application/json", "utf-8")
+				->set_status_header(500)
+				->set_output(json_encode(array("estado" => 0, "mensaje" => "No se pudo crear el archivo ZIP temporal.")));
+			return;
+		}
+
+		$errores = array();
+		$totalVentas = count($ventas);
+		$procesados = 0;
+		foreach ($ventas as $venta) {
+			$procesados++;
+			$pdf = $this->generar_comprobante_pdf_binario($venta["codkardex"], $formato_pdf);
+			if ($pdf["estado"] != 1) {
+				$errores[] = $venta["codkardex"].": ".$pdf["mensaje"];
+				$this->zip_tickets_set_progress($progress_id, $procesados, $totalVentas, "procesando", "Procesando comprobantes...");
+				continue;
+			}
+
+			$archivo = preg_replace('/[^A-Za-z0-9._-]/', '_', strtoupper($formato_pdf)."-".$venta["tipo"]."-".$venta["seriecomprobante"]."-".$venta["nrocomprobante"]).".pdf";
+			$zip->addFromString($archivo, $pdf["pdf"]);
+			$this->zip_tickets_set_progress($progress_id, $procesados, $totalVentas, "procesando", "Procesando comprobantes...");
+		}
+
+		if (!empty($errores)) {
+			$zip->addFromString("errores.txt", implode(PHP_EOL, $errores));
+		}
+
+		$zip->close();
+		$this->zip_tickets_set_progress($progress_id, $totalVentas, $totalVentas, "completado", "ZIP generado correctamente.");
+
+		header("Content-Type: application/zip");
+		header("Content-Disposition: attachment; filename=".$nombreZip);
+		header("Content-Length: ".filesize($rutaZip));
+		readfile($rutaZip);
+		@unlink($rutaZip);
 	}
 	
 	function pdf_reporte_ventas(){

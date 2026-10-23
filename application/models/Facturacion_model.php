@@ -32,7 +32,24 @@ class Facturacion_model extends CI_Model
         $credito = $this->db->query("select *from kardex.creditos WHERE codkardex=" . $codkardex)->result_array();
         $cuotas = [];
         if (count($credito) > 0) {
-            $cuotas = $this->db->query("select *from kardex.cuotas WHERE codcredito=" . $credito[0]["codcredito"])->result_array();
+            $cuotas = $this->db->query("select *from kardex.cuotas WHERE codcredito=" . $credito[0]["codcredito"] . " ORDER BY nrocuota")->result_array();
+        }
+
+        // Validar antes de crear o sobrescribir el XML, incluso al reenviar ventas antiguas.
+        if ($codcomprobante !== '07' && $codcomprobante !== '08' && (int)$info[0]['condicionpago'] === 2) {
+            if (count($cuotas) === 0) {
+                return ['estado' => 0, 'mensaje' => 'La venta a credito no tiene cuotas. Corrija el cronograma antes de enviar a SUNAT.'];
+            }
+            $capital = 0;
+            foreach ($cuotas as $i => $cuota) {
+                if (!is_numeric($cuota['importe']) || !is_finite((float)$cuota['importe']) || round((float)$cuota['importe'], 2) <= 0) {
+                    return ['estado' => 0, 'mensaje' => 'La cuota ' . ($i + 1) . ' tiene importe cero o invalido. Corrija el cronograma antes de enviar a SUNAT.'];
+                }
+                $capital += (int)round((float)$cuota['importe'] * 100);
+            }
+            if ($capital !== (int)round((float)$info[0]['importe'] * 100)) {
+                return ['estado' => 0, 'mensaje' => 'Los importes de las cuotas no coinciden con la venta. Corrija el cronograma antes de enviar a SUNAT.'];
+            }
         }
 
         // 0: CREAMOS UNA CARPETA PARA ALMACENAR EL XML DEL COMPROBANTE TEMPORALMENTE //

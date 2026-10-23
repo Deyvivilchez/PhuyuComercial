@@ -21,6 +21,72 @@ class Ventas extends CI_Controller
         return is_numeric($valor) ? (float)$valor : null;
     }
 
+    private function phuyu_usuario_puede_modificar_precio()
+    {
+        return (int)($_SESSION['phuyu_editar_pventa'] ?? 0) === 1;
+    }
+
+    private function phuyu_usuario_puede_eliminar_venta()
+    {
+        return (int)($_SESSION['phuyu_eliminar_venta'] ?? 0) === 1;
+    }
+
+    private function phuyu_precio_venta_producto($codproducto, $codunidad)
+    {
+        return $this->db->query(
+            "select pventapublico from almacen.productounidades where codproducto=? and codunidad=? and estado=1 limit 1",
+            [(int)$codproducto, (int)$codunidad]
+        )->row_array();
+    }
+
+    private function phuyu_normalizar_precios_venta($request)
+    {
+        if ($this->phuyu_usuario_puede_modificar_precio()) {
+            return ['estado' => 1, 'request' => $request];
+        }
+
+        if (!isset($request->detalle) || !is_array($request->detalle)) {
+            return ['estado' => 0, 'informacion' => 'Debe registrar al menos un producto en la venta.'];
+        }
+
+        $igvSunat = (float)($_SESSION['phuyu_igv'] ?? 18);
+        $icbperSunat = (float)($_SESSION['phuyu_icbper'] ?? 0);
+
+        foreach ($request->detalle as $index => $item) {
+            $precioBase = $this->phuyu_precio_venta_producto($item->codproducto ?? 0, $item->codunidad ?? 0);
+            if (empty($precioBase)) {
+                return [
+                    'estado' => 0,
+                    'informacion' => 'No se encontro precio de venta para el item '.($index + 1).'. Revise producto y unidad.'
+                ];
+            }
+
+            $cantidad = (float)($item->cantidad ?? 0);
+            $precio = round((float)$precioBase['pventapublico'], 4);
+            $afectacion = (int)($item->codafectacionigv ?? 0);
+            $porcentaje = $afectacion === 10 ? (1 + $igvSunat) / 100 : 1;
+            $preciosinigv = $afectacion === 21 ? 0 : round($precio / $porcentaje, 4);
+            $subtotal = $afectacion === 21 ? 0 : round($cantidad * $precio, 2);
+            $valorventa = $afectacion === 21 ? 0 : round($cantidad * $preciosinigv, 2);
+            $igv = $afectacion === 10 ? round($subtotal - $valorventa, 2) : 0;
+            $icbper = ((int)($item->conicbper ?? 0) === 1) ? round($cantidad * $icbperSunat, 2) : 0;
+
+            $item->precio = $precio;
+            $item->preciorefunitario = $precio;
+            $item->preciobruto = $preciosinigv;
+            $item->preciosinigv = $preciosinigv;
+            $item->descuento = 0;
+            $item->porcdescuento = 0;
+            $item->valorventa = $valorventa;
+            $item->subtotal = $subtotal;
+            $item->subtotal_tem = $subtotal;
+            $item->igv = $igv;
+            $item->icbper = $icbper;
+        }
+
+        return ['estado' => 1, 'request' => $request];
+    }
+
     private function phuyu_validar_totales_venta($request)
     {
         if (!is_object($request) || !isset($request->campos) || !isset($request->totales)) {
@@ -95,8 +161,11 @@ class Ventas extends CI_Controller
             return ['estado' => 0, 'informacion' => 'Los datos de pago llegaron incompletos.'];
         }
 
+        if ((int)$request->campos->condicionpago === 2) {
+            return $this->Caja_model->phuyu_validar_cuotas_venta($request->campos, $request->totales, $request->cuotas ?? null);
+        }
         if ((int)$request->campos->condicionpago !== 1) {
-            return ['estado' => 1];
+            return ['estado' => 0, 'informacion' => 'Seleccione una condicion de pago valida.'];
         }
 
         $total = round((float)$request->totales->importe, 2);
@@ -1289,6 +1358,13 @@ class Ventas extends CI_Controller
             if (isset($_SESSION['phuyu_codusuario'])) {
                 $this->request = json_decode(file_get_contents('php://input'));
 
+                $validacionPrecios = $this->phuyu_normalizar_precios_venta($this->request);
+                if ((int)$validacionPrecios['estado'] !== 1) {
+                    echo json_encode($validacionPrecios);
+                    return;
+                }
+                $this->request = $validacionPrecios['request'];
+
                 $validacionTotales = $this->phuyu_validar_totales_venta($this->request);
                 if ((int)$validacionTotales['estado'] !== 1) {
                     echo json_encode($validacionTotales);
@@ -1544,6 +1620,13 @@ class Ventas extends CI_Controller
         if ($this->input->is_ajax_request()) {
             if (isset($_SESSION['phuyu_codusuario'])) {
                 $this->request = json_decode(file_get_contents('php://input'));
+
+                $validacionPrecios = $this->phuyu_normalizar_precios_venta($this->request);
+                if ((int)$validacionPrecios['estado'] !== 1) {
+                    echo json_encode($validacionPrecios);
+                    return;
+                }
+                $this->request = $validacionPrecios['request'];
 
                 $validacionTotales = $this->phuyu_validar_totales_venta($this->request);
                 if ((int)$validacionTotales['estado'] !== 1) {
@@ -1890,20 +1973,39 @@ class Ventas extends CI_Controller
         if ($this->input->is_ajax_request()) {
             $this->request = json_decode(file_get_contents('php://input'));
 
-            $campos = ['codpersona', 'fechacomprobante', 'fechakardex', 'cliente', 'direccion', 'descripcion', 'nroplaca'];
-            $valores = [$this->request->codpersona, $this->request->fechacomprobante, $this->request->fechakardex, $this->request->cliente, $this->request->direccion, $this->request->descripcion, $this->request->nroplaca];
-            $estado = $this->phuyu_model->phuyu_editar('kardex.kardex', $campos, $valores, 'codkardex', $this->request->codregistro);
+            $codkardex = isset($this->request->codregistro) ? (int)$this->request->codregistro : 0;
+            $fecha = isset($this->request->fechacomprobante) ? trim((string)$this->request->fechacomprobante) : '';
 
-            $campos = ['fechakardex'];
-            $valores = [$this->request->fechakardex];
-            $estado_u = $this->phuyu_model->phuyu_editar('kardex.kardexalmacen', $campos, $valores, 'codkardex', $this->request->codregistro);
+            if ($codkardex <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
+                echo json_encode(['estado' => 0, 'mensaje' => 'Fecha de venta invalida.']);
+                return;
+            }
 
-            $campos = ['codpersona', 'fechacredito'];
-            $valores = [$this->request->codpersona, $this->request->fechacomprobante];
-            $estado_u = $this->phuyu_model->phuyu_editar('kardex.creditos', $campos, $valores, 'codkardex', $this->request->codregistro);
-            $campos = ['codpersona', 'fechamovimiento'];
-            $valores = [$this->request->codpersona, $this->request->fechacomprobante];
-            $estado_u = $this->phuyu_model->phuyu_editar('caja.movimientos', $campos, $valores, 'codkardex', $this->request->codregistro);
+            $venta = $this->db->query(
+                'select codkardex, estado, codsucursal from kardex.kardex where codkardex=? and codmovimientotipo=20 limit 1',
+                [$codkardex]
+            )->row_array();
+            if (empty($venta) || (int)$venta['codsucursal'] !== (int)$_SESSION['phuyu_codsucursal'] || (int)$venta['estado'] === 0) {
+                echo json_encode(['estado' => 0, 'mensaje' => 'La venta no esta disponible para cambiar fecha.']);
+                return;
+            }
+
+            $sunat = $this->db->query('select estado from sunat.kardexsunat where codkardex=? limit 1', [$codkardex])->row_array();
+            if (!empty($sunat) && (int)$sunat['estado'] !== 0) {
+                echo json_encode(['estado' => 0, 'mensaje' => 'El comprobante ya fue enviado a SUNAT.']);
+                return;
+            }
+
+            $nuevaFecha = new DateTime($fecha);
+            $hoy = new DateTime(date('Y-m-d'));
+            $minimo = (clone $hoy)->modify('-3 days');
+            if ($nuevaFecha > $hoy || $nuevaFecha < $minimo) {
+                echo json_encode(['estado' => 0, 'mensaje' => 'La fecha de venta debe estar dentro de los ultimos 3 dias y no puede ser futura.']);
+                return;
+            }
+
+            $estado = $this->phuyu_model->phuyu_editar('kardex.kardex', ['fechacomprobante'], [$fecha], 'codkardex', $codkardex);
+            $this->phuyu_model->phuyu_editar('sunat.kardexsunat', ['fechacreado'], [$fecha], 'codkardex', $codkardex);
 
             echo $estado;
         }
@@ -1913,6 +2015,13 @@ class Ventas extends CI_Controller
     {
         if ($this->input->is_ajax_request()) {
             $this->request = json_decode(file_get_contents('php://input'));
+            if (!$this->phuyu_usuario_puede_eliminar_venta()) {
+                echo json_encode([
+                    'estado' => 0,
+                    'mensaje' => 'No tiene permiso para eliminar ventas.'
+                ]);
+                return;
+            }
             $this->db->trans_begin();
 
             //REVISAMOS SI LA VENTA YA ESTA ELIMINADO
@@ -2078,6 +2187,10 @@ class Ventas extends CI_Controller
     {
         if ($this->input->is_ajax_request()) {
             $this->request = json_decode(file_get_contents('php://input'));
+            if (!$this->phuyu_usuario_puede_eliminar_venta()) {
+                echo json_encode(0);
+                return;
+            }
             $this->db->trans_begin();
 
             // ACTUALIZAMOS PRODUCTOS UBICACION //

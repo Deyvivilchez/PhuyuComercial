@@ -27,6 +27,7 @@ BEGIN
         hotel.estadia_cambios_habitacion,
         hotel.estadia_habitaciones,
         hotel.estadia_huespedes,
+        hotel.estadia_pagos,
         hotel.estadias,
         hotel.reserva_habitaciones,
         hotel.reservas,
@@ -106,6 +107,7 @@ BEGIN
         restaurante.mesas,
         restaurante.mesaskardex,
         restaurante.mesaspedido,
+        restaurante.recetas_config,
         restaurante.recetas,
 
         -- SUNAT DOCUMENTOS
@@ -341,7 +343,11 @@ BEGIN
         codtalla,
         tipo,
         comisionvendedor,
-        controlarseries
+        controlarseries,
+        es_venta,
+        es_insumo,
+        es_preparado,
+        merma_porcentaje
     )
     VALUES (
         0, 0, 0, 1,
@@ -354,6 +360,10 @@ BEGIN
         '',
         0, 0, 0, 0,
         2,
+        0,
+        0,
+        1,
+        0,
         0,
         0
     )
