@@ -1,3 +1,15 @@
+<style>
+  #phuyu_datos .movimiento-anulado td,
+  #phuyu_datos .movimiento-anulado td * {
+    color: #c62828 !important;
+    text-decoration-line: line-through !important;
+    text-decoration-color: #c62828 !important;
+    text-decoration-thickness: 1px !important;
+  }
+  #phuyu_datos .movimiento-anulado .badge {
+    background: transparent !important;
+  }
+</style>
 <div id="phuyu_datos">
   <div class="row mb-3">
     <div class="col-12 col-md-6">
@@ -104,12 +116,13 @@
               <th>Referencia</th>
               <th>Forma pago</th>
               <th>Tipo</th>
+              <th>Estado</th>
               <th>Importe (S/)</th>
               <th>Sel.</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(dato, index) in datos" :class="{ 'table-danger': dato.estado == 0 }">
+            <tr v-for="(dato, index) in datos" :class="{ 'table-danger': dato.estado == 0, 'movimiento-anulado': dato.estado == 0 }">
               <td>{{ dato.fechamovimiento }}</td>
               <td>{{ dato.seriecomprobante + '-' + dato.nrocomprobante }}</td>
               <td>{{ dato.concepto }}</td>
@@ -120,9 +133,13 @@
                 <span class="badge bg-danger" v-if="dato.tipomovimiento == 2">Egreso</span>
                 <span class="badge bg-warning text-dark" v-if="dato.tipomovimiento == 1">Ingreso</span>
               </td>
+              <td class="text-center">
+                <span class="badge bg-danger" v-if="dato.estado == 0">ANULADO</span>
+                <span class="badge bg-success" v-else>ACTIVO</span>
+              </td>
               <td class="text-end">{{ dato.importe_r }}</td>
               <td class="text-center">
-                <input type="radio" class="form-check-input" name="phuyu_seleccionar" @click="phuyu_seleccionar(dato.codmovimiento)">
+                <input type="radio" class="form-check-input" name="phuyu_seleccionar" :disabled="dato.estado == 0" @click="phuyu_seleccionar(dato.codmovimiento)">
               </td>
             </tr>
           </tbody>

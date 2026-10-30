@@ -4,6 +4,20 @@
 <head>
     <meta charset="UTF-8">
     <title>Reporte de Movimientos</title>
+    <style>
+        .reporte-movimiento-anulado td,
+        .reporte-movimiento-anulado td * {
+            color: #c62828 !important;
+            text-decoration-line: line-through !important;
+            text-decoration-color: #c62828 !important;
+            text-decoration-thickness: 1px !important;
+            text-shadow: none !important;
+        }
+        .reporte-movimiento-anulado span {
+            background: transparent !important;
+            box-shadow: none !important;
+        }
+    </style>
 </head>
 
 <body
@@ -55,12 +69,16 @@
             $resumenTotalMovimiento = 0;
 
             foreach ($movimientos as $movimientoResumen) {
+                if ((int)$movimientoResumen['estado'] === 0) {
+                    continue;
+                }
                 $resumenTotalPago += (double)$movimientoResumen['importe_pago'];
                 $resumenTotalEntregado += (double)$movimientoResumen['importe_entregado'];
                 $resumenTotalVuelto += (double)$movimientoResumen['vuelto'];
                 $resumenTotalMovimiento += (double)$movimientoResumen['importe_pago'];
             }
         ?>
+        <p style="font-size: 9pt; color: #922b21;">Los movimientos ANULADOS se muestran como historial y no se incluyen en los totales. Las fechas corresponden al movimiento original.</p>
 
         <!-- RESUMEN SUPERIOR -->
         <div style="margin: 0 0 18px 0;">
@@ -151,7 +169,8 @@
                     $totalMovimiento = 0;
                     
                     foreach ($movimientos as $m) {
-                        $tipoPago = strtolower($m['tipopago']);
+                        $anulado = (int)$m['estado'] === 0;
+                        $tipoPago = strtolower($m['tipopago'] ?? '');
                         $badge_style = 'background: linear-gradient(135deg, #636e72 0%, #2d3436 100%); color: white;';
                         if (strpos($tipoPago, 'efectivo') !== false) {
                             $badge_style = 'background: linear-gradient(135deg, #00b894 0%, #00a085 100%); color: white;';
@@ -161,11 +180,13 @@
                             $badge_style = 'background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%); color: white;';
                         }
                     
-                        echo "<tr style='transition: all 0.3s ease;'>";
+                        $estiloFila = $anulado ? 'background: #fdecea; color: #922b21;' : '';
+                        $claseFila = $anulado ? 'reporte-movimiento-anulado' : '';
+                        echo "<tr class='{$claseFila}' style='{$estiloFila}'>";
                         echo "<td style='padding: 8px 6px; border-bottom: 1px solid #ecf0f1; vertical-align: middle; text-align: center;'><strong>{$i}</strong></td>";
                         $horaMovimiento = !empty($m['horamovimiento']) ? $m['horamovimiento'] : '--:--:--';
                         echo "<td style='padding: 8px 6px; border-bottom: 1px solid #ecf0f1; vertical-align: middle; text-align: center;'><strong>{$m['fechamovimiento']}</strong><br><span style='font-size: 6.5pt; color: #7f8c8d;'>{$horaMovimiento}</span></td>";
-                        echo "<td style='padding: 8px 6px; border-bottom: 1px solid #ecf0f1; vertical-align: middle; text-align: center;'><span style='font-family: \"SF Mono\", monospace; font-weight: 700; color: #2c3e50; letter-spacing: 0.5px; background: #f8f9fa; padding: 3px 6px; border-radius: 4px; border: 1px solid #e9ecef;'>{$m['seriecomprobante']}-{$m['nrocomprobante']}</span></td>";
+                        echo "<td style='padding: 8px 6px; border-bottom: 1px solid #ecf0f1; vertical-align: middle; text-align: center;'><span style='font-family: \"SF Mono\", monospace; font-weight: 700; color: #2c3e50; letter-spacing: 0.5px; background: #f8f9fa; padding: 3px 6px; border-radius: 4px; border: 1px solid #e9ecef;'>{$m['seriecomprobante']}-{$m['nrocomprobante']}</span>" . ($anulado ? "<br><strong style='color: #b71c1c;'>ANULADO</strong>" : "<br><span style='color: #117864;'>ACTIVO</span>") . "</td>";
                         echo "<td style='padding: 8px 6px; border-bottom: 1px solid #ecf0f1; vertical-align: middle; text-align: left; font-weight: 600; color: #34495e;'>{$m['comprobante_referencia']}</td>";
                         echo "<td style='padding: 8px 6px; border-bottom: 1px solid #ecf0f1; vertical-align: middle; text-align: left; font-weight: 600; color: #34495e;'>{$m['razonsocial']}</td>";
 
@@ -177,10 +198,12 @@
                         echo "<td style='padding: 8px 6px; border-bottom: 1px solid #ecf0f1; vertical-align: middle; text-align: right; font-family: \"SF Mono\", \"Monaco\", \"Consolas\", monospace; font-weight: 700; color: #2c3e50;'><strong><span style='font-size: 6pt; color: #7f8c8d; margin-right: 2px; font-weight: 600;'>S/</span>" . number_format($m['importe_pago'], 2) . '</strong></td>';
                         echo '</tr>';
                     
-                        $totalPago += $m['importe_pago'];
-                        $totalEntregado += $m['importe_entregado'];
-                        $totalVuelto += $m['vuelto'];
-                        $totalMovimiento += $m['importe_pago'];
+                        if (!$anulado) {
+                            $totalPago += $m['importe_pago'];
+                            $totalEntregado += $m['importe_entregado'];
+                            $totalVuelto += $m['vuelto'];
+                            $totalMovimiento += $m['importe_pago'];
+                        }
                         $i++;
                     }
                     ?>
@@ -190,7 +213,7 @@
                         style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important; color: #ffffff; font-weight: 800;">
                         <td colspan="7"
                             style="padding: 12px 6px; border: none; font-size: 8pt; text-shadow: 0 1px 2px rgba(0,0,0,0.3); text-align: right; padding-right: 20px;">
-                            <strong>TOTALES GENERALES</strong>
+                            <strong>TOTALES DE MOVIMIENTOS ACTIVOS</strong>
                         </td>
                         <td
                             style="padding: 12px 6px; border: none; font-size: 8pt; text-shadow: 0 1px 2px rgba(0,0,0,0.3); text-align: right; font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;">

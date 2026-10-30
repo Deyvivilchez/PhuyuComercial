@@ -75,7 +75,7 @@ class Movimientos extends CI_Controller {
 				".$filtro_tipopago."
 				".$filtro_tipomovimiento."
 				and movimientos.condicionpago=1
-				and movimientos.estado=1";
+				and movimientos.estado IN (0,1)";
 			$join_pagos = "
 				left join (
 					select
@@ -450,6 +450,7 @@ public function exportar_pdf_detallado()
     $sql = "
         SELECT 
             m.codmovimiento,
+            m.estado,
             m.fechamovimiento,
             COALESCE(
                 TO_CHAR(m.horamovimiento, 'HH24:MI:SS'),
@@ -460,26 +461,25 @@ public function exportar_pdf_detallado()
             m.codkardex,
             p.razonsocial,
             c.descripcion         AS concepto_caja,
-            tp.descripcion        AS tipopago,
-            md.importe            AS importe_pago,
-            md.importeentregado   AS importe_entregado,
-            md.vuelto             AS vuelto,
+            COALESCE(tp.descripcion, 'Sin detalle') AS tipopago,
+            COALESCE(md.importe, m.importe) AS importe_pago,
+            COALESCE(md.importeentregado, 0) AS importe_entregado,
+            COALESCE(md.vuelto, 0) AS vuelto,
             ROUND(m.importe, 2)   AS total_movimiento,
             CASE
                 WHEN k.codkardex IS NULL THEN COALESCE(NULLIF(CONCAT(m.seriecomprobante_ref,'-',m.nrocomprobante_ref), '-'), '')
                 ELSE CONCAT(k.seriecomprobante,'-',k.nrocomprobante)
             END AS comprobante_referencia
-        FROM caja.movimientosdetalle AS md
-        JOIN caja.movimientos AS m       ON m.codmovimiento = md.codmovimiento
+        FROM caja.movimientos AS m
+        LEFT JOIN caja.movimientosdetalle AS md ON md.codmovimiento = m.codmovimiento
         JOIN public.personas AS p        ON p.codpersona = m.codpersona
         JOIN caja.conceptos AS c         ON c.codconcepto = m.codconcepto
-        JOIN caja.tipopagos AS tp        ON tp.codtipopago = md.codtipopago
+        LEFT JOIN caja.tipopagos AS tp        ON tp.codtipopago = md.codtipopago
         LEFT JOIN kardex.kardex AS k          ON k.codkardex = m.codkardex
         WHERE m.fechamovimiento BETWEEN {$this->db->escape($desde)} AND {$this->db->escape($hasta)}
         AND m.codcaja = {$this->db->escape($codcaja)}
-        AND m.estado = 1
+        AND m.estado IN (0, 1)
         AND m.condicionpago = 1
-        AND tp.estado = 1
         ORDER BY m.fechamovimiento, m.codmovimiento
     ";
 
@@ -511,6 +511,7 @@ public function exportar_pdf_detallado_02()
     $sql = "
         SELECT 
             m.codmovimiento,
+            m.estado,
             m.fechamovimiento,
             COALESCE(
                 TO_CHAR(m.horamovimiento, 'HH24:MI:SS'),
@@ -521,26 +522,25 @@ public function exportar_pdf_detallado_02()
             m.codkardex,
             p.razonsocial,
             c.descripcion         AS concepto_caja,
-            tp.descripcion        AS tipopago,
-            md.importe            AS importe_pago,
-            md.importeentregado   AS importe_entregado,
-            md.vuelto             AS vuelto,
+            COALESCE(tp.descripcion, 'Sin detalle') AS tipopago,
+            COALESCE(md.importe, m.importe) AS importe_pago,
+            COALESCE(md.importeentregado, 0) AS importe_entregado,
+            COALESCE(md.vuelto, 0) AS vuelto,
             ROUND(m.importe, 2)   AS total_movimiento,
             CASE
                 WHEN k.codkardex IS NULL THEN COALESCE(NULLIF(CONCAT(m.seriecomprobante_ref,'-',m.nrocomprobante_ref), '-'), '')
                 ELSE CONCAT(k.seriecomprobante,'-',k.nrocomprobante)
             END AS comprobante_referencia
-        FROM caja.movimientosdetalle AS md
-        JOIN caja.movimientos AS m       ON m.codmovimiento = md.codmovimiento
+        FROM caja.movimientos AS m
+        LEFT JOIN caja.movimientosdetalle AS md ON md.codmovimiento = m.codmovimiento
         JOIN public.personas AS p        ON p.codpersona = m.codpersona
         JOIN caja.conceptos AS c         ON c.codconcepto = m.codconcepto
-        JOIN caja.tipopagos AS tp        ON tp.codtipopago = md.codtipopago
+        LEFT JOIN caja.tipopagos AS tp        ON tp.codtipopago = md.codtipopago
         LEFT JOIN kardex.kardex AS k          ON k.codkardex = m.codkardex
         WHERE m.fechamovimiento BETWEEN {$this->db->escape($desde)} AND {$this->db->escape($hasta)}
         AND m.codcaja = {$this->db->escape($codcaja)}
-        AND m.estado = 1
+        AND m.estado IN (0, 1)
         AND m.condicionpago = 1
-        AND tp.estado = 1
         ORDER BY m.fechamovimiento, m.codmovimiento
     ";
 
