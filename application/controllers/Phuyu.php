@@ -31,7 +31,13 @@ class Phuyu extends CI_Controller
 			}
 
 			$info["almacenes"] = $this->db->query("select *from almacen.almacenes where estado=1 and codsucursal=?", [$codsucursal])->result_array();
-			$info["cajas"] = $this->db->query("select *from caja.cajas where estado=1 and codsucursal=?", [$codsucursal])->result_array();
+			$info["cajas"] = $this->db->query(
+				"select c.* from caja.cajas c
+				inner join seguridad.cajausuarios cu on(cu.codcaja=c.codcaja and cu.codsucursal=c.codsucursal)
+				where cu.codusuario=? and c.estado=1 and c.codsucursal=?
+				order by c.descripcion",
+				[(int) $_SESSION["phuyu_codusuario"], $codsucursal]
+			)->result_array();
 			$this->output->set_content_type("application/json", "utf-8");
 			echo json_encode($info);
 		}else{

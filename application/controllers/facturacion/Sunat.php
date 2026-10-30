@@ -6,6 +6,49 @@ use RobRichards\XMLSecLibs\XMLSecurityKey;
 
 class Sunat extends CI_Controller {
 
+    function phuyu_consultaIntegradaSUNAT($datos, $client_id, $client_secret, $ruc_consultante){
+        if (!function_exists("curl_init") || trim($client_id)==="" || trim($client_secret)==="") {
+            return ["estado" => 0, "nivel" => "danger", "mensaje" => "FALTAN CREDENCIALES API SUNAT", "detalle" => "Configure el Client ID y Client Secret de Consulta Integrada."];
+        }
+        $clave_sesion = "phuyu_sunat_api_token_".(int)$_SESSION["phuyu_codempresa"];
+        $token = isset($_SESSION[$clave_sesion]) ? $_SESSION[$clave_sesion] : null;
+        if (!is_array($token) || empty($token["access_token"]) || empty($token["vence"]) || (int)$token["vence"]<=time()+60) {
+            $curl = curl_init("https://api-seguridad.sunat.gob.pe/v1/clientesextranet/".rawurlencode($client_id)."/oauth2/token/");
+            curl_setopt($curl, CURLOPT_POST, true);
+            curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query(["grant_type"=>"client_credentials", "scope"=>"https://api.sunat.gob.pe/v1/contribuyente/contribuyentes", "client_id"=>$client_id, "client_secret"=>$client_secret]));
+            curl_setopt($curl, CURLOPT_HTTPHEADER, ["Content-Type: application/x-www-form-urlencoded"]);
+            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true); curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 10); curl_setopt($curl, CURLOPT_TIMEOUT, 30);
+            $respuesta_token = curl_exec($curl); $error_token = curl_error($curl); $http_token = curl_getinfo($curl, CURLINFO_HTTP_CODE); curl_close($curl);
+            $token_data = json_decode((string)$respuesta_token, true);
+            if ($http_token<200 || $http_token>=300 || !is_array($token_data) || empty($token_data["access_token"])) {
+                $detalle = is_array($token_data) && !empty($token_data["error_description"]) ? $token_data["error_description"] : ($error_token!=="" ? $error_token : "SUNAT rechazo las credenciales API.");
+                return ["estado"=>0, "nivel"=>"danger", "mensaje"=>"NO SE PUDO OBTENER TOKEN SUNAT", "detalle"=>$detalle];
+            }
+            $token = ["access_token"=>$token_data["access_token"], "vence"=>time()+max(60, (int)(isset($token_data["expires_in"]) ? $token_data["expires_in"] : 3600))];
+            $_SESSION[$clave_sesion] = $token;
+        }
+        $curl = curl_init("https://api.sunat.gob.pe/v1/contribuyente/contribuyentes/".rawurlencode($ruc_consultante)."/validarcomprobante");
+        curl_setopt($curl, CURLOPT_POST, true); curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($datos));
+        curl_setopt($curl, CURLOPT_HTTPHEADER, ["Authorization: Bearer ".$token["access_token"], "Content-Type: application/json", "Accept: application/json"]);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true); curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 10); curl_setopt($curl, CURLOPT_TIMEOUT, 30);
+        $respuesta = curl_exec($curl); $error = curl_error($curl); $http = curl_getinfo($curl, CURLINFO_HTTP_CODE); curl_close($curl);
+        $data = json_decode((string)$respuesta, true);
+        if ($http<200 || $http>=300 || !is_array($data)) {
+            return ["estado"=>0, "nivel"=>"warning", "mensaje"=>"SUNAT NO PUDO PROCESAR LA CONSULTA", "detalle"=>$error!=="" ? $error : (is_array($data) && !empty($data["message"]) ? $data["message"] : "HTTP ".$http)];
+        }
+        if (!empty($data["success"]) && isset($data["data"])) {
+			$info=$data["data"]; $estados=["0"=>"NO EXISTE", "1"=>"ACEPTADO", "2"=>"ANULADO", "3"=>"AUTORIZADO", "4"=>"NO AUTORIZADO"];
+			$estados_ruc=["00"=>"ACTIVO", "01"=>"BAJA PROVISIONAL", "02"=>"BAJA DE OFICIO", "03"=>"SUSPENSION TEMPORAL", "10"=>"BAJA DEFINITIVA", "11"=>"BAJA DE OFICIO", "22"=>"INHABILITADO"];
+			$condiciones=["00"=>"HABIDO", "01"=>"NO HALLADO", "02"=>"NO HALLADO", "03"=>"NO HALLADO", "04"=>"NO HALLADO", "05"=>"NO HALLADO", "06"=>"NO HALLADO", "07"=>"NO HALLADO", "08"=>"NO HALLADO", "09"=>"PENDIENTE"];
+			$codigo=(string)$info["estadoCp"]; $mensaje=isset($estados[$codigo]) ? $estados[$codigo] : "ESTADO ".$codigo;
+			$codigo_ruc=isset($info["estadoRuc"])?(string)$info["estadoRuc"]:""; $codigo_condicion=isset($info["condDomiRuc"])?(string)$info["condDomiRuc"]:"";
+			$estado_ruc=isset($estados_ruc[$codigo_ruc])?$estados_ruc[$codigo_ruc]:$codigo_ruc; $condicion=isset($condiciones[$codigo_condicion])?$condiciones[$codigo_condicion]:$codigo_condicion;
+			$detalle="RUC: ".$estado_ruc." | DOMICILIO: ".$condicion;
+			return ["estado"=>$codigo==="1"?1:0, "nivel"=>$codigo==="1"?"success":($codigo==="0"?"danger":"warning"), "mensaje"=>$mensaje, "detalle"=>$detalle, "estado_cp"=>$mensaje, "estado_ruc"=>$estado_ruc, "condicion"=>$condicion, "observaciones"=>isset($info["observaciones"])?$info["observaciones"]:[]];
+        }
+        return ["estado"=>0, "nivel"=>"warning", "mensaje"=>"SUNAT NO VALIDO EL COMPROBANTE", "detalle"=>!empty($data["message"])?$data["message"]:(!empty($data["errorCode"])?"Codigo: ".$data["errorCode"]:"Sin detalle")];
+    }
+
     protected function phuyu_respuesta_cpe($estado, $mensaje, $alerta = null){
         $data = array("estado" => $estado, "mensaje" => $mensaje);
         if ($alerta !== null) {
@@ -19,10 +62,139 @@ class Sunat extends CI_Controller {
         return isset($partes[1]) ? trim($partes[1]) : (string)$descripcion;
     }
 
+    protected function phuyu_normalizar_error_sunat($mensaje, $respuesta = "", $operacion = ""){
+        $texto = trim((string)$mensaje);
+        $respuesta = trim((string)$respuesta);
+        $base = $respuesta !== "" ? $respuesta : $texto;
+
+        $faultcode = "";
+        $faultstring = "";
+        if ($base !== "" && preg_match('/<faultcode[^>]*>(.*?)<\/faultcode>/is', $base, $m)) {
+            $faultcode = trim(strip_tags($m[1]));
+        }
+        if ($base !== "" && preg_match('/<faultstring[^>]*>(.*?)<\/faultstring>/is', $base, $m)) {
+            $faultstring = trim(html_entity_decode(strip_tags($m[1]), ENT_QUOTES, "UTF-8"));
+        }
+
+        if ($faultstring !== "") {
+            if (strpos($faultcode, "0140") !== false) {
+                return "SUNAT ya tiene este resumen en proceso. Espere 15 minutos y vuelva a consultar/enviar. Detalle SUNAT: ".$faultstring;
+            }
+            return "SUNAT rechazo la solicitud".($faultcode !== "" ? " (".$faultcode.")" : "").": ".$faultstring;
+        }
+
+        if (stripos($texto, "Bad Request") !== false) {
+            return "SUNAT devolvio Bad Request. Normalmente significa que el resumen ya fue recibido y esta en proceso. Espere 15 minutos y vuelva a consultar o enviar; no lo regenere todavia.";
+        }
+
+        return $texto !== "" ? $texto : "SUNAT no devolvio una respuesta interpretable para ".$operacion.".";
+    }
+
+	protected function phuyu_get_certificados_dir(){
+        $candidatos = array(
+            rtrim(FCPATH, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . "sunat" . DIRECTORY_SEPARATOR . "certificados",
+            rtrim(getcwd(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . "sunat" . DIRECTORY_SEPARATOR . "certificados",
+            dirname(APPPATH) . DIRECTORY_SEPARATOR . "sunat" . DIRECTORY_SEPARATOR . "certificados"
+        );
+
+        foreach ($candidatos as $dir) {
+            if (is_dir($dir)) {
+                return $dir;
+            }
+        }
+
+        $dir = $candidatos[0];
+        @mkdir($dir, 0775, true);
+        return $dir;
+    }
+
+    protected function phuyu_recuperar_certificados_faltantes(){
+        $dir = $this->phuyu_get_certificados_dir();
+        $private_key_file = $dir . DIRECTORY_SEPARATOR . "private_key.pem";
+        $public_key_file = $dir . DIRECTORY_SEPARATOR . "public_key.pem";
+
+        if (is_readable($private_key_file) && is_readable($public_key_file)) {
+            return true;
+        }
+
+        $pfx_archivo = null;
+        $pfx_files = glob($dir . DIRECTORY_SEPARATOR . "*.pfx");
+        if (is_array($pfx_files) && !empty($pfx_files)) {
+            $pfx_archivo = $pfx_files[0];
+        }
+
+        if (!empty($_SESSION["phuyu_codempresa"])) {
+            $empresa = $this->db->query("SELECT certificado_pfx, certificado_clave FROM public.webservice WHERE codempresa = ? LIMIT 1", array((int)$_SESSION["phuyu_codempresa"]))->row_array();
+            if (is_array($empresa) && !empty($empresa["certificado_pfx"])) {
+                $ruta_pfx = $dir . DIRECTORY_SEPARATOR . $empresa["certificado_pfx"];
+                if (is_readable($ruta_pfx)) {
+                    $pfx_archivo = $ruta_pfx;
+                }
+            }
+        }
+
+        if (empty($pfx_archivo)) {
+            return false;
+        }
+
+        $password = "";
+        if (!empty($_SESSION["phuyu_codempresa"])) {
+            $empresa = $this->db->query("SELECT certificado_clave FROM public.webservice WHERE codempresa = ? LIMIT 1", array((int)$_SESSION["phuyu_codempresa"]))->row_array();
+            if (is_array($empresa)) {
+                $password = (string)($empresa["certificado_clave"] ?? "");
+            }
+        }
+
+        if ($password === "" && !empty($_POST["certificado_clave"])) {
+            $password = (string)$_POST["certificado_clave"];
+        }
+
+        if ($password === "") {
+            return false;
+        }
+
+        $pkcs12 = @file_get_contents($pfx_archivo);
+        if ($pkcs12 === false) {
+            return false;
+        }
+
+        $certificados = array();
+        $respuesta = openssl_pkcs12_read($pkcs12, $certificados, $password);
+        if (!$respuesta || empty($certificados["cert"]) || empty($certificados["pkey"])) {
+            return false;
+        }
+
+        $tmp_private = $dir . DIRECTORY_SEPARATOR . ".private_key.pem." . getmypid() . ".tmp";
+        $tmp_public = $dir . DIRECTORY_SEPARATOR . ".public_key.pem." . getmypid() . ".tmp";
+
+        if (file_put_contents($tmp_private, $certificados["pkey"], LOCK_EX) === false) {
+            return false;
+        }
+        if (file_put_contents($tmp_public, $certificados["cert"], LOCK_EX) === false) {
+            @unlink($tmp_private);
+            return false;
+        }
+
+        chmod($tmp_private, 0644);
+        chmod($tmp_public, 0644);
+
+        if (!@rename($tmp_private, $private_key_file) || !@rename($tmp_public, $public_key_file)) {
+            @unlink($tmp_private);
+            @unlink($tmp_public);
+            return false;
+        }
+
+        chmod($private_key_file, 0644);
+        chmod($public_key_file, 0644);
+
+        return true;
+    }
+
 	function phuyu_firmarXML($carpeta_phuyu,$phuyu,$respuesta_detallada = false){
+        $this->phuyu_recuperar_certificados_faltantes();
         $xml_file = $carpeta_phuyu.".xml";
-        $private_key_file = "./sunat/certificados/private_key.pem";
-        $public_key_file = "./sunat/certificados/public_key.pem";
+        $private_key_file = $this->phuyu_get_certificados_dir() . DIRECTORY_SEPARATOR . "private_key.pem";
+        $public_key_file = $this->phuyu_get_certificados_dir() . DIRECTORY_SEPARATOR . "public_key.pem";
 
         try {
             if (!is_readable($xml_file)) {
@@ -177,8 +349,10 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
     
     // 1: CREAMOS EL ARCHIVO ZIP CON EL XML DEL COMPROBANTE //
     $this->load->library("zip");
+    $this->zip->clear_data();
     $this->zip->read_file($carpeta_phuyu."/".$archivo_phuyu.".xml");
     $this->zip->archive($carpeta_phuyu."/".$archivo_phuyu.".zip");
+    $this->zip->clear_data();
     chmod($carpeta_phuyu."/".$archivo_phuyu.".zip", 0777);
 
     $webservice = $this->db->query("select * from public.webservice")->result_array();
@@ -208,6 +382,7 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
         if ($result["error"] == "si") {
             $estado = 0;
             $mensaje = $result["mensaje"];
+            $respuesta_sunat = isset($result["respuesta"]) ? $result["respuesta"] : "";
         } else {
             // 3: DESCARGAMOS EL ARCHIVO RESPUESTA DE SUNAT //
             $archivoresponse = fopen($carpeta_phuyu."/R-".$archivo_phuyu.".xml", "w+");
@@ -363,18 +538,24 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
                                 }
                             }
 
-                            if ($responsecode_texto == "0") {
+                            $responsecode_texto = trim((string) $responsecode_texto);
+                            $responsecode_numero = is_numeric($responsecode_texto) ? (int) $responsecode_texto : null;
+
+                            if ($responsecode_texto === "0") {
                                 $estado = 1;
                                 $mensaje = (string) $description_texto;
-                            } elseif ($responsecode_texto >= 100 && $responsecode_texto <= 1999) {
+                            } elseif ($responsecode_numero !== null && $responsecode_numero >= 100 && $responsecode_numero <= 1999) {
                                 $estado = 2;
                                 $mensaje = $this->phuyu_descripcion_cdr($description_texto);
-                            } elseif ($responsecode_texto >= 2000 && $responsecode_texto <= 3999) {
+                            } elseif ($responsecode_numero !== null && $responsecode_numero >= 2000 && $responsecode_numero <= 3999) {
                                 $estado = 3;
                                 $mensaje = $this->phuyu_descripcion_cdr($description_texto);
-                            } else {
+                            } elseif ($responsecode_numero !== null) {
                                 $estado = 4;
                                 $mensaje = $this->phuyu_descripcion_cdr($description_texto);
+                            } else {
+                                $estado = 0;
+                                $mensaje = "NO SE PUDO LEER EL CODIGO DE RESPUESTA DEL CDR";
                             }
 
                             $update = array(
@@ -465,18 +646,24 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
                     }
                 }
 
-                if ($responsecode_texto == "0") {
+                $responsecode_texto = trim((string) $responsecode_texto);
+                $responsecode_numero = is_numeric($responsecode_texto) ? (int) $responsecode_texto : null;
+
+                if ($responsecode_texto === "0") {
                     $estado = 1;
                     $mensaje = (string) $description_texto;
-                } elseif ($responsecode_texto >= 100 && $responsecode_texto <= 1999) {
+                } elseif ($responsecode_numero !== null && $responsecode_numero >= 100 && $responsecode_numero <= 1999) {
                     $estado = 2;
                     $mensaje = $this->phuyu_descripcion_cdr($description_texto);
-                } elseif ($responsecode_texto >= 2000 && $responsecode_texto <= 3999) {
+                } elseif ($responsecode_numero !== null && $responsecode_numero >= 2000 && $responsecode_numero <= 3999) {
                     $estado = 3;
                     $mensaje = $this->phuyu_descripcion_cdr($description_texto);
-                } else {
+                } elseif ($responsecode_numero !== null) {
                     $estado = 4;
                     $mensaje = $this->phuyu_descripcion_cdr($description_texto);
+                } else {
+                    $estado = 0;
+                    $mensaje = "NO SE PUDO LEER EL CODIGO DE RESPUESTA DEL CDR";
                 }
 
                 $update = array(
@@ -507,6 +694,9 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
 
     $data["estado"] = $estado;
     $data["mensaje"] = $mensaje;
+    if (isset($respuesta_sunat) && $respuesta_sunat !== "") {
+        $data["respuesta"] = $respuesta_sunat;
+    }
     return $data;
 }
 
@@ -515,8 +705,10 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
         // 1: CREAMOS EL ARCHIVO ZIP CON EL XML DEL COMPROBANTE //
 
         $this->load->library("zip");
+        $this->zip->clear_data();
         $this->zip->read_file($carpeta_phuyu."/".$archivo_phuyu.".xml");
         $this->zip->archive($carpeta_phuyu."/".$archivo_phuyu.".zip");
+        $this->zip->clear_data();
         chmod($carpeta_phuyu."/".$archivo_phuyu.".zip", 0777);
 
         $webservice = $this->db->query("select * from public.webservice")->result_array();
@@ -672,14 +864,19 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
                         }
                     }
 
-                    if($responsecode_texto == 0){    
+                    $responsecode_texto = trim((string) $responsecode_texto);
+                    $responsecode_numero = is_numeric($responsecode_texto) ? (int) $responsecode_texto : null;
+
+                    if($responsecode_texto === "0"){    
                         $estado = 1; $mensaje =  (string)($description_texto);
-                    }elseif($responsecode_texto >= 100 and $responsecode_texto<=1999){
+                    }elseif($responsecode_numero !== null and $responsecode_numero >= 100 and $responsecode_numero<=1999){
                         $estado = 2; $mensaje = $this->phuyu_descripcion_cdr($description_texto);
-                    }elseif($responsecode_texto >= 2000 and $responsecode_texto<=3999){
+                    }elseif($responsecode_numero !== null and $responsecode_numero >= 2000 and $responsecode_numero<=3999){
                         $estado = 3; $mensaje = $this->phuyu_descripcion_cdr($description_texto);
-                    }else{
+                    }elseif($responsecode_numero !== null){
                         $estado = 4; $mensaje = $this->phuyu_descripcion_cdr($description_texto);
+                    }else{
+                        $estado = 0; $mensaje = "NO SE PUDO LEER EL CODIGO DE RESPUESTA DEL CDR";
                     }
 
                     $update = array(
@@ -754,9 +951,13 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
             // 4: LEEMOS EL ARCHIVO XML //
             $xml = simplexml_load_file($carpeta_phuyu."/R-".$ticket.".xml"); 
             $response = "";
+            $status_code = "";
             if ($xml !== false) {
                 foreach ($xml->xpath('//content') as $item){
                     $response = (string)$item;
+                }
+                foreach ($xml->xpath('//statusCode') as $item){
+                    $status_code = trim((string)$item);
                 }
             }
 //print_r($response);exit;
@@ -796,7 +997,11 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
                 exit;*/
 
                 // 7: LEEMOS EL CDR Y ACTUALIZAMOS EN LA BASE DE DATOS EN RESUMENES //
-                $xml_respuesta = simplexml_load_file($carpeta_phuyu."/R-".$nombre_xml.'.xml');
+                $archivo_cdr = $carpeta_phuyu."/R-".$nombre_xml.'.xml';
+                if (!is_readable($archivo_cdr)) {
+                    return ["estado" => 0, "mensaje" => "SUNAT devolvio CDR, pero no se encontro el XML esperado: R-".$nombre_xml.".xml"];
+                }
+                $xml_respuesta = simplexml_load_file($archivo_cdr);
                 $responsecode_texto = "";
                 $description_texto = "";
                 if ($xml_respuesta !== false) {
@@ -808,14 +1013,19 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
                     }
                 }
 
-                if($responsecode_texto == 0){    
+                $responsecode_texto = trim((string) $responsecode_texto);
+                $responsecode_numero = is_numeric($responsecode_texto) ? (int) $responsecode_texto : null;
+
+                if($responsecode_texto === "0"){    
                     $estado = 1; $mensaje =  (string)($description_texto);
-                }elseif($responsecode_texto >= 100 and $responsecode_texto<=1999){
+                }elseif($responsecode_numero !== null and $responsecode_numero >= 100 and $responsecode_numero<=1999){
                     $estado = 2; $mensaje = $this->phuyu_descripcion_cdr($description_texto);
-                }elseif($responsecode_texto >= 2000 and $responsecode_texto<=3999){
+                }elseif($responsecode_numero !== null and $responsecode_numero >= 2000 and $responsecode_numero<=3999){
                     $estado = 3; $mensaje = $this->phuyu_descripcion_cdr($description_texto);
-                }else{
+                }elseif($responsecode_numero !== null){
                     $estado = 4; $mensaje = $this->phuyu_descripcion_cdr($description_texto);
+                }else{
+                    $estado = 0; $mensaje = "NO SE PUDO LEER EL CODIGO DE RESPUESTA DEL CDR";
                 }
 
                 $update = array(
@@ -878,7 +1088,12 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
                 }
                 rmdir($carpeta_phuyu);
             }else{
-                $estado = 0; $mensaje = "NO HAY RESPUESTA DE LA SUNAT !!! INTENTALO MAS TARDE";
+                $estado = 0;
+                if ($status_code === "0098") {
+                    $mensaje = "Ticket ".$ticket." en proceso SUNAT (0098). Pendiente consultar CDR; no reenviar XML.";
+                } else {
+                    $mensaje = "NO HAY RESPUESTA DE LA SUNAT !!! INTENTALO MAS TARDE";
+                }
             }
         }
 
@@ -977,11 +1192,8 @@ function phuyu_enviarSUNAT($send, $carpeta_phuyu, $archivo_phuyu, $credenciales,
             return array("error" => "no", "mensaje" => $client->__getLastResponse());
         }catch(Exception $e){
             $respuesta = isset($client) ? trim((string)$client->__getLastResponse()) : "";
-            $mensaje = trim($e->getMessage());
-            if ($respuesta != "") {
-                $mensaje .= "\n".$respuesta;
-            }
-            return array("error" => "si", "mensaje" => $mensaje);
+            $mensaje = $this->phuyu_normalizar_error_sunat($e->getMessage(), $respuesta, $callFunction);
+            return array("error" => "si", "mensaje" => $mensaje, "respuesta" => $respuesta);
         }
     }
 

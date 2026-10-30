@@ -27,7 +27,13 @@ class Recepcion extends CI_Controller {
 				$ambientes = $this->Hotel_model->ambientes();
 				$caracteristicas = $this->Hotel_model->caracteristicas();
 				$tipodocumentos = $this->db->query("select * from public.documentotipos where estado=1 order by coddocumentotipo")->result_array();
-				$this->load->view("hotel/recepcion/index", compact("comprobantes", "tipopagos", "vendedores", "ambientes", "caracteristicas", "tipodocumentos"));
+				$sucursal = $this->db->query(
+					"select coalesce(codcomprobantetipo,12) as codcomprobantetipo, seriecomprobante
+					from public.sucursales
+					where codsucursal=?",
+					[(int)$_SESSION["phuyu_codsucursal"]]
+				)->row_array();
+				$this->load->view("hotel/recepcion/index", compact("comprobantes", "tipopagos", "vendedores", "ambientes", "caracteristicas", "tipodocumentos", "sucursal"));
 			}else{
 				$this->load->view("phuyu/505");
 			}

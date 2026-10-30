@@ -47,9 +47,323 @@
     padding-left: .75rem;
     padding-right: .75rem;
   }
+
+  #phuyu_operacion.phuyu-venta-form .phuyu-quick-product {
+    position: relative;
+  }
+
+  #phuyu_operacion.phuyu-venta-form .phuyu-product-select2.select2-container {
+    width: 100% !important;
+  }
+
+  #phuyu_operacion.phuyu-venta-form .phuyu-product-select2 .select2-selection--single {
+    display: flex !important;
+    align-items: center !important;
+    min-height: 46px !important;
+    border: 1px solid rgba(64, 81, 137, .18) !important;
+    border-radius: .75rem !important;
+    background: #fff !important;
+  }
+
+  #phuyu_operacion.phuyu-venta-form .phuyu-product-select2 .select2-selection__rendered {
+    line-height: 46px !important;
+    padding-left: .9rem !important;
+    font-weight: 700 !important;
+    color: #343a40 !important;
+  }
+
+  #phuyu_operacion.phuyu-venta-form .phuyu-product-select2 .select2-selection__arrow {
+    height: 46px !important;
+    right: .4rem !important;
+  }
+
+  #phuyu_operacion .select2-dropdown {
+    border-color: rgba(64, 81, 137, .16);
+    border-radius: .75rem;
+    overflow: hidden;
+    box-shadow: 0 16px 34px rgba(15, 23, 42, .14);
+  }
+
+  #phuyu_operacion .select2-results__option {
+    padding: .45rem .6rem;
+    border-left: 4px solid transparent;
+    transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
+  }
+
+  #phuyu_operacion .select2-results__option--highlighted[aria-selected] {
+    background: linear-gradient(90deg, rgba(94, 76, 180, .18), rgba(64, 81, 137, .08));
+    border-left-color: #5e4cb4;
+    box-shadow: inset 0 0 0 1px rgba(94, 76, 180, .22), 0 5px 14px rgba(64, 81, 137, .08);
+  }
+
+  #phuyu_operacion .select2-results__option--highlighted[aria-selected] .phuyu-product-result-name,
+  #phuyu_operacion .select2-results__option--highlighted[aria-selected] .phuyu-product-result-meta {
+    color: #2f285f;
+  }
+
+  #phuyu_operacion .select2-results__option--highlighted[aria-selected] .phuyu-product-result-name {
+    color: #21184f;
+  }
+
+  #phuyu_operacion .select2-results__option--highlighted[aria-selected] .badge {
+    background: rgba(94, 76, 180, .12) !important;
+    border-color: rgba(94, 76, 180, .22) !important;
+    color: #3b2f86 !important;
+  }
+
+  #phuyu_operacion .select2-results__option--highlighted[aria-selected] .phuyu-product-result-stock.stock-ok {
+    color: #087f6f;
+  }
+
+  #phuyu_operacion .select2-results__option--highlighted[aria-selected] .phuyu-product-result-stock.stock-low {
+    color: #9a5b12;
+  }
+
+  #phuyu_operacion .select2-results__option--highlighted[aria-selected] .phuyu-product-result-stock.stock-empty {
+    color: #d94d35;
+  }
+
+  .phuyu-product-result {
+    display: flex;
+    gap: .75rem;
+    align-items: center;
+    justify-content: space-between;
+    padding: .35rem .15rem;
+  }
+
+  .phuyu-product-result-name {
+    font-size: .86rem;
+    font-weight: 800;
+    color: #212529;
+  }
+
+  .phuyu-product-result-meta {
+    font-size: .72rem;
+    color: #74788d;
+  }
+
+  .phuyu-product-result-stock {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    font-weight: 800;
+  }
+
+  .phuyu-product-result-stock.stock-ok {
+    color: #0ab39c;
+  }
+
+  .phuyu-product-result-stock.stock-low {
+    color: #b7791f;
+  }
+
+  .phuyu-product-result-stock.stock-empty {
+    color: #f06548;
+  }
+
+  #phuyu_operacion .phuyu-quick-feedback {
+    position: fixed;
+    top: 88px;
+    right: 22px;
+    z-index: 2050;
+    min-width: 260px;
+    max-width: min(420px, calc(100vw - 32px));
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .7rem .85rem;
+    border: 1px solid rgba(10, 179, 156, .18);
+    border-radius: .7rem;
+    background: #effcf8;
+    color: #087f6f;
+    font-size: .82rem;
+    font-weight: 800;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, .16);
+  }
+
+  #phuyu_operacion .phuyu-quick-feedback i {
+    font-size: 1.05rem;
+    flex: 0 0 auto;
+  }
+
+  #phuyu_operacion .table tbody tr.phuyu-row-added > td {
+    animation: phuyu-row-added 1.2s ease-out;
+  }
+
+  @keyframes phuyu-row-added {
+    0% {
+      box-shadow: inset 4px 0 0 #0ab39c, inset 0 0 0 9999px rgba(10, 179, 156, .22);
+    }
+    55% {
+      box-shadow: inset 4px 0 0 rgba(10, 179, 156, .7), inset 0 0 0 9999px rgba(10, 179, 156, .1);
+    }
+    100% {
+      box-shadow: inset 4px 0 0 transparent, inset 0 0 0 9999px transparent;
+    }
+  }
+
+  @media (max-width: 575.98px) {
+    #phuyu_operacion .phuyu-quick-feedback {
+      top: 76px;
+      left: 12px;
+      right: 12px;
+      min-width: 0;
+      max-width: none;
+    }
+
+    .phuyu-product-result {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: .35rem;
+    }
+
+    .phuyu-product-result-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .35rem;
+    }
+  }
+
+  #modal_series_rapidas .modal-dialog {
+    max-width: 760px;
+  }
+
+  #modal_series_rapidas .modal-content {
+    overflow: hidden;
+    border: 0;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, .22);
+  }
+
+  #modal_series_rapidas .modal-header {
+    padding: .75rem 1rem;
+    background: linear-gradient(135deg, #2996d6, #3da9e6) !important;
+  }
+
+  #modal_series_rapidas .modal-title {
+    display: flex;
+    align-items: center;
+    font-size: 1rem;
+  }
+
+  #modal_series_rapidas .modal-body {
+    padding: 1rem;
+  }
+
+  #modal_series_rapidas .phuyu-series-search {
+    min-height: 42px;
+    border-radius: .65rem;
+    border-color: rgba(64, 81, 137, .18);
+  }
+
+  #modal_series_rapidas .phuyu-series-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .65rem;
+    max-height: min(55vh, 390px);
+    padding: .1rem .15rem .15rem;
+    overflow-y: auto;
+  }
+
+  #modal_series_rapidas .phuyu-serie-option {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    width: 100%;
+    min-height: 68px;
+    padding: .7rem .8rem;
+    border: 1px solid rgba(64, 81, 137, .12);
+    border-radius: .7rem;
+    background: #fff;
+    color: #273142;
+    text-align: left;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, .06);
+    transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease, background .15s ease;
+  }
+
+  #modal_series_rapidas .phuyu-serie-option:hover,
+  #modal_series_rapidas .phuyu-serie-option:focus-visible {
+    transform: translateY(-1px);
+    border-color: rgba(10, 179, 156, .5);
+    background: #f3fffc;
+    box-shadow: 0 7px 18px rgba(10, 179, 156, .13);
+    outline: none;
+  }
+
+  #modal_series_rapidas .phuyu-serie-icon {
+    display: inline-flex;
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(10, 179, 156, .12);
+    color: #0a9b88;
+    font-size: 1rem;
+  }
+
+  #modal_series_rapidas .phuyu-serie-info {
+    min-width: 0;
+  }
+
+  #modal_series_rapidas .phuyu-serie-code {
+    display: block;
+    overflow-wrap: anywhere;
+    font-size: .86rem;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  #modal_series_rapidas .phuyu-serie-status {
+    display: block;
+    margin-top: .18rem;
+    color: #0a9b88;
+    font-size: .66rem;
+    font-weight: 800;
+    letter-spacing: .04em;
+  }
+
+  @media (max-width: 767.98px) {
+    #modal_series_rapidas .modal-dialog {
+      max-width: none;
+      margin: .75rem;
+    }
+
+    #modal_series_rapidas .phuyu-series-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      max-height: 58vh;
+    }
+  }
+
+  @media (max-width: 479.98px) {
+    #modal_series_rapidas .modal-dialog {
+      margin: .5rem;
+    }
+
+    #modal_series_rapidas .modal-header,
+    #modal_series_rapidas .modal-body {
+      padding: .75rem;
+    }
+
+    #modal_series_rapidas .phuyu-series-list {
+      grid-template-columns: 1fr;
+      gap: .5rem;
+      max-height: 62vh;
+    }
+
+    #modal_series_rapidas .phuyu-serie-option {
+      min-height: 58px;
+      padding: .6rem .7rem;
+    }
+  }
 </style>
 
 <div id="phuyu_operacion" class="phuyu-venta-form phuyu-velzon-form phuyu-ventas-velzon">
+  <div id="phuyu_producto_feedback" class="phuyu-quick-feedback" style="display: none;">
+    <i class="bi bi-check2-circle"></i>
+    <span></span>
+  </div>
+
   <div class="phuyu-page-title">
     <span class="phuyu-page-icon"><i class="bi bi-receipt"></i></span>
     <div>
@@ -166,6 +480,13 @@
                 <label class="form-label">Direccion cliente</label>
                 <input type="text" class="form-control" id="direccion" v-model.trim="campos.direccion" autocomplete="off" maxlength="250" placeholder="Direccion del cliente" required>
               </div>
+
+              <div class="col-12">
+                <label class="form-label">Buscar producto directo</label>
+                <div class="phuyu-quick-product">
+                  <select id="producto_rapido_select" class="form-select" style="width: 100%;"></select>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -210,7 +531,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(dato,index) in detalle" :key="index">
+                    <tr v-for="(dato,index) in detalle" :key="index" v-bind:class="{'phuyu-row-added': dato.phuyu_agregado}">
                       <td>
                         <button type="button" class="btn btn-primary btn-xs w-100" v-on:click="phuyu_itemdetalle(index,dato)">
                           <b>+ MAS</b>
@@ -232,7 +553,7 @@
                       </td>
                       <td>
                         <input type="number" step="0.0001" class="form-control form-control-sm number" v-if="dato.codafectacionigv==21" v-model.number="dato.precio" min="0" readonly>
-                        <input type="number" step="0.0001" class="form-control form-control-sm number" v-if="dato.codafectacionigv!=21" v-model.number="dato.precio" v-on:keyup="phuyu_calcular(dato)" min="0.001" required v-bind:disabled="dato.porcdescuento==100">
+                        <input type="number" step="0.0001" class="form-control form-control-sm number" v-if="dato.codafectacionigv!=21" v-model.number="dato.precio" v-on:keyup="phuyu_calcular(dato)" min="0.001" required v-bind:disabled="!puede_modificar_precio || dato.porcdescuento==100" v-bind:title="!puede_modificar_precio ? 'Solo administrador puede modificar precios' : ''">
                       </td>
                       <td>
                         <input type="number" class="form-control form-control-sm number" v-model.number="dato.igv" min="0" readonly>
@@ -241,11 +562,11 @@
                         <input type="number" class="form-control form-control-sm number" v-model.number="dato.icbper" min="0" readonly>
                       </td>
                       <td v-if="dato.codafectacionigv==21">
-                        <input type="number" step="0.01" class="form-control form-control-sm number" v-model.number="dato.subtotal">
+                        <input type="number" step="0.01" class="form-control form-control-sm number" v-model.number="dato.subtotal" v-bind:disabled="!puede_modificar_precio">
                       </td>
                       <td v-if="dato.codafectacionigv!=21">
                         <input type="number" step="0.01" class="form-control form-control-sm number" v-if="dato.calcular==0" v-model.number="dato.subtotal" readonly>
-                        <input type="number" step="0.01" class="form-control form-control-sm number" v-if="dato.calcular!=0" v-model.number="dato.subtotal" v-on:keyup="phuyu_subtotal(dato)" required v-bind:disabled="dato.porcdescuento==100">
+                        <input type="number" step="0.01" class="form-control form-control-sm number" v-if="dato.calcular!=0" v-model.number="dato.subtotal" v-on:keyup="phuyu_subtotal(dato)" required v-bind:disabled="!puede_modificar_precio || dato.porcdescuento==100">
                       </td>
                       <td>
                         <button type="button" class="btn btn-danger btn-xs w-100" v-on:click="phuyu_deleteitem(index,dato)">
@@ -353,25 +674,25 @@
           <div class="row form-group">
             <div class="col-md-4 col-xs-12">
               <label>PRECIO BRUTO</label>
-              <input type="number" class="form-control number" v-model.number="item.preciobruto" v-on:keyup="phuyu_itemcalcular(item,0)" v-bind:disabled="item.codafectacionigv==21">
+              <input type="number" class="form-control number" v-model.number="item.preciobruto" v-on:keyup="phuyu_itemcalcular(item,0)" v-bind:disabled="item.codafectacionigv==21 || !puede_modificar_precio">
             </div>
             <div class="col-md-4 col-xs-12">
               <label>DESCUENTO (S/.)</label>
-              <input type="number" class="form-control number" v-model.number="item.descuento" v-on:keyup="phuyu_itemcalcular(item,-1)" v-bind:disabled="item.codafectacionigv==21">
+              <input type="number" class="form-control number" v-model.number="item.descuento" v-on:keyup="phuyu_itemcalcular(item,-1)" v-bind:disabled="item.codafectacionigv==21 || !puede_modificar_precio">
             </div>
             <div class="col-md-4 col-xs-12">
               <label>DESCUENTO (%)</label>
-              <input type="number" class="form-control number" v-model.number="item.porcdescuento" v-on:keyup="phuyu_itemcalcular(item,-2)" v-bind:disabled="item.codafectacionigv==21">
+              <input type="number" class="form-control number" v-model.number="item.porcdescuento" v-on:keyup="phuyu_itemcalcular(item,-2)" v-bind:disabled="item.codafectacionigv==21 || !puede_modificar_precio">
             </div>
           </div>
           <div class="row form-group">
             <div class="col-md-4">
               <label>PRECIO SIN I.G.V.</label>
-              <input type="number" class="form-control number" v-model.number="item.preciosinigv" v-on:keyup="phuyu_itemcalcular(item,1)" v-bind:disabled="item.codafectacionigv==21">
+              <input type="number" class="form-control number" v-model.number="item.preciosinigv" v-on:keyup="phuyu_itemcalcular(item,1)" v-bind:disabled="item.codafectacionigv==21 || !puede_modificar_precio">
             </div>
             <div class="col-md-3">
               <label>PRECIO UNITARIO</label>
-              <input type="number" class="form-control number" v-model.number="item.precio" v-on:keyup="phuyu_itemcalcular(item,2)" v-bind:disabled="item.codafectacionigv==21">
+              <input type="number" class="form-control number" v-model.number="item.precio" v-on:keyup="phuyu_itemcalcular(item,2)" v-bind:disabled="item.codafectacionigv==21 || !puede_modificar_precio">
             </div>
             <div class="col-md-3">
               <label>TIPO AFECTACION</label>
@@ -417,6 +738,32 @@
           <h4 class="modal-title"></h4>
         </div>
         <div class="modal-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modal_series_rapidas" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content rounded-4">
+        <div class="modal-header bg-info text-white">
+          <h5 class="modal-title"><i class="bi bi-upc-scan me-2"></i><strong>Seleccionar serie</strong></h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <input type="text" class="form-control phuyu-series-search mb-3" v-model.trim="serie_rapida_buscar" placeholder="Buscar serie..." autocomplete="off">
+          <div class="phuyu-series-list" v-if="series_rapidas_filtradas.length > 0">
+            <button type="button" class="phuyu-serie-option" v-for="serieRapida in series_rapidas_filtradas" :key="serieRapida.id_serie" v-on:click="phuyu_seleccionar_serie_rapida(serieRapida)">
+              <span class="phuyu-serie-icon"><i class="bi bi-check-lg"></i></span>
+              <span class="phuyu-serie-info">
+                <span class="phuyu-serie-code">{{ serieRapida.serie_codigo }}</span>
+                <small class="phuyu-serie-status">DISPONIBLE</small>
+              </span>
+            </button>
+          </div>
+          <div class="text-center text-muted py-4" v-else>
+            No hay series disponibles para este producto.
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -474,7 +821,21 @@
               </div>
               <div class="col-6" v-if="inicialActivado">
                 <label>Inicial</label>
-                <input type="number" step="0.01" class="form-control number" min="0" v-model.number="campos.inicial" @input="calcular_credito()" placeholder="S/. 0.00">
+                <input type="number" step="0.01" class="form-control number" min="0" v-model.number="campos.inicial" @input="onInicialInput()" placeholder="S/. 0.00">
+              </div>
+            </div>
+            <div class="row form-group" v-if="campos.condicionpago==2 && inicialActivado && campos.inicial>0">
+              <div class="col-md-6 col-xs-12">
+                <label>TIPO PAGO INICIAL</label>
+                <select class="form-select" v-model="pagos.inicial_codtipopago" v-on:change="phuyu_tipopago_inicial()" required>
+                  <?php foreach ($tipopagos as $value) { ?>
+                    <option value="<?php echo $value['codtipopago']; ?>"><?php echo $value['descripcion']; ?></option>
+                  <?php } ?>
+                </select>
+              </div>
+              <div class="col-md-6 col-xs-12">
+                <label>NRO OPERACION / VOUCHER</label>
+                <input type="text" class="form-control" v-model.trim="pagos.inicial_nrodocbanco" v-bind:readonly="pagos.inicial_codtipopago==1" v-bind:required="pagos.inicial_codtipopago!=1" autocomplete="off" placeholder="Operacion, voucher, referencia">
               </div>
             </div>
 
@@ -535,7 +896,7 @@
                       <td><input type="date" class="form-control" v-model="dato.fechavence" @change="recalcular_fechas_desde(index)"></td>
                       <td><input type="text" class="form-control" v-model="dato.nroletra" maxlength="10"></td>
                       <td><input type="text" class="form-control" v-model="dato.nrounicodepago"></td>
-                      <td><input type="number" class="form-control" v-model="dato.importe" step="0.001" v-on:keyup="calcular_credito()"></td>
+                      <td><input type="number" class="form-control" v-model.number="dato.importe" step="0.01" min="0.01" required :readonly="!inicialActivado && cuotas.length === 1" @input="calcular_credito()"></td>
                       <td><input type="number" disabled="disabled" class="form-control" v-model="dato.interes"></td>
                       <td>{{ dato.total }}</td>
                     </tr>
@@ -600,8 +961,14 @@
   </div>
 </div>
 
+<script>
+  var phuyu_puede_modificar_precio = <?php
+    $puedePrecio = ((int)($_SESSION['phuyu_editar_pventa'] ?? 0) === 1) ? 1 : 0;
+    echo $puedePrecio;
+  ?>;
+</script>
 <!-- Scripts: se mantienen exactamente igual -->
-<script src="<?php echo base_url(); ?>phuyu/phuyu_ventas/nuevo.js"></script>
+<script src="<?php echo base_url(); ?>phuyu/phuyu_ventas/nuevo.js?v=<?php echo filemtime(FCPATH . 'phuyu/phuyu_ventas/nuevo.js'); ?>"></script>
 <script src="<?php echo base_url(); ?>phuyu/phuyu_personas_2.js"></script>
 <script>
   var pantalla = jQuery(document).height();

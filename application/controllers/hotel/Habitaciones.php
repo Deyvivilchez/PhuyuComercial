@@ -33,7 +33,9 @@ class Habitaciones extends CI_Controller {
 				left join hotel.ambientes a on(a.codambiente=h.codambiente)
 				where h.codsucursal=? and h.estado=1
 					and (upper(h.numero) like upper(?) or upper(ht.descripcion) like upper(?) or upper(coalesce(a.descripcion,'')) like upper(?))
-				order by coalesce(a.descripcion, h.piso), h.numero offset ? limit ?",
+				order by coalesce(a.descripcion, h.piso),
+					nullif(regexp_replace(h.numero::text, '\\D', '', 'g'), '')::int nulls last,
+					h.numero offset ? limit ?",
 				[(int)$_SESSION["phuyu_codsucursal"], "%".$buscar."%", "%".$buscar."%", "%".$buscar."%", $offset, $limit]
 			)->result_array();
 

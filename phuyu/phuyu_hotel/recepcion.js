@@ -56,7 +56,10 @@ var phuyu_datos = new Vue({
 			direccion: "",
 			fecha_checkin: phuyu_fecha_local(0),
 			fecha_checkout: phuyu_fecha_local(1),
+			precio_base: 0,
 			precio_noche: 0,
+			total_estadia: 0,
+			noches: 1,
 			codempleado: 0,
 			observacion: ""
 		},
@@ -91,12 +94,21 @@ var phuyu_datos = new Vue({
 				codempleado: 0,
 				codmoneda: 1,
 				tipocambio: 1,
+				codlote: 0,
 				creditoprogramado: 1,
 				nrodias: 30,
 				nrocuotas: 1,
 				codcreditoconcepto: 3,
 				tasainteres: 0,
-				totalcredito: 0
+				totalcredito: 0,
+				codpersona_facturacion: 0
+			},
+			facturacion: {
+				codpersona: 0,
+				cliente: "",
+				documento: "",
+				coddocumentotipo: 0,
+				direccion: ""
 			},
 			pagos: {
 				codtipopago_efectivo: 1,
@@ -107,9 +119,24 @@ var phuyu_datos = new Vue({
 				nrovoucher: ""
 			},
 			cuotas: []
+		},
+		cancelacion: {
+			motivo: "",
+			procesando: false,
+			confirmar_pagos: 0
 		}
 	},
 	methods: {
+		modal_bootstrap: function(selector, accion){
+			var elemento = document.querySelector(selector);
+			if (window.bootstrap && elemento) {
+				bootstrap.Modal.getOrCreateInstance(elemento)[accion]();
+				return;
+			}
+			if (window.jQuery && $(selector).modal) {
+				$(selector).modal(accion);
+			}
+		},
 		cargar_habitaciones: function(){
 			this.$http.post(url+"hotel/recepcion/habitaciones", {codambiente:this.codambiente, codcaracteristica:this.codcaracteristica}).then(function(data){
 				this.habitaciones = data.body;
@@ -135,7 +162,8 @@ var phuyu_datos = new Vue({
 			}
 			this.habitacionActiva = habitacion;
 			this.checkin.codhabitacion = habitacion.codhabitacion;
-			this.checkin.precio_noche = Number(habitacion.preciobase);
+			this.checkin.precio_base = Number(habitacion.preciobase || 0);
+			this.recalcular_checkin_total();
 			this.limpiar_cliente_checkin();
 			this.estadia = {};
 			this.productos = [];
@@ -148,6 +176,18 @@ var phuyu_datos = new Vue({
 					this.iniciar_select_cliente();
 				});
 			}
+		},
+		noches_checkin: function(){
+			var noches = this.diff_dias(this.checkin.fecha_checkin, this.checkin.fecha_checkout);
+			return noches > 0 ? noches : 1;
+		},
+		recalcular_checkin_total: function(){
+			var noches = this.noches_checkin();
+			var precioBase = this.toNum(this.checkin.precio_base);
+			var total = Number((precioBase * noches).toFixed(2));
+			this.checkin.noches = noches;
+			this.checkin.total_estadia = total;
+			this.checkin.precio_noche = precioBase;
 		},
 		iniciar_cambio_habitacion: function(){
 			if (!this.habitacionActiva || !this.estadia.estadia) {
@@ -302,7 +342,7 @@ var phuyu_datos = new Vue({
 		},
 		abrir_cliente_nuevo: function(){
 			this.limpiar_cliente_nuevo();
-			$("#modal_cliente_hotel").modal("show");
+			this.modal_bootstrap("#modal_cliente_hotel", "show");
 		},
 		cambiar_tipo_documento_cliente: function(){
 			var tipo = parseInt(this.clienteNuevo.coddocumentotipo || 0);
@@ -395,7 +435,7 @@ var phuyu_datos = new Vue({
 				var cliente = socio[0];
 				$("#codpersona_hotel").empty().append(new Option(cliente.razonsocial, cliente.codpersona, true, true)).trigger("change");
 				this.phuyu_infocliente(cliente.codpersona);
-				$("#modal_cliente_hotel").modal("hide");
+				this.modal_bootstrap("#modal_cliente_hotel", "hide");
 				phuyu_sistema.phuyu_noti("CLIENTE REGISTRADO", cliente.razonsocial, "success");
 			}, function(){
 				this.guardandoCliente = false;
@@ -407,7 +447,17 @@ var phuyu_datos = new Vue({
 				phuyu_sistema.phuyu_noti("SELECCIONE UN CLIENTE", "PARA REGISTRAR CHECK-IN", "error");
 				return;
 			}
-			this.$http.post(url+"hotel/estadias/checkin", this.checkin).then(function(data){
+			this.recalcular_checkin_total();
+			if (this.toNum(this.checkin.precio_base) <= 0) {
+				phuyu_sistema.phuyu_noti("INGRESE PRECIO POR NOCHE", "", "error");
+				return;
+			}
+			this.$http.post(url+"hotel/estadias/checkin", Object.assign({}, this.checkin, {
+				precio_noche: this.checkin.precio_base,
+				precio_base: this.checkin.precio_base,
+				total_estadia: this.checkin.total_estadia,
+				noches: this.checkin.noches
+			})).then(function(data){
 				if (data.body.estado == 1) {
 					phuyu_sistema.phuyu_noti("CHECK-IN REGISTRADO", "ESTADIA 000"+data.body.codestadia, "success");
 					this.cargar_habitaciones();
@@ -422,6 +472,59 @@ var phuyu_datos = new Vue({
 			this.$http.post(url+"hotel/consumos/productos", {buscar:this.buscarProducto}).then(function(data){
 				this.productos = data.body;
 			});
+		},
+		es_factura: function(codcomprobantetipo){
+			return [10, 25].indexOf(parseInt(codcomprobantetipo || 0)) !== -1;
+		},
+		es_boleta: function(codcomprobantetipo){
+			return [12, 26].indexOf(parseInt(codcomprobantetipo || 0)) !== -1;
+		},
+		es_cliente_varios: function(codpersona){
+			return parseInt(codpersona || 0) == 2;
+		},
+		toNum: function(valor){
+			var numero = parseFloat(valor);
+			return isNaN(numero) ? 0 : numero;
+		},
+		fecha_hoy: function(){
+			return phuyu_fecha_local(0);
+		},
+		parse_fecha: function(valor){
+			if (!valor) { return null; }
+			var partes = String(valor).split("-");
+			if (partes.length !== 3) { return null; }
+			return new Date(parseInt(partes[0], 10), parseInt(partes[1], 10) - 1, parseInt(partes[2], 10));
+		},
+		diff_dias: function(desde, hasta){
+			var fechaDesde = this.parse_fecha(desde);
+			var fechaHasta = this.parse_fecha(hasta);
+			if (!fechaDesde || !fechaHasta) { return 0; }
+			fechaDesde.setHours(0, 0, 0, 0);
+			fechaHasta.setHours(0, 0, 0, 0);
+			return Math.max(0, Math.floor((fechaHasta.getTime() - fechaDesde.getTime()) / 86400000));
+		},
+		clase_stock: function(stock){
+			var cantidad = Number(stock || 0);
+			if (cantidad <= 0) { return "stock-empty"; }
+			if (cantidad <= 5) { return "stock-low"; }
+			return "stock-ok";
+		},
+		texto_stock: function(stock){
+			var cantidad = Number(stock || 0);
+			if (cantidad <= 0) { return "Sin stock"; }
+			if (cantidad <= 5) { return "Stock bajo"; }
+			return "Disponible";
+		},
+		producto_sin_stock: function(producto){
+			if (!producto) { return false; }
+			return this.controlaStockSistema == 1 && parseInt(producto.controlstock || 0) == 1 && Number(producto.stock || 0) <= 0;
+		},
+		clase_alerta_stock: function(producto){
+			if (!producto || this.controlaStockSistema != 1 || parseInt(producto.controlstock || 0) != 1) { return ""; }
+			var cantidad = Number(producto.stock || 0);
+			if (cantidad <= 0) { return "hotel-stock-alert"; }
+			if (cantidad <= 5) { return "hotel-stock-warn"; }
+			return "";
 		},
 		seleccionar_producto: function(producto){
 			if (!producto.codproducto && producto.id) {
@@ -589,9 +692,12 @@ var phuyu_datos = new Vue({
 				templateResult: function(result){
 					if (result.loading) { return result.text; }
 					var badges = "";
-					if (vm.controlaStockSistema == 1 && parseInt(result.controlstock || 0) == 1) { badges += " - Stock " + Number(result.stock || 0).toFixed(2); }
-					if (parseInt(result.controlarseries || 0) == 1) { badges += " - Series"; }
-					return "<div><strong>"+(result.descripcion || result.text || "")+"</strong><div class='text-muted small'>"+(result.unidad || "")+" - S/. "+Number(result.precio || 0).toFixed(2)+badges+"</div></div>";
+					if (vm.controlaStockSistema == 1 && parseInt(result.controlstock || 0) == 1) {
+						var stockClase = vm.clase_stock(result.stock);
+						badges += " <span class='hotel-stock-pill "+stockClase+"'>" + vm.texto_stock(result.stock) + " · Stock " + Number(result.stock || 0).toFixed(2) + "</span>";
+					}
+					if (parseInt(result.controlarseries || 0) == 1) { badges += " <span class='badge bg-info-subtle text-info'>Series</span>"; }
+					return "<div><strong>"+(result.descripcion || result.text || "")+"</strong><div class='text-muted small'>"+(result.unidad || "")+" - S/. "+Number(result.precio || 0).toFixed(2)+" "+badges+"</div></div>";
 				},
 				templateSelection: function(result){
 					return result.descripcion || result.text || "";
@@ -665,11 +771,18 @@ var phuyu_datos = new Vue({
 		},
 		total_checkout: function(){
 			if (!this.estadia.estadia) { return 0; }
-			var total = Number(this.estadia.estadia.alojamiento || 0);
+			var total = this.alojamiento_pendiente();
 			(this.estadia.consumos || []).forEach(function(c){
 				if (parseInt(c.situacion) == 1) { total += Number(c.subtotal || 0); }
 			});
 			return total;
+		},
+		alojamiento_pendiente: function(){
+			if (!this.estadia.estadia) { return 0; }
+			if (this.estadia.estadia.alojamiento_pendiente !== undefined) {
+				return Math.max(0, Number(this.estadia.estadia.alojamiento_pendiente || 0));
+			}
+			return Math.max(0, Number(this.estadia.estadia.alojamiento || 0) - Number(this.estadia.estadia.total_pagado_ocupacion || 0));
 		},
 		total_consumos_pendientes: function(){
 			var total = 0;
@@ -679,7 +792,9 @@ var phuyu_datos = new Vue({
 			return total;
 		},
 		total_pago_actual: function(){
-			return this.checkout.tipo == "consumos" ? this.total_consumos_pendientes() : this.total_checkout();
+			if (this.checkout.tipo == "consumos") { return this.total_consumos_pendientes(); }
+			if (this.checkout.tipo == "ocupacion") { return this.alojamiento_pendiente(); }
+			return this.total_checkout();
 		},
 		preparar_cobro: function(tipo){
 			if (!this.estadia.estadia || !this.estadia.estadia.codestadia) {
@@ -693,15 +808,33 @@ var phuyu_datos = new Vue({
 			this.checkout.tipo = tipo;
 			this.checkout.campos.codestadia = this.estadia.estadia.codestadia;
 			this.checkout.campos.codempleado = this.estadia.estadia.codempleado;
+			this.checkout.campos.codlote = 0;
+			this.checkout.campos.totalcredito = this.total_pago_actual();
+			this.checkout.campos.condicionpago = 1;
+			this.checkout.cuotas = [];
+			this.checkout.campos.codpersona_facturacion = 0;
+			this.checkout.facturacion = {
+				codpersona: 0,
+				cliente: "",
+				documento: "",
+				coddocumentotipo: 0,
+				direccion: ""
+			};
 			this.checkout.pagos.monto_efectivo = this.total_pago_actual();
 			this.checkout.pagos.monto_tarjeta = 0;
 			this.checkout.pagos.vuelto_efectivo = 0;
+			var comprobanteDefault = parseInt($("#hotel_comprobante_default").val() || 0);
 			var primerComprobante = $("#modal_checkout select").first().val();
-			if (!this.checkout.campos.codcomprobantetipo && primerComprobante) {
+			if (comprobanteDefault > 0) {
+				this.checkout.campos.codcomprobantetipo = comprobanteDefault;
+			}else if (!this.checkout.campos.codcomprobantetipo && primerComprobante) {
 				this.checkout.campos.codcomprobantetipo = primerComprobante;
 			}
 			this.series();
-			$("#modal_checkout").modal("show");
+			this.modal_bootstrap("#modal_checkout", "show");
+			this.$nextTick(function(){
+				this.iniciar_select_factura();
+			});
 			return true;
 		},
 		abrir_cobro_consumos: function(){
@@ -711,16 +844,243 @@ var phuyu_datos = new Vue({
 			}
 			this.preparar_cobro("consumos");
 		},
+		abrir_cobro_ocupacion: function(){
+			if (this.alojamiento_pendiente() <= 0) {
+				phuyu_sistema.phuyu_noti("OCUPACION YA COBRADA", "", "warning");
+				return;
+			}
+			this.preparar_cobro("ocupacion");
+		},
 		abrir_checkout: function(){
 			this.preparar_cobro("checkout");
 		},
+		abrir_cancelar_ocupacion: function(){
+			if (!this.estadia.estadia || !this.estadia.estadia.codestadia) {
+				phuyu_sistema.phuyu_noti("NO HAY ESTADIA ACTIVA", "VUELVA A SELECCIONAR LA HABITACION", "error");
+				return;
+			}
+			this.cancelacion.motivo = "";
+			this.cancelacion.confirmar_pagos = 0;
+			this.modal_bootstrap("#modal_cancelar_ocupacion", "show");
+		},
 		series: function(){
 			if (!this.checkout.campos.codcomprobantetipo) { return; }
+			if (!this.es_factura(this.checkout.campos.codcomprobantetipo)) {
+				this.checkout.campos.codpersona_facturacion = 0;
+				if ($("#codpersona_factura_hotel").length && $("#codpersona_factura_hotel").data("select2")) {
+					$("#codpersona_factura_hotel").val(null).trigger("change");
+				}
+			}
 			this.$http.get(url+"caja/controlcajas/phuyu_seriescaja/"+this.checkout.campos.codcomprobantetipo).then(function(data){
 				this.seriesLista = data.body.series;
-				this.checkout.campos.seriecomprobante = data.body.serie;
+				var serieDefault = $("#hotel_serie_default").val() || "";
+				var existeSerieDefault = (this.seriesLista || []).some(function(item){
+					return item.seriecomprobante == serieDefault;
+				});
+				this.checkout.campos.seriecomprobante = existeSerieDefault ? serieDefault : data.body.serie;
 				this.correlativo();
 			});
+			this.$nextTick(function(){
+				this.iniciar_select_factura();
+			});
+		},
+		iniciar_select_factura: function(){
+			if (!this.es_factura(this.checkout.campos.codcomprobantetipo)) { return; }
+			var vm = this;
+			var $select = $("#codpersona_factura_hotel");
+			if (!$select.length || typeof $.fn.select2 === "undefined") { return; }
+			if ($select.data("select2")) { $select.select2("destroy"); }
+			$select.empty().select2({
+				placeholder: "Buscar cliente con RUC",
+				minimumInputLength: 1,
+				dropdownParent: $("#modal_checkout"),
+				ajax: {
+					url: url+"ventas/clientes/buscar",
+					dataType: "json",
+					delay: 250,
+					data: function(params){
+						return {search:{value:params.term || "", tipo:1}};
+					},
+					processResults: function(data){
+						return {results:data.data || []};
+					},
+					cache: true
+				},
+				escapeMarkup: function(markup){ return markup; },
+				templateResult: function(result){
+					if (result.loading) { return result.text; }
+					return "<div><strong>"+(result.documento || "")+"</strong><div class='text-muted small'>"+(result.razonsocial || result.text || "")+"</div></div>";
+				},
+				templateSelection: function(result){
+					return result.razonsocial || result.text || "";
+				}
+			}).on("select2:select", function(e){
+				var persona = e.params.data || {};
+				var codpersona = persona.codpersona || persona.id || 0;
+				vm.checkout.campos.codpersona_facturacion = codpersona;
+				if (!codpersona) { return; }
+				vm.$http.get(url+"ventas/clientes/infocliente/"+codpersona).then(function(data){
+					var info = data.body[0] || {};
+					vm.checkout.facturacion = {
+						codpersona: codpersona,
+						cliente: info.razonsocial || persona.razonsocial || persona.text || "",
+						documento: info.documento || persona.documento || "",
+						coddocumentotipo: parseInt(info.coddocumentotipo || 0),
+						direccion: info.direccion || ""
+					};
+					if (parseInt(vm.checkout.campos.condicionpago || 1) == 2) {
+						vm.lineas_credito_checkout();
+					}
+				});
+			});
+		},
+		usar_hospedado_para_factura: function(){
+			if (!this.estadia.estadia) { return false; }
+			if (this.es_cliente_varios(this.estadia.estadia.codpersona)) { return false; }
+			var documento = String(this.estadia.estadia.documento || "").trim();
+			if (parseInt(this.estadia.estadia.coddocumentotipo || 0) != 4 || documento.length != 11) {
+				return false;
+			}
+			this.checkout.campos.codpersona_facturacion = this.estadia.estadia.codpersona;
+			this.checkout.facturacion = {
+				codpersona: this.estadia.estadia.codpersona,
+				cliente: this.estadia.estadia.cliente || "",
+				documento: documento,
+				coddocumentotipo: 4,
+				direccion: this.estadia.estadia.direccion || ""
+			};
+			return true;
+		},
+		validar_comprobante_pago: function(){
+			var comprobante = parseInt(this.checkout.campos.codcomprobantetipo || 0);
+			if (this.es_factura(comprobante)) {
+				if (!this.checkout.campos.codpersona_facturacion && !this.usar_hospedado_para_factura()) {
+					phuyu_sistema.phuyu_noti("SELECCIONE CLIENTE PARA FACTURA", "Debe elegir a nombre de quien va la factura", "error");
+					return false;
+				}
+				if (this.es_cliente_varios(this.checkout.campos.codpersona_facturacion)) {
+					phuyu_sistema.phuyu_noti("CLIENTES VARIOS NO PERMITE FACTURA", "Seleccione un cliente con RUC", "error");
+					return false;
+				}
+				if (parseInt(this.checkout.facturacion.coddocumentotipo || 0) != 4 || String(this.checkout.facturacion.documento || "").length != 11) {
+					phuyu_sistema.phuyu_noti("FACTURA REQUIERE RUC", "Seleccione un cliente con RUC de 11 digitos", "error");
+					return false;
+				}
+			}
+			if (this.es_boleta(comprobante)) {
+				var doc = String((this.estadia.estadia && this.estadia.estadia.documento) || "");
+				if (parseInt((this.estadia.estadia && this.estadia.estadia.coddocumentotipo) || 0) == 4) {
+					phuyu_sistema.phuyu_noti("BOLETA NO PUEDE EMITIRSE A RUC", "Use factura para clientes con RUC o nota de venta", "error");
+					return false;
+				}
+				if (!doc || doc.length != 8) {
+					phuyu_sistema.phuyu_noti("DNI INVALIDO PARA BOLETA", "El documento debe tener 8 digitos", "error");
+					return false;
+				}
+			}
+			return true;
+		},
+		condicion_pago_checkout: function(){
+			if (parseInt(this.checkout.campos.condicionpago || 1) == 2) {
+				this.checkout.pagos.monto_efectivo = 0;
+				this.checkout.pagos.monto_tarjeta = 0;
+				this.checkout.pagos.vuelto_efectivo = 0;
+				this.lineas_credito_checkout();
+				this.cuotas_checkout();
+			}else{
+				this.checkout.campos.codlote = 0;
+				this.checkout.cuotas = [];
+				this.checkout.campos.totalcredito = this.total_pago_actual();
+				this.checkout.pagos.monto_efectivo = this.total_pago_actual();
+				this.vuelto();
+			}
+		},
+		lineas_credito_checkout: function(){
+			var codpersona = this.persona_credito_checkout();
+			if (!codpersona || this.es_cliente_varios(codpersona)) {
+				this.checkout.campos.codlote = 0;
+				$("#codlote_hotel").empty();
+				return;
+			}
+			this.$http.get(url+"ventas/lineascredito/phuyu_lineascredito/"+codpersona).then(function(data){
+				$("#codlote_hotel").empty().html(data.body);
+				this.checkout.campos.codlote = $("#codlote_hotel").val() || 0;
+			});
+		},
+		persona_credito_checkout: function(){
+			if (this.es_factura(this.checkout.campos.codcomprobantetipo) && this.checkout.campos.codpersona_facturacion) {
+				return this.checkout.campos.codpersona_facturacion;
+			}
+			return this.estadia.estadia ? this.estadia.estadia.codpersona : 0;
+		},
+		linea_credito_directa_checkout: function(){
+			var codpersona = this.persona_credito_checkout();
+			if (!codpersona || this.es_cliente_varios(codpersona)) {
+				phuyu_sistema.phuyu_noti("SELECCIONE CLIENTE", "No se puede generar credito a clientes varios", "error");
+				return false;
+			}
+			this.$http.post(url+"ventas/lineascredito/guardarlineascreditodirecto", {"codpersona":codpersona}).then(function(data){
+				if (data.body == 1) {
+					phuyu_sistema.phuyu_noti("LINEA DE CREDITO AGREGADA", "", "success");
+					this.lineas_credito_checkout();
+				}else{
+					phuyu_sistema.phuyu_noti("NO SE PUDO CREAR LINEA", "", "error");
+				}
+			});
+		},
+		cuotas_checkout: function(){
+			var nrocuotas = parseInt(this.checkout.campos.nrocuotas || 0);
+			var total = this.total_pago_actual();
+			this.checkout.cuotas = [];
+			if (nrocuotas <= 0) {
+				this.checkout.campos.totalcredito = total;
+				return;
+			}
+			var fecha = new Date();
+			fecha.setHours(0, 0, 0, 0);
+			var base = Number((total / nrocuotas).toFixed(2));
+			var acumulado = 0;
+			for (var i = 1; i <= nrocuotas; i++) {
+				var dias = parseInt(this.checkout.campos.nrodias || 0);
+				if (dias > 0) { fecha.setDate(fecha.getDate() + dias); }
+				var importe = (i == nrocuotas) ? Number((total - acumulado).toFixed(2)) : base;
+				acumulado = Number((acumulado + importe).toFixed(2));
+				this.checkout.cuotas.push({
+					nrocuota: i,
+					fechavence: fecha.getFullYear()+"-"+String(fecha.getMonth()+1).padStart(2, "0")+"-"+String(fecha.getDate()).padStart(2, "0"),
+					nroletra: String(i).padStart(2, "0"),
+					nrounicodepago: "H"+(this.checkout.campos.codestadia || "")+"-"+String(i).padStart(2, "0"),
+					importe: importe < 0 ? 0 : importe,
+					interes: 0,
+					total: importe < 0 ? 0 : importe
+				});
+			}
+			this.calcular_credito_checkout();
+		},
+		calcular_credito_checkout: function(){
+			var tasa = this.toNum(this.checkout.campos.tasainteres);
+			var totalInteres = 0;
+			var totalCredito = 0;
+			for (var i = 0; i < this.checkout.cuotas.length; i++) {
+				var cuota = this.checkout.cuotas[i];
+				var dias = this.diff_dias(i === 0 ? this.fecha_hoy() : this.checkout.cuotas[i - 1].fechavence, cuota.fechavence);
+				var interes = tasa > 0 ? this.toNum(cuota.importe) * (tasa / 100) * (dias / 30) : 0;
+				cuota.interes = Number(interes.toFixed(2));
+				cuota.total = Number((this.toNum(cuota.importe) + cuota.interes).toFixed(2));
+				totalInteres += cuota.interes;
+				totalCredito += cuota.total;
+			}
+			this.checkout.campos.totalcredito = Number(totalCredito.toFixed(2));
+		},
+		pago_tarjeta_checkout: function(){
+			if (parseInt(this.checkout.pagos.codtipopago_tarjeta || 0) == 0) {
+				this.checkout.pagos.monto_tarjeta = 0;
+				this.checkout.pagos.nrovoucher = "";
+				if (parseInt(this.checkout.campos.condicionpago || 1) == 1) {
+					this.checkout.pagos.monto_efectivo = this.total_pago_actual();
+				}
+			}
+			this.vuelto(1);
 		},
 		correlativo: function(){
 			if (!this.checkout.campos.codcomprobantetipo || !this.checkout.campos.seriecomprobante) { return; }
@@ -728,13 +1088,28 @@ var phuyu_datos = new Vue({
 				this.checkout.campos.nro = data.body;
 			});
 		},
-		vuelto: function(){
-			var vuelto = Number(this.checkout.pagos.monto_efectivo || 0) - this.total_pago_actual();
+		vuelto: function(ajustarEfectivo){
+			if (ajustarEfectivo == 1 && parseInt(this.checkout.campos.condicionpago || 1) == 1) {
+				this.checkout.pagos.monto_efectivo = Math.max(0, this.total_pago_actual() - Number(this.checkout.pagos.monto_tarjeta || 0));
+			}
+			var vuelto = Number(this.checkout.pagos.monto_efectivo || 0) + Number(this.checkout.pagos.monto_tarjeta || 0) - this.total_pago_actual();
 			this.checkout.pagos.vuelto_efectivo = vuelto > 0 ? Number(vuelto.toFixed(2)) : 0;
 		},
 		checkout_estadia: function(){
 			if (this.cobrandoHotel) { return; }
+			if (!this.validar_comprobante_pago()) { return; }
 			var total = this.total_pago_actual();
+			if (parseInt(this.checkout.campos.condicionpago || 1) == 2) {
+				var codpersonaCredito = this.persona_credito_checkout();
+				this.checkout.campos.codlote = $("#codlote_hotel").val() || this.checkout.campos.codlote || 0;
+				if (!codpersonaCredito || this.es_cliente_varios(codpersonaCredito)) {
+					phuyu_sistema.phuyu_noti("CREDITO NO PERMITIDO", "Seleccione un cliente valido, no clientes varios", "error");
+					return;
+				}
+				if (!this.checkout.cuotas.length) {
+					this.cuotas_checkout();
+				}
+			}
 			if (parseInt(this.checkout.campos.condicionpago) == 1) {
 				var pagado = Number(this.checkout.pagos.monto_efectivo || 0) + Number(this.checkout.pagos.monto_tarjeta || 0) - Number(this.checkout.pagos.vuelto_efectivo || 0);
 				if (pagado < total) {
@@ -742,15 +1117,17 @@ var phuyu_datos = new Vue({
 					return;
 				}
 			}
-			var endpoint = this.checkout.tipo == "consumos" ? "hotel/estadias/cobrar_consumos" : "hotel/estadias/checkout";
+			var endpoint = this.checkout.tipo == "consumos" ? "hotel/estadias/cobrar_consumos" : (this.checkout.tipo == "ocupacion" ? "hotel/estadias/cobrar_ocupacion" : "hotel/estadias/checkout");
 			this.cobrandoHotel = true;
 			this.$http.post(url+endpoint, this.checkout).then(function(data){
 				this.cobrandoHotel = false;
 				if (data.body.estado == 1) {
-					$("#modal_checkout").modal("hide");
-					var mensaje = this.checkout.tipo == "consumos" ? "CONSUMOS COBRADOS" : "CHECK-OUT REGISTRADO";
-					phuyu_sistema.phuyu_noti(mensaje, "VENTA 000"+data.body.codkardex, "success");
-					window.open(url+"facturacion/formato/ticket/"+data.body.codkardex, "_blank");
+					this.modal_bootstrap("#modal_checkout", "hide");
+					var mensaje = this.checkout.tipo == "consumos" ? "CONSUMOS COBRADOS" : (this.checkout.tipo == "ocupacion" ? "OCUPACION COBRADA" : "CHECK-OUT REGISTRADO");
+					phuyu_sistema.phuyu_noti(mensaje, data.body.codkardex > 0 ? "VENTA 000"+data.body.codkardex : (data.body.mensaje || ""), "success");
+					if (data.body.codkardex > 0) {
+						window.open(url+"facturacion/formato/ticket/"+data.body.codkardex, "_blank");
+					}
 					if (this.checkout.tipo == "checkout") {
 						this.habitacionActiva = null;
 						this.estadia = {};
@@ -764,6 +1141,52 @@ var phuyu_datos = new Vue({
 			}, function(){
 				this.cobrandoHotel = false;
 				phuyu_sistema.phuyu_alerta("ERROR DE RED", "NO SE PUDO COBRAR LA ESTADIA", "error");
+			});
+		},
+		cancelar_ocupacion: function(){
+			if (this.cancelacion.procesando) { return; }
+			if (!this.estadia.estadia || !this.estadia.estadia.codestadia) {
+				phuyu_sistema.phuyu_noti("NO HAY ESTADIA ACTIVA", "", "error");
+				return;
+			}
+			if (!(this.cancelacion.motivo || "").trim()) {
+				phuyu_sistema.phuyu_noti("INGRESE MOTIVO", "REQUERIDO PARA AUDITORIA", "error");
+				return;
+			}
+			this.cancelacion.procesando = true;
+			this.$http.post(url+"hotel/estadias/cancelar_ocupacion", {
+				codestadia: this.estadia.estadia.codestadia,
+				motivo: this.cancelacion.motivo,
+				confirmar_pagos: this.cancelacion.confirmar_pagos
+			}).then(function(data){
+				this.cancelacion.procesando = false;
+				if (data.body.estado == 1) {
+					this.modal_bootstrap("#modal_cancelar_ocupacion", "hide");
+					phuyu_sistema.phuyu_noti(data.body.mensaje || "OCUPACION CANCELADA", "", "success");
+					this.habitacionActiva = null;
+					this.estadia = {};
+					this.cargar_habitaciones();
+					return;
+				}
+				if (data.body.requiere_confirmacion == 1) {
+					var vm = this;
+					swal({
+						title: "La estadia tiene pagos",
+						text: "Pagos registrados: S/. " + Number(data.body.total_pagado || 0).toFixed(2) + ". La cancelacion no elimina esos comprobantes ni pagos.",
+						icon: "warning",
+						buttons: ["Volver", "Confirmar cancelacion"],
+						dangerMode: true
+					}).then(function(confirmado){
+						if (!confirmado) { return; }
+						vm.cancelacion.confirmar_pagos = 1;
+						vm.cancelar_ocupacion();
+					});
+					return;
+				}
+				phuyu_sistema.phuyu_alerta(data.body.mensaje || "NO SE PUDO CANCELAR LA OCUPACION", "", "error");
+			}, function(){
+				this.cancelacion.procesando = false;
+				phuyu_sistema.phuyu_alerta("ERROR DE RED", "NO SE PUDO CANCELAR LA OCUPACION", "error");
 			});
 		}
 	},

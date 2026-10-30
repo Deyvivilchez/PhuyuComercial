@@ -6,6 +6,36 @@ class Productos extends CI_Controller {
 		parent::__construct(); $this->load->model("phuyu_model");
 	}
 
+	private function reporte_stock_mostrar($stockactual){
+		$stock = isset($this->request->stock) ? (int)$this->request->stock : 0;
+
+		if ($stock==0) {
+			return true;
+		}
+
+		if ($stock==1) {
+			return $stockactual>0;
+		}
+
+		return $stockactual<=0;
+	}
+
+	private function reporte_productos_buscar_sql(){
+		$buscar = isset($this->request->buscar) ? trim($this->request->buscar) : "";
+
+		if ($buscar=="") {
+			return "";
+		}
+
+		$buscar = $this->db->escape_like_str($buscar);
+
+		return " and (REPLACE(UPPER(p.descripcion),' ','%') like REPLACE(UPPER('%".$buscar."%'),' ','%') or UPPER(p.codigo) like UPPER('%".$buscar."%')) ";
+	}
+
+	private function reporte_stock_agrupar_linea(){
+		return !isset($this->request->agruparlinea) || (int)$this->request->agruparlinea==1;
+	}
+
 	public function index(){
 		if ($this->input->is_ajax_request()) {
 			$almacenes = $this->db->query("select *from almacen.almacenes where estado=1")->result_array();
@@ -14,6 +44,62 @@ class Productos extends CI_Controller {
 			$this->load->view("reportes/productos/index",compact("almacenes","lineas","monedas"));
 		}else{
 			$this->load->view("phuyu/404");
+		}
+	}
+
+	public function exportar_migracion(){
+		if (empty($_SESSION['phuyu_codusuario'])) {
+			show_error('Debe iniciar sesion para exportar productos.', 401);
+			return;
+		}
+
+		$codalmacen = (int)$this->input->get('codalmacen');
+		$almacen = $this->db->query(
+			"SELECT a.* FROM almacen.almacenes a
+			 INNER JOIN seguridad.sucursalusuarios su ON su.codsucursal=a.codsucursal
+			 WHERE a.codalmacen=? AND a.estado=1 AND su.codusuario=? LIMIT 1",
+			[$codalmacen, (int)$_SESSION['phuyu_codusuario']]
+		)->row_array();
+		if (empty($almacen)) {
+			show_error('Seleccione un almacen al que tenga acceso.', 403);
+			return;
+		}
+
+		// Conservar ambos registros: los precios y barras del almacen pueden diferir del catalogo.
+		$registros = $this->db->query(
+			"SELECT row_to_json(p) AS producto, row_to_json(pu) AS unidad_producto,
+			 row_to_json(ub) AS ubicacion, f.descripcion AS familia, l.descripcion AS linea,
+			 m.descripcion AS marca, u.descripcion AS unidad,
+			 ac.descripcion AS afectacion_compra, av.descripcion AS afectacion_venta
+			 FROM almacen.productoubicacion ub
+			 INNER JOIN almacen.productos p ON p.codproducto=ub.codproducto
+			 LEFT JOIN almacen.productounidades pu ON pu.codproducto=ub.codproducto AND pu.codunidad=ub.codunidad
+			 LEFT JOIN almacen.familias f ON f.codfamilia=p.codfamilia
+			 LEFT JOIN almacen.lineas l ON l.codlinea=p.codlinea
+			 LEFT JOIN almacen.marcas m ON m.codmarca=p.codmarca
+			 LEFT JOIN almacen.unidades u ON u.codunidad=ub.codunidad
+			 LEFT JOIN afectacionigv ac ON ac.codafectacionigv=ub.codafectacionigvcompra
+			 LEFT JOIN afectacionigv av ON av.codafectacionigv=ub.codafectacionigvventa
+			 WHERE ub.codalmacen=? ORDER BY p.codproducto, ub.factor, ub.codunidad",
+			[$codalmacen]
+		)->result_array();
+
+		$this->load->library('Producto_migracion_export');
+		$mostrarErrores = ini_get('display_errors');
+		ini_set('display_errors', '0');
+		try {
+			$archivo = $this->producto_migracion_export->crear($registros, $almacen);
+		} finally {
+			ini_set('display_errors', $mostrarErrores);
+		}
+		while (ob_get_level() > 0) { ob_end_clean(); }
+		header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+		header('Content-Disposition: attachment; filename="productos-migracion-almacen-'.$codalmacen.'-'.date('Ymd-His').'.xlsx"');
+		header('Cache-Control: private, no-store, max-age=0');
+		try {
+			readfile($archivo);
+		} finally {
+			unlink($archivo);
 		}
 	}
 
@@ -663,7 +749,7 @@ class Productos extends CI_Controller {
 			$this->request = json_decode($_GET["datos"]);
 
 			$almacen = $this->db->query("select *from almacen.almacenes where codalmacen=".$this->request->codalmacen)->result_array();
-			$titulo = "REPORTE GENERAL DE PRECIOS DE PRODUCTOS - ".$almacen[0]["descripcion"];
+			$titulo = "REPORTE GENERAL DE STOCK DE PRODUCTOS - ".$almacen[0]["descripcion"];
 
 			if ($this->request->codlinea==0) {
 				$lineas = $this->db->query("select * from almacen.lineas where estado=1")->result_array();
@@ -672,12 +758,30 @@ class Productos extends CI_Controller {
 			}
 
 			foreach ($lineas as $key => $v) {
-				$lista = $this->db->query("select p.codproducto,p.codigo,p.descripcion,p.codigo,u.codunidad,u.descripcion as unidad,round(pu.preciocosto,2) as preciocosto,round(pu.pventapublico,2) as precioventa,round(pu.stockactualconvertido,2) as stock,round(pu.ventarecogoconvertido,2) as ventas, round(pu.comprarecogoconvertido,2) as compras from almacen.productos as p inner join almacen.productoubicacion as pu on(p.codproducto=pu.codproducto) inner join almacen.unidades as u on(u.codunidad=pu.codunidad) where p.codlinea=".$v["codlinea"]." and p.estado=1 and pu.estado=1 and pu.codalmacen = ".$this->request->codalmacen." and p.controlstock=".(int)$this->request->controlstock." and p.estado=".(int)$this->request->estado." order by p.descripcion")->result_array();
+				$lista = $this->db->query("select p.codproducto,p.codigo,p.descripcion,p.codigo,u.codunidad,u.descripcion as unidad,round(pu.preciocosto,2) as preciocosto,round(pu.pventapublico,2) as precioventa,round(pu.stockactualconvertido,2) as stock,round(pu.ventarecogoconvertido,2) as ventas, round(pu.comprarecogoconvertido,2) as compras from almacen.productos as p inner join almacen.productoubicacion as pu on(p.codproducto=pu.codproducto) inner join almacen.unidades as u on(u.codunidad=pu.codunidad) where p.codlinea=".$v["codlinea"]." and pu.estado=1 and pu.codalmacen = ".$this->request->codalmacen." and p.controlstock=".(int)$this->request->controlstock." and p.estado=".(int)$this->request->estado.$this->reporte_productos_buscar_sql()." order by p.descripcion")->result_array();
+
+				foreach ($lista as $k => $value) {
+					if (!$this->reporte_stock_mostrar((float)$value["stock"])) {
+						unset($lista[$k]);
+					}
+				}
 
 				$lineas[$key]["lista"] = $lista;
 			}
 
-			$this->load->view("reportes/productos/stockxls.php",compact("titulo","lineas"));
+			if (!$this->reporte_stock_agrupar_linea()) {
+				$lista = array();
+				foreach ($lineas as $value) {
+					$lista = array_merge($lista,$value["lista"]);
+				}
+				usort($lista,function($a,$b){
+					return strcmp($a["descripcion"],$b["descripcion"]);
+				});
+				$lineas = array(array("descripcion"=>"","lista"=>$lista));
+			}
+
+			$agruparlinea = $this->reporte_stock_agrupar_linea();
+			$this->load->view("reportes/productos/stockxls.php",compact("titulo","lineas","agruparlinea"));
 		}else{
 			$this->load->view("phuyu/404");
 		}
@@ -701,7 +805,7 @@ class Productos extends CI_Controller {
 			$pdf->SetFont('Arial','B',10);
 		    $pdf->setFillColor(245,245,245);
 
-		    $columnas = array("ID","CODIGO","DESCRIPCION PRODUCTO","U.MEDIDA","STOCK DISP.","V.X RECOGER","C.X RECOGER","STOCK FISICO");
+		    $columnas = array("ID","CODIGO","DESCRIPCION PRODUCTO","UNIDAD","STOCK ACTUAL","V.X RECOGER","C.X RECOGER","STOCK X UNIDAD");
 			$w = array(10,16,58,18,22,22,22,22); $pdf->pdf_tabla_head($columnas,$w,8);
 
 			$pdf->SetWidths(array(10,16,58,18,22,22,22,22));
@@ -709,32 +813,26 @@ class Productos extends CI_Controller {
 			$pdf->SetFont('Arial','',7); $item = 0;
 
 			foreach ($lineas as $key => $v) {
-				$lista = $this->db->query("select p.codproducto,p.codigo,p.descripcion,p.codigo,u.codunidad,u.descripcion as unidad,round(pu.preciocosto,2) as preciocosto,round(pu.pventapublico,2) as precioventa,round(pu.stockactualconvertido,2) as stock, round(pu.ventarecogoconvertido,2) as ventas,round(pu.comprarecogoconvertido,2) as compras from almacen.productos as p inner join almacen.productoubicacion as pu on(p.codproducto=pu.codproducto) inner join almacen.unidades as u on(u.codunidad=pu.codunidad) where p.codlinea=".$v["codlinea"]." and p.estado=1 and pu.estado=1 and pu.codalmacen = ".$this->request->codalmacen." and p.controlstock=".(int)$this->request->controlstock." and p.estado=".(int)$this->request->estado." order by p.descripcion")->result_array();
+				$lista = $this->db->query("select p.codproducto,p.codigo,p.descripcion,p.codigo,u.codunidad,u.descripcion as unidad,round(pu.preciocosto,2) as preciocosto,round(pu.pventapublico,2) as precioventa,round(pu.stockactualconvertido,2) as stock, round(pu.ventarecogoconvertido,2) as ventas,round(pu.comprarecogoconvertido,2) as compras from almacen.productos as p inner join almacen.productoubicacion as pu on(p.codproducto=pu.codproducto) inner join almacen.unidades as u on(u.codunidad=pu.codunidad) where p.codlinea=".$v["codlinea"]." and pu.estado=1 and pu.codalmacen = ".$this->request->codalmacen." and p.controlstock=".(int)$this->request->controlstock." and p.estado=".(int)$this->request->estado.$this->reporte_productos_buscar_sql()." order by p.descripcion")->result_array();
+
+				foreach ($lista as $k => $value) {
+					if (!$this->reporte_stock_mostrar((float)$value["stock"])) {
+						unset($lista[$k]);
+					}
+				}
 
 				if (count($lista)>0) {
 					$pdf->SetFont('Arial','B',8);
-					$pdf->Cell(190,6,"LINEA DE PRODUCTO: ".utf8_decode($v["descripcion"]),1); $pdf->Ln();
+					if ($this->reporte_stock_agrupar_linea()) {
+						$pdf->Cell(190,6,"LINEA DE PRODUCTO: ".utf8_decode($v["descripcion"]),1); $pdf->Ln();
+					}
 					$pdf->SetFont('Arial','',8);
 
-					foreach ($lista as $value) { $item = $item + 1;
-
-						if ($this->request->stock==0) {
-							$mostrar = 1;
-						}elseif ($this->request->stock==1) {
-							if ($stockactual>0) {
-								$mostrar = 1;
-							}else{
-								$mostrar = 0;
-							}
-						}else{
-							if ($stockactual<=0) {
-								$mostrar = 1;
-							}else{
-								$mostrar = 0;
-							}
-						}
+					foreach ($lista as $value) {
+						$mostrar = $this->reporte_stock_mostrar((float)$value["stock"]);
 
 						if ($mostrar==1) {
+							$item = $item + 1;
 							$datos = array($value["codproducto"]);
 							array_push($datos,utf8_decode($value["codigo"]));
 							array_push($datos,utf8_decode($value["descripcion"]));

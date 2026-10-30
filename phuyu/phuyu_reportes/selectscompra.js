@@ -27,8 +27,11 @@ function phuyu_select2_velzon_style(){
 
 function destinatario(){
     var tipo = 2;
+    var $modal = jQuery('#modal_clientes');
     jQuery('#codpersona').select2({
       destroy: 'true',
+      dropdownParent: $modal.length ? $modal : jQuery(document.body),
+      width: '100%',
       ajax: {
         url: url+'ventas/clientes/buscar',
         dataType: 'json',
@@ -46,7 +49,8 @@ function destinatario(){
         },
         cache: true,
       },
-      placeholder: 'Search',
+      placeholder: 'TODOS LOS PROVEEDORES',
+      allowClear: true,
       escapeMarkup: function (markup) {
         return markup;
       },
@@ -64,7 +68,7 @@ function destinatario(){
             phuyu_datos.phuyu_infocliente(result.codpersona);
         }
         if(typeof result.razonsocial == "undefined"){
-          result.razonsocial = phuyu_datos.campos.cliente;
+          result.razonsocial = result.text || 'TODOS LOS PROVEEDORES';
         }
         //
         return result.razonsocial;

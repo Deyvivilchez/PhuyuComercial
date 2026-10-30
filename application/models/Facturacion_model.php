@@ -8,6 +8,19 @@ class Facturacion_model extends CI_Model
         parent::__construct();
     }
 
+    private function phuyu_unidad_sunat($unidad)
+    {
+        $unidad = strtoupper(trim((string)$unidad));
+        $equivalencias = [
+            "" => "NIU",
+            "UNI" => "NIU",
+            "UND" => "NIU",
+            "UNIDAD" => "NIU",
+        ];
+
+        return isset($equivalencias[$unidad]) ? $equivalencias[$unidad] : $unidad;
+    }
+
     function phuyu_crearXML($codcomprobante, $codkardex)
     {
         $empresa = $this->db->query("select p.documento,p.razonsocial,p.direccion, e.ubigeo, e.departamento, e.provincia, e.distrito from public.personas as p inner join public.empresas as e on(p.codpersona=e.codpersona) where e.codempresa=1")->result_array();
@@ -19,7 +32,24 @@ class Facturacion_model extends CI_Model
         $credito = $this->db->query("select *from kardex.creditos WHERE codkardex=" . $codkardex)->result_array();
         $cuotas = [];
         if (count($credito) > 0) {
-            $cuotas = $this->db->query("select *from kardex.cuotas WHERE codcredito=" . $credito[0]["codcredito"])->result_array();
+            $cuotas = $this->db->query("select *from kardex.cuotas WHERE codcredito=" . $credito[0]["codcredito"] . " ORDER BY nrocuota")->result_array();
+        }
+
+        // Validar antes de crear o sobrescribir el XML, incluso al reenviar ventas antiguas.
+        if ($codcomprobante !== '07' && $codcomprobante !== '08' && (int)$info[0]['condicionpago'] === 2) {
+            if (count($cuotas) === 0) {
+                return ['estado' => 0, 'mensaje' => 'La venta a credito no tiene cuotas. Corrija el cronograma antes de enviar a SUNAT.'];
+            }
+            $capital = 0;
+            foreach ($cuotas as $i => $cuota) {
+                if (!is_numeric($cuota['importe']) || !is_finite((float)$cuota['importe']) || round((float)$cuota['importe'], 2) <= 0) {
+                    return ['estado' => 0, 'mensaje' => 'La cuota ' . ($i + 1) . ' tiene importe cero o invalido. Corrija el cronograma antes de enviar a SUNAT.'];
+                }
+                $capital += (int)round((float)$cuota['importe'] * 100);
+            }
+            if ($capital !== (int)round((float)$info[0]['importe'] * 100)) {
+                return ['estado' => 0, 'mensaje' => 'Los importes de las cuotas no coinciden con la venta. Corrija el cronograma antes de enviar a SUNAT.'];
+            }
         }
 
         // 0: CREAMOS UNA CARPETA PARA ALMACENAR EL XML DEL COMPROBANTE TEMPORALMENTE //
@@ -486,6 +516,8 @@ class Facturacion_model extends CI_Model
         // 12: ITEMS DEL COMPROBANTE //
 
         foreach ($detalle as $key => $value) {
+            $unidad_sunat = $this->phuyu_unidad_sunat($value["unidad"]);
+
             if ($codcomprobante <> "07" && $codcomprobante <> "08") {
                 $line = $xml->createElement("cac:InvoiceLine");
                 $line = $Invoice->appendChild($line);
@@ -504,17 +536,17 @@ class Facturacion_model extends CI_Model
             if ($codcomprobante <> "07" && $codcomprobante <> "08") {
                 $cbc = $xml->createElement("cbc:InvoicedQuantity", number_format($value["cantidad"], 2, ".", ""));
                 $cbc = $line->appendChild($cbc);
-                $cbc->setAttribute("unitCode", $value["unidad"]);
+                $cbc->setAttribute("unitCode", $unidad_sunat);
                 $cbc->setAttribute("unitCodeListID", 'UN/ECE rec 20');
                 $cbc->setAttribute("unitCodeListAgencyName", "United Nations Economic Commission for Europe");
             } elseif ($codcomprobante == "07") {
                 $cbc = $xml->createElement("cbc:CreditedQuantity", number_format($value["cantidad"], 2, ".", ""));
                 $cbc = $line->appendChild($cbc);
-                $cbc->setAttribute("unitCode", $value["unidad"]);
+                $cbc->setAttribute("unitCode", $unidad_sunat);
             } else {
                 $cbc = $xml->createElement("cbc:DebitedQuantity", number_format($value["cantidad"], 2, ".", ""));
                 $cbc = $line->appendChild($cbc);
-                $cbc->setAttribute("unitCode", $value["unidad"]);
+                $cbc->setAttribute("unitCode", $unidad_sunat);
             }
 
             // 12.2: SUBTOTAL DEL ITEM / MONTOS UNITARIOS DEL ITEM //
@@ -716,7 +748,7 @@ class Facturacion_model extends CI_Model
                 $cbc->setAttribute("currencyID", "PEN");
                 $cbc = $xml->createElement("cbc:BaseUnitMeasure", (int)$value["cantidad"]);
                 $cbc = $cac_ig->appendChild($cbc);
-                $cbc->setAttribute("unitCode", $value["unidad"]);
+                $cbc->setAttribute("unitCode", $unidad_sunat);
                 $cbc = $xml->createElement("cbc:PerUnitAmount", number_format($value["icbper"], 2, ".", ""));
                 $cbc = $cac_ig->appendChild($cbc);
                 $cbc->setAttribute("currencyID", "PEN");
@@ -1035,6 +1067,8 @@ class Facturacion_model extends CI_Model
         // 12: ITEMS DEL COMPROBANTE //
 
         foreach ($detalle as $key => $value) {
+            $unidad_sunat = $this->phuyu_unidad_sunat($value["unidad"]);
+
             $line = $xml->createElement("cac:DespatchLine");
             $line = $Invoice->appendChild($line);
 
@@ -1045,7 +1079,7 @@ class Facturacion_model extends CI_Model
 
             $cbc = $xml->createElement("cbc:DeliveredQuantity", number_format($value["cantidad"], 2, ".", ""));
             $cbc = $line->appendChild($cbc);
-            $cbc->setAttribute("unitCode", $value["unidad"]);
+            $cbc->setAttribute("unitCode", $unidad_sunat);
 
             $cac_orden = $xml->createElement("cac:OrderLineReference");
             $cac_orden = $line->appendChild($cac_orden);
@@ -1214,13 +1248,32 @@ class Facturacion_model extends CI_Model
     {
         $empresa = $this->db->query("select p.documento,p.razonsocial,p.direccion,u.* from public.personas as p inner join public.ubigeo as u on(p.codubigeo=u.codubigeo) where p.codpersona=" . $_SESSION["phuyu_codempresa"])->result_array();
 
-        $resumen = $this->db->query("select *from sunat.resumenes where codresumentipo=" . $codresumentipo . " and periodo='" . $periodo . "' and nrocorrelativo=" . $nrocorrelativo)->result_array();
+        $resumen = $this->db->query("select *from sunat.resumenes where codresumentipo=" . $codresumentipo . " and periodo='" . $periodo . "' and nrocorrelativo=" . $nrocorrelativo . " and codempresa=" . $_SESSION["phuyu_codempresa"])->result_array();
+        if (empty($resumen)) {
+            return [
+                "estado" => 0,
+                "mensaje" => "No existe resumen para codresumentipo=" . $codresumentipo . " periodo=" . $periodo . " nrocorrelativo=" . $nrocorrelativo
+            ];
+        }
+        if (empty($resumen[0]["nombre_xml"])) {
+            return [
+                "estado" => 0,
+                "mensaje" => "Resumen sin nombre_xml para codresumentipo=" . $codresumentipo
+            ];
+        }
         if ($codresumentipo == 3) {
             $detalle = $this->db->query("select dt.oficial as coddocumento, p.documento, k.seriecomprobante,k.nrocomprobante, k.igv,k.icbper,k.importe,k.codkardex from sunat.kardexsunatdetalle as ksd inner join kardex.kardex as k on(ksd.codkardex=k.codkardex) inner join public.personas as p on(k.codpersona=p.codpersona) inner join public.documentotipos as dt on(p.coddocumentotipo=dt.coddocumentotipo) where ksd.codresumentipo=" . $codresumentipo . " and ksd.periodo='" . $periodo . "' and ksd.nrocorrelativo=" . $nrocorrelativo . " and ksd.codempresa=" . $_SESSION["phuyu_codempresa"] . " order by k.seriecomprobante,k.nrocomprobante")->result_array();
             $estado = 1;
         } else {
             $detalle = $this->db->query("select dt.oficial as coddocumento, p.documento, k.seriecomprobante,k.nrocomprobante, k.igv,k.icbper,k.importe,k.codkardex from sunat.kardexsunatanulados as ksa inner join kardex.kardex as k on(ksa.codkardex=k.codkardex) inner join public.personas as p on(k.codpersona=p.codpersona) inner join public.documentotipos as dt on(p.coddocumentotipo=dt.coddocumentotipo) where ksa.codresumentipo=" . $codresumentipo . " and ksa.periodo='" . $periodo . "' and ksa.nrocorrelativo=" . $nrocorrelativo . " and ksa.codempresa=" . $_SESSION["phuyu_codempresa"])->result_array();
             $estado = 3;
+        }
+
+        if (empty($detalle)) {
+            return [
+                "estado" => 0,
+                "mensaje" => "No hay detalle para el resumen " . $resumen[0]["nombre_xml"]
+            ];
         }
 
         // 0: CREAMOS UNA CARPETA PARA ALMACENAR EL XML DEL COMPROBANTE TEMPORALMENTE //

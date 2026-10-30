@@ -3,7 +3,8 @@
 class Comprobantes extends CI_Controller {
 
 	public function __construct(){
-		parent::__construct(); $this->load->model("phuyu_model");
+		parent::__construct(); 
+		$this->load->model("phuyu_model");
 	}
 
 	public function index(){

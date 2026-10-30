@@ -54,10 +54,41 @@ var phuyu_compras = new Vue({
 				$(".eliminar").attr('disabled',true);
 				$(".editar").attr('disabled',true);
 				$(".gasto").attr('disabled',true);
+				$(".restaurar").attr('disabled',false);
 			}else{
 				$(".eliminar").attr('disabled',false);
 				$(".editar").attr('disabled',false);
 				$(".gasto").attr('disabled',false);
+				$(".restaurar").attr('disabled',true);
+			}
+		},
+		phuyu_restaurar: function(){
+			if (this.registro==0) {
+				phuyu_sistema.phuyu_alerta("DEBE SELECCIONAR UNA COMPRA", "PARA RESTAURAR EN EL SISTEMA UNA COMPRA !!!","error");
+			}else{
+				if(this.estado!=0){
+					return false;
+				}
+				swal({
+					title: "SEGURO DESEA RESTAURAR LA COMPRA ?",   
+					text: "USTED ESTA POR RESTAURAR UNA COMPRA", 
+					icon: "warning",
+					dangerMode: true,
+					buttons: ["CANCELAR", "SI, RESTAURAR"],
+				}).then((willRestore) => {
+					if (willRestore) {
+						this.$http.post(url+phuyu_controller+"/restaurar",{"codregistro":this.registro}).then(function(data){
+							if (data.body==1) {
+								phuyu_sistema.phuyu_alerta("RESTAURADO CORRECTAMENTE", "UN REGISTRO RESTAURADO EN EL SISTEMA","success");
+							}else{
+								phuyu_sistema.phuyu_alerta("OCURRIO UN ERROR !!!", "SE PERDIÓ LA CONEXION !!! LO SENTIMOS","error");				
+							}
+							this.phuyu_datos();
+						}, function(){
+							alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED","error");
+						});
+					}
+				});
 			}
 		},
 		phuyu_nuevo:function(){

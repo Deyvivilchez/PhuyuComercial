@@ -9,6 +9,51 @@ class Salidas extends CI_Controller
         $this->load->model('Kardex_model');
     }
 
+    private function detalle_salida($codkardex)
+    {
+        $codkardex = (int) $codkardex;
+        $detalle = $this->db->query(
+            'select kd.*,p.descripcion as producto,u.descripcion as unidad,p.codigo
+            from kardex.kardexdetalle as kd
+            inner join almacen.productos as p on(kd.codproducto=p.codproducto)
+            inner join almacen.unidades as u on(kd.codunidad=u.codunidad)
+            where kd.codkardex=' . $codkardex . ' and kd.estado=1
+            order by kd.item'
+        )->result_array();
+
+        if (count($detalle) > 0) {
+            return $detalle;
+        }
+
+        return $this->db->query(
+            'select
+                kad.codproducto,
+                kad.codunidad,
+                kad.item,
+                kad.cantidad,
+                coalesce(pu.preciocosto, 0) as preciounitario,
+                coalesce(pu.preciocosto, 0) as preciosinigv,
+                coalesce(pu.preciocosto, 0) as preciorefunitario,
+                round((kad.cantidad * coalesce(pu.preciocosto, 0))::numeric, 2) as valorventa,
+                round((kad.cantidad * coalesce(pu.preciocosto, 0))::numeric, 2) as subtotal,
+                0 as igv,
+                p.descripcion as producto,
+                u.descripcion as unidad,
+                p.codigo
+            from kardex.kardexalmacen ka
+            inner join kardex.kardexalmacendetalle kad on(kad.codkardexalmacen=ka.codkardexalmacen)
+            inner join almacen.productos p on(p.codproducto=kad.codproducto)
+            inner join almacen.unidades u on(u.codunidad=kad.codunidad)
+            left join almacen.productoubicacion pu on(
+                pu.codalmacen=ka.codalmacen
+                and pu.codproducto=kad.codproducto
+                and pu.codunidad=kad.codunidad
+            )
+            where ka.codkardex=' . $codkardex . ' and kad.estado=1
+            order by kad.item'
+        )->result_array();
+    }
+
     public function index()
     {
         if ($this->input->is_ajax_request()) {
@@ -216,12 +261,25 @@ class Salidas extends CI_Controller
     function detalle($codregistro)
     {
         if ($this->input->is_ajax_request()) {
+            $codregistro = (int) $codregistro;
             $detalle = $this->db->query('select kd.codproducto,kd.codunidad,round(kd.cantidad - kd.cantidaddevuelta,2) as cantidad,round(kd.preciounitario,2) as precio,kd.preciosinigv,kd.preciorefunitario,kd.valorventa,round(kd.igv,2) as igv, round(kd.subtotal,2) as subtotal,kd.item, kd.codafectacionigv,p.descripcion as producto,u.descripcion as unidad, kd.recoger,kd.recogido,kd.descripcion,kd.codafectacionigv,p.controlstock from kardex.kardexdetalle as kd inner join almacen.productos as p on(kd.codproducto=p.codproducto) inner join almacen.unidades as u on(kd.codunidad=u.codunidad) where kd.codkardex=' . $codregistro . ' and kd.estado=1 and kd.cantidad > kd.cantidaddevuelta order by kd.item')->result_array();
+
+            if (count($detalle) == 0) {
+                $detalle = $this->detalle_salida($codregistro);
+                foreach ($detalle as $key => $value) {
+                    $detalle[$key]['precio'] = round((float) $value['preciounitario'], 2);
+                    $detalle[$key]['controlstock'] = 1;
+                    $detalle[$key]['recoger'] = 1;
+                    $detalle[$key]['recogido'] = $value['cantidad'];
+                    $detalle[$key]['codafectacionigv'] = 20;
+                    $detalle[$key]['descripcion'] = '';
+                }
+            }
 
             foreach ($detalle as $key => $value) {
                 $unidades = $this->db->query('select *FROM almacen.v_productounidades pun where pun.codproducto=' . $value['codproducto'] . ' AND codalmacen = ' . $_SESSION['phuyu_codalmacen'])->result_array();
 
-                $detalle[$key]['unidades'] = $unidades[0]['unidades'];
+                $detalle[$key]['unidades'] = count($unidades) > 0 ? $unidades[0]['unidades'] : '';
             }
 
             $totales = $this->db->query('select codkardex,round(valorventa,2) as valorventa,round(igv,2) as igv,round(importe,2) as importe from kardex.kardex where codkardex=' . $codregistro)->result_array();
@@ -253,9 +311,10 @@ class Salidas extends CI_Controller
     {
         if ($this->input->is_ajax_request()) {
             if (isset($_SESSION['phuyu_codusuario'])) {
+                $codregistro = (int) $codregistro;
                 $info = $this->db->query('select kardex.*,personas.*,comprobantes.descripcion as tipo from kardex.kardex as kardex inner join public.personas as personas on (kardex.codpersona=personas.codpersona) inner join caja.comprobantetipos as comprobantes on(kardex.codcomprobantetipo=comprobantes.codcomprobantetipo) where kardex.codkardex=' . $codregistro)->result_array();
 
-                $detalle = $this->db->query('select kd.*,p.descripcion as producto,u.descripcion as unidad,p.codigo from kardex.kardexdetalle as kd inner join almacen.productos as p on(kd.codproducto=p.codproducto) inner join almacen.unidades as u on(kd.codunidad=u.codunidad) where kd.codkardex=' . $codregistro . ' and kd.estado=1 order by kd.item')->result_array();
+                $detalle = $this->detalle_salida($codregistro);
 
                 $this->load->view('almacen/salidas/ver', compact('info', 'detalle'));
             } else {
@@ -698,9 +757,11 @@ class Salidas extends CI_Controller
         if ($this->input->is_ajax_request()) {
             if (isset($_SESSION['phuyu_codusuario'])) {
                 $this->request = json_decode(file_get_contents('php://input'));
-                $info = $this->db->query('select codkardex,fechacomprobante,fechakardex, seriecomprobante, nrocomprobante, descripcion,codmovimientotipo,codpersona,cliente from kardex.kardex where codkardex=' . $this->request->codregistro)->result_array();
+                $codregistro = (int) $this->request->codregistro;
+                $info = $this->db->query('select codkardex,fechacomprobante,fechakardex, seriecomprobante, nrocomprobante, descripcion,codmovimientotipo,codpersona,cliente from kardex.kardex where codkardex=' . $codregistro)->result_array();
+                $detalle = $this->detalle_salida($codregistro);
                 $movimientos = $this->db->query('select *from almacen.movimientotipos where codmovimientotipo<>20 and tipo=2 and estado=1')->result_array();
-                $this->load->view('almacen/salidas/editar', compact('info', 'movimientos'));
+                $this->load->view('almacen/salidas/editar', compact('info', 'movimientos', 'detalle'));
             } else {
                 $this->load->view('phuyu/505');
             }

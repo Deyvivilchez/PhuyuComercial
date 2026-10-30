@@ -1,21 +1,27 @@
 <?php
 $modo_pdf = isset($modo_pdf) ? (bool)$modo_pdf : false;
 
-function texto_doc($texto)
-{
-    return htmlspecialchars((string)$texto, ENT_QUOTES, 'UTF-8');
+if (!function_exists('texto_doc')) {
+    function texto_doc($texto)
+    {
+        return htmlspecialchars((string)$texto, ENT_QUOTES, 'UTF-8');
+    }
 }
 
-function numero_doc($monto)
-{
-    return number_format((float)$monto, 2);
+if (!function_exists('numero_doc')) {
+    function numero_doc($monto)
+    {
+        return number_format((float)$monto, 2);
+    }
 }
 
-function fecha_doc($fecha)
-{
-    if (empty($fecha) || $fecha === '0000-00-00') return '-';
-    $ts = strtotime($fecha);
-    return $ts ? date('d/m/Y', $ts) : $fecha;
+if (!function_exists('fecha_doc')) {
+    function fecha_doc($fecha)
+    {
+        if (empty($fecha) || $fecha === '0000-00-00') return '-';
+        $ts = strtotime($fecha);
+        return $ts ? date('d/m/Y', $ts) : $fecha;
+    }
 }
 
 $fechaEmision = fecha_doc($venta['fechacomprobante'] ?? '');
@@ -25,6 +31,7 @@ $direccionCliente = $venta['direccion'] ?? '-';
 $cliente = $venta['cliente'] ?? '-';
 $usuario = $_SESSION['phuyu_usuario'] ?? '-';
 $vendedor = $empleado['razonsocial'] ?? '-';
+$mesaRestaurante = trim((string)($mesa_restaurante ?? ''));
 $condicionPago = ((int)($venta['condicionpago'] ?? 0) === 1)
     ? 'CONTADO'
     : 'CRÉDITO' . (!empty($credito['nrodias']) ? ': ' . $credito['nrodias'] . ' días' : '');
@@ -328,6 +335,29 @@ $condicionPago = ((int)($venta['condicionpago'] ?? 0) === 1)
             line-height: 1.35;
         }
 
+        .proforma-note {
+            margin-top: 12px;
+            border: 1px solid #e4d4ff;
+            border-left: 4px solid #6d28d9;
+            border-radius: 10px;
+            background: rgba(250, 247, 255, 0.76);
+            padding: 10px 12px;
+        }
+
+        .proforma-note-title {
+            font-size: 9px;
+            font-weight: bold;
+            color: #581c87;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .proforma-note-text {
+            font-size: 8.1px;
+            color: #5e556e;
+            line-height: 1.45;
+        }
+
         .totales-box {
             border: 1px solid rgba(228, 212, 255, 0.60);
             background: rgba(255, 255, 255, 0.50);
@@ -529,6 +559,9 @@ $condicionPago = ((int)($venta['condicionpago'] ?? 0) === 1)
                             <div class="doc-row"><strong>Fecha vencimiento:</strong> <?= texto_doc(fecha_doc($fechavencimiento ?? '')) ?></div>
                             <div class="doc-row"><strong>Condición:</strong> <?= texto_doc($condicionPago) ?></div>
                             <div class="doc-row"><strong>Moneda:</strong> SOLES</div>
+                            <?php if ($mesaRestaurante !== ''): ?>
+                            <div class="doc-row"><strong>Mesa:</strong> <?= texto_doc($mesaRestaurante) ?></div>
+                            <?php endif; ?>
                         </div>
                     </td>
                 </tr>
@@ -581,7 +614,10 @@ $condicionPago = ((int)($venta['condicionpago'] ?? 0) === 1)
                         <?php foreach ($detalle as $i => $item): ?>
                             <tr>
                                 <td class="text-center"><?= str_pad((string)($i + 1), 2, '0', STR_PAD_LEFT) ?></td>
-                                <td><?= texto_doc(($item['producto'] ?? '') . ' ' . ($item['descripcion'] ?? '')) ?></td>
+                                <td><?= texto_doc(trim(
+                                    ($item['producto'] ?? '') .
+                                    ($mesaRestaurante === '' ? ' ' . ($item['descripcion'] ?? '') : '')
+                                )) ?></td>
                                 <td><?= texto_doc($item['unidad'] ?? '-') ?></td>
                                 <td class="text-right"><?= numero_doc($item['cantidad'] ?? 0) ?></td>
                                 <td class="text-right">S/ <?= numero_doc($item['preciounitario'] ?? 0) ?></td>
@@ -607,9 +643,17 @@ $condicionPago = ((int)($venta['condicionpago'] ?? 0) === 1)
                                 <div class="qr-image">
                                     <img src="<?= $qr_src ?>" alt="QR">
                                 </div>
+                            <?php elseif (!empty($es_proforma)): ?>
+                                <div class="proforma-note">
+                                    <div class="proforma-note-title">Proforma valida para cotizacion</div>
+                                    <div class="proforma-note-text">
+                                        Documento informativo no valido como comprobante de pago.<br>
+                                        Precios sujetos a disponibilidad y confirmacion de venta.
+                                    </div>
+                                </div>
                             <?php endif; ?>
 
-                            <?php if (!empty($parametros['urlconsultacomprobantes'])): ?>
+                            <?php if (empty($es_proforma) && !empty($parametros['urlconsultacomprobantes'])): ?>
                                 <div class="qr-text"><?= texto_doc($parametros['urlconsultacomprobantes']) ?></div>
                             <?php endif; ?>
 

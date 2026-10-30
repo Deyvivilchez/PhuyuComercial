@@ -6,6 +6,16 @@ class Usuarios extends CI_Controller {
 		parent::__construct(); $this->load->model("phuyu_model");
 	}
 
+	private function tabla_cajausuarios_existe(){
+		$existe = $this->db->query("select to_regclass('seguridad.cajausuarios') as tabla")->row_array();
+		return !empty($existe["tabla"]);
+	}
+
+	private function responder_json($data){
+		$this->output->set_content_type("application/json", "utf-8");
+		echo json_encode($data);
+	}
+
 	public function index(){
 		if ($this->input->is_ajax_request()) {
 			if (isset($_SESSION["phuyu_usuario"])) {
@@ -59,8 +69,9 @@ class Usuarios extends CI_Controller {
 			if (isset($_SESSION["phuyu_usuario"])) {
 				$empleados = $this->db->query("select persona.codpersona, persona.razonsocial from public.personas as persona inner join public.empleados as empleado on(persona.codpersona=empleado.codpersona) where empleado.estado=1")->result_array();
 				$perfiles = $this->db->query("select *from seguridad.perfiles where estado=1")->result_array();
-				$sucursales = $this->db->query("select * from public.sucursales where estado=1")->result_array();
-				$this->load->view("administracion/usuarios/nuevo",compact("empleados","perfiles","sucursales"));
+				$sucursales = $this->db->query("select * from public.sucursales where estado=1 order by codsucursal")->result_array();
+				$cajas = $this->db->query("select caja.*, sucursal.descripcion as sucursal from caja.cajas as caja inner join public.sucursales as sucursal on(caja.codsucursal=sucursal.codsucursal) where caja.estado=1 and sucursal.estado=1 order by sucursal.codsucursal, caja.descripcion")->result_array();
+				$this->load->view("administracion/usuarios/nuevo",compact("empleados","perfiles","sucursales","cajas"));
 			}else{
 				$this->load->view("phuyu/505");
 			}
@@ -71,9 +82,9 @@ class Usuarios extends CI_Controller {
 
 	function guardar(){
 		if ($this->input->is_ajax_request()) {
-			$campos = ["codempleado","codperfil","usuario","clave","editar_pventa"];
+			$campos = ["codempleado","codperfil","usuario","clave","editar_pventa","eliminar_venta"];
 			$this->request = json_decode(file_get_contents('php://input'));
-			$valores = [$this->request->campos->codempleado,$this->request->campos->codperfil,$this->request->campos->usuario,$this->request->campos->clave,$this->request->campos->editar_pventa];
+			$valores = [$this->request->campos->codempleado,$this->request->campos->codperfil,$this->request->campos->usuario,$this->request->campos->clave,$this->request->campos->editar_pventa,$this->request->campos->eliminar_venta];
 
 			if($this->request->campos->codregistro=="") {
 				$existe = $this->db->query("select usuario from seguridad.usuarios where usuario='".$this->request->campos->usuario."'")->result_array();
@@ -96,7 +107,7 @@ class Usuarios extends CI_Controller {
 			}
 
 			$this->db->where("codusuario", $this->request->campos->codregistro);
-			$estado = $this->db->delete("seguridad.sucursalusuarios");
+				$estado = $this->db->delete("seguridad.sucursalusuarios");
 
 			if (isset($this->request->sucursales)) {
 				foreach ($this->request->sucursales as $key => $value) {
@@ -107,7 +118,32 @@ class Usuarios extends CI_Controller {
 					$estado = $this->db->insert("seguridad.sucursalusuarios", $data);
 				}
 			}
-			echo $estado;
+
+			if (!$this->tabla_cajausuarios_existe()) {
+				$this->responder_json([
+					"estado" => 0,
+					"mensaje" => "Falta ejecutar la migracion de cajas por usuario: seguridad.cajausuarios no existe."
+				]);
+				return;
+			}
+
+			$this->db->where("codusuario", $this->request->campos->codregistro);
+			$estado = $this->db->delete("seguridad.cajausuarios");
+
+			if (isset($this->request->cajas)) {
+				foreach ($this->request->cajas as $key => $value) {
+					$caja = $this->db->query("select codcaja, codsucursal from caja.cajas where codcaja=? and estado=1", [(int)$value])->row_array();
+					if (!empty($caja) && in_array((string)$caja["codsucursal"], array_map("strval", $this->request->sucursales ?? []), true)) {
+						$data = array(
+							"codsucursal" => (int)$caja["codsucursal"],
+							"codcaja" => (int)$caja["codcaja"],
+							"codusuario" => (int)$this->request->campos->codregistro
+						);
+						$estado = $this->db->insert("seguridad.cajausuarios", $data);
+					}
+				}
+			}
+			$this->responder_json(["estado" => (int)$estado]);
 		}else{
 			$this->load->view("phuyu/404");
 		}
@@ -129,6 +165,23 @@ class Usuarios extends CI_Controller {
 			$info = $this->db->query("select codsucursal from seguridad.sucursalusuarios where codusuario=".$this->request->codregistro)->result_array(); $data = array();
 			foreach ($info as $key => $value) {
 				$data[] = $value["codsucursal"];
+			}
+			echo json_encode($data);
+		}else{
+			$this->load->view("phuyu/404");
+		}
+	}
+
+	function cajas(){
+		if ($this->input->is_ajax_request()) {
+			$this->request = json_decode(file_get_contents('php://input'));
+			if (!$this->tabla_cajausuarios_existe()) {
+				echo json_encode([]);
+				return;
+			}
+			$info = $this->db->query("select codcaja from seguridad.cajausuarios where codusuario=".(int)$this->request->codregistro)->result_array(); $data = array();
+			foreach ($info as $key => $value) {
+				$data[] = $value["codcaja"];
 			}
 			echo json_encode($data);
 		}else{

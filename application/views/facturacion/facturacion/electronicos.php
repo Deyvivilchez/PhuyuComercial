@@ -34,8 +34,9 @@
 					<td> S/. {{dato.importe}} </td>
 					<td>
 						<b v-if="dato.estado==0" style="color:#d43f3a">PENDIENTE</b>
-						<b v-if="dato.estado==3" style="color:#eea236">CON EXCEPCIONES</b> 
-						<b v-if="dato.estado==4" style="color:#eea236">RECHAZADO</b> 
+						<b v-if="dato.estado==2" style="color:#eea236">CON EXCEPCIONES</b> 
+						<b v-if="dato.estado==3" style="color:#d43f3a">RECHAZADO</b> 
+						<b v-if="dato.estado==4" style="color:#eea236">OBSERVADO</b> 
 					</td>
 					<td style="padding-top:5px;"> 
 						<button type="button" class="btn btn-info btn-sm" v-on:click="comprobantes_xml(dato.codkardex,'01')">
@@ -83,8 +84,9 @@
 					<td> {{dato.nombre_xml}} </td>
 					<td>
 						<b v-if="dato.estado==0" style="color:#d43f3a">PENDIENTE</b>
-						<b v-if="dato.estado==3" style="color:#eea236">CON EXCEPCIONES</b> 
-						<b v-if="dato.estado==4" style="color:#eea236">RECHAZADO</b> 
+						<b v-if="dato.estado==2" style="color:#eea236">CON EXCEPCIONES</b> 
+						<b v-if="dato.estado==3" style="color:#d43f3a">RECHAZADO</b> 
+						<b v-if="dato.estado==4" style="color:#eea236">OBSERVADO</b> 
 					</td>
 					<td> 
 						<button type="button" class="btn btn-primary btn-sm" v-on:click="resumenes_ver(dato.codresumentipo,dato.periodo,dato.nrocorrelativo)"><i class="fa fa-file"></i> VER</button>
@@ -130,8 +132,9 @@
 					<td> {{dato.nombre_xml}} </td>
 					<td>
 						<b v-if="dato.estado==0" style="color:#d43f3a">PENDIENTE</b>
-						<b v-if="dato.estado==3" style="color:#eea236">CON EXCEPCIONES</b> 
-						<b v-if="dato.estado==4" style="color:#eea236">RECHAZADO</b> 
+						<b v-if="dato.estado==2" style="color:#eea236">CON EXCEPCIONES</b> 
+						<b v-if="dato.estado==3" style="color:#d43f3a">RECHAZADO</b> 
+						<b v-if="dato.estado==4" style="color:#eea236">OBSERVADO</b> 
 					</td>
 					<td style="padding-top:5px;"> 
 						<button type="button" class="btn btn-info btn-sm" v-on:click="resumenes_xml(dato.codresumentipo,dato.periodo,dato.nrocorrelativo)"> <i class="fa fa-cloud-download"></i> XML</button>
@@ -177,8 +180,9 @@
 					<td> {{dato.motivo}} </td>
 					<td>
 						<b v-if="dato.estado==0" style="color:#d43f3a">PENDIENTE</b>
-						<b v-if="dato.estado==3" style="color:#eea236">CON EXCEPCIONES</b> 
-						<b v-if="dato.estado==4" style="color:#eea236">RECHAZADO</b> 
+						<b v-if="dato.estado==2" style="color:#eea236">CON EXCEPCIONES</b> 
+						<b v-if="dato.estado==3" style="color:#d43f3a">RECHAZADO</b> 
+						<b v-if="dato.estado==4" style="color:#eea236">OBSERVADO</b> 
 					</td>
 					<td style="padding-top:5px;"> 
 						<button type="button" class="btn btn-info btn-sm" v-on:click="guias_xml(dato.codguiar,'09')">
@@ -218,8 +222,9 @@
 					<td> S/. {{dato.importe}} </td>
 					<td>
 						<b v-if="dato.estado==0" style="color:#d43f3a">PENDIENTE</b>
-						<b v-if="dato.estado==3" style="color:#eea236">CON EXCEPCIONES</b> 
-						<b v-if="dato.estado==4" style="color:#eea236">RECHAZADO</b> 
+						<b v-if="dato.estado==2" style="color:#eea236">CON EXCEPCIONES</b> 
+						<b v-if="dato.estado==3" style="color:#d43f3a">RECHAZADO</b> 
+						<b v-if="dato.estado==4" style="color:#eea236">OBSERVADO</b> 
 					</td>
 					<td style="padding-top:5px;"> 
 						<button type="button" class="btn btn-info btn-sm" v-on:click="comprobantes_xml(dato.codkardex,'01')">

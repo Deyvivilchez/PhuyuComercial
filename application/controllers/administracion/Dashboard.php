@@ -69,9 +69,33 @@ class Dashboard extends CI_Controller {
 	}
 
 	function vaciabd(){
-		$vaciar = $this->db->query("SELECT f_datosiniciales(".$_SESSION["phuyu_codsucursal"].")")->result_array();
+		set_time_limit(0);
+		$this->output->set_content_type("application/json");
 
-		echo 1;
+		if (!isset($_SESSION["phuyu_codsucursal"])) {
+			$this->output->set_status_header(401);
+			echo json_encode(["estado" => 0, "mensaje" => "Sesion no valida. Vuelva a iniciar sesion."]);
+			return;
+		}
+
+		$codsucursal = (int)$_SESSION["phuyu_codsucursal"];
+		$query = $this->db->query("SELECT public.f_datosiniciales(?) AS mensaje", [$codsucursal]);
+
+		if ($query === false) {
+			$error = $this->db->error();
+			$this->output->set_status_header(500);
+			echo json_encode([
+				"estado" => 0,
+				"mensaje" => $error["message"] ?? "No se pudo limpiar la base de datos."
+			]);
+			return;
+		}
+
+		$resultado = $query->row_array();
+		echo json_encode([
+			"estado" => 1,
+			"mensaje" => $resultado["mensaje"] ?? "BASE DE DATOS CON DATOS INICIALES"
+		]);
 	}
 
 	function ver_pedidos(){

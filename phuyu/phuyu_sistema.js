@@ -12,11 +12,24 @@ var phuyu_sistemabd = new Vue({
 			}).then((willDelete) => {
 				if (willDelete) {
 					phuyu_sistema.phuyu_inicio_guardar("LIMPIANDO LA BASE DE DATOS . . .");
-					$.post(url+"administracion/dashboard/vaciabd").then(function(data){
-						if(data==1){
-							swal({title: "VALORES RESTAURADOS CORRECTAMENTE", text: "LA BASE DE DATOS ESTÁ LIMPIA", icon: "success", closeOnClickOutside: true });							
-							phuyu_sistema.phuyu_fin();
+					$.ajax({
+						url: url+"administracion/dashboard/vaciabd",
+						method: "POST",
+						dataType: "json",
+						timeout: 600000
+					}).done(function(data){
+						if(data && parseInt(data.estado) === 1){
+							swal({title: "VALORES RESTAURADOS CORRECTAMENTE", text: data.mensaje || "LA BASE DE DATOS ESTÁ LIMPIA", icon: "success", closeOnClickOutside: true });
+						}else{
+							swal({title: "NO SE PUDO LIMPIAR LA BASE", text: (data && data.mensaje) ? data.mensaje : "El servidor no confirmo la limpieza.", icon: "error", closeOnClickOutside: true });
 						}
+					}).fail(function(xhr, estado){
+						var mensaje = estado === "timeout"
+							? "La limpieza tardo demasiado y se cancelo la espera."
+							: phuyu_limpia_error_backup(xhr.responseText) || "Error de red o servidor.";
+						swal({title: "NO SE PUDO LIMPIAR LA BASE", text: mensaje.substring(0, 500), icon: "error", closeOnClickOutside: true });
+					}).always(function(){
+						phuyu_sistema.phuyu_fin();
 					});
 				}
 			});

@@ -36,6 +36,24 @@
         text-transform: uppercase;
         white-space: nowrap;
     }
+	#modal_duplicados_productos .modal-dialog {
+		max-width: min(1180px, calc(100vw - 32px));
+	}
+	#modal_duplicados_productos .modal-content {
+		max-height: calc(100vh - 56px);
+	}
+	#modal_duplicados_productos .modal-body {
+		overflow-y: auto;
+		max-height: calc(100vh - 190px);
+	}
+	#modal_duplicados_productos .phuyu-duplicados-table {
+		min-width: 980px;
+	}
+	#modal_duplicados_productos .phuyu-duplicados-table thead th {
+		position: sticky;
+		top: 0;
+		z-index: 2;
+	}
 </style>
 
 <div id="phuyu_datos" class="phuyu-productos-list">
@@ -83,7 +101,12 @@
 	                        <i class="bi bi-pencil-square me-1"></i> Editar
 	                      </button>
 
-							<button type="button" class="btn btn-info" v-on:click="phuyu_operacion()"> <i class="bi bi-upload me-1"></i> Extra</button>
+							<button type="button" class="btn btn-info" v-on:click="phuyu_operacion()" title="Importar productos o servicios desde Excel"> <i class="bi bi-upload me-1"></i> Importar productos</button>
+							<button type="button" class="btn btn-primary" v-on:click="phuyu_migrar_stock()" title="Migrar productos nuevos y actualizar stock desde Excel"> <i class="bi bi-file-earmark-spreadsheet me-1"></i> Migrar productos/stock</button>
+							<button type="button" class="btn btn-secondary" :disabled="normalizandoStock" v-on:click="phuyu_normalizar_stock()" title="Colocar en cero las existencias negativas del almacén actual">
+								<i class="bi bi-arrow-counterclockwise me-1"></i> {{ normalizandoStock ? 'Revisando stock...' : 'Negativos a cero' }}
+							</button>
+							<button type="button" class="btn btn-dark" v-on:click="phuyu_duplicados()"> <i class="bi bi-intersect me-1"></i> Duplicados</button>
 	                      <button
 	                        class="btn eliminar btn-danger"
 	                        data-bs-toggle="tooltip"
@@ -97,6 +120,82 @@
 	                    </div>
 	                  </div>
 			    </div>
+				<div id="modal_duplicados_productos" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+					<div class="modal-dialog modal-xl">
+						<div class="modal-content">
+							<div class="modal-header">
+								<div>
+									<h5 class="modal-title mb-1">Productos duplicados</h5>
+									<small class="text-muted">Se detectan por codigo de barra, codigo interno y descripcion exacta. Al unir se conserva el menor ID y los demas quedan deshabilitados.</small>
+								</div>
+								<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+							</div>
+							<div class="modal-body">
+								<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+									<div class="input-group input-group-sm" style="width:280px">
+										<span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+										<input type="text" class="form-control" v-model="filtroDuplicado" :disabled="cargandoDuplicados || uniendoDuplicados" placeholder="Filtrar por ID, codigo o producto">
+									</div>
+									<div class="d-flex flex-wrap gap-2">
+										<select class="form-select form-select-sm" style="width:180px" v-model="tipoDuplicado" :disabled="cargandoDuplicados || uniendoDuplicados" v-on:change="phuyu_cargar_duplicados()">
+											<option value="todos">Todos</option>
+											<option value="barra">Codigo de barra</option>
+											<option value="codigo">Codigo interno</option>
+											<option value="descripcion">Descripcion exacta</option>
+										</select>
+										<button type="button" class="btn btn-sm btn-warning" :disabled="cargandoDuplicados || uniendoDuplicados || duplicadosFiltrados.length==0" v-on:click="phuyu_unir_todos_duplicados()">
+											{{ uniendoDuplicados ? 'Procesando ' + progresoDuplicados + '/' + totalDuplicados : 'Unir todos' }}
+										</button>
+										<button type="button" class="btn btn-sm btn-outline-secondary" :disabled="cargandoDuplicados || uniendoDuplicados" v-on:click="phuyu_cargar_duplicados()"><i class="bi bi-arrow-clockwise me-1"></i> Actualizar</button>
+									</div>
+								</div>
+								<p class="text-muted small mb-2">Unir todos procesa los grupos mostrados según los filtros actuales. Se muestran hasta 100 grupos por tipo; actualice la lista para revisar si quedan más.</p>
+								<div class="alert alert-info py-2" v-if="uniendoDuplicados" role="status" aria-live="polite">Procesando grupos: {{progresoDuplicados}} de {{totalDuplicados}}. Mantenga esta página abierta hasta terminar.</div>
+								<div class="table-responsive">
+									<table class="table table-sm table-hover align-middle mb-0 phuyu-data-table phuyu-duplicados-table">
+										<thead>
+											<tr>
+												<th>Tipo</th>
+												<th>Valor repetido</th>
+												<th>Cant.</th>
+												<th>Productos involucrados</th>
+												<th width="90">Accion</th>
+											</tr>
+										</thead>
+										<tbody>
+											<tr v-if="cargandoDuplicados">
+												<td colspan="5" class="text-center text-muted py-4">Buscando duplicados...</td>
+											</tr>
+											<tr v-if="!cargandoDuplicados && duplicados.length==0">
+												<td colspan="5" class="text-center text-muted py-4">No se encontraron duplicados activos.</td>
+											</tr>
+											<tr v-if="!cargandoDuplicados && duplicados.length>0 && duplicadosFiltrados.length==0">
+												<td colspan="5" class="text-center text-muted py-4">No hay coincidencias con ese filtro.</td>
+											</tr>
+											<tr v-for="grupo in duplicadosFiltrados">
+												<td><span class="badge bg-secondary">{{grupo.tipo_nombre}}</span></td>
+												<td>{{grupo.valor}}</td>
+												<td>{{grupo.cantidad}}</td>
+												<td>
+													<div v-for="producto in grupo.productos" class="border-bottom py-1">
+														<div><strong>ID:</strong> #{{producto.codproducto}} <strong>Codigo:</strong> {{producto.codigo || 'SIN CODIGO'}} <strong>Barra:</strong> {{producto.codigobarra || 'SIN BARRA'}}</div>
+														<div>{{producto.descripcion}} <span class="text-muted">Stock: {{producto.stock}}</span></div>
+													</div>
+												</td>
+												<td>
+													<button type="button" class="btn btn-sm btn-warning" :disabled="cargandoDuplicados || uniendoDuplicados" v-on:click="phuyu_unir_duplicado(grupo)">Unir</button>
+												</td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+							</div>
+							<div class="modal-footer">
+								<button type="button" class="btn btn-light" data-bs-dismiss="modal">Cerrar</button>
+							</div>
+						</div>
+					</div>
+				</div>
 				<div class="phuyu_cargando" v-if="cargando">
 					<div class="overlay-spinner">
 					</div>
@@ -137,6 +236,7 @@
 				<?php include("application/views/phuyu/phuyu_paginacion.php");?>
 			</div>
 		</div>
+
 	</div>
 </div>
 <script>
@@ -148,4 +248,4 @@
     }
 </script>
 
-<script src="<?php echo base_url();?>phuyu/phuyu_almacen/productos_index.js"> </script>
+<script src="<?php echo base_url();?>phuyu/phuyu_almacen/productos_index.js?v=stock-negativo-1"> </script>

@@ -1,33 +1,33 @@
-# IGNORAMOS LOS CAMBIOS A LA CARPETA DE FACTURACION ELECTRONICA SUNAT #
-# /sunat
-# Archivos de configuración sensibles
+# ==========================
+# Configuración sensible
+# ==========================
 /application/config/config.php
 /application/config/database.php
-/sunat/certificados/
-/sunat/comprobantes/
-/sunat/resumenes/
-/sunat/webphuyu/
-
-# O si quieres ser más específico:
-/sunat/*
-/sunat/certificados/
-/sunat/comprobantes/
-/sunat/log/
-/sunat/resumenes/
-/sunat/webphuyu/
-/sunat/xml/
-
-# Otros archivos sensibles comunes
 .env
 *.key
 *.pem
 *.crt
 
+# ==========================
+# Facturación electrónica (SUNAT)
+# ==========================
+/sunat/
 
+# ==========================
+# Guias y SQL locales
+# ==========================
+/guia_productos_unidades_almacenes.sql
 
+# ==========================
+# Logos e imágenes propias de cada empresa
+# ==========================
+/public/img/empresa/
+
+# ==========================
 # CodeIgniter
+# ==========================
 /application/logs/
 /application/cache/
-/application/config/database.php
-/application/config/config.php
-/vendor/*
+
+# Dependencias (solo si NO se versionan)
+/vendor/

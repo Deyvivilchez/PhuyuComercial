@@ -8,6 +8,7 @@
 
   #phuyu_ventas .phuyu-card-ventas {
     border-radius: 16px;
+    max-width: 100%;
   }
 
   #phuyu_ventas .phuyu-search-box .form-control {
@@ -50,6 +51,7 @@
     border-radius: 14px;
     overflow: visible;
     border: 1px solid #eef1f4;
+    max-width: 100%;
   }
 
   #phuyu_ventas .phuyu-table-ventas {
@@ -102,6 +104,40 @@
     white-space: nowrap;
   }
 
+  #phuyu_ventas .phuyu-comprobante-wrap {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  #phuyu_ventas .phuyu-mesa-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border: 1px solid #d8c5ff;
+    border-radius: 999px;
+    background: #f5f0ff;
+    color: #6d28d9;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  #phuyu_ventas .phuyu-mesa-badge i {
+    font-size: 11px;
+  }
+
+  #phuyu_ventas .phuyu-cliente-truncado {
+    display: block;
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   #phuyu_ventas .phuyu-download-btn {
     border-radius: 999px;
     font-weight: 700;
@@ -128,6 +164,14 @@
   }
 
   @media (max-width: 768px) {
+    #phuyu_ventas {
+      overflow-x: hidden;
+    }
+
+    #phuyu_ventas .phuyu-card-ventas .card-body {
+      overflow: hidden;
+    }
+
     #phuyu_ventas #title {
       font-size: 1.6rem !important;
     }
@@ -137,12 +181,30 @@
     }
 
     #phuyu_ventas .phuyu-btn-group .phuyu-btn {
-      flex: 1 1 auto;
+      flex: 1 1 calc(50% - .5rem);
+      min-width: 0;
+      padding-inline: 8px;
+    }
+
+    #phuyu_ventas .phuyu-btn-group .phuyu-btn span {
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     #phuyu_ventas .phuyu-table-ventas tbody td,
     #phuyu_ventas .phuyu-table-ventas thead th {
       font-size: 12px;
+    }
+
+    #phuyu_ventas .phuyu-table-wrapper {
+      overflow-x: auto;
+      overflow-y: hidden;
+      border-radius: 12px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #phuyu_ventas .phuyu-table-ventas {
+      min-width: 980px;
     }
   }
 </style>
@@ -238,6 +300,11 @@
                 <span>Imprimir</span>
               </button>
 
+              <button type="button" class="btn btn-dark btn-sm phuyu-btn" title="Cambiar fecha de venta" data-bs-toggle="tooltip" v-on:click="phuyu_editar()">
+                <i class="bi bi-calendar-event"></i>
+                <span>Fecha venta</span>
+              </button>
+
               <button type="button" class="btn btn-warning btn-sm phuyu-btn" title="Restaurar venta anulada" data-bs-toggle="tooltip" v-on:click="restaurar_venta()">
                 <i class="bi bi-arrow-counterclockwise"></i>
                 <span>Restaurar</span>
@@ -277,9 +344,15 @@
                 <td class="fw-bold text-muted">{{dato.codkardex}}</td>
 
                 <td>
-                  <span class="fw-semibold">
-                    {{dato.abreviatura}}: ({{dato.seriecomprobante}} - {{dato.nrocomprobante}})
-                  </span>
+                  <div class="phuyu-comprobante-wrap">
+                    <span class="fw-semibold">
+                      {{dato.abreviatura}}: ({{dato.seriecomprobante}} - {{dato.nrocomprobante}})
+                    </span>
+                    <span v-if="dato.mesa_restaurante" class="phuyu-mesa-badge" title="Código de mesa">
+                      <i class="bi bi-grid-3x3-gap-fill"></i>
+                      {{dato.mesa_restaurante}}
+                    </span>
+                  </div>
                   <span v-if="dato.referencia" class="badge bg-secondary-subtle text-secondary border border-secondary-subtle mt-1 d-inline-flex align-items-center gap-1">
                     <i class="bi bi-receipt"></i>
                     Pedido: {{dato.referencia}}
@@ -287,7 +360,11 @@
                 </td>
 
                 <td>{{dato.documento}}</td>
-                <td class="fw-semibold text-dark">{{dato.cliente}}</td>
+                <td class="fw-semibold text-dark">
+                  <span class="phuyu-cliente-truncado" :title="phuyu_cliente_nombre(dato)">
+                    {{phuyu_cliente_nombre(dato)}}
+                  </span>
+                </td>
 
                 <td>
                   {{dato.fechacomprobante}}<br>
@@ -487,6 +564,7 @@
 </div>
 
 <script>
+  var phuyu_puede_eliminar_venta = <?php echo (int)($_SESSION["phuyu_eliminar_venta"] ?? 0); ?>;
   var pantalla = jQuery(document).height();
   $("#reportes_modal").css({height: pantalla - 65});
 
@@ -497,4 +575,4 @@
   }
 </script>
 
-<script src="<?php echo base_url();?>phuyu/phuyu_ventas/index.js"></script>
+<script src="<?php echo base_url();?>phuyu/phuyu_ventas/index.js?v=<?php echo filemtime(FCPATH . 'phuyu/phuyu_ventas/index.js'); ?>"></script>

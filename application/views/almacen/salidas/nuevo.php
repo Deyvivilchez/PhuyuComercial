@@ -1,29 +1,29 @@
 <style>
+	#phuyu_operacion.phuyu-almacen-movimiento {
+		color: #444;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu_body {
+		padding: 32px 20px;
+	}
+
 	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-mov-card {
-		border: 1px solid rgba(64, 81, 137, .10);
-		border-radius: .9rem;
-		box-shadow: 0 10px 28px rgba(15, 23, 42, .06);
+		background: #fff;
+		border: 1px solid #dedede;
+		border-radius: 14px;
+		box-shadow: 0 8px 22px rgba(33, 37, 41, .05);
 	}
 
 	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-form-header {
-		display: flex;
-		align-items: center;
-		gap: .75rem;
-		padding-bottom: 1rem;
-		margin-bottom: 1rem;
-		border-bottom: 1px solid rgba(64, 81, 137, .10);
+		margin-bottom: 18px;
 	}
 
-	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-form-icon {
-		width: 44px;
-		height: 44px;
-		border-radius: 12px;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		background: rgba(240, 101, 72, .12);
-		color: #f06548;
-		font-size: 1.35rem;
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-form-header h5 {
+		color: #4a4a4a;
+		font-size: 15px;
+		font-weight: 800;
+		letter-spacing: .01em;
+		text-transform: uppercase;
 	}
 
 	#phuyu_operacion.phuyu-almacen-movimiento label,
@@ -31,22 +31,177 @@
 		font-size: .74rem;
 		font-weight: 800;
 		text-transform: uppercase;
-		letter-spacing: .03em;
-		color: #495057;
-		margin-bottom: .4rem;
+		letter-spacing: .01em;
+		color: #4f4f4f;
+		margin-bottom: 5px;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-main-grid,
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-ref-grid {
+		display: grid;
+		gap: 10px 22px;
+		margin-left: 0;
+		margin-right: 0;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-main-grid {
+		grid-template-columns: minmax(0, 2.4fr) minmax(0, 2.4fr) minmax(0, 1.55fr) minmax(0, .75fr) minmax(0, .75fr) minmax(0, 1.55fr);
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-ref-grid {
+		grid-template-columns: minmax(0, 2.4fr) minmax(0, .75fr) minmax(0, 1.55fr) minmax(0, 3.25fr) minmax(0, 1.35fr);
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-main-grid > [class*="col-"],
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-ref-grid > [class*="col-"] {
+		max-width: none;
+		min-width: 0;
+		padding-left: 0;
+		padding-right: 0;
+		width: auto;
 	}
 
 	#phuyu_operacion.phuyu-almacen-movimiento .form-control,
 	#phuyu_operacion.phuyu-almacen-movimiento .form-select,
 	#phuyu_operacion.phuyu-almacen-movimiento .select2-container .select2-selection {
-		min-height: 40px;
-		border-color: rgba(64, 81, 137, .16);
-		border-radius: .375rem;
+		min-height: 36px;
+		border-color: #cfcfcf;
+		border-radius: 9px;
+		box-shadow: none;
+		color: #4a4a4a;
+		font-size: 12px;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .form-control:focus,
+	#phuyu_operacion.phuyu-almacen-movimiento .form-select:focus {
+		border-color: #d32133;
+		box-shadow: 0 0 0 .14rem rgba(211, 33, 51, .12);
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .form-control[readonly],
+	#phuyu_operacion.phuyu-almacen-movimiento .form-select[readonly] {
+		background: #eeeeee;
+		color: #444;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-quick-product {
+		background: #f7f9fc;
+		border: 1px solid #dde5ef;
+		border-radius: 10px;
+		margin: 10px 0 8px;
+		padding: 10px 12px 14px;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-product-select2.select2-container {
+		width: 100% !important;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-product-select2 .select2-selection--single {
+		align-items: center !important;
+		background: #fbfcfe !important;
+		border: 1px solid #cfd8e3 !important;
+		border-radius: 9px !important;
+		display: flex !important;
+		min-height: 36px !important;
+		transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-product-select2.select2-container--open .select2-selection--single,
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-product-select2.select2-container--focus .select2-selection--single {
+		background: #fff !important;
+		border-color: #d32133 !important;
+		box-shadow: 0 0 0 .14rem rgba(211, 33, 51, .12) !important;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-product-select2 .select2-selection__rendered {
+		color: #4a4a4a !important;
+		font-size: 12px !important;
+		line-height: 36px !important;
+		padding-left: .75rem !important;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-product-select2 .select2-selection__arrow {
+		height: 36px !important;
+	}
+
+	#phuyu_operacion .select2-dropdown {
+		border-color: #cfd8e3;
+		border-radius: 10px;
+		box-shadow: 0 14px 32px rgba(33, 37, 41, .12);
+		overflow: hidden;
+	}
+
+	#phuyu_operacion .select2-results__option {
+		padding: 7px 9px;
+	}
+
+	#phuyu_operacion .select2-results__option--highlighted[aria-selected] {
+		background: #fff1f2;
+		color: #8d1d2b;
+	}
+
+	.phuyu-product-result {
+		align-items: center;
+		display: flex;
+		justify-content: space-between;
+		gap: 10px;
+	}
+
+	.phuyu-product-result-name {
+		color: #333;
+		font-size: 12.5px;
+		font-weight: 800;
+	}
+
+	.phuyu-product-result-meta {
+		color: #777;
+		font-size: 11px;
+	}
+
+	.phuyu-product-result-price {
+		color: #d32133;
+		font-size: 12px;
+		font-weight: 900;
+		white-space: nowrap;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-quick-feedback {
+		align-items: center;
+		background: #effcf8;
+		border: 1px solid rgba(10, 179, 156, .18);
+		border-radius: 11px;
+		box-shadow: 0 14px 34px rgba(15, 23, 42, .16);
+		color: #087f6f;
+		display: flex;
+		font-size: .82rem;
+		font-weight: 800;
+		gap: .45rem;
+		max-width: min(360px, calc(100vw - 32px));
+		min-width: 240px;
+		padding: .68rem .82rem;
+		position: fixed;
+		right: 22px;
+		top: 88px;
+		z-index: 2050;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-quick-feedback i {
+		flex: 0 0 auto;
+		font-size: 1.05rem;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-quick-feedback span {
+		display: block;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	#phuyu_operacion.phuyu-almacen-movimiento .table-responsive {
-		border: 1px solid rgba(64, 81, 137, .10);
-		border-radius: .75rem;
+		background: #fff;
+		border: 0;
+		border-radius: 0;
 		overflow: auto;
 	}
 
@@ -56,20 +211,51 @@
 
 	#phuyu_operacion.phuyu-almacen-movimiento .table thead th {
 		background: #f8fafc;
-		color: #495057;
-		font-size: .74rem;
+		color: #444;
+		font-size: 11px;
 		font-weight: 800;
 		text-transform: uppercase;
 		white-space: nowrap;
-		border-bottom: 1px solid rgba(64, 81, 137, .12);
-		padding: .65rem;
+		border: 1px solid #cfd6dd;
+		padding: 6px;
 	}
 
 	#phuyu_operacion.phuyu-almacen-movimiento .table tbody td,
 	#phuyu_operacion.phuyu-almacen-movimiento .table tfoot td {
-		font-size: .86rem;
+		border: 1px solid #cfd6dd;
+		font-size: 12px;
 		vertical-align: middle;
-		padding: .55rem;
+		padding: 6px;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .table tbody tr:hover {
+		background: #f8fbff;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-products-table {
+		margin-top: 8px;
+		min-height: 66px;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-products-table .form-control,
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-products-table .form-select {
+		min-height: 32px;
+		font-size: 12px;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-total-label {
+		background: #fff;
+		color: #4f4f4f;
+		font-weight: 800;
+		text-align: right;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-total-amount {
+		background: #fff;
+		color: #f00;
+		font-size: 14px !important;
+		font-weight: 900;
+		text-align: right;
 	}
 
 	#phuyu_operacion.phuyu-almacen-movimiento .btn-block {
@@ -82,31 +268,79 @@
 		--vz-btn-font-size: .75rem;
 	}
 
+	#phuyu_operacion.phuyu-almacen-movimiento .btn {
+		border-radius: 9px;
+		font-weight: 700;
+		min-height: 36px;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-product-button {
+		background: #3c9c35;
+		border-color: #3c9c35;
+		min-height: 36px;
+	}
+
 	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-form-actions {
 		display: flex;
 		justify-content: flex-end;
-		gap: .65rem;
-		padding-top: 1rem;
-		margin-top: 1rem;
-		border-top: 1px solid rgba(64, 81, 137, .10);
+		gap: 4px;
+		margin-top: 46px;
+		padding-top: 0;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-form-actions .btn-primary {
+		background: #23a8df;
+		border-color: #23a8df;
+	}
+
+	#phuyu_operacion.phuyu-almacen-movimiento .phuyu-form-actions .btn-light {
+		background: #d32133;
+		border-color: #d32133;
+		color: #fff;
+	}
+
+	@media (max-width: 767.98px) {
+		#phuyu_operacion.phuyu-almacen-movimiento .phuyu-quick-feedback {
+			left: 12px;
+			max-width: none;
+			min-width: 0;
+			right: 12px;
+			top: 76px;
+		}
+
+		#phuyu_operacion.phuyu-almacen-movimiento .phuyu-main-grid,
+		#phuyu_operacion.phuyu-almacen-movimiento .phuyu-ref-grid {
+			grid-template-columns: 1fr;
+		}
+
+		#phuyu_operacion.phuyu-almacen-movimiento .phuyu-form-actions {
+			flex-direction: column-reverse;
+			margin-top: 18px;
+		}
+
+		#phuyu_operacion.phuyu-almacen-movimiento .phuyu-form-actions .btn {
+			width: 100%;
+		}
 	}
 </style>
 
 <div id="phuyu_operacion" class="phuyu-almacen-movimiento">
+	<div id="phuyu_producto_feedback" class="phuyu-quick-feedback" style="display: none;">
+		<i class="bi bi-check2-circle"></i>
+		<span></span>
+	</div>
+
 	<form id="formulario" v-on:submit.prevent="phuyu_guardar()">
 		<input type="hidden" id="igvsunat" value="<?php echo $_SESSION["phuyu_igv"];?>">
+		<input type="hidden" id="stockalmacen" value="<?php echo $_SESSION["phuyu_stockalmacen"];?>">
 
 		<div class="phuyu_body">
 			<div class="card phuyu-mov-card">
 				<div class="card-body">
 				    <div class="phuyu-form-header">
-						<div class="phuyu-form-icon"><i class="bi bi-box-arrow-up"></i></div>
-						<div>
-							<div class="text-muted small text-uppercase fw-semibold">Almacen</div>
-							<h5 class="mb-0 fw-bold">Registro nueva salida almacen</h5>
-						</div>
+						<h5 class="mb-0">Registro nueva salida almacen</h5>
 					</div>
-		        	<div class="row mb-2">
+		        	<div class="phuyu-main-grid mb-2">
 		        		<div class="col-md-3">
 		        			<div class="w-100">
 						    	<label>PERSONA RESPONSABLE</label>
@@ -161,7 +395,7 @@
 					    	<input type="date" class="form-control" name="fechakardex" id="fechakardex" value="<?php echo date('Y-m-d');?>" autocomplete="off" required>
 					    </div>
 				    </div>
-				    <div class="row mb-2" v-if="campos.codmovimientotipo==30">
+				    <div class="row g-3 mb-2" v-if="campos.codmovimientotipo==30">
 				    	<div class="col-md-12">
 					    	<label>ALMACEN DESTINO</label>
 					    	<select class="form-select" name="codalmacen_ref" v-model="campos.codalmacen_ref" required>
@@ -176,7 +410,7 @@
 					    	</select>
 					    </div>
 				    </div>
-				    <div class="row mb-2" v-if="campos.codmovimientotipo==29">
+				    <div class="row g-3 mb-2" v-if="campos.codmovimientotipo==29">
 						<div class="col-md-4"></div>
 						<div class="col-md-8">	
 							<div class="row form-group table-responsive">
@@ -207,7 +441,7 @@
 							</div>
 						</div>
 					</div>
-				    <div class="row mb-2">
+				    <div class="phuyu-ref-grid mb-2">
 				    	<div class="col-md-3 col-xs-12">
 					    	<label>COMPROBANTE REFERENCIA</label>
 					    	<select class="form-select" name="codcomprobantetipo_ref" v-model="campos.codcomprobantetipo_ref">
@@ -232,19 +466,23 @@
 					    	<input class="form-control" name="descripcion" v-model="campos.descripcion" required autocomplete="off">
 					    </div>
 						    <div class="col-md-2 d-flex align-items-end">
-								<button type="button" class="btn btn-success w-100" v-on:click="phuyu_item()">
+								<button type="button" class="btn btn-success w-100 phuyu-product-button" v-on:click="phuyu_item()">
 								<i class="bi bi-search me-1"></i> Productos
 							</button>
 					    </div>
 				    </div>
+					<div class="phuyu-quick-product">
+						<label>BUSCAR PRODUCTO DIRECTO</label>
+						<select id="producto_rapido_select" class="form-select" style="width: 100%;"></select>
+					</div>
 				    <?php
                         $data = '';
                         if($_SESSION["phuyu_stockalmacen"] == 1){
                         	$data = 'v-bind:max="dato.stock"';
                         }
 				    ?>
-				    <div class="row form-group table-responsive">
-						<table class="table table-striped" style="font-size: 11px">
+				    <div class="table-responsive phuyu-products-table">
+						<table class="table table-hover align-middle" style="font-size: 11px">
 							<thead>
 								<tr>
 									
@@ -321,8 +559,8 @@
 							</tbody>
 							<tfoot>
 								<tr>
-									<td colspan="5" style="font-size: 14px;" align="right"><b>Total Salida</b></td>
-									<td align="right" style="font-size: 14px;color:red"><b>S/. {{totales.importe}}</b></td>
+									<td colspan="5" class="phuyu-total-label">Total Salida</td>
+									<td class="phuyu-total-amount">S/. {{totales.importe}}</td>
 									<td></td>
 								</tr>
 							</tfoot>

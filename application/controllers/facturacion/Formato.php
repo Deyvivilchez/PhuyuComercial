@@ -56,6 +56,43 @@ class Formato extends CI_Controller
         return file_exists($cachePath) ? $cachePath : $path;
     }
 
+    private function phuyu_qr_data_uri($textoqr, $size = 5, $level = 'H')
+    {
+        if ((string)$textoqr === '') {
+            return '';
+        }
+
+        // Genera el PNG en memoria para no crear archivos temporales en sunat/webphuyu.
+        $this->load->library('ciqrcode');
+
+        ob_start();
+        $this->ciqrcode->generate([
+            'data' => (string)$textoqr,
+            'level' => $level,
+            'size' => $size,
+        ]);
+        $png = ob_get_clean();
+
+        $archivo_error = APPPATH . 'logs/qrcode.png-errors.txt';
+        if (file_exists($archivo_error)) {
+            @unlink($archivo_error);
+        }
+
+        return $png !== '' ? 'data:image/png;base64,' . base64_encode($png) : '';
+    }
+
+    private function phuyu_qr_texto_comprobante($empresa, $venta)
+    {
+        // Texto QR usado por los comprobantes impresos: empresa, serie, total, fecha y cliente.
+        return ($empresa['razonsocial'] ?? '') . '|' .
+            ($venta['seriecomprobante'] ?? '') . '|' .
+            ($venta['nrocomprobante'] ?? '') . '|' .
+            number_format((float)($venta['igv'] ?? 0), 2, '.', '') . '|' .
+            number_format((float)($venta['importe'] ?? 0), 2, '.', '') . '|' .
+            ($venta['fechacomprobante'] ?? $venta['fechapedido'] ?? date('Y-m-d')) . '|' .
+            ($venta['documento'] ?? '');
+    }
+
     private function phuyu_whatsapp_secret()
     {
         $secret = getenv('WHATSAPP_SHARE_SECRET');
@@ -94,6 +131,37 @@ class Formato extends CI_Controller
         )->row_array();
 
         return !empty($venta['codsucursal']) ? (int)$venta['codsucursal'] : 0;
+    }
+
+    private function phuyu_mesa_restaurante($codkardex)
+    {
+        $tablas = $this->db->query("
+            SELECT
+                to_regclass('kardex.kardexpedido') AS kardexpedido,
+                to_regclass('restaurante.mesaspedido') AS mesaspedido
+        ")->row_array();
+
+        if (empty($tablas['kardexpedido']) || empty($tablas['mesaspedido'])) {
+            return '';
+        }
+
+        $mesa = $this->db->query("
+            SELECT string_agg(DISTINCT mp.nromesa::text, ' - ') AS numero
+            FROM restaurante.mesaspedido mp
+            WHERE mp.codpedido IN (
+                SELECT p.codpedido
+                FROM kardex.pedidos p
+                WHERE p.codkardex = " . (int)$codkardex . "
+
+                UNION
+
+                SELECT kp.codpedido
+                FROM kardex.kardexpedido kp
+                WHERE kp.codkardex = " . (int)$codkardex . "
+            )
+        ")->row_array();
+
+        return trim((string)($mesa['numero'] ?? ''));
     }
 
     public function formato_guia($codguiar)
@@ -436,12 +504,13 @@ class Formato extends CI_Controller
         $this->load->library('Number');
         $number = new Number();
         $total_texto = $number->convertirNumeroEnLetras(round($venta[0]['importe'], 2));
+        $qrSrc = $this->phuyu_qr_data_uri($this->phuyu_qr_texto_comprobante($empresa[0], $venta[0]));
 
         $html .= '<table cellpadding="2" width="100%" style="border:1px solid #000;">';
         $html .= '<tr>';
         $html .= '<td style="' . $estilo . ' width:65%" rowspan="10" align="center"> <br> ';
         $html .= '<h3> SON: ' . strtoupper($total_texto) . ' Y 00/100 SOLES</h3> <br> ';
-        $html .= '<img src="' . base_url() . 'sunat/webphuyu/qrcode.png" style="height:100px">';
+        $html .= '<img src="' . $qrSrc . '" style="height:100px">';
         $html .= '<p>Para ver el documento visita: http://ceramicasm.erpperu.com/consultacomprobantes</p>';
         $html .= '</td>';
         $html .= '<td style="' . $estilo . ' width:20%;text-align:right"> <b>OP.GRAVADAS S/</b> </td>';
@@ -458,18 +527,6 @@ class Formato extends CI_Controller
         $html .= '<tr> <td style="' . $estilo1 . '"> <b>ICBPER S/</b> </td> <td style="' . $estilo1 . '">' . number_format($venta[0]['icbper'], 2) . ' </td> </tr>';
         $html .= '<tr> <td style="' . $estilo1 . '"> <b>TOTAL S/</b> </td> <td style="' . $estilo1 . '">' . number_format($venta[0]['importe'], 2) . ' </td> </tr>';
         $html .= '</table><br><br>';
-
-        $textoqr = $empresa[0]['razonsocial'] . '|' . $venta[0]['seriecomprobante'] . '|' . $venta[0]['nrocomprobante'] . '|' . number_format($venta[0]['igv'], 2) . '|' . number_format($venta[0]['importe'], 2) . '|' . $venta[0]['fechacomprobante'] . '|' . $venta[0]['documento'];
-
-        $this->load->library('ciqrcode');
-        $params['data'] = $textoqr;
-        $params['level'] = 'H';
-        $params['size'] = 5;
-        $params['savename'] = './sunat/webphuyu/qrcode.png';
-        $this->ciqrcode->generate($params);
-
-        $archivo_error = APPPATH . '/logs/qrcode.png-errors.txt';
-        unlink($archivo_error);
 
         $html .= '<table><tr><td>BIENES TRANSFERIDOS EN LA AMAZONIA REGION SELVA PARA SER CONSUMIDOS EN LA MISMA</td></tr><tr><td>SERVICIOS PRESTADOS EN LA AMAZONIA REGION SELVA PARA SER CONSUMIDOS EN LA MISMA</td></tr> </table>';
 
@@ -1096,38 +1153,7 @@ class Formato extends CI_Controller
     $number = new Number();
     $total_texto = $number->convertirNumeroEnLetras(round((float)$venta['importe'], 2));
 
-    // QR
-    $this->load->library('ciqrcode');
-
-    $qrDir = FCPATH . 'sunat/webphuyu/';
-    if (!is_dir($qrDir)) {
-        mkdir($qrDir, 0777, true);
-    }
-
-    $textoqr = $empresa['razonsocial'] . '|' .
-        $venta['seriecomprobante'] . '|' .
-        $venta['nrocomprobante'] . '|' .
-        number_format((float)$venta['igv'], 2, '.', '') . '|' .
-        number_format((float)$venta['importe'], 2, '.', '') . '|' .
-        $venta['fechacomprobante'] . '|' .
-        $venta['documento'];
-
-    $qrFileName = 'qr_' . $venta['seriecomprobante'] . '_' . $venta['nrocomprobante'] . '.png';
-    $qrFilePath = $qrDir . $qrFileName;
-
-    $paramsQr = [];
-    $paramsQr['data'] = $textoqr;
-    $paramsQr['level'] = 'H';
-    $paramsQr['size'] = 5;
-    $paramsQr['savename'] = $qrFilePath;
-    $this->ciqrcode->generate($paramsQr);
-
-    $qr_src = file_exists($qrFilePath) ? base_url('sunat/webphuyu/' . $qrFileName) : '';
-
-    $archivo_error = APPPATH . 'logs/qrcode.png-errors.txt';
-    if (file_exists($archivo_error)) {
-        @unlink($archivo_error);
-    }
+    $qr_src = $this->phuyu_qr_data_uri($this->phuyu_qr_texto_comprobante($empresa, $venta));
 
     $data = [
         'modo_pdf'         => true,
@@ -1149,6 +1175,7 @@ class Formato extends CI_Controller
         'fechavencimiento' => $fechavencimiento,
         'total_texto'      => $total_texto,
         'qr_src'           => $qr_src,
+        'mesa_restaurante' => $this->phuyu_mesa_restaurante($codkardex),
     ];
 
     $html = $this->load->view('reportes/ventas/a4comprobante', $data, true);
@@ -1159,6 +1186,7 @@ class Formato extends CI_Controller
     if (!is_dir($tempDir)) {
         mkdir($tempDir, 0777, true);
     }
+    $fontDir = FCPATH . 'vendor/dompdf/dompdf/lib/fonts';
 
     $options = new \Dompdf\Options();
     $options->set('isHtml5ParserEnabled', true);
@@ -1166,7 +1194,7 @@ class Formato extends CI_Controller
     $options->set('defaultFont', 'DejaVu Sans');
     $options->set('chroot', FCPATH);
     $options->set('tempDir', $tempDir);
-    $options->set('fontDir', $tempDir);
+    $options->set('fontDir', $fontDir);
     $options->set('fontCache', $tempDir);
     $options->set('dpi', 96);
 
@@ -1888,36 +1916,7 @@ class Formato extends CI_Controller
     $slogan = $formato['slogan'] !== '' ? $formato['slogan'] : ($parametros['slogan'] ?? '');
     $publicidad = $formato['publicidad'] !== '' ? $formato['publicidad'] : ($parametros['publicidad'] ?? '');
 
-    // QR
-    $this->load->library('ciqrcode');
-
-    $qrDir = FCPATH . 'sunat/webphuyu/';
-    if (!is_dir($qrDir)) {
-        mkdir($qrDir, 0777, true);
-    }
-
-    $textoqr = $empresa['razonsocial'] . '|' .
-               $venta['seriecomprobante'] . '|' .
-               $venta['nrocomprobante'] . '|' .
-               number_format((float)$venta['igv'], 2, '.', '') . '|' .
-               number_format((float)$venta['importe'], 2, '.', '') . '|' .
-               $venta['fechacomprobante'] . '|' .
-               $venta['documento'];
-
-    $qrFileName = 'qrcode_a5_' . $venta['seriecomprobante'] . '_' . $venta['nrocomprobante'] . '.png';
-    $qrFilePath = $qrDir . $qrFileName;
-
-    $params = [];
-    $params['data'] = $textoqr;
-    $params['level'] = 'H';
-    $params['size'] = 5;
-    $params['savename'] = $qrFilePath;
-    $this->ciqrcode->generate($params);
-
-    $qrSrc = '';
-    if (file_exists($qrFilePath)) {
-        $qrSrc = 'data:image/png;base64,' . base64_encode(file_get_contents($qrFilePath));
-    }
+    $qrSrc = $this->phuyu_qr_data_uri($this->phuyu_qr_texto_comprobante($empresa, $venta));
 
     $this->load->library('Number');
     $number = new Number();
@@ -1942,6 +1941,7 @@ class Formato extends CI_Controller
         'publicidad' => $publicidad,
         'fechavencimiento' => $fechavencimiento,
         'total_texto' => $total_texto,
+        'mesa_restaurante' => $this->phuyu_mesa_restaurante($codkardex),
     ];
 
     $html = $this->load->view('reportes/ventas/a5venta', $data, true);
@@ -1952,6 +1952,7 @@ class Formato extends CI_Controller
     if (!is_dir($tempDir)) {
         mkdir($tempDir, 0777, true);
     }
+    $fontDir = FCPATH . 'vendor/dompdf/dompdf/lib/fonts';
 
     $options = new \Dompdf\Options();
     $options->set('isHtml5ParserEnabled', true);
@@ -1959,7 +1960,7 @@ class Formato extends CI_Controller
     $options->set('defaultFont', 'DejaVu Sans');
     $options->set('chroot', FCPATH);
     $options->set('tempDir', $tempDir);
-    $options->set('fontDir', $tempDir);
+    $options->set('fontDir', $fontDir);
     $options->set('fontCache', $tempDir);
     $options->set('dpi', 96);
 
@@ -2164,35 +2165,7 @@ class Formato extends CI_Controller
         $slogan = !empty($formato['slogan']) ? $formato['slogan'] : ($parametros['slogan'] ?? '');
         $publicidad = !empty($formato['publicidad']) ? $formato['publicidad'] : ($parametros['publicidad'] ?? '');
 
-        // QR único por ticket
-        $textoqr = $empresa['razonsocial'] . '|' .
-            $venta['seriecomprobante'] . '|' .
-            $venta['nrocomprobante'] . '|' .
-            number_format((float)$venta['igv'], 2, '.', '') . '|' .
-            number_format((float)$venta['importe'], 2, '.', '') . '|' .
-            $venta['fechacomprobante'] . '|' .
-            $venta['documento'];
-
-        $this->load->library('ciqrcode');
-
-        $qrDir = FCPATH . 'sunat/webphuyu/';
-        if (!is_dir($qrDir)) {
-            mkdir($qrDir, 0777, true);
-        }
-
-        $qrFile = $qrDir . 'ticket_qr_' . $venta['seriecomprobante'] . '_' . $venta['nrocomprobante'] . '.png';
-
-        $params = [];
-        $params['data'] = $textoqr;
-        $params['level'] = 'H';
-        $params['size'] = 5;
-        $params['savename'] = $qrFile;
-        $this->ciqrcode->generate($params);
-
-        $qrSrc = '';
-        if (file_exists($qrFile)) {
-            $qrSrc = 'data:image/png;base64,' . base64_encode(file_get_contents($qrFile));
-        }
+        $qrSrc = $this->phuyu_qr_data_uri($this->phuyu_qr_texto_comprobante($empresa, $venta));
 
         $this->load->library('Number');
         $number = new Number();
@@ -2222,6 +2195,7 @@ class Formato extends CI_Controller
             'detallemovimiento' => $detallemovimiento,
             'efectivo' => $efectivo,
             'logoEmpresa' => $_SESSION['phuyu_logo'] ?? '',
+            'mesa_restaurante' => $this->phuyu_mesa_restaurante($codkardex),
         ];
 
         $this->load->view('facturacion/formato/ticket_Phuyu', $data);
@@ -2289,17 +2263,7 @@ class Formato extends CI_Controller
                 $publicidad = $parametros[0]['publicidad'];
             }
 
-            $textoqr = $empresa[0]['razonsocial'] . '|' . $venta[0]['seriecomprobante'] . '|' . $venta[0]['nrocomprobante'] . '|' . number_format($venta[0]['igv'], 2) . '|' . number_format($venta[0]['importe'], 2) . '|' . $venta[0]['fechacomprobante'] . '|' . $venta[0]['documento'];
-
-            $this->load->library('ciqrcode');
-            $params['data'] = $textoqr;
-            $params['level'] = 'H';
-            $params['size'] = 5;
-            $params['savename'] = './sunat/webphuyu/qrcode.png';
-            $this->ciqrcode->generate($params);
-
-            $archivo_error = APPPATH . '/logs/qrcode.png-errors.txt';
-            unlink($archivo_error);
+            $qrSrc = $this->phuyu_qr_data_uri($this->phuyu_qr_texto_comprobante($empresa[0], $venta[0]));
 
             $this->load->library('Number');
             $number = new Number();
@@ -2321,7 +2285,7 @@ class Formato extends CI_Controller
             }
             $logoEmpresa = $_SESSION['phuyu_logo'];
 
-            $this->load->view('facturacion/formato/' . $ticket, compact('empresa', 'sucursal', 'venta', 'totales', 'detalle', 'vendedor', 'credito', 'texto_importe', 'direccionlogo', 'formato', 'nombre', 'slogan', 'publicidad', 'fechavencimiento', 'detallemovimiento', 'efectivo', 'logoEmpresa'));
+            $this->load->view('facturacion/formato/' . $ticket, compact('empresa', 'sucursal', 'venta', 'totales', 'detalle', 'vendedor', 'credito', 'texto_importe', 'direccionlogo', 'formato', 'nombre', 'slogan', 'publicidad', 'fechavencimiento', 'detallemovimiento', 'efectivo', 'logoEmpresa', 'qrSrc'));
         } else {
             $this->load->view('phuyu/404');
         }
@@ -2332,7 +2296,7 @@ class Formato extends CI_Controller
         $estilo = 'border-left:1px solid #000; border-right:1px solid #000;';
         $estilo1 = 'border-top:1px solid #000; border-left:1px solid #000; border-right:1px solid #000;text-align:right';
 
-        $empresa = $this->db->query('select documento,razonsocial,nombrecomercial from public.personas where codpersona=1')->result_array();
+        $empresa = $this->db->query('select documento,razonsocial,nombrecomercial,foto from public.personas where codpersona=1')->result_array();
         $sucursal = $this->db->query('select *from public.sucursales where codsucursal=' . $_SESSION['phuyu_codsucursal'])->result_array();
         $principal = $this->db->query('select *from public.sucursales where principal=1 and estado=1')->result_array();
         $parametros = $this->db->query('select *from public.empresas limit 1')->result_array();
@@ -2340,6 +2304,133 @@ class Formato extends CI_Controller
         $venta = $this->db->query('select k.fechaproforma,ct.descripcion as comprobante, k.codcomprobantetipo, k.seriecomprobante,k.nrocomprobante, p.documento,k.razonsocial,k.direccion,k.valorventa,k.descglobal,k.igv,k.importe, k.codempleado,k.condicionpago,k.codpersona from kardex.proformas as k inner join public.personas as p on(k.codpersona=p.codpersona) inner join caja.comprobantetipos as ct on(k.codcomprobantetipo=ct.codcomprobantetipo) where k.codproforma=' . $codproforma)->result_array();
         $totales = $this->db->query('select (select coalesce(sum(subtotal),0) from kardex.proformasdetalle where codproforma=' . $codproforma . " and codafectacionigv='10') as gravado, (select coalesce(sum(subtotal),0) from kardex.proformasdetalle where codproforma=" . $codproforma . " and codafectacionigv='20') as exonerado, (select coalesce(sum(subtotal),0) from kardex.proformasdetalle where codproforma=" . $codproforma . " and codafectacionigv='30') as inafecto, (select coalesce(sum(subtotal),0) from kardex.proformasdetalle where codproforma=" . $codproforma . " and codafectacionigv='21') as gratuito")->result_array();
         $detalle = $this->db->query('select kd.item,kd.cantidad,p.descripcion as producto,u.descripcion as unidad,kd.preciounitario,kd.subtotal, kd.descripcion,kd.preciobruto,kd.descuento from kardex.proformasdetalle as kd inner join almacen.productos as p on(p.codproducto=kd.codproducto) inner join almacen.unidades as u on(u.codunidad=kd.codunidad) where kd.codproforma=' . $codproforma . ' order by kd.item')->result_array();
+
+        if (empty($venta)) {
+            show_error('No se encontró la proforma solicitada.', 404);
+            return;
+        }
+
+        $formatoData = $this->db->query('select *from caja.comprobantes where codcomprobantetipo=' . (int)$venta[0]['codcomprobantetipo'] . ' AND seriecomprobante = ' . $this->db->escape($venta[0]['seriecomprobante']) . ' AND codsucursal= ' . (int)$_SESSION['phuyu_codsucursal'] . ' limit 1')->row_array();
+        if (empty($formatoData)) {
+            $formatoData = [
+                'nombrecomercial' => '',
+                'logo' => '',
+                'slogan' => '',
+                'publicidad' => '',
+                'agradecimiento' => '',
+                'tipoconleyendaamazonia' => 0,
+                'impresionlogo' => 1,
+            ];
+        }
+
+        $nombreProforma = trim((string)($formatoData['nombrecomercial'] ?? ''));
+        if ($nombreProforma === '') {
+            $nombreProforma = !empty($empresa[0]['nombrecomercial']) ? $empresa[0]['nombrecomercial'] : $empresa[0]['razonsocial'];
+        }
+
+        // Usa el logo configurado y recupera el de la empresa si el archivo ya no existe.
+        $logosCandidatos = [
+            FCPATH . 'public/img/empresa/' . ($formatoData['logo'] ?? ''),
+            FCPATH . 'public/img/empresa/' . ($empresa[0]['foto'] ?? ''),
+            FCPATH . 'public/img/' . ($_SESSION['phuyu_logo'] ?? ''),
+        ];
+        $logoSrc = '';
+        foreach ($logosCandidatos as $logoArchivo) {
+            if (!is_file($logoArchivo) || !is_readable($logoArchivo)) {
+                continue;
+            }
+            $imagenInfo = @getimagesize($logoArchivo);
+            if (!$imagenInfo || !in_array($imagenInfo['mime'], ['image/png', 'image/jpeg', 'image/gif'], true)) {
+                continue;
+            }
+            $imagenContenido = file_get_contents($logoArchivo);
+            if ($imagenContenido !== false) {
+                $logoSrc = 'data:' . $imagenInfo['mime'] . ';base64,' . base64_encode($imagenContenido);
+                break;
+            }
+        }
+
+        $vendedorData = $this->db->query('select razonsocial from public.personas where codpersona=' . (int)$venta[0]['codempleado'])->row_array();
+        $creditoData = [];
+        $fechavencimiento = $venta[0]['fechaproforma'];
+        if ((int)$venta[0]['condicionpago'] === 2) {
+            $creditoData = $this->db->query('select *from kardex.creditosproformas where codproforma=' . (int)$codproforma . ' AND estado = 1 limit 1')->row_array();
+            if (!empty($creditoData['fechavencimiento'])) {
+                $fechavencimiento = $creditoData['fechavencimiento'];
+            }
+        }
+
+        $cuentascorrientes = $this->db->query('select ct.*, b.descripcion as banco from caja.ctasctes ct inner join caja.bancos b ON(ct.codbanco=b.codbanco) where ct.codpersona=1')->result_array();
+
+        $this->load->library('Number');
+        $number = new Number();
+        $total_texto = $number->convertirNumeroEnLetras(round((float)$venta[0]['importe'], 2));
+
+        $empresaData = $empresa[0];
+        $sucursalData = $sucursal[0];
+        $principalData = $principal[0] ?? [];
+        $parametrosData = $parametros[0];
+        $ventaData = $venta[0];
+        $ventaData['cliente'] = $ventaData['razonsocial'];
+        $ventaData['fechacomprobante'] = $ventaData['fechaproforma'];
+        $ventaData['comprobante'] = 'PROFORMA';
+        $ventaData['oficial'] = 'PROFORMA';
+        $ventaData['nroplaca'] = '';
+        $ventaData['icbper'] = 0;
+        $ventaData['conleyendaamazonia'] = 0;
+
+        $data = [
+            'modo_pdf' => true,
+            'empresa' => $empresaData,
+            'sucursal' => $sucursalData,
+            'principal' => $principalData,
+            'parametros' => $parametrosData,
+            'venta' => $ventaData,
+            'credito' => $creditoData,
+            'empleado' => $vendedorData,
+            'totales' => $totales[0] ?? [],
+            'detalle' => $detalle,
+            'cuentascorrientes' => $cuentascorrientes,
+            'formato' => $formatoData,
+            'nombre_empresa' => $nombreProforma,
+            'logo_src' => $logoSrc,
+            'slogan' => $formatoData['slogan'] !== '' ? $formatoData['slogan'] : ($parametrosData['slogan'] ?? ''),
+            'publicidad' => $formatoData['publicidad'] !== '' ? $formatoData['publicidad'] : ($parametrosData['publicidad'] ?? ''),
+            'fechavencimiento' => $fechavencimiento,
+            'total_texto' => $total_texto,
+            'qr_src' => '',
+            'mesa_restaurante' => '',
+            'es_proforma' => true,
+        ];
+
+        $html = $this->load->view('reportes/ventas/a4comprobante', $data, true);
+
+        require_once FCPATH . 'vendor/autoload.php';
+
+        $tempDir = FCPATH . 'application/cache/dompdf';
+        if (!is_dir($tempDir)) {
+            mkdir($tempDir, 0777, true);
+        }
+        $fontDir = FCPATH . 'vendor/dompdf/dompdf/lib/fonts';
+
+        $options = new \Dompdf\Options();
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('isRemoteEnabled', true);
+        $options->set('defaultFont', 'DejaVu Sans');
+        $options->set('chroot', FCPATH);
+        $options->set('tempDir', $tempDir);
+        $options->set('fontDir', $fontDir);
+        $options->set('fontCache', $tempDir);
+        $options->set('dpi', 96);
+
+        $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf->loadHtml($html, 'UTF-8');
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        $nombre_archivo = utf8_decode($empresaData['documento'] . '-PROFORMA-' . $ventaData['seriecomprobante'] . '-' . $ventaData['nrocomprobante'] . '.pdf');
+        $dompdf->stream($nombre_archivo, ['Attachment' => false]);
+        return;
 
         $formato = $this->db->query('select *from caja.comprobantes where codcomprobantetipo=' . $venta[0]['codcomprobantetipo'] . " AND seriecomprobante = '" . $venta[0]['seriecomprobante'] . "' AND codsucursal= " . $_SESSION['phuyu_codsucursal'])->result_array();
 
@@ -2354,12 +2445,14 @@ class Formato extends CI_Controller
 
         $logo = $formato[0]['logo'];
         if ($logo == '') {
+            $rutaLogo = FCPATH . 'public/img/' . $_SESSION['phuyu_logo'];
             $direccionlogo = base_url() . 'public/img/' . $_SESSION['phuyu_logo'];
         } else {
+            $rutaLogo = FCPATH . 'public/img/empresa/' . $logo;
             $direccionlogo = base_url() . 'public/img/empresa/' . $logo;
         }
 
-        if (!file_exists($direccionlogo)) {
+        if (!file_exists($rutaLogo)) {
             $direccionlogo = '';
         }
 
@@ -2548,6 +2641,116 @@ class Formato extends CI_Controller
         $totales = $this->db->query('select (select coalesce(sum(subtotal),0) from kardex.proformasdetalle where codproforma=' . $codkardex . " and codafectacionigv='10') as gravado, (select coalesce(sum(subtotal),0) from kardex.proformasdetalle where codproforma=" . $codkardex . " and codafectacionigv='20') as exonerado, (select coalesce(sum(subtotal),0) from kardex.proformasdetalle where codproforma=" . $codkardex . " and codafectacionigv='30') as inafecto, (select coalesce(sum(subtotal),0) from kardex.proformasdetalle where codproforma=" . $codkardex . " and codafectacionigv='21') as gratuito")->result_array();
         $detalle = $this->db->query('select kd.item,kd.cantidad,p.descripcion as producto,u.descripcion as unidad,kd.preciounitario,kd.subtotal, kd.descripcion from kardex.proformasdetalle as kd inner join almacen.productos as p on(p.codproducto=kd.codproducto) inner join almacen.unidades as u on(u.codunidad=kd.codunidad) where kd.codproforma=' . $codkardex . ' order by kd.item')->result_array();
 
+        if (empty($venta)) {
+            show_error('No se encontró la proforma solicitada.', 404);
+            return;
+        }
+
+        $formatoData = $this->db->query('select *from caja.comprobantes where codcomprobantetipo=' . (int)$venta[0]['codcomprobantetipo'] . " AND seriecomprobante = " . $this->db->escape($venta[0]['seriecomprobante']) . ' AND codsucursal= ' . (int)$_SESSION['phuyu_codsucursal'] . ' limit 1')->row_array();
+        if (empty($formatoData)) {
+            $formatoData = [
+                'nombrecomercial' => '',
+                'logo' => '',
+                'slogan' => '',
+                'publicidad' => '',
+                'agradecimiento' => '',
+                'tipoconleyendaamazonia' => 0,
+                'impresionlogo' => 1,
+            ];
+        }
+
+        $nombreProforma = $formatoData['nombrecomercial'];
+        if ($nombreProforma === '') {
+            $nombreProforma = !empty($empresa[0]['nombrecomercial']) ? $empresa[0]['nombrecomercial'] : $empresa[0]['razonsocial'];
+        }
+
+        $logoArchivo = !empty($formatoData['logo'])
+            ? FCPATH . 'public/img/empresa/' . $formatoData['logo']
+            : FCPATH . 'public/img/' . ($_SESSION['phuyu_logo'] ?? '');
+        $logoSrc = '';
+        if (!empty($logoArchivo) && file_exists($logoArchivo)) {
+            $extension = strtolower(pathinfo($logoArchivo, PATHINFO_EXTENSION));
+            $mime = ($extension === 'jpg' || $extension === 'jpeg') ? 'jpeg' : 'png';
+            $logoSrc = 'data:image/' . $mime . ';base64,' . base64_encode(file_get_contents($logoArchivo));
+        }
+
+        $vendedorData = $this->db->query('select razonsocial from public.personas where codpersona=' . (int)$venta[0]['codempleado'])->row_array();
+        $creditoData = [];
+        $fechavencimiento = $venta[0]['fechaproforma'];
+        if ((int)$venta[0]['condicionpago'] === 2) {
+            $creditoData = $this->db->query('select *from kardex.creditosproformas where codproforma=' . (int)$codkardex . ' AND estado = 1 limit 1')->row_array();
+            if (!empty($creditoData['fechavencimiento'])) {
+                $fechavencimiento = $creditoData['fechavencimiento'];
+            }
+        }
+
+        $cuentascorrientes = $this->db->query('select ct.*,b.descripcion as banco from caja.ctasctes ct inner join caja.bancos b ON(ct.codbanco=b.codbanco) where ct.codpersona=1')->result_array();
+
+        $this->load->library('Number');
+        $number = new Number();
+        $total_texto = $number->convertirNumeroEnLetras(round((float)$venta[0]['importe'], 2));
+
+        $empresaData = $empresa[0];
+        $sucursalData = $sucursal[0];
+        $parametrosData = $parametros[0];
+        $ventaData = $venta[0];
+        $ventaData['fechacomprobante'] = $ventaData['fechaproforma'];
+        $ventaData['comprobante'] = 'PROFORMA';
+        $ventaData['nroplaca'] = '';
+        $ventaData['oficial'] = 'PROFORMA';
+
+        $data = [
+            'modo_pdf' => true,
+            'empresa' => $empresaData,
+            'sucursal' => $sucursalData,
+            'parametros' => $parametrosData,
+            'venta' => $ventaData,
+            'credito' => $creditoData,
+            'empleado' => $vendedorData,
+            'totales' => $totales[0] ?? [],
+            'detalle' => $detalle,
+            'cuentascorrientes' => $cuentascorrientes,
+            'formato' => $formatoData,
+            'logo_src' => $logoSrc,
+            'nombre_empresa' => $nombreProforma,
+            'slogan' => $formatoData['slogan'] !== '' ? $formatoData['slogan'] : ($parametrosData['slogan'] ?? ''),
+            'publicidad' => $formatoData['publicidad'] !== '' ? $formatoData['publicidad'] : ($parametrosData['publicidad'] ?? ''),
+            'fechavencimiento' => $fechavencimiento,
+            'total_texto' => $total_texto,
+            'mesa_restaurante' => '',
+            'qr_src' => '',
+            'es_proforma' => true,
+        ];
+
+        $html = $this->load->view('reportes/ventas/a5venta', $data, true);
+
+        require_once FCPATH . 'vendor/autoload.php';
+
+        $tempDir = FCPATH . 'application/cache/dompdf';
+        if (!is_dir($tempDir)) {
+            mkdir($tempDir, 0777, true);
+        }
+        $fontDir = FCPATH . 'vendor/dompdf/dompdf/lib/fonts';
+
+        $options = new \Dompdf\Options();
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('isRemoteEnabled', true);
+        $options->set('defaultFont', 'DejaVu Sans');
+        $options->set('chroot', FCPATH);
+        $options->set('tempDir', $tempDir);
+        $options->set('fontDir', $fontDir);
+        $options->set('fontCache', $tempDir);
+        $options->set('dpi', 96);
+
+        $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf->loadHtml($html, 'UTF-8');
+        $dompdf->setPaper('A5', 'portrait');
+        $dompdf->render();
+
+        $nombre_archivo = utf8_decode($empresaData['documento'] . '-PROFORMA-' . $ventaData['seriecomprobante'] . '-' . $ventaData['nrocomprobante'] . '.pdf');
+        $dompdf->stream($nombre_archivo, ['Attachment' => false]);
+        return;
+
         //$html = $this->load->view("facturacion/formato/a5",compact("empresa","parametros","venta"),true);
 
         $formato = $this->db->query('select *from caja.comprobantes where codcomprobantetipo=' . $venta[0]['codcomprobantetipo'] . " AND seriecomprobante = '" . $venta[0]['seriecomprobante'] . "' AND codsucursal= " . $_SESSION['phuyu_codsucursal'])->result_array();
@@ -2563,65 +2766,84 @@ class Formato extends CI_Controller
 
         $logo = $formato[0]['logo'];
         if ($logo == '') {
+            $rutaLogo = FCPATH . 'public/img/' . $_SESSION['phuyu_logo'];
             $direccionlogo = base_url() . 'public/img/' . $_SESSION['phuyu_logo'];
         } else {
+            $rutaLogo = FCPATH . 'public/img/empresa/' . $logo;
             $direccionlogo = base_url() . 'public/img/empresa/' . $logo;
         }
 
-        if (!file_exists($direccionlogo)) {
+        if (!file_exists($rutaLogo)) {
             $direccionlogo = '';
         }
 
         $vendedor = $this->db->query('select razonsocial from public.personas where codpersona=' . $venta[0]['codempleado'])->result_array();
-        $html = '<table width="100%" align="center">';
-        $html .= '<tr>';
-        $html .= '<th style="width:20%">';
-        $html .= '<img src="' . $direccionlogo . '" style="height:100px;">';
-        $html .= '</th>';
-        $html .= '<th style="width:40%">';
-
-        $html .= '<h2>' . $nombre . '</h2>';
-        $html .= '<h4>' . $parametros[0]['slogan'] . '</h4>';
-        $html .= '</th>';
-        $html .= '<th style="width:2%;"></th>';
-        $html .= '<th style="width:38%;border:1px solid #000;color:#000;">';
-        $html .= '<h3>RUC: ' . $empresa[0]['documento'] . '</h3> <h3>' . $venta[0]['comprobante'] . '</h3>';
-        $html .= '<h3>' . $venta[0]['seriecomprobante'] . ' - ' . $venta[0]['nrocomprobante'] . '</h3>';
-        $html .= '</th>';
-        $html .= '</tr>';
-        $html .= '</table>';
-
-        $html .= '<table cellpadding="2" width="100%">';
-        $html .= '<tr>';
-        $html .= '<td style="width:100%;"><b>' . $sucursal[0]['direccion'] . '</b> </td>';
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td>TELEFONOS: ' . $sucursal[0]['telefonos'] . '</td>';
-        $html .= '</tr>';
-        $html .= '</table>';
-
-        $html .= '<table cellpadding="2" width="100%" style="border:1px solid #000;font-size:9px;">';
-        $html .= '<tr>';
-        $html .= '<td style="width:16%;"> <b>CLIENTE</b> </td>';
-        $html .= '<td style="width:54%;">: ' . $venta[0]['cliente'] . '</td>';
-        $html .= '<td style="width:15%"> <b>PAGO AL</b> </td>';
-        if ($venta[0]['condicionpago'] == 1) {
-            $html .= '<td style="width:15%;">: CONTADO</td>';
-        } else {
-            $html .= '<td style="width:15%;">: CREDITO: ' . $credito[0]['nrodias'] . ' dias</td>';
+        $credito = [];
+        if ((int)$venta[0]['condicionpago'] === 2) {
+            $credito = $this->db->query('select nrodias,fechavencimiento from kardex.creditosproformas where codproforma=' . (int)$codkardex . ' AND estado = 1 limit 1')->result_array();
         }
+
+        $pago = ((int)$venta[0]['condicionpago'] === 1) ? 'CONTADO' : 'CREDITO';
+        if ($pago === 'CREDITO' && !empty($credito[0]['nrodias'])) {
+            $pago .= ' - ' . $credito[0]['nrodias'] . ' DIAS';
+        }
+
+        $html = '<style>
+            body{font-family:helvetica,arial,sans-serif;color:#1f172a;}
+            .brand-name{font-size:18px;font-weight:bold;text-transform:uppercase;color:#4c1d95;line-height:1.15;}
+            .muted{color:#5f586d;}
+            .doc-box{border:1px solid #d9c2ff;background-color:#faf7ff;color:#1f172a;text-align:center;}
+            .doc-ruc{font-size:13px;font-weight:bold;color:#4c1d95;}
+            .doc-type{font-size:16px;font-weight:bold;text-transform:uppercase;}
+            .doc-serie{font-size:13px;font-weight:bold;color:#4c1d95;}
+            .info-box{border-top:1px dashed #cdb9ef;border-bottom:1px dashed #cdb9ef;background-color:#fcfbff;font-size:9px;}
+            .label{font-weight:bold;color:#5e556e;}
+            .items-head td{background-color:#4c1d95;color:#ffffff;font-size:8px;font-weight:bold;text-transform:uppercase;border:1px solid #d9c2ff;text-align:center;}
+            .items td{font-size:8px;border-bottom:1px dashed #e7dbfb;vertical-align:top;}
+            .prod{font-weight:bold;color:#1f172a;}
+            .prod-extra{font-size:7px;color:#746c83;}
+            .amount-box{border:1px solid #dcc9fb;background-color:#fcfbff;font-size:8px;}
+            .amount-title{font-size:8px;text-transform:uppercase;font-weight:bold;color:#6b5b95;}
+            .totals td{font-size:8.5px;}
+            .grand-total td{border-top:1px solid #d8c3fb;border-bottom:1px solid #d8c3fb;background-color:#f7f2ff;color:#4c1d95;font-size:10px;font-weight:bold;}
+            .thanks{font-size:9px;color:#5e556e;text-align:center;}
+        </style>';
+
+        $html .= '<table cellpadding="5" width="100%">';
+        $html .= '<tr>';
+        $html .= '<td style="width:18%;text-align:center;">';
+        if ($direccionlogo !== '') {
+            $html .= '<img src="' . $direccionlogo . '" style="max-height:55px;max-width:125px;">';
+        }
+        $html .= '</td>';
+        $html .= '<td style="width:47%;">';
+        $html .= '<div class="brand-name">' . $nombre . '</div>';
+        $html .= '<div class="muted" style="font-size:9px;">' . $parametros[0]['slogan'] . '</div>';
+        $html .= '<div class="muted" style="font-size:8px;">' . $sucursal[0]['direccion'] . '<br>Telefonos: ' . $sucursal[0]['telefonos'] . '</div>';
+        $html .= '</td>';
+        $html .= '<td style="width:35%;" class="doc-box">';
+        $html .= '<div class="doc-ruc">RUC: ' . $empresa[0]['documento'] . '</div>';
+        $html .= '<div class="doc-type">' . $venta[0]['comprobante'] . '</div>';
+        $html .= '<div class="doc-serie">' . $venta[0]['seriecomprobante'] . ' - ' . $venta[0]['nrocomprobante'] . '</div>';
+        $html .= '</td>';
+        $html .= '</tr>';
+        $html .= '</table>';
+
+        $html .= '<table cellpadding="4" width="100%" class="info-box">';
+        $html .= '<tr>';
+        $html .= '<td style="width:12%;" class="label">CLIENTE</td><td style="width:48%;">: ' . $venta[0]['cliente'] . '</td>';
+        $html .= '<td style="width:13%;" class="label">PAGO</td><td style="width:27%;">: ' . $pago . '</td>';
         $html .= '</tr>';
         $html .= '<tr>';
-        $html .= '<td> <b>DIRECCION</b> </td>';
-        $html .= '<td>: ' . $venta[0]['direccion'] . ' </td>';
-        $html .= '<td> <b>MONEDA</b> </td>';
-        $html .= '<td>: SOLES</td>';
+        $html .= '<td class="label">DIRECCION</td><td>: ' . $venta[0]['direccion'] . '</td>';
+        $html .= '<td class="label">MONEDA</td><td>: SOLES</td>';
         $html .= '</tr>';
         $html .= '<tr>';
-        $html .= '<td> <b>DNI / RUC</b> </td>';
-        $html .= '<td>: ' . $venta[0]['documento'] . '</td>';
-        $html .= '<td> <b>FECHA</b> </td>';
-        $html .= '<td>: ' . $venta[0]['fechaproforma'] . '</td>';
+        $html .= '<td class="label">DNI / RUC</td><td>: ' . $venta[0]['documento'] . '</td>';
+        $html .= '<td class="label">FECHA</td><td>: ' . $venta[0]['fechaproforma'] . '</td>';
+        $html .= '</tr>';
+        $html .= '<tr>';
+        $html .= '<td class="label">VENDEDOR</td><td colspan="3">: ' . ($vendedor[0]['razonsocial'] ?? '-') . '</td>';
         $html .= '</tr>';
         $html .= '</table>';
 
@@ -2629,45 +2851,54 @@ class Formato extends CI_Controller
         $number = new Number();
         $total_texto = $number->convertirNumeroEnLetras(round($venta[0]['importe'], 2));
 
-        $html .= '<table cellpadding="4" width="100%" style="border:1px solid #000;font-size:8px;margin-top:-5px">';
-        $html .= '<tr>';
-        $html .= '<td style="' . $estilo . 'width:7%;"> <b>ITEM</b> </td>';
-        $html .= '<td style="' . $estilo . 'width:40%;"> <b>DESCRIPCION</b> </td>';
-        $html .= '<td style="' . $estilo . 'width:15%;"> <b>UND MEDIDA</b> </td>';
-        $html .= '<td style="' . $estilo . 'width:12%;"> <b>CANTIDAD</b> </td>';
-        $html .= '<td style="' . $estilo . 'width:13%;"> <b>P.UNITARIO</b> </td>';
-        $html .= '<td style="' . $estilo . 'width:13%;"> <b>IMPORTE</b> </td>';
+        $html .= '<table cellpadding="4" width="100%" style="margin-top:6px;" class="items">';
+        $html .= '<tr class="items-head">';
+        $html .= '<td style="width:7%;">ITEM</td>';
+        $html .= '<td style="width:43%;">DESCRIPCION</td>';
+        $html .= '<td style="width:12%;">UND</td>';
+        $html .= '<td style="width:12%;">CANT</td>';
+        $html .= '<td style="width:13%;">P.U.</td>';
+        $html .= '<td style="width:13%;">IMPORTE</td>';
         $html .= '</tr>';
         foreach ($detalle as $value) {
+            $descripcionExtra = trim((string)$value['descripcion']);
+            if ($descripcionExtra !== '' && stripos($descripcionExtra, $value['producto']) === 0) {
+                $descripcionExtra = trim(substr($descripcionExtra, strlen($value['producto'])));
+            }
             $html .= '<tr>';
-            $html .= '<td style="' . $estilo . 'width:7%;"> 0' . $value['item'] . ' </td>';
-            $html .= '<td style="' . $estilo . 'width:40%;"> ' . $value['producto'] . ' ' . $value['descripcion'] . '</td>';
-            $html .= '<td style="' . $estilo . 'width:15%;"> ' . $value['unidad'] . ' </td>';
-            $html .= '<td style="' . $estilo . 'width:12%;text-align:right"> ' . number_format($value['cantidad'], 2) . ' </td>';
-            $html .= '<td style="' . $estilo . 'width:13%;text-align:right"> ' . number_format($value['preciounitario'], 2) . ' </td>';
-            $html .= '<td style="' . $estilo . 'width:13%;text-align:right"> ' . number_format($value['subtotal'], 2) . ' </td>';
+            $html .= '<td style="width:7%;text-align:center;"> ' . str_pad($value['item'], 2, '0', STR_PAD_LEFT) . ' </td>';
+            $html .= '<td style="width:43%;"><div class="prod">' . $value['producto'] . '</div>';
+            if ($descripcionExtra !== '') {
+                $html .= '<div class="prod-extra">' . $descripcionExtra . '</div>';
+            }
+            $html .= '</td>';
+            $html .= '<td style="width:12%;text-align:center;"> ' . $value['unidad'] . ' </td>';
+            $html .= '<td style="width:12%;text-align:right;"> ' . number_format($value['cantidad'], 2) . ' </td>';
+            $html .= '<td style="width:13%;text-align:right;"> ' . number_format($value['preciounitario'], 2) . ' </td>';
+            $html .= '<td style="width:13%;text-align:right;"> ' . number_format($value['subtotal'], 2) . ' </td>';
             $html .= '</tr>';
         }
         $html .= '</table>';
 
-        $html .= '<table cellpadding="4" width="100%" style="border:1px solid #000;font-size:8px">';
+        $html .= '<table cellpadding="5" width="100%" style="margin-top:4px;">';
         $html .= '<tr>';
-        $html .= '<td style="' . $estilo . ' width:62%" rowspan="7" align="center">';
-        $html .= '<h4> SON: ' . strtoupper($total_texto) . ' Y 00/100 SOLES</h4>';
+        $html .= '<td style="width:62%;" rowspan="7" class="amount-box">';
+        $html .= '<div class="amount-title">IMPORTE EN LETRAS</div>';
+        $html .= '<div><b>SON: ' . strtoupper($total_texto) . ' Y 00/100 SOLES</b></div>';
         $html .= '</td>';
-        $html .= '<td style="' . $estilo . ' width:25%;text-align:right"> <b>OP.GRAVADAS S/</b> </td>';
-        $html .= '<td style="' . $estilo . ' width:13%;text-align:right">' . number_format($totales[0]['gravado'], 2) . ' </td>';
+        $html .= '<td style="width:25%;text-align:right;" class="totals"><b>OP.GRAVADAS S/</b></td>';
+        $html .= '<td style="width:13%;text-align:right;" class="totals">' . number_format($totales[0]['gravado'], 2) . '</td>';
         $html .= '</tr>';
 
-        $html .= '<tr> <td style="' . $estilo1 . '"> <b>OP.INAFECTAS S/</b> </td> <td style="' . $estilo1 . '">' . number_format($totales[0]['inafecto'], 2) . ' </td> </tr>';
-        $html .= '<tr> <td style="' . $estilo1 . '"> <b>OP.EXONERADAS S/</b> </td> <td style="' . $estilo1 . '">' . number_format($totales[0]['exonerado'], 2) . ' </td> </tr>';
-        $html .= '<tr> <td style="' . $estilo1 . '"> <b>O.GRATUITAS S/</b> </td> <td style="' . $estilo1 . '">' . number_format($totales[0]['gratuito'], 2) . ' </td> </tr>';
-        $html .= '<tr> <td style="' . $estilo1 . '"> <b>DESCUENTO S/</b>  </td> <td style="' . $estilo1 . '">' . number_format($venta[0]['descglobal'], 2) . ' </td> </tr>';
-        $html .= '<tr> <td style="' . $estilo1 . '"> <b>IGV S/</b> </td> <td style="' . $estilo1 . '">' . number_format($venta[0]['igv'], 2) . ' </td> </tr>';
-        $html .= '<tr> <td style="' . $estilo1 . '"> <b>TOTAL S/</b> </td> <td style="' . $estilo1 . '">' . number_format($venta[0]['importe'], 2) . ' </td> </tr>';
+        $html .= '<tr><td style="text-align:right;"><b>OP.INAFECTAS S/</b></td><td style="text-align:right;">' . number_format($totales[0]['inafecto'], 2) . '</td></tr>';
+        $html .= '<tr><td style="text-align:right;"><b>OP.EXONERADAS S/</b></td><td style="text-align:right;">' . number_format($totales[0]['exonerado'], 2) . '</td></tr>';
+        $html .= '<tr><td style="text-align:right;"><b>O.GRATUITAS S/</b></td><td style="text-align:right;">' . number_format($totales[0]['gratuito'], 2) . '</td></tr>';
+        $html .= '<tr><td style="text-align:right;"><b>DESCUENTO S/</b></td><td style="text-align:right;">' . number_format($venta[0]['descglobal'], 2) . '</td></tr>';
+        $html .= '<tr><td style="text-align:right;"><b>IGV S/</b></td><td style="text-align:right;">' . number_format($venta[0]['igv'], 2) . '</td></tr>';
+        $html .= '<tr class="grand-total"><td style="text-align:right;">TOTAL S/</td><td style="text-align:right;">' . number_format($venta[0]['importe'], 2) . '</td></tr>';
         $html .= '</table>';
 
-        $html .= '<h5 style="color:#000;" align="center">' . $parametros[0]['publicidad'] . '</h5>';
+        $html .= '<div class="thanks">' . $parametros[0]['publicidad'] . '</div>';
 
         $this->load->library('Pdf');
 
@@ -2852,14 +3083,6 @@ class Formato extends CI_Controller
 
         require_once FCPATH . 'vendor/autoload.php';
 
-        // -------- GENERAR QR ----------
-        $this->load->library('ciqrcode');
-
-        $qrDir = FCPATH . 'sunat/webphuyu/';
-        if (!is_dir($qrDir)) {
-            mkdir($qrDir, 0777, true);
-        }
-
         $venta = $data['venta'];
         $empresaDoc = $data['empresa']['documento'] ?? '';
         $serie = $venta['seriecomprobante'] ?? '';
@@ -2870,19 +3093,7 @@ class Formato extends CI_Controller
         $documentoCliente = $venta['documento'] ?? '';
 
         $textoqr = $empresaDoc . '|' . $serie . '|' . $numero . '|' . $igv . '|' . $total . '|' . $fecha . '|' . $documentoCliente;
-
-        $qrFileName = 'qr_' . $serie . '_' . $numero . '.png';
-        $qrFilePath = $qrDir . $qrFileName;
-
-        $params = [];
-        $params['data'] = $textoqr;
-        $params['level'] = 'H';
-        $params['size'] = 5;
-        $params['savename'] = $qrFilePath;
-
-        $this->ciqrcode->generate($params);
-
-        $data['qr_src'] = base_url('sunat/webphuyu/' . $qrFileName);
+        $data['qr_src'] = $this->phuyu_qr_data_uri($textoqr);
 
         // Si no quieres barcode por ahora
         $data['barcode_src'] = '';
@@ -2895,6 +3106,7 @@ class Formato extends CI_Controller
         if (!is_dir($tempDir)) {
             mkdir($tempDir, 0777, true);
         }
+        $fontDir = FCPATH . 'vendor/dompdf/dompdf/lib/fonts';
 
         $options = new \Dompdf\Options();
         $options->set('isHtml5ParserEnabled', true);
@@ -2902,7 +3114,7 @@ class Formato extends CI_Controller
         $options->set('defaultFont', 'DejaVu Sans');
         $options->set('chroot', FCPATH);
         $options->set('tempDir', $tempDir);
-        $options->set('fontDir', $tempDir);
+        $options->set('fontDir', $fontDir);
         $options->set('fontCache', $tempDir);
         $options->set('dpi', 96);
 
@@ -3430,12 +3642,13 @@ class Formato extends CI_Controller
         $this->load->library('Number');
         $number = new Number();
         $total_texto = $number->convertirNumeroEnLetras(round($venta[0]['importe'], 2));
+        $qrSrc = $this->phuyu_qr_data_uri($this->phuyu_qr_texto_comprobante($empresa[0], $venta[0]));
 
         $html .= '<table cellpadding="2" width="100%" style="border:1px solid #000;">';
         $html .= '<tr>';
         $html .= '<td style="' . $estilo . ' width:65%" rowspan="8" align="center"> ';
         $html .= '<h4> SON: ' . strtoupper($total_texto) . ' Y 00/100 SOLES</h4> <br> ';
-        $html .= '<img src="' . base_url() . 'sunat/webphuyu/qrcode.png" style="height:100px">';
+        $html .= '<img src="' . $qrSrc . '" style="height:100px">';
         $html .= '</td>';
         $html .= '<td style="' . $estilo . ' width:20%;text-align:right"> <b>OP.GRAVADAS S/</b> </td>';
         $html .= '<td style="' . $estilo . ' width:15%;text-align:right">' . number_format($totales[0]['gravado'] - $venta[0]['igv'], 2) . ' </td>';
@@ -3451,18 +3664,6 @@ class Formato extends CI_Controller
 
         $html .= '<p>CONSULTE SU COMPROBANTE EN: ' . $parametros[0]['urlconsultacomprobantes'] . '</p>';
         $html .= '<p>' . $parametros[0]['agradecimiento'] . '</p>';
-
-        $textoqr = $empresa[0]['razonsocial'] . '|' . $venta[0]['seriecomprobante'] . '|' . $venta[0]['nrocomprobante'] . '|' . number_format($venta[0]['igv'], 2) . '|' . number_format($venta[0]['importe'], 2) . '|' . $venta[0]['fechacomprobante'] . '|' . $venta[0]['documento'];
-
-        $this->load->library('ciqrcode');
-        $params['data'] = $textoqr;
-        $params['level'] = 'H';
-        $params['size'] = 5;
-        $params['savename'] = './sunat/webphuyu/qrcode.png';
-        $this->ciqrcode->generate($params);
-
-        $archivo_error = APPPATH . '/logs/qrcode.png-errors.txt';
-        unlink($archivo_error);
 
         $this->load->library('Pdf');
 
@@ -3572,6 +3773,7 @@ class Formato extends CI_Controller
         $this->load->library('Number');
         $number = new Number();
         $total_texto = $number->convertirNumeroEnLetras(round($venta[0]['importe'], 2));
+        $qrSrc = $this->phuyu_qr_data_uri($this->phuyu_qr_texto_comprobante($empresa[0], $venta[0]));
 
         $html .= '<table cellpadding="4" width="100%" style="border:1px solid #000;font-size:8px;margin-top:-5px">';
         $html .= '<tr>';
@@ -3594,23 +3796,11 @@ class Formato extends CI_Controller
         }
         $html .= '</table>';
 
-        $textoqr = $empresa[0]['razonsocial'] . '|' . $venta[0]['seriecomprobante'] . '|' . $venta[0]['nrocomprobante'] . '|' . number_format($venta[0]['igv'], 2) . '|' . number_format($venta[0]['importe'], 2) . '|' . $venta[0]['fechacomprobante'] . '|' . $venta[0]['documento'];
-
-        $this->load->library('ciqrcode');
-        $params['data'] = $textoqr;
-        $params['level'] = 'H';
-        $params['size'] = 5;
-        $params['savename'] = './sunat/webphuyu/qrcode.png';
-        $this->ciqrcode->generate($params);
-
-        $archivo_error = APPPATH . '/logs/qrcode.png-errors.txt';
-        unlink($archivo_error);
-
         $html .= '<table cellpadding="4" width="100%" style="border:1px solid #000;font-size:8px">';
         $html .= '<tr>';
         $html .= '<td style="' . $estilo . ' width:62%" rowspan="7" align="center">';
         $html .= '<h4> SON: ' . strtoupper($total_texto) . ' Y 00/100 SOLES</h4>';
-        $html .= '<img src="' . base_url() . 'sunat/webphuyu/qrcode.png" style="height:80px">';
+        $html .= '<img src="' . $qrSrc . '" style="height:80px">';
         $html .= '</td>';
         $html .= '<td style="' . $estilo . ' width:25%;text-align:right"> <b>OP.GRAVADAS S/</b> </td>';
         $html .= '<td style="' . $estilo . ' width:13%;text-align:right">' . number_format($totales[0]['gravado'], 2) . ' </td>';
@@ -3667,17 +3857,7 @@ class Formato extends CI_Controller
                 $credito = [];
             }
 
-            $textoqr = $empresa[0]['razonsocial'] . '|' . $venta[0]['seriecomprobante'] . '|' . $venta[0]['nrocomprobante'] . '|' . number_format($venta[0]['igv'], 2) . '|' . number_format($venta[0]['importe'], 2) . '|' . $venta[0]['fechacomprobante'] . '|' . $venta[0]['documento'];
-
-            $this->load->library('ciqrcode');
-            $params['data'] = $textoqr;
-            $params['level'] = 'H';
-            $params['size'] = 5;
-            $params['savename'] = './sunat/webphuyu/qrcode.png';
-            $this->ciqrcode->generate($params);
-
-            $archivo_error = APPPATH . '/logs/qrcode.png-errors.txt';
-            unlink($archivo_error);
+            $qrSrc = $this->phuyu_qr_data_uri($this->phuyu_qr_texto_comprobante($empresa[0], $venta[0]));
 
             $this->load->library('Number');
             $number = new Number();
@@ -3698,7 +3878,7 @@ class Formato extends CI_Controller
                 $ticket = 'ticket_20570793986';
             }
 
-            $this->load->view('facturacion/formato/' . $ticket, compact('empresa', 'sucursal', 'venta', 'totales', 'detalle', 'vendedor', 'credito', 'texto_importe'));
+            $this->load->view('facturacion/formato/' . $ticket, compact('empresa', 'sucursal', 'venta', 'totales', 'detalle', 'vendedor', 'credito', 'texto_importe', 'qrSrc'));
         } else {
             $this->load->view('phuyu/404');
         }

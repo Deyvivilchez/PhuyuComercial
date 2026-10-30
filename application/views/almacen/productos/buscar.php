@@ -450,7 +450,7 @@
             phuyu_seleccionado_07022026: async function(index, producto) {
 
                 // inf para identificar si es egreso o ventas asi debe selecionar la serie de producto 
-                if ((phuyu_controller == 'ventas/ventas' || phuyu_controller == 'almacen/salidas') && producto.controlarseries == 1) {
+                if ((phuyu_controller == 'ventas/ventas' || phuyu_controller == 'ventas/nuevaventa' || phuyu_controller == 'almacen/salidas') && producto.controlarseries == 1) {
                     let detalleActual = phuyu_operacion.detalle || [];
                     // Lista completa de series del producto
                     let listaSeriesSinFiltro = producto.series;
@@ -481,7 +481,7 @@
             phuyu_seleccionado: async function(index, producto) {
 
                 const esSalidaOVenta =
-                    (phuyu_controller == 'ventas/ventas' || phuyu_controller == 'almacen/salidas');
+                    (phuyu_controller == 'ventas/ventas' || phuyu_controller == 'ventas/nuevaventa' || phuyu_controller == 'almacen/salidas');
 
                 const validaStock =
                     esSalidaOVenta &&
@@ -526,7 +526,7 @@
             },
             SerieSeleccionada: function(serie) {
                 const esSalidaOVenta =
-                    (phuyu_controller == 'ventas/ventas' || phuyu_controller == 'almacen/salidas');
+                    (phuyu_controller == 'ventas/ventas' || phuyu_controller == 'ventas/nuevaventa' || phuyu_controller == 'almacen/salidas');
 
                 const validaStock =
                     esSalidaOVenta &&

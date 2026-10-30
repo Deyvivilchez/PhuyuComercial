@@ -84,17 +84,28 @@ var phuyu_datos = new Vue({
 						data = JSON.parse(respuesta);
 					} catch(e) {}
 
-					if (respuesta == 1 || data == 1) {
-						phuyu_sistema.phuyu_noti("CONFIGURACION REGISTRADA CORRECTAMENTE","DATOS GUARDADOS EN EL SISTEMA","success");
+					if (respuesta == 1 || data == 1 || (data && data.estado == 1)) {
+						var mensajeOk = data && data.mensaje ? data.mensaje : "DATOS GUARDADOS EN EL SISTEMA";
+						phuyu_sistema.phuyu_noti("CONFIGURACION REGISTRADA CORRECTAMENTE", mensajeOk, "success");
 						setTimeout(function() {
 							location.reload();
 						}, 1000);
 					}else{
-						phuyu_sistema.phuyu_alerta("ATENCION USUARIO","OCURRIO UN ERROR AL GUARDAR LA CONFIGURACION","error");
+						var mensajeError = data && data.mensaje ? data.mensaje : "OCURRIO UN ERROR AL GUARDAR LA CONFIGURACION";
+						phuyu_sistema.phuyu_alerta("ATENCION USUARIO", mensajeError, "error");
 					}
 				},
-				error: function(){
-					phuyu_sistema.phuyu_alerta("ATENCION USUARIO","ERROR DE RED O SERVIDOR","error");
+				error: function(xhr){
+					var mensajeError = "ERROR DE RED O SERVIDOR";
+					if (xhr && xhr.responseText) {
+						try {
+							var data = JSON.parse(xhr.responseText);
+							if (data && data.mensaje) {
+								mensajeError = data.mensaje;
+							}
+						} catch(e) {}
+					}
+					phuyu_sistema.phuyu_alerta("ATENCION USUARIO", mensajeError, "error");
 				}
 			});
 		},

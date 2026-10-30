@@ -2,6 +2,7 @@ var phuyu_ventas = new Vue({
 	el: "#phuyu_ventas",
 	data: {
 		cargando: true, registro:0, estado:0, buscar: "", formato_impresion: $("#formato").val(), datos: [], fechas:{"filtro":1,"desde":"","hasta":""},
+		puede_eliminar_venta: (typeof phuyu_puede_eliminar_venta !== "undefined" && parseInt(phuyu_puede_eliminar_venta) === 1),
 		paginacion: {"total":0, "actual":1, "ultima":0, "desde":0, "hasta":0}, offset: 3,
 		whatsapp: {codkardex:0, codigo:'+51', tipo_envio:'link', telefono:"", comprobante:"", enviando:false, error:""}
 	},
@@ -30,6 +31,17 @@ var phuyu_ventas = new Vue({
 		}
 	},
 	methods: {
+		phuyu_cliente_nombre: function(dato){
+			var cliente = String(dato.cliente || "").trim();
+			var documento = String(dato.documento || "").trim();
+
+			if (!documento) {
+				return cliente;
+			}
+
+			var documentoRegex = documento.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+			return cliente.replace(new RegExp("\\s*-\\s*" + documentoRegex + "\\s*$"), "").trim();
+		},
 		phuyu_datos: function(){
 			this.fechas.desde = $("#fecha_desde").val(); this.fechas.hasta = $("#fecha_hasta").val();
 			this.cargando = true; this.registro = 0;
@@ -147,10 +159,10 @@ var phuyu_ventas = new Vue({
 				phuyu_sistema.phuyu_alerta("DEBE SELECCIONAR UNA VENTA", "PARA IMPRIMIR EN EL SISTEMA LA VENTA !!!","error");
 			}else{
 				if ($("#formato").val()=="ticket") {
-					window.open(url+"facturacion/formato/ticket/"+this.registro,"_blank");
+					window.open(url+"facturacion/formato/ticket/"+this.registro,"_blank") || (window.location.href = url+"facturacion/formato/ticket/"+this.registro);
 				}else{
 					var phuyu_url = url+"facturacion/formato/"+$("#formato").val()+"/"+this.registro;
-					window.open(phuyu_url,"_blank");
+					window.open(phuyu_url,"_blank") || (window.location.href = phuyu_url);
 					//$("#phuyu_pdf").attr("src",phuyu_url); $("#modal_reportes").modal("show");
 				}
 				
@@ -162,7 +174,7 @@ var phuyu_ventas = new Vue({
 						var phuyu_url = url+"facturacion/formato/a5/"+this.registro;
 	            		$("#phuyu_pdf").attr("src",phuyu_url); $("#modal_reportes").modal("show");
 					}else{
-						window.open(url+"facturacion/formato/ticket/"+this.registro,"_blank");
+						window.open(url+"facturacion/formato/ticket/"+this.registro,"_blank") || (window.location.href = url+"facturacion/formato/ticket/"+this.registro);
 					}
 				} */
 			}
@@ -171,6 +183,10 @@ var phuyu_ventas = new Vue({
 			if (this.registro==0) {
 				phuyu_sistema.phuyu_alerta("DEBE SELECCIONAR UN REGISTRO", "PARA ELIMINAR EN EL SISTEMA UN REGISTRO!!!","error");
 			}else{
+				if (!this.puede_eliminar_venta) {
+					phuyu_sistema.phuyu_alerta("SIN PERMISO", "No tiene permiso para eliminar ventas.", "error");
+					return false;
+				}
 				if(this.estado==0){
 					return false;
 				}
@@ -190,7 +206,12 @@ var phuyu_ventas = new Vue({
 					},
 				}).then((willDelete) => {
 					if (willDelete) {
-						this.$http.post(url+phuyu_controller+"/eliminar",{"codregistro":this.registro,"observaciones":$(".swal-content__input").val()}).then(function(data){
+						var motivo = String($(".swal-content__input").val() || "").trim();
+						if (motivo === "") {
+							phuyu_sistema.phuyu_alerta("MOTIVO REQUERIDO", "Ingrese el motivo para anular la venta.", "warning");
+							return false;
+						}
+						this.$http.post(url+phuyu_controller+"/eliminar",{"codregistro":this.registro,"observaciones":motivo}).then(function(data){
 							if (data.body.estado==1) {
 								phuyu_sistema.phuyu_alerta("ELIMINADO CORRECTAMENTE", "UN REGISTRO ELIMINADO EN EL SISTEMA","success");
 								this.phuyu_datos();
@@ -231,7 +252,7 @@ var phuyu_ventas = new Vue({
 		phuyu_docu: function(tipo,codkardex){
 			if(tipo=="pdf"){
 				if ($("#formato").val()=="ticket") {
-					window.open(url+"facturacion/formato/ticket/"+codkardex,"_blank");
+					window.open(url+"facturacion/formato/ticket/"+codkardex,"_blank") || (window.location.href = url+"facturacion/formato/ticket/"+codkardex);
 				}else{
 					var phuyu_url = url+"facturacion/formato/"+$("#formato").val()+"/"+codkardex;
 					$("#phuyu_pdf").attr("src",phuyu_url); $("#modal_reportes").modal("show");

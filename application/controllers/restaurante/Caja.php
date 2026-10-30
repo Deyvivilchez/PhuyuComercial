@@ -363,7 +363,9 @@ class Caja extends CI_Controller
 							<div class="c-cant"><?= $esc($cant) . " " . $esc($unidad) ?></div>
 							<div class="c-desc">
 								<span class="prod"><?= $esc($producto) ?></span>
-
+								<?php if ($nota !== ''): ?>
+									<span class="note">(<?= $esc($nota) ?>)</span>
+								<?php endif; ?>
 							</div>
 							<div class="c-pu"><?= number_format($pu, 2) ?></div>
 							<div class="c-imp"><?= number_format($imp, 2) ?></div>

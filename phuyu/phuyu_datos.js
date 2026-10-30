@@ -2,6 +2,7 @@ var phuyu_datos = new Vue({
 	el: "#phuyu_datos",
 	data: {
 		cargando: true, registro:0, buscar: "", datos: [],
+		normalizandoStock: false,
 		paginacion: {"total":0, "actual":1, "ultima":0, "desde":0, "hasta":0}, offset: 3
 	},
 	computed: {
@@ -64,6 +65,50 @@ var phuyu_datos = new Vue({
 				$("#phuyu_formulario").empty().html(data.body);phuyu_sistema.phuyu_finloader("phuyu_formulario");
 			},function(){
 				phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED","error"); phuyu_sistema.phuyu_finloader("phuyu_formulario");
+			});
+		},
+		phuyu_migrar_stock: function(){
+			phuyu_controller = "almacen/migrarstock";
+			phuyu_sistema.phuyu_modulo();
+		},
+		phuyu_normalizar_stock: function(){
+			if (this.normalizandoStock) { return; }
+			this.normalizandoStock = true;
+			this.$http.post(url+"almacen/productos/normalizar_stock_negativo", {"accion":"consultar"}).then(function(data){
+				var resumen = data.body;
+				if (!resumen || resumen.estado != 1) {
+					phuyu_sistema.phuyu_alerta("NO SE PUDO CONSULTAR", resumen && resumen.mensaje ? resumen.mensaje : "No se pudo consultar el stock.", "error");
+					this.normalizandoStock = false;
+					return;
+				}
+				if (resumen.ubicaciones == 0) {
+					phuyu_sistema.phuyu_alerta("STOCK CORRECTO", "No hay productos con stock negativo en el almacén actual.", "success");
+					this.normalizandoStock = false;
+					return;
+				}
+				swal({
+					title:"¿COLOCAR STOCK NEGATIVO EN CERO?",
+					text:"Se corregirán "+resumen.ubicaciones+" ubicaciones de "+resumen.productos+" productos del almacén actual. Se conservará el historial de movimientos.",
+					icon:"warning", dangerMode:true,
+					buttons:["CANCELAR", "SÍ, COLOCAR EN CERO"]
+				}).then((confirmado) => {
+					if (!confirmado) { this.normalizandoStock = false; return; }
+					this.$http.post(url+"almacen/productos/normalizar_stock_negativo", {"accion":"ejecutar"}).then(function(respuesta){
+						if (respuesta.body && respuesta.body.estado == 1) {
+							phuyu_sistema.phuyu_alerta("STOCK CORREGIDO", respuesta.body.productos+" productos y "+respuesta.body.actualizados+" ubicaciones fueron colocados en cero.", "success");
+							this.phuyu_opcion();
+						} else {
+							phuyu_sistema.phuyu_alerta("NO SE PUDO CORREGIR", respuesta.body && respuesta.body.mensaje ? respuesta.body.mensaje : "Error del servidor.", "error");
+						}
+						this.normalizandoStock = false;
+					}, function(){
+						phuyu_sistema.phuyu_alerta("NO SE PUDO CORREGIR", "Error de red o sesión.", "error");
+						this.normalizandoStock = false;
+					});
+				});
+			}, function(){
+				phuyu_sistema.phuyu_alerta("NO SE PUDO CONSULTAR", "Error de red o sesión.", "error");
+				this.normalizandoStock = false;
 			});
 		},
 		phuyu_seleccionar: function(registro){

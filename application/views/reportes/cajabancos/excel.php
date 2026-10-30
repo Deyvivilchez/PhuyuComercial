@@ -13,14 +13,14 @@ header('Cache-Control: max-age=0');
 
     <?php 
         if ($reporte==1) {
-            $item = 0; $ingresos = 0; $egresos = 0;
+            $item = 0; $totalIngresos = 0; $totalEgresos = 0;
 
             if ($ingresos[0]["importe"]>=$egresos[0]["importe"]) {
                 $resultado_i = round($ingresos[0]["importe"] - $egresos[0]["importe"],2); $resultado_e = "";
-                $ingresos = $ingresos + $resultado_i;
+                $totalIngresos = $totalIngresos + $resultado_i;
             }else{
                 $resultado_e = round($egresos[0]["importe"] - $ingresos[0]["importe"],2); $resultado_i = "";
-                $egresos = $egresos + $resultado_e;
+                $totalEgresos = $totalEgresos + $resultado_e;
             } ?>
 
             <tr>
@@ -49,10 +49,10 @@ header('Cache-Control: max-age=0');
                         <td><?php echo utf8_decode($value["razonsocial"]);?></td>
                         <td><?php echo utf8_decode($value["referencia"]);?></td>
                         <?php 
-                            if ($value["tipomovimiento"]==1) { $ingresos = $ingresos + $value["importe_r"]; ?>
+                            if ($value["tipomovimiento"]==1) { $totalIngresos = $totalIngresos + $value["importe_r"]; ?>
                                 <td><?php echo number_format($value["importe_r"],2);?></td>
                                 <td> </td>
-                            <?php }else{ $egresos = $egresos + $value["importe_r"]; ?>
+                            <?php }else{ $totalEgresos = $totalEgresos + $value["importe_r"]; ?>
                                 <td> </td>
                                 <td><?php echo number_format($value["importe_r"],2);?></td>
                             <?php }
@@ -62,15 +62,15 @@ header('Cache-Control: max-age=0');
             ?>
             <tr>
                 <th colspan="6">TOTALES</th>
-                <th><?php echo number_format($ingresos,2);?></th>
-                <th><?php echo number_format($egresos,2);?></th>
+                <th><?php echo number_format($totalIngresos,2);?></th>
+                <th><?php echo number_format($totalEgresos,2);?></th>
             </tr>
             <tr>
                 <th colspan="5"></th>
-                <th colspan="3">SALDO (INGRESOS - EGRESOS): <?php echo number_format($ingresos - $egresos,2);?></th>
+                <th colspan="3">SALDO (INGRESOS - EGRESOS): <?php echo number_format($totalIngresos - $totalEgresos,2);?></th>
             </tr>
         <?php }else{ 
-            $ingresos = 0; $egresos = 0; ?>
+            $totalIngresos = 0; $totalEgresos = 0; ?>
 
             <tr>
                 <th>FECHA</th>
@@ -93,10 +93,10 @@ header('Cache-Control: max-age=0');
                         <td><?php echo utf8_decode($value["razonsocial"]);?></td>
                         <td><?php echo utf8_decode($value["referencia"]);?></td>
                         <?php 
-                            if ($value["tipomovimiento"]==1) { $ingresos = $ingresos + $value["importe_r"]; ?>
+                            if ($value["tipomovimiento"]==1) { $totalIngresos = $totalIngresos + $value["importe_r"]; ?>
                                 <td><?php echo number_format($value["importe_r"],2);?></td>
                                 <td> </td>
-                            <?php }else{ $egresos = $egresos + $value["importe_r"]; ?>
+                            <?php }else{ $totalEgresos = $totalEgresos + $value["importe_r"]; ?>
                                 <td> </td>
                                 <td><?php echo number_format($value["importe_r"],2);?></td>
                             <?php }
@@ -107,12 +107,12 @@ header('Cache-Control: max-age=0');
 
             <tr>
                 <th colspan="6">TOTALES</th>
-                <th><?php echo number_format($ingresos,2);?></th>
-                <th><?php echo number_format($egresos,2);?></th>
+                <th><?php echo number_format($totalIngresos,2);?></th>
+                <th><?php echo number_format($totalEgresos,2);?></th>
             </tr>
             <tr>
                 <th colspan="5"></th>
-                <th colspan="3">SALDO (INGRESOS - EGRESOS): <?php echo number_format($ingresos - $egresos,2);?></th>
+                <th colspan="3">SALDO (INGRESOS - EGRESOS): <?php echo number_format($totalIngresos - $totalEgresos,2);?></th>
             </tr>
         <?php }
     ?>

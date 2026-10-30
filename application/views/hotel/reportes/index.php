@@ -54,6 +54,21 @@
 					<tbody><tr v-for="r in resumen.habitaciones"><td>{{r.numero}}</td><td>{{r.tipo}}</td><td>{{r.usos}}</td><td>{{r.noches}}</td><td>S/. {{Number(r.importe).toFixed(2)}}</td></tr></tbody>
 				</table>
 			</div>
+			<div class="table-responsive mt-3" v-if="activo=='libres'">
+				<table class="table table-sm table-hover"><thead><tr><th>Habitacion</th><th>Ambiente</th><th>Tipo</th><th>Precio base</th><th>Estado</th></tr></thead>
+					<tbody><tr v-for="r in resumen.habitaciones_libres"><td>{{r.numero}}</td><td>{{r.ambiente}}</td><td>{{r.tipo}}</td><td>S/. {{Number(r.preciobase || 0).toFixed(2)}}</td><td><span class="badge bg-success-subtle text-success">LIBRE</span></td></tr></tbody>
+				</table>
+			</div>
+			<div class="table-responsive mt-3" v-if="activo=='reservas_pendientes'">
+				<table class="table table-sm table-hover"><thead><tr><th>Reserva</th><th>Cliente</th><th>Documento</th><th>Habitacion</th><th>Llegada</th><th>Salida</th><th>Estado</th></tr></thead>
+					<tbody><tr v-for="r in resumen.reservas_pendientes"><td>000{{r.codreserva}}</td><td>{{r.cliente}}</td><td>{{r.documento}}</td><td>{{r.habitaciones}}</td><td>{{r.fechallegada}}</td><td>{{r.fechasalida}}</td><td><span class="badge bg-warning-subtle text-warning">{{r.situacion_texto}}</span></td></tr></tbody>
+				</table>
+			</div>
+			<div class="table-responsive mt-3" v-if="activo=='reservas_confirmadas'">
+				<table class="table table-sm table-hover"><thead><tr><th>Reserva</th><th>Cliente</th><th>Documento</th><th>Habitacion</th><th>Llegada</th><th>Salida</th><th>Estado</th></tr></thead>
+					<tbody><tr v-for="r in resumen.reservas_confirmadas"><td>000{{r.codreserva}}</td><td>{{r.cliente}}</td><td>{{r.documento}}</td><td>{{r.habitaciones}}</td><td>{{r.fechallegada}}</td><td>{{r.fechasalida}}</td><td><span class="badge bg-info-subtle text-info">{{r.situacion_texto}}</span></td></tr></tbody>
+				</table>
+			</div>
 			<div class="table-responsive mt-3" v-if="activo=='consumos'">
 				<table class="table table-sm table-hover"><thead><tr><th>Habitacion</th><th>Producto</th><th>Unidad</th><th>Cantidad</th><th>Total</th></tr></thead>
 					<tbody><tr v-for="r in resumen.consumos_habitacion"><td>{{r.numero}}</td><td>{{r.producto}}</td><td>{{r.unidad}}</td><td>{{Number(r.cantidad).toFixed(2)}}</td><td>S/. {{Number(r.subtotal).toFixed(2)}}</td></tr></tbody>
@@ -70,13 +85,13 @@
 				</table>
 			</div>
 			<div class="table-responsive mt-3" v-if="activo=='mantenimiento'">
-				<table class="table table-sm table-hover"><thead><tr><th>Habitacion</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Estado</th><th>Observacion</th></tr></thead>
-					<tbody><tr v-for="r in resumen.mantenimiento"><td>{{r.numero}}</td><td>{{r.tipo}}</td><td>{{r.fecha_inicio}}</td><td>{{r.fecha_fin}}</td><td>{{r.situacion_texto}}</td><td>{{r.observacion}}</td></tr></tbody>
+				<table class="table table-sm table-hover"><thead><tr><th>Habitacion</th><th>Tipo hab.</th><th>Tipo mant.</th><th>Prioridad</th><th>Inicio</th><th>Fin</th><th>Estado</th><th>Observacion</th></tr></thead>
+					<tbody><tr v-for="r in resumen.mantenimiento"><td>{{r.numero}}</td><td>{{r.tipo}}</td><td>{{r.tipo_mantenimiento}}</td><td>{{r.prioridad}}</td><td>{{r.fecha_inicio}}</td><td>{{r.fecha_fin}}</td><td>{{r.situacion_texto}}</td><td>{{r.observacion}}</td></tr></tbody>
 				</table>
 			</div>
 			<div class="table-responsive mt-3" v-if="activo=='limpieza'">
-				<table class="table table-sm table-hover"><thead><tr><th>Habitacion</th><th>Tipo</th><th>Fecha</th><th>Hora</th><th>Observacion</th></tr></thead>
-					<tbody><tr v-for="r in resumen.limpieza"><td>{{r.numero}}</td><td>{{r.tipo}}</td><td>{{r.fecha}}</td><td>{{r.hora}}</td><td>{{r.observacion}}</td></tr></tbody>
+				<table class="table table-sm table-hover"><thead><tr><th>Habitacion</th><th>Tipo hab.</th><th>Tipo limpieza</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Observacion</th></tr></thead>
+					<tbody><tr v-for="r in resumen.limpieza"><td>{{r.numero}}</td><td>{{r.tipo}}</td><td>{{r.tipo_limpieza}}</td><td>{{r.fecha}}</td><td>{{r.hora}}</td><td>{{r.situacion_texto}}</td><td>{{r.observacion}}</td></tr></tbody>
 				</table>
 			</div>
 		</div>
@@ -86,26 +101,30 @@
 new Vue({
 	el:"#phuyu_hotel_reportes",
 	data:{
-		filtro:{desde:new Date().toISOString().slice(0,10),hasta:new Date().toISOString().slice(0,10),codhabitacion:0,cliente:""},
+		filtro:{desde:"",hasta:"",codhabitacion:0,cliente:""},
 		activo:"diaria",
 		tabs:[
 			{id:"diaria",texto:"Ocupacion diaria"},
 			{id:"mensual",texto:"Ocupacion mensual"},
 			{id:"ingresos",texto:"Ingresos"},
 			{id:"habitaciones",texto:"Habitaciones"},
+			{id:"libres",texto:"Libres"},
+			{id:"reservas_pendientes",texto:"Reservas pendientes"},
+			{id:"reservas_confirmadas",texto:"Reservas confirmadas"},
 			{id:"consumos",texto:"Consumos"},
 			{id:"clientes",texto:"Clientes"},
 			{id:"historial",texto:"Historial"},
 			{id:"mantenimiento",texto:"Mantenimiento"},
 			{id:"limpieza",texto:"Limpieza"}
 		],
-		resumen:{ocupacion:{},consumos:{},clientes:[],diaria:[],mensual:[],habitaciones:[],consumos_habitacion:[],historial:[],mantenimiento:[],limpieza:[]}
+		resumen:{ocupacion:{},consumos:{},clientes:[],diaria:[],mensual:[],habitaciones:[],habitaciones_libres:[],reservas_pendientes:[],reservas_confirmadas:[],consumos_habitacion:[],historial:[],mantenimiento:[],limpieza:[]}
 	},
 	methods:{
+		hoy:function(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");},
 		cargar:function(){
 			this.$http.post(url+"hotel/reportes/resumen",this.filtro).then(function(data){this.resumen=data.body;});
 		}
 	},
-	created:function(){this.cargar();}
+	created:function(){this.filtro.desde=this.hoy();this.filtro.hasta=this.hoy();this.cargar();}
 });
 </script>

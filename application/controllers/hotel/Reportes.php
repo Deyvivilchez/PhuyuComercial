@@ -131,9 +131,48 @@ class Reportes extends CI_Controller {
 				order by e.fecha_checkin desc, e.codestadia desc limit 100",
 				$paramsBase
 			)->result_array();
+			$reservasPendientes = $this->db->query(
+				"select r.codreserva, r.fechallegada, r.fechasalida, r.cliente, p.documento,
+					string_agg(h.numero, ', ' order by h.numero) as habitaciones,
+					case when r.situacion=1 then 'PENDIENTE' when r.situacion=2 then 'CONFIRMADA' when r.situacion=3 then 'EN HOSPEDAJE' when r.situacion=4 then 'FINALIZADA' else 'ANULADA' end as situacion_texto
+				from hotel.reservas r
+				inner join public.personas p on(p.codpersona=r.codpersona)
+				left join hotel.reserva_habitaciones rh on(rh.codreserva=r.codreserva and rh.estado=1)
+				left join hotel.habitaciones h on(h.codhabitacion=rh.codhabitacion)
+				where r.codsucursal=? and r.estado=1 and r.situacion=1 and r.fechallegada>=? and r.fechallegada<=?
+					".($codhabitacion > 0 ? " and h.codhabitacion=".$codhabitacion : "")."
+					".($cliente != "" ? " and (upper(r.cliente) like upper(?) or upper(p.documento) like upper(?))" : "")."
+				group by r.codreserva, p.documento
+				order by r.fechallegada, r.codreserva",
+				array_merge([(int)$_SESSION["phuyu_codsucursal"], $desde, $hasta], $cliente != "" ? ["%".$cliente."%", "%".$cliente."%"] : [])
+			)->result_array();
+			$reservasConfirmadas = $this->db->query(
+				"select r.codreserva, r.fechallegada, r.fechasalida, r.cliente, p.documento,
+					string_agg(h.numero, ', ' order by h.numero) as habitaciones,
+					case when r.situacion=1 then 'PENDIENTE' when r.situacion=2 then 'CONFIRMADA' when r.situacion=3 then 'EN HOSPEDAJE' when r.situacion=4 then 'FINALIZADA' else 'ANULADA' end as situacion_texto
+				from hotel.reservas r
+				inner join public.personas p on(p.codpersona=r.codpersona)
+				left join hotel.reserva_habitaciones rh on(rh.codreserva=r.codreserva and rh.estado=1)
+				left join hotel.habitaciones h on(h.codhabitacion=rh.codhabitacion)
+				where r.codsucursal=? and r.estado=1 and r.situacion=2 and r.fechallegada>=? and r.fechallegada<=?
+					".($codhabitacion > 0 ? " and h.codhabitacion=".$codhabitacion : "")."
+					".($cliente != "" ? " and (upper(r.cliente) like upper(?) or upper(p.documento) like upper(?))" : "")."
+				group by r.codreserva, p.documento
+				order by r.fechallegada, r.codreserva",
+				array_merge([(int)$_SESSION["phuyu_codsucursal"], $desde, $hasta], $cliente != "" ? ["%".$cliente."%", "%".$cliente."%"] : [])
+			)->result_array();
+			$habitacionesLibres = [];
+			foreach ($this->Hotel_model->disponibilidad_habitaciones_rango($desde, date("Y-m-d", strtotime($hasta." +1 day")), 0, 0) as $habLibre) {
+				if ((int)$habLibre["disponible"] == 1 && ($codhabitacion == 0 || (int)$habLibre["codhabitacion"] == $codhabitacion)) {
+					$habitacionesLibres[] = $habLibre;
+				}
+			}
 			$mantenimiento = $this->db->query(
-				"select h.numero, ht.descripcion as tipo, mh.fecha_inicio, mh.fecha_fin, mh.observacion,
-					case when mh.situacion=1 then 'ACTIVO' else 'FINALIZADO' end as situacion_texto
+				"select h.numero, ht.descripcion as tipo, mh.fecha_inicio, mh.fecha_fin, mh.observacion, mh.tipo_mantenimiento, mh.prioridad,
+					case when coalesce(mh.estado_orden,mh.situacion,1)=1 then 'PENDIENTE'
+						when coalesce(mh.estado_orden,mh.situacion,1)=2 then 'EN PROCESO'
+						when coalesce(mh.estado_orden,mh.situacion,1)=3 then 'FINALIZADO'
+						else 'ANULADO' end as situacion_texto
 				from hotel.mantenimiento_habitaciones mh
 				inner join hotel.habitaciones h on(h.codhabitacion=mh.codhabitacion)
 				inner join hotel.habitacion_tipos ht on(ht.codhabitaciontipo=h.codhabitaciontipo)
@@ -143,7 +182,11 @@ class Reportes extends CI_Controller {
 				[(int)$_SESSION["phuyu_codsucursal"], $desde, $hasta]
 			)->result_array();
 			$limpieza = $this->db->query(
-				"select h.numero, ht.descripcion as tipo, lh.fecha, lh.hora, lh.observacion
+				"select h.numero, ht.descripcion as tipo, lh.fecha, lh.hora, lh.observacion, lh.tipo_limpieza,
+					case when coalesce(lh.estado_orden,1)=1 then 'PENDIENTE'
+						when coalesce(lh.estado_orden,1)=2 then 'EN PROCESO'
+						when coalesce(lh.estado_orden,1)=3 then 'FINALIZADO'
+						else 'ANULADO' end as situacion_texto
 				from hotel.limpieza_habitaciones lh
 				inner join hotel.habitaciones h on(h.codhabitacion=lh.codhabitacion)
 				inner join hotel.habitacion_tipos ht on(ht.codhabitaciontipo=h.codhabitaciontipo)
@@ -162,6 +205,9 @@ class Reportes extends CI_Controller {
 				"habitaciones" => $habitacionesUsadas,
 				"consumos_habitacion" => $consumosHabitacion,
 				"historial" => $historial,
+				"reservas_pendientes" => $reservasPendientes,
+				"reservas_confirmadas" => $reservasConfirmadas,
+				"habitaciones_libres" => $habitacionesLibres,
 				"mantenimiento" => $mantenimiento,
 				"limpieza" => $limpieza
 			]);

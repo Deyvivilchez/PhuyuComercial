@@ -1,19 +1,25 @@
 <?php
-function texto_ticket($texto)
-{
-    return htmlspecialchars((string)$texto, ENT_QUOTES, 'UTF-8');
+if (!function_exists('texto_ticket')) {
+    function texto_ticket($texto)
+    {
+        return htmlspecialchars((string)$texto, ENT_QUOTES, 'UTF-8');
+    }
 }
 
-function numero_ticket($monto)
-{
-    return number_format((float)$monto, 2);
+if (!function_exists('numero_ticket')) {
+    function numero_ticket($monto)
+    {
+        return number_format((float)$monto, 2);
+    }
 }
 
-function fecha_ticket($fecha)
-{
-    if (empty($fecha) || $fecha === '0000-00-00') return '-';
-    $ts = strtotime($fecha);
-    return $ts ? date('d/m/Y', $ts) : $fecha;
+if (!function_exists('fecha_ticket')) {
+    function fecha_ticket($fecha)
+    {
+        if (empty($fecha) || $fecha === '0000-00-00') return '-';
+        $ts = strtotime($fecha);
+        return $ts ? date('d/m/Y', $ts) : $fecha;
+    }
 }
 
 $empresaData   = is_array($empresa) && isset($empresa['documento']) ? $empresa : ($empresa[0] ?? []);
@@ -38,6 +44,7 @@ $direccionSucursal = $sucursalData['direccion'] ?? '-';
 $telefonosSucursal = $sucursalData['telefonos'] ?? '-';
 $vendedorNombre = $vendedorData['razonsocial'] ?? '-';
 $vendedorTelefono = $vendedorData['telefono'] ?? '';
+$mesaRestaurante = trim((string)($mesa_restaurante ?? ''));
 $condicionPago = ((int)($ventaData['condicionpago'] ?? 0) === 1)
     ? 'CONTADO'
     : 'CRÉDITO';
@@ -442,6 +449,12 @@ $agradecimiento = $formatoData['agradecimiento'] ?? '';
             <span class="label">Vendedor</span>
             <span class="value"><?= texto_ticket($vendedorNombre) ?></span>
         </div>
+        <?php if ($mesaRestaurante !== ''): ?>
+        <div class="row">
+            <span class="label">Mesa</span>
+            <span class="value strong"><?= texto_ticket($mesaRestaurante) ?></span>
+        </div>
+        <?php endif; ?>
         <?php if (!empty($placa) && $placa !== '-'): ?>
         <div class="row">
             <span class="label">Placa</span>
@@ -472,8 +485,20 @@ $agradecimiento = $formatoData['agradecimiento'] ?? '';
                         <td class="item-num"><?= str_pad((string)($item['item'] ?? ($i + 1)), 2, '0', STR_PAD_LEFT) ?></td>
                         <td class="item-desc">
                             <div class="prod"><?= texto_ticket($item['producto'] ?? '') ?></div>
-                            <?php if (!empty($item['descripcion'])): ?>
-                                <div class="prod-extra"><?= texto_ticket($item['descripcion']) ?></div>
+                            <?php
+                            $productoDescripcion = trim((string)($item['producto'] ?? ''));
+                            $descripcionExtra = trim((string)($item['descripcion'] ?? ''));
+
+                            if (
+                                $productoDescripcion !== '' &&
+                                strncasecmp($descripcionExtra, $productoDescripcion, strlen($productoDescripcion)) === 0
+                            ) {
+                                $descripcionExtra = trim(substr($descripcionExtra, strlen($productoDescripcion)));
+                                $descripcionExtra = preg_replace('/^[\s\-:|]+/u', '', $descripcionExtra);
+                            }
+                            ?>
+                            <?php if ($mesaRestaurante === '' && $descripcionExtra !== ''): ?>
+                                <div class="prod-extra"><?= texto_ticket($descripcionExtra) ?></div>
                             <?php endif; ?>
                         </td>
                         <td class="item-und"><?= texto_ticket($item['unidad'] ?? '-') ?></td>

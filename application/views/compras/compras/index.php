@@ -173,6 +173,10 @@
 								<i class="bi bi-trash"></i>
 								<span>Eliminar</span>
 							</button>
+							<button type="button" class="btn btn-warning phuyu-btn-text-icon restaurar" v-on:click="phuyu_restaurar()" disabled>
+								<i class="bi bi-arrow-counterclockwise"></i>
+								<span>Restaurar</span>
+							</button>
 							<button type="button" class="btn btn-secondary phuyu-btn-text-icon" v-on:click="phuyu_clonar()">
 								<i class="bi bi-copy"></i>
 								<span>Clonar</span>
