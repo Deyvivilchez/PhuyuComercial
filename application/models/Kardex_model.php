@@ -455,6 +455,20 @@ class Kardex_model extends CI_Model
 	 */
 	function phuyu_kardexdetalle($codkardex, $codkardexalmacen, $detalle, $retirar, $operacion = 0, $codpedido = 0, $codproforma = 0, $tipocambio = 1)
 	{
+        if ((int)$operacion === 0) {
+            $this->load->model('Stock_reservas_model');
+            $movimientos = [];
+            foreach ($detalle as $indice => $itemDetalle) {
+                foreach ($this->phuyu_movimientos_stock_producto($itemDetalle, $indice + 1, $operacion) as $movimiento) {
+                    $movimientos[] = (object)$movimiento;
+                }
+            }
+            $validacion = $this->Stock_reservas_model->validar($movimientos, $codpedido);
+            if (!$validacion['success']) { return $validacion; }
+            // trans_complete() de este método cierra solo este nivel; el controlador confirma la venta.
+            $this->db->trans_begin();
+        }
+
 		$item = 0;                    // Contador correlativo de ítems del kardex
 		$estado = 1;                  // Bandera de estado para operaciones de BD
 		$informacion['success'] = true; // Resultado general del proceso

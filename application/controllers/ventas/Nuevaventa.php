@@ -275,6 +275,7 @@ class Nuevaventa extends CI_Controller {
 
 				//echo json_encode($detalle['success']);exit;
 				if(!$detalle['success']){
+                    $this->db->trans_rollback();
 					$data["estado"] = 0; $data["informacion"] = $detalle;
 				    echo json_encode($data);exit;
 				}
