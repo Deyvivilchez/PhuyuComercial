@@ -415,5 +415,21 @@ BEGIN
 END $$;
 
 -- ============================================================
+-- 007. CAJA: REFERENCIA AL MOVIMIENTO DE ORIGEN EN TRANSFERENCIAS
+-- Fecha: 2026-11-03
+-- Reejecutable: ADD COLUMN IF NOT EXISTS.
+-- Que hace:
+-- - Agrega el campo que usa caja/movimientos/aceptar_transferencia.
+-- - Conserva el codigo del movimiento de salida en el ingreso de destino.
+-- - Los movimientos existentes quedan sin referencia (NULL).
+-- ============================================================
+
+ALTER TABLE caja.movimientos
+    ADD COLUMN IF NOT EXISTS codmovimiento_ref integer;
+
+COMMENT ON COLUMN caja.movimientos.codmovimiento_ref IS
+    'Movimiento de caja de origen de la transferencia aceptada; NULL si no corresponde o es anterior a la migracion.';
+
+-- ============================================================
 -- FIN MIGRACIONES ORDENADAS 2
 -- ============================================================

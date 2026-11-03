@@ -1,7 +1,8 @@
 var phuyu_datos = new Vue({
 	el: "#phuyu_datos",
 	data: {
-		cargando: true, registro:0, buscar: "", datos: [], transferencias:[], 
+		cargando: true, registro:0, buscar: "", datos: [], transferencias:[],
+		transferencias_pendientes: Number(document.getElementById("phuyu_datos").getAttribute("data-transferencias-pendientes")) || 0,
 		campos_t:{"codmovimiento":"","codpersona":"","codcaja":0,"codtipopago":0,"importe":0,"codcomprobantetipo":0,
 		"seriecomprobante":"","nrocomprobante":"","fechadocbanco":"","nrodocbanco":""},
 		paginacion: {"total":0, "actual":1, "ultima":0, "desde":0, "hasta":0}, offset: 3,
@@ -173,9 +174,11 @@ var phuyu_datos = new Vue({
 				});
 			}
 		},
-		phuyu_transferencias: function(){
+		phuyu_transferencias: function(mostrar){
 			this.$http.post(url+phuyu_controller+"/transferencias").then(function(data){
-				this.transferencias = data.body; $("#modal_transferencias").modal("show");
+				this.transferencias = data.body;
+				this.transferencias_pendientes = this.transferencias.length;
+				if (mostrar !== false) { $("#modal_transferencias").modal("show"); }
 			},function(){
 				phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS", "ERROR DE RED","error");
 			});
@@ -209,14 +212,21 @@ var phuyu_datos = new Vue({
 			}).then((willDelete) => {
 				if (willDelete) {
 					this.$http.post(url+phuyu_controller+"/aceptar_transferencia",{"campos":this.campos_t,"referencia":$(".swal-content__input").val()}).then(function(data){
-						if (data.body==1) {
-							phuyu_sistema.phuyu_alerta("TRANSFERENCIA ACEPTADA CORRECTAMENTE", "","success");
+						const respuesta = data.body;
+						if (respuesta && respuesta.exito === true) {
+							phuyu_sistema.phuyu_alerta("TRANSFERENCIA ACEPTADA", respuesta.mensaje,"success");
+							this.transferencias = this.transferencias.filter(function(transferencia){ return transferencia.codmovimiento != datos.codmovimiento; });
+							this.transferencias_pendientes = this.transferencias.length;
+							this.phuyu_transferencias(false);
+							$("#modal_transferencias").modal("hide");
+							this.phuyu_datos();
 						}else{
-							phuyu_sistema.phuyu_alerta("OCURRIO UN ERROR !!!", "SE PERDIÓ LA CONEXION !!! LO SENTIMOS","error");
+							phuyu_sistema.phuyu_alerta("NO SE PUDO ACEPTAR LA TRANSFERENCIA", respuesta && respuesta.mensaje ? respuesta.mensaje : "El servidor devolvio una respuesta inesperada. Revise el estado de la transferencia antes de reintentar.","error");
 						}
-						$("#modal_transferencias").modal("hide"); this.phuyu_datos();
-					}, function(){
-						phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED","error");
+					}, function(error){
+						const respuesta = error.body;
+						const mensaje = respuesta && respuesta.mensaje ? respuesta.mensaje : (error.status === 0 ? "No se pudo conectar con el servidor. Revise su conexion y el estado de la transferencia antes de reintentar." : "El servidor no pudo procesar la transferencia. Revise su estado antes de reintentar.");
+						phuyu_sistema.phuyu_alerta("NO SE PUDO ACEPTAR LA TRANSFERENCIA", mensaje,"error");
 					});
 				}else{
 					$("#modal_transferencias").modal("show");

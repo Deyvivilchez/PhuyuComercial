@@ -1,4 +1,4 @@
-<div id="phuyu_datos">
+<div id="phuyu_datos" data-transferencias-pendientes="<?php echo (int)$transferencias[0]['cantidad']; ?>">
   <div class="row mb-3">
     <div class="col-12 col-md-6">
       <?php if ($_SESSION['phuyu_codcontroldiario'] == 0): ?>
@@ -64,7 +64,7 @@
               </button>
               <button class="btn btn-info" @click="phuyu_transferencias">
                 <i class="bi bi-arrow-left-right"></i> Transferencias
-                <span class="badge bg-danger ms-1"><?php echo $transferencias[0]['cantidad']; ?></span>
+                <span class="badge bg-danger ms-1" v-if="transferencias_pendientes > 0">{{ transferencias_pendientes }}</span>
               </button>
               <button class="btn btn-warning" @click="phuyu_editar">
                 <i class="bi bi-pencil-square"></i> Editar
@@ -141,4 +141,4 @@
   if (typeof AcornIcons !== 'undefined') new AcornIcons().replace();
   if (typeof Icons !== 'undefined') new Icons();
 </script>
-<script src="<?php echo base_url(); ?>phuyu/phuyu_caja/movi_index.js"></script>
+<script src="<?php echo base_url(); ?>phuyu/phuyu_caja/movi_index.js?v=<?php echo filemtime(FCPATH . 'phuyu/phuyu_caja/movi_index.js'); ?>"></script>

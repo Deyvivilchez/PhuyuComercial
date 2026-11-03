@@ -27,55 +27,8 @@ class Movimientos extends CI_Controller {
 			$limit = 10;
 			$pagina = isset($this->request->pagina) ? max(1, (int)$this->request->pagina) : 1;
 			$offset = $pagina * $limit - $limit;
-			$codcontroldiario = isset($_SESSION["phuyu_codcontroldiario"]) ? (int)$_SESSION["phuyu_codcontroldiario"] : 0;
-			$buscar = isset($this->request->buscar) ? $this->db->escape_like_str(trim($this->request->buscar)) : "";
-			$fecha_desde = isset($this->request->fecha_desde) ? trim($this->request->fecha_desde) : "";
-			$fecha_hasta = isset($this->request->fecha_hasta) ? trim($this->request->fecha_hasta) : "";
-			$codtipopago = isset($this->request->codtipopago) ? (int)$this->request->codtipopago : 0;
-			$tipomovimiento = isset($this->request->tipomovimiento) ? (int)$this->request->tipomovimiento : 0;
-			$filtro_fecha = "";
-			$filtro_tipopago = "";
-			$filtro_tipomovimiento = "";
-
-			if ($fecha_desde !== "" && $fecha_hasta !== "" && $fecha_desde > $fecha_hasta) {
-				$fecha_temp = $fecha_desde;
-				$fecha_desde = $fecha_hasta;
-				$fecha_hasta = $fecha_temp;
-			}
-
-			if ($fecha_desde !== "") {
-				$filtro_fecha .= " and movimientos.fechamovimiento >= ".$this->db->escape($fecha_desde);
-			}
-
-			if ($fecha_hasta !== "") {
-				$filtro_fecha .= " and movimientos.fechamovimiento <= ".$this->db->escape($fecha_hasta);
-			}
-
-			if ($codtipopago > 0) {
-				$filtro_tipopago = " and exists (
-					select 1
-					from caja.movimientosdetalle md_filtro
-					where md_filtro.codmovimiento=movimientos.codmovimiento
-					  and md_filtro.codtipopago=".$codtipopago."
-				)";
-			}
-
-			if ($tipomovimiento === 1 || $tipomovimiento === 2) {
-				$filtro_tipomovimiento = " and movimientos.tipomovimiento=".$tipomovimiento;
-			}
-
-			$where = " where movimientos.codcontroldiario=".$codcontroldiario."
-				and (
-					UPPER(movimientos.seriecomprobante) like UPPER('%".$buscar."%')
-					or UPPER(conceptos.descripcion) like UPPER('%".$buscar."%')
-					or UPPER(personas.razonsocial) like UPPER('%".$buscar."%')
-					or UPPER(COALESCE(pagos.tipopago, '')) like UPPER('%".$buscar."%')
-				)
-				".$filtro_fecha."
-				".$filtro_tipopago."
-				".$filtro_tipomovimiento."
-				and movimientos.condicionpago=1
-				and movimientos.estado=1";
+			$filtros = (array)$this->request;
+			$where = " WHERE ".$this->filtro_consulta_movimientos($filtros, 'movimientos', 'personas', 'conceptos');
 			$join_pagos = "
 				left join (
 					select
@@ -329,9 +282,23 @@ class Movimientos extends CI_Controller {
 	function aceptar_transferencia(){
 		if ($this->input->is_ajax_request()) {
 			$this->request = json_decode(file_get_contents('php://input'));
+			if (empty($_SESSION["phuyu_codusuario"]) || empty($_SESSION["phuyu_codcaja"]) || empty($_SESSION["phuyu_codcontroldiario"])) {
+				return $this->respuesta_transferencia(false, "La sesion no tiene una caja abierta. Inicie sesion y abra la caja.", 401);
+			}
+			if (empty($this->request->campos->codmovimiento)) {
+				return $this->respuesta_transferencia(false, "Seleccione una transferencia valida.", 400);
+			}
+			$columna = $this->db->query("SELECT 1 FROM information_schema.columns WHERE table_schema = 'caja' AND table_name = 'movimientos' AND column_name = 'codmovimiento_ref'");
+			if (!$columna || $columna->num_rows() === 0) {
+				return $this->respuesta_transferencia(false, "Falta actualizar la base de datos. Ejecute la migracion 007 de phuyu_migraciones_ordenado2.sql.", 409);
+			}
 
 			$comprobante_ingresos = 1;
 			$series = $this->db->query("select seriecomprobante from caja.comprobantes where codcomprobantetipo=".$comprobante_ingresos." and codsucursal=".$_SESSION["phuyu_codsucursal"]." and codcaja=".$_SESSION["phuyu_codcaja"]." and estado=1")->result_array();
+
+			if (empty($series)) {
+				return $this->respuesta_transferencia(false, "La caja no tiene una serie activa para comprobantes de ingreso.", 422);
+			}
 
 			$campos = ["codmovimiento_ref","codcontroldiario","codcaja","codconcepto","codpersona","codusuario","codcomprobantetipo","seriecomprobante","tipomovimiento","codcomprobantetipo_ref","seriecomprobante_ref","nrocomprobante_ref","importe","referencia","codcaja_ref","transferido","horamovimiento"];
 
@@ -350,7 +317,12 @@ class Movimientos extends CI_Controller {
 				$this->request->referencia,
 				(int)$this->request->campos->codcaja,1,date("H:i:s")
 			];
-			$codmovimiento = $this->phuyu_model->phuyu_guardar("caja.movimientos", $campos, $valores, "true");
+			$this->db->trans_begin();
+			if (!$this->db->insert("caja.movimientos", array_combine($campos, $valores))) {
+				$this->db->trans_rollback();
+				return $this->respuesta_transferencia(false, "No se pudo registrar el ingreso de la transferencia. No se guardaron cambios.", 500);
+			}
+			$codmovimiento = $this->db->insert_id();
 			$estado = $this->Caja_model->phuyu_correlativo($codmovimiento,$comprobante_ingresos,$series[0]["seriecomprobante"]);
 
 			$campos_1 = ["codmovimiento","codtipopago","codcontroldiario","codcaja","fechadocbanco","nrodocbanco","importe","importeentregado"];
@@ -369,15 +341,78 @@ class Movimientos extends CI_Controller {
 			$campos = ["transferido"]; $valores = [1];
 			$estado = $this->phuyu_model->phuyu_editar("caja.movimientos", $campos, $valores, "codmovimiento", $this->request->campos->codmovimiento);
 
-			echo $estado;
+			if ($this->db->trans_status() === FALSE) {
+				$this->db->trans_rollback();
+				return $this->respuesta_transferencia(false, "No se pudo completar la transferencia. No se guardaron cambios.", 500);
+			} else {
+				if (!$this->db->trans_commit()) {
+					return $this->respuesta_transferencia(false, "No se pudo confirmar la transferencia. Revise el estado antes de reintentar.", 500);
+				}
+				return $this->respuesta_transferencia(true, "Transferencia aceptada correctamente.", 200, $codmovimiento);
+			}
 		}else{
 			$this->load->view("phuyu/404");
 		}
 	}
 
 
+	private function respuesta_transferencia($exito, $mensaje, $http, $codmovimiento = null){
+		return $this->output
+			->set_status_header($http)
+			->set_content_type('application/json', 'utf-8')
+			->set_output(json_encode([
+				"exito" => (bool)$exito,
+				"mensaje" => $mensaje,
+				"codmovimiento" => $codmovimiento
+			]));
+	}
 
 
+
+
+
+
+    // Un mismo filtro para la lista, Excel y PDF. La caja siempre sale de la sesion.
+    private function filtro_consulta_movimientos($filtros, $m, $p, $c)
+    {
+        $historial = isset($filtros['vista']) && $filtros['vista'] === 'historial';
+        $desde = isset($filtros['fecha_desde']) ? trim($filtros['fecha_desde']) : '';
+        $hasta = isset($filtros['fecha_hasta']) ? trim($filtros['fecha_hasta']) : '';
+        foreach ([$desde, $hasta] as $fecha) {
+            if ($fecha !== '') {
+                $valor = DateTime::createFromFormat('!Y-m-d', $fecha);
+                if (!$valor || $valor->format('Y-m-d') !== $fecha) {
+                    show_error('Seleccione fechas validas.', 422);
+                    exit;
+                }
+            }
+        }
+        if (($historial && ($desde === '' || $hasta === '')) || ($desde !== '' && $hasta !== '' && $desde > $hasta)) {
+            show_error('Seleccione un rango de fechas valido para consultar el historial.', 422);
+            exit;
+        }
+        $where = "$m.codcaja=".(int)$_SESSION['phuyu_codcaja']." AND $m.estado=1 AND $m.condicionpago=1";
+        if (!$historial) {
+            $where .= " AND $m.codcontroldiario=".(int)$_SESSION['phuyu_codcontroldiario'];
+        }
+        if ($desde !== '') { $where .= " AND $m.fechamovimiento >= ".$this->db->escape($desde); }
+        if ($hasta !== '') { $where .= " AND $m.fechamovimiento <= ".$this->db->escape($hasta); }
+        $tipo = isset($filtros['tipomovimiento']) ? (int)$filtros['tipomovimiento'] : 0;
+        if ($tipo === 1 || $tipo === 2) { $where .= " AND $m.tipomovimiento=".$tipo; }
+        $pago = isset($filtros['codtipopago']) ? (int)$filtros['codtipopago'] : 0;
+        if ($pago > 0) {
+            $where .= " AND EXISTS (SELECT 1 FROM caja.movimientosdetalle md_f WHERE md_f.codmovimiento=$m.codmovimiento AND md_f.codtipopago=".$pago.")";
+        }
+        $buscar = isset($filtros['buscar']) ? trim($filtros['buscar']) : '';
+        if ($buscar !== '') {
+            $texto = $this->db->escape('%'.$this->db->escape_like_str($buscar).'%');
+            $where .= " AND (CONCAT($m.seriecomprobante, '-', $m.nrocomprobante) ILIKE $texto ESCAPE '!'"
+                ." OR $p.razonsocial ILIKE $texto ESCAPE '!' OR $c.descripcion ILIKE $texto ESCAPE '!'"
+                ." OR $m.referencia ILIKE $texto ESCAPE '!'"
+                ." OR EXISTS (SELECT 1 FROM caja.movimientosdetalle md_b JOIN caja.tipopagos tp_b ON tp_b.codtipopago=md_b.codtipopago WHERE md_b.codmovimiento=$m.codmovimiento AND tp_b.descripcion ILIKE $texto ESCAPE '!'))";
+        }
+        return $where;
+    }
 
 public function exportar_excel_detallado()
 {
@@ -390,6 +425,11 @@ public function exportar_excel_detallado()
         return;
     }
 
+    $filtros = (array)$this->input->get();
+    $filtros['vista'] = isset($filtros['vista']) ? $filtros['vista'] : 'historial';
+    $filtros['fecha_desde'] = $desde;
+    $filtros['fecha_hasta'] = $hasta;
+    $where = $this->filtro_consulta_movimientos($filtros, 'm', 'p', 'c');
     $sql = "
         SELECT 
             m.codmovimiento,
@@ -418,11 +458,7 @@ public function exportar_excel_detallado()
         JOIN caja.conceptos AS c         ON c.codconcepto = m.codconcepto
         JOIN caja.tipopagos AS tp        ON tp.codtipopago = md.codtipopago
 		LEFT JOIN kardex.kardex AS k        ON k.codkardex = m.codkardex
-        WHERE m.fechamovimiento BETWEEN {$this->db->escape($desde)} AND {$this->db->escape($hasta)}
-        AND m.codcaja = {$this->db->escape($codcaja)}
-        AND m.estado = 1
-        AND m.condicionpago = 1
-        AND tp.estado = 1
+        WHERE {$where}
         ORDER BY m.fechamovimiento, m.codmovimiento
     ";
 
@@ -447,6 +483,11 @@ public function exportar_pdf_detallado()
         return;
     }
 
+    $filtros = (array)$this->input->get();
+    $filtros['vista'] = isset($filtros['vista']) ? $filtros['vista'] : 'historial';
+    $filtros['fecha_desde'] = $desde;
+    $filtros['fecha_hasta'] = $hasta;
+    $where = $this->filtro_consulta_movimientos($filtros, 'm', 'p', 'c');
     $sql = "
         SELECT 
             m.codmovimiento,
@@ -475,11 +516,7 @@ public function exportar_pdf_detallado()
         JOIN caja.conceptos AS c         ON c.codconcepto = m.codconcepto
         JOIN caja.tipopagos AS tp        ON tp.codtipopago = md.codtipopago
         LEFT JOIN kardex.kardex AS k          ON k.codkardex = m.codkardex
-        WHERE m.fechamovimiento BETWEEN {$this->db->escape($desde)} AND {$this->db->escape($hasta)}
-        AND m.codcaja = {$this->db->escape($codcaja)}
-        AND m.estado = 1
-        AND m.condicionpago = 1
-        AND tp.estado = 1
+        WHERE {$where}
         ORDER BY m.fechamovimiento, m.codmovimiento
     ";
 
