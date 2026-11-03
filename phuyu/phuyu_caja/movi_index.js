@@ -6,9 +6,18 @@ var phuyu_datos = new Vue({
 		campos_t:{"codmovimiento":"","codpersona":"","codcaja":0,"codtipopago":0,"importe":0,"codcomprobantetipo":0,
 		"seriecomprobante":"","nrocomprobante":"","fechadocbanco":"","nrodocbanco":""},
 		paginacion: {"total":0, "actual":1, "ultima":0, "desde":0, "hasta":0}, offset: 3,
-		fecha_desde: "", fecha_hasta: "", codtipopago: 0, tipomovimiento: 0,
+		fecha_desde: "", fecha_hasta: "", codtipopago: 0, tipomovimiento: 0, vista: "actual", consulta: 0,
 	},
 	computed: {
+		totales_pagina() {
+			const campos = {pagado: "importe_pagado", entregado: "importe_entregado", vuelto: "vuelto", total: "importe_r"};
+			const totales = {};
+			Object.keys(campos).forEach((nombre) => {
+				const centimos = this.datos.reduce((suma, dato) => suma + Math.round(Number(dato[campos[nombre]]) * 100), 0);
+				totales[nombre] = centimos / 100;
+			});
+			return totales;
+		},
 		phuyu_actual: function(){
 			return this.paginacion.actual;
 		},
@@ -33,38 +42,38 @@ var phuyu_datos = new Vue({
 		}
 	},
 	methods: {
-		exportarExcelDetallado() {
-			let desde = this.fecha_desde;
-			let hasta = this.fecha_hasta;
-
-			if (!desde || !hasta) {
-				phuyu_sistema.phuyu_noti("FALTAN FECHAS", "Debes seleccionar el rango de fechas", "warning");
-				return;
-			}
-
-			if (desde > hasta) {
-				phuyu_sistema.phuyu_noti("FECHAS INVÁLIDAS", "La fecha 'Desde' no puede ser mayor que la fecha 'Hasta'", "danger");
-				return;
-			}
-
-			window.open(`${url + phuyu_controller}/exportar_excel_detallado?desde=${desde}&hasta=${hasta}`);
+		formato_importe(importe) {
+			if (importe === null || importe === undefined || importe === "" || !Number.isFinite(Number(importe))) return "—";
+			return new Intl.NumberFormat("es-PE", {style: "currency", currency: "PEN"}).format(Number(importe));
 		},
-		exportarPdfDetallado() {
-			let desde = this.fecha_desde;
-			let hasta = this.fecha_hasta;
-
-			if (!desde || !hasta) {
-				phuyu_sistema.phuyu_noti("FALTAN FECHAS", "Debes seleccionar el rango de fechas", "warning");
-				return;
-			}
-
-			if (desde > hasta) {
-				phuyu_sistema.phuyu_noti("FECHAS INVÁLIDAS", "La fecha 'Desde' no puede ser mayor que la fecha 'Hasta'", "danger");
-				return;
-			}
-
-			window.open(url + phuyu_controller +'/exportar_pdf_detallado?desde=' + desde + '&hasta=' + hasta);
+		cambiar_vista(vista) {
+			this.vista = vista;
+			this.buscar = ""; this.codtipopago = 0; this.tipomovimiento = 0;
+			const elemento = document.getElementById("phuyu_datos");
+			this.fecha_desde = vista === "historial" ? elemento.getAttribute("data-inicio-mes") : "";
+			this.fecha_hasta = vista === "historial" ? elemento.getAttribute("data-hoy") : "";
+			this.phuyu_buscar();
 		},
+		filtros_movimientos() {
+			return {vista: this.vista, buscar: this.buscar, fecha_desde: this.fecha_desde, fecha_hasta: this.fecha_hasta, codtipopago: this.codtipopago, tipomovimiento: this.tipomovimiento};
+		},
+		validar_fechas(obligatorias) {
+			if ((obligatorias && (!this.fecha_desde || !this.fecha_hasta)) || (this.fecha_desde && this.fecha_hasta && this.fecha_desde > this.fecha_hasta)) {
+				phuyu_sistema.phuyu_noti("REVISE LAS FECHAS", "Seleccione un rango completo y ordenado de fechas.", "warning");
+				return false;
+			}
+			return true;
+		},
+		exportar_detallado(formato) {
+			if (!this.validar_fechas(true)) return;
+			const filtros = this.filtros_movimientos();
+			filtros.vista = "historial";
+			filtros.desde = this.fecha_desde; filtros.hasta = this.fecha_hasta;
+			filtros._exportado = Date.now();
+			window.open(url + phuyu_controller + "/exportar_" + formato + "_detallado?" + new URLSearchParams(filtros).toString(), "_blank");
+		},
+		exportarExcelDetallado() { this.exportar_detallado("excel"); },
+		exportarPdfDetallado() { this.exportar_detallado("pdf"); },
 
 		exportarMovimientosDetallePDF() {
    			 window.open(url + phuyu_controller+ "/reporte_movimientos_detallado_pdf", "_blank");
@@ -77,19 +86,18 @@ var phuyu_datos = new Vue({
 
 
 		phuyu_datos: function(){
+			if (!this.validar_fechas(this.vista === "historial")) return;
 			this.cargando = true; this.registro = 0;
-			this.$http.post(url+phuyu_controller+"/lista",{
-				"buscar":this.buscar,
-				"pagina":this.paginacion.actual,
-				"fecha_desde":this.fecha_desde,
-				"fecha_hasta":this.fecha_hasta,
-				"codtipopago":this.codtipopago,
-				"tipomovimiento":this.tipomovimiento
-			}).then(function(data){
+			const consulta = ++this.consulta;
+			const filtros = this.filtros_movimientos();
+			filtros.pagina = this.paginacion.actual;
+			this.$http.post(url+phuyu_controller+"/lista", filtros).then(function(data){
+				if (consulta !== this.consulta) return;
 				this.datos = data.body.lista; this.paginacion = data.body.paginacion;
 				this.cargando = false; phuyu_sistema.phuyu_fin();
 			},function(){
-				phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS", "ERROR DE RED","error"); this.cargando = false;
+				if (consulta !== this.consulta) return;
+				phuyu_sistema.phuyu_alerta("NO SE PUDO CONSULTAR", "Revise los filtros e intente nuevamente.","error"); this.cargando = false;
 			});
 		},
 		phuyu_buscar: function(){

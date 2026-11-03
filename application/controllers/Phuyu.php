@@ -95,7 +95,10 @@ class Phuyu extends CI_Controller
 			}
 			$sistemas = $this->db->query("select *from sistemas where estado = 1")->result_array();
 			$phuyu_modulos = $this->phuyu_model->phuyu_modulos();
-            $this->load->view("phuyu/index",compact("phuyu_modulos","sistemas"));
+            $this->load->helper('phuyu_soporte');
+            $soporte = $this->db->query("SELECT to_jsonb(e)->>'soporte_whatsapp_grupo' AS enlace FROM public.empresas e WHERE codempresa=?", [(int)($_SESSION['phuyu_codempresa'] ?? 0)])->row_array();
+            $soporte_grupo_url = phuyu_url_grupo_soporte($soporte['enlace'] ?? '');
+            $this->load->view("phuyu/index",compact("phuyu_modulos","sistemas","soporte_grupo_url"));
         }else{
             $this->load->view("phuyu/404");
         }

@@ -597,19 +597,15 @@
             background: #fff;
         }
 
-        .settings-buttons-container {
-            position: fixed;
-            right: 1rem;
-            bottom: 1rem;
-            z-index: 1051;
-        }
-
-        .settings-buttons-container .settings-button {
-            width: 52px;
-            height: 52px;
-            border-radius: 999px;
-            box-shadow: 0 10px 30px rgba(64, 81, 137, 0.28);
-        }
+        .phuyu-support-access { position: fixed; right: 20px; bottom: 18px; z-index: 1030; }
+        .phuyu-support-button { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; width: 84px; padding: 0; border: 0; border-radius: 12px; background: transparent; box-shadow: none; cursor: pointer; text-decoration: none; transition: transform .18s; }
+        .phuyu-support-button img { display: block; width: 68px; height: 74px; object-fit: contain; filter: drop-shadow(0 0 1px rgba(109, 40, 217, .8)) drop-shadow(0 3px 7px rgba(88, 28, 135, .28)); transition: filter .18s; }
+        .phuyu-support-button:hover { transform: translateY(-3px); background: transparent; text-decoration: none; }
+        .phuyu-support-button:hover img { filter: drop-shadow(0 0 2px rgba(109, 40, 217, .85)) drop-shadow(0 4px 10px rgba(88, 28, 135, .35)); }
+        .phuyu-support-button:focus-visible { outline: 3px solid #7c3aed; outline-offset: 5px; }
+        .phuyu-support-label { display: block; color: #581c87; font-family: inherit; font-size: 13px; font-weight: 700; line-height: 1.4; letter-spacing: .3px; text-align: center; text-shadow: 0 1px 3px rgba(255, 255, 255, .95); }
+        @media(max-width: 575px) { .phuyu-support-access { right: 12px; bottom: 12px; } .phuyu-support-button { width: 72px; } .phuyu-support-button img { width: 58px; height: 64px; } .phuyu-support-label { font-size: 12px; } }
+        @media(prefers-reduced-motion: reduce) { .phuyu-support-button, .phuyu-support-button img { transition: none; } }
 
         .overlay-spinner {
             position: relative;

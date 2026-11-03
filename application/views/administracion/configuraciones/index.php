@@ -509,6 +509,12 @@
                                 </div>
 
                                 <div class="col-12">
+                                    <label class="form-label" for="soporte_whatsapp_grupo">Grupo de WhatsApp para soporte Phuyu</label>
+                                    <input type="url" class="form-control" id="soporte_whatsapp_grupo" name="soporte_whatsapp_grupo" v-model="campos.soporte_whatsapp_grupo" placeholder="https://chat.whatsapp.com/...">
+                                    <small class="text-muted">El botón flotante abrirá el grupo asignado a esta empresa. Al cambiarlo, recarga la página para actualizar el acceso.</small>
+                                </div>
+
+                                <div class="col-12">
                                     <label class="form-label">URL consulta comprobantes</label>
                                     <input type="url"
                                            class="form-control"
@@ -571,6 +577,7 @@
         "codleyendapamazonia" => $valor_configuracion($empresa_configuracion, "codleyendapamazonia"),
         "leyendasamazonia" => $valor_configuracion($empresa_configuracion, "leyendasamazonia"),
         "codleyendasamazonia" => $valor_configuracion($empresa_configuracion, "codleyendasamazonia"),
+        "soporte_whatsapp_grupo" => $valor_configuracion($empresa_configuracion, "soporte_whatsapp_grupo"),
         "urlconsultacomprobantes" => $valor_configuracion($empresa_configuracion, "urlconsultacomprobantes"),
         "sesion_alcance" => $valor_configuracion($sesion_config, "alcance", "global"),
         "cerrar_inactividad" => (int)$valor_configuracion($sesion_config, "cerrar_inactividad", 0),

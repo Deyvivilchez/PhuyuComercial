@@ -148,13 +148,15 @@
 
     <?php include("ventana.php"); ?>
 
-    <div class="settings-buttons-container">
-        <button type="button" class="btn settings-button btn-primary p-0" data-bs-toggle="offcanvas" 
-        data-bs-target="#theme-settings-offcanvas" aria-controls="theme-settings-offcanvas" id="settingsButton">
-            <span class="d-inline-block">
-                <i class="ri-settings-3-line fs-22"></i>
-            </span>
-        </button>
+    <div class="phuyu-support-access">
+        <?php if (!empty($soporte_grupo_url)): ?>
+        <a class="phuyu-support-button" href="<?php echo htmlspecialchars($soporte_grupo_url, ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener noreferrer" aria-label="Abrir grupo de soporte Phuyu en WhatsApp" title="Grupo de soporte Phuyu">
+        <?php else: ?>
+        <button type="button" class="phuyu-support-button" aria-label="Soporte Phuyu" title="Soporte Phuyu" onclick="swal('Soporte Phuyu', 'Tu empresa todavía no tiene un grupo de soporte asignado. Solicita al administrador que lo configure.', 'info');">
+        <?php endif; ?>
+            <img src="<?php echo base_url(); ?>public/img/phuyu_soporte.svg?v=<?php echo filemtime(FCPATH . 'public/img/phuyu_soporte.svg'); ?>" alt="" width="64" height="70">
+            <span class="phuyu-support-label">Soporte</span>
+        <?php if (!empty($soporte_grupo_url)): ?></a><?php else: ?></button><?php endif; ?>
     </div>
 
     <div class="compose">
