@@ -43,11 +43,13 @@ foreach ($movimientos as $m) {
 </table>
 <p style="font-size:7pt;color:#82788e;">Una fila por forma de pago. Los ANULADOS se muestran como historial, conservan su fecha original y no suman a los totales. El total del recibo se muestra una sola vez. El neto no incluye el saldo inicial.</p>
 <p style="font-size:8pt;color:#581c87;"><b>DETALLE DE MOVIMIENTOS</b></p>
+<?php ob_start(); ?>
 <table width="100%" cellpadding="5" cellspacing="0" style="font-size:8pt;">
  <thead><tr bgcolor="#4c1d95" style="color:#ffffff;font-size:7pt;font-weight:bold;text-align:center;">
   <th width="3%">#</th><th width="9%">Fecha / Hora</th><th width="11%">Recibo / Tipo</th><th width="14%">Comprobante relacionado</th><th width="14%">Socio / Razón social</th><th width="12%">Concepto</th><th width="10%">Forma pago</th><th width="7%">Pagado</th><th width="7%">Entregado</th><th width="6%">Vuelto</th><th width="7%">Total</th>
  </tr></thead>
  <tbody>
+<?php $cabecera_detalle = ob_get_clean(); echo $cabecera_detalle; ?>
  <?php $vistos = []; foreach ($movimientos as $i=>$m): $anulado = (int)($m['estado'] ?? 1) === 0; $primero = !isset($vistos[$m['codmovimiento']]); $vistos[$m['codmovimiento']] = true; ?>
  <tr style="<?php echo $anulado ? 'color:#b71c1c;text-decoration:line-through;' : ''; ?>" bgcolor="<?php echo $anulado ? '#fff0f0' : ($i%2 ? '#f7f5fa' : '#ffffff'); ?>" nobr="true">
   <td width="3%" align="center"><?php echo $i+1; ?></td>
@@ -62,7 +64,13 @@ foreach ($movimientos as $m) {
   <td width="6%" align="right"><?php echo $dinero($m['vuelto']); ?></td>
   <td width="7%" align="right"><b><?php echo $primero ? $dinero($m['total_movimiento']) : ''; ?></b></td>
  </tr>
- <?php endforeach; ?>
+ <?php
+ // Limitar el DOM de TCPDF: cada bloque contiene como máximo 40 filas.
+ // Los acumuladores y recibos vistos se conservan entre bloques.
+ if (($i + 1) % 40 === 0 && ($i + 1) < count($movimientos)) {
+     echo '</tbody></table><!-- phuyu-pdf-block -->'.$cabecera_detalle;
+ }
+ endforeach; ?>
  <?php if (empty($movimientos)): ?><tr><td colspan="11" align="center">No se encontraron movimientos con los filtros seleccionados.</td></tr><?php endif; ?>
  <tr bgcolor="#f4edff" style="color:#581c87;font-size:7pt;font-weight:bold;" nobr="true"><td colspan="7" width="73%" align="right">TOTALES DE MOVIMIENTOS ACTIVOS (S/)</td><td width="7%" align="right"><?php echo number_format($pagado, 2, '.', ','); ?></td><td width="7%" align="right"><?php echo number_format($entregado, 2, '.', ','); ?></td><td width="6%" align="right"><?php echo number_format($vuelto, 2, '.', ','); ?></td><td width="7%" align="right"><?php echo number_format($total, 2, '.', ','); ?></td></tr>
  </tbody>

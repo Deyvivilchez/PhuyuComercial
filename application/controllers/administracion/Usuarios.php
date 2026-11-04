@@ -82,14 +82,27 @@ class Usuarios extends CI_Controller {
 
 	function guardar(){
 		if ($this->input->is_ajax_request()) {
-			$campos = ["codempleado","codperfil","usuario","clave","editar_pventa","eliminar_venta"];
+			$campos = ["codempleado","codperfil","usuario","clave","editar_pventa"];
 			$this->request = json_decode(file_get_contents('php://input'));
-			$valores = [$this->request->campos->codempleado,$this->request->campos->codperfil,$this->request->campos->usuario,$this->request->campos->clave,$this->request->campos->editar_pventa,$this->request->campos->eliminar_venta];
+			$valores = [$this->request->campos->codempleado,$this->request->campos->codperfil,$this->request->campos->usuario,$this->request->campos->clave,(int)$this->request->campos->editar_pventa];
+
+			// Algunas instalaciones aun no tienen el permiso independiente de anulacion.
+			if ($this->db->field_exists("eliminar_venta", "seguridad.usuarios")) {
+				$campos[] = "eliminar_venta";
+				$valores[] = (int)($this->request->campos->eliminar_venta ?? 0);
+			}
+
+			if (!$this->tabla_cajausuarios_existe()) {
+				$this->responder_json(["estado" => 0, "mensaje" => "Falta ejecutar la migracion de cajas por usuario: seguridad.cajausuarios no existe."]);
+				return;
+			}
+			$this->db->trans_begin();
 
 			if($this->request->campos->codregistro=="") {
 				$existe = $this->db->query("select usuario from seguridad.usuarios where usuario='".$this->request->campos->usuario."'")->result_array();
 				if (count($existe)>0) { 
-					echo "e"; exit();
+					$this->db->trans_rollback();
+					echo "e"; return;
 				}
 
 				$codusuario = $this->phuyu_model->phuyu_guardar("seguridad.usuarios", $campos, $valores, "true");
@@ -99,7 +112,8 @@ class Usuarios extends CI_Controller {
 				$existe = $this->db->query("select usuario from seguridad.usuarios where usuario='".$this->request->campos->usuario."'")->result_array();
 				if (count($existe)>0) {
 					if ( $actual[0]["usuario"]!=$existe[0]["usuario"] ) {
-						echo "e"; exit();
+						$this->db->trans_rollback();
+						echo "e"; return;
 					}
 				}
 
@@ -119,14 +133,6 @@ class Usuarios extends CI_Controller {
 				}
 			}
 
-			if (!$this->tabla_cajausuarios_existe()) {
-				$this->responder_json([
-					"estado" => 0,
-					"mensaje" => "Falta ejecutar la migracion de cajas por usuario: seguridad.cajausuarios no existe."
-				]);
-				return;
-			}
-
 			$this->db->where("codusuario", $this->request->campos->codregistro);
 			$estado = $this->db->delete("seguridad.cajausuarios");
 
@@ -143,7 +149,13 @@ class Usuarios extends CI_Controller {
 					}
 				}
 			}
-			$this->responder_json(["estado" => (int)$estado]);
+			$guardado = $this->db->trans_status();
+			if ($guardado) {
+				$this->db->trans_commit();
+			}else{
+				$this->db->trans_rollback();
+			}
+			$this->responder_json(["estado" => (int)$guardado]);
 		}else{
 			$this->load->view("phuyu/404");
 		}

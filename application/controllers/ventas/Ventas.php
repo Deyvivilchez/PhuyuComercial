@@ -8,6 +8,15 @@ class Ventas extends CI_Controller
         $this->load->model('phuyu_model');
         $this->load->model('Caja_model');
         $this->load->model('Kardex_model');
+
+        // Aplicar cambios de permisos tambien a las sesiones que ya estan abiertas.
+        if (!empty($_SESSION['phuyu_codusuario'])) {
+            $usuario = $this->db->query(
+                "select editar_pventa from seguridad.usuarios where codusuario=? and estado=1",
+                [(int)$_SESSION['phuyu_codusuario']]
+            )->row_array();
+            $_SESSION['phuyu_editar_pventa'] = (int)($usuario['editar_pventa'] ?? 0);
+        }
     }
 
     private function phuyu_json($data)
