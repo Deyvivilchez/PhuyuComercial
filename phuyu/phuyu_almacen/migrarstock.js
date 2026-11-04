@@ -346,6 +346,8 @@ var phuyu_migrarstock = new Vue({
 				codalmacen: this.campos.codalmacen,
 				ignorar_stock_cero: this.campos.ignorar_stock_cero,
 				permitir_cantidad_cero: this.campos.permitir_cantidad_cero,
+				convertir_negativos_cero: this.campos.convertir_negativos_cero,
+				usar_catalogos_genericos: this.campos.usar_catalogos_genericos,
 				crear_productos: this.campos.crear_productos,
 				reemplazar_nombre: this.campos.reemplazar_nombre,
 				buscar_por: this.campos.buscar_por,
@@ -475,6 +477,7 @@ var phuyu_migrarstock = new Vue({
 		np_normalizar_preview_migrarstock: function(preview){
 			return preview.map(function(fila){
 				fila.valido = fila.valido === true || fila.valido === 1 || fila.valido === "1";
+				fila.cantidad_convertida = fila.cantidad_convertida === true || fila.cantidad_convertida === 1 || fila.cantidad_convertida === "1";
 				fila.seleccionado = fila.valido && (fila.seleccionado === true || fila.seleccionado === 1 || fila.seleccionado === "1");
 				return fila;
 			});
@@ -550,6 +553,8 @@ var phuyu_migrarstock = new Vue({
 				codalmacen: this.campos.codalmacen,
 				ignorar_stock_cero: this.campos.ignorar_stock_cero,
 				permitir_cantidad_cero: this.campos.permitir_cantidad_cero,
+				convertir_negativos_cero: this.campos.convertir_negativos_cero,
+				usar_catalogos_genericos: this.campos.usar_catalogos_genericos,
 				crear_productos: this.campos.crear_productos,
 				reemplazar_nombre: this.campos.reemplazar_nombre,
 				limpieza_almacen: this.campos.limpieza_almacen,
@@ -557,9 +562,33 @@ var phuyu_migrarstock = new Vue({
 				modo_stock: this.campos.modo_stock
 			}).then(function(response){
 				if (response.body.estado == 1) {
-					phuyu_sistema.phuyu_alerta("Migracion realizada correctamente", response.body.mensaje || "Filas seleccionadas migradas correctamente", "success");
-					self.campos.preview = [];
-					self.campos.resumen = null;
+					var parcial = response.body.parcial === true || response.body.parcial === 1 || response.body.parcial === "1";
+					phuyu_sistema.phuyu_alerta(parcial ? "Migracion parcial" : "Migracion realizada correctamente", response.body.mensaje || "Filas seleccionadas migradas correctamente", parcial ? "warning" : "success");
+					if (parcial && Array.isArray(response.body.errores_detalle) && response.body.errores_detalle.length) {
+						var erroresPorFila = {};
+						response.body.errores_detalle.forEach(function(error){
+							erroresPorFila[parseInt(error.fila)] = error;
+						});
+						self.campos.preview = (self.campos.preview || []).filter(function(fila){
+							var error = erroresPorFila[parseInt(fila.fila)];
+							if (!error) {
+								return false;
+							}
+							fila.valido = false;
+							fila.seleccionado = false;
+							fila.mensaje = error.mensaje || "No se pudo migrar esta fila.";
+							return true;
+						});
+						self.campos.resumen = {
+							total: response.body.errores_detalle.length,
+							validas: 0,
+							errores: response.body.errores_detalle.length,
+							omitidas: 0
+						};
+					} else {
+						self.campos.preview = [];
+						self.campos.resumen = null;
+					}
 				} else {
 					phuyu_sistema.phuyu_alerta("No se pudo migrar", response.body.mensaje || "Revise las filas e intente nuevamente", "error");
 				}

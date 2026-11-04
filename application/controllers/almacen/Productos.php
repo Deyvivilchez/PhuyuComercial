@@ -824,6 +824,87 @@ class Productos extends CI_Controller
         echo json_encode(['lista' => $lista]);
     }
 
+    public function normalizar_stock_negativo()
+    {
+        if (!$this->input->is_ajax_request() || !isset($_SESSION['phuyu_codusuario'], $_SESSION['phuyu_codalmacen'])) {
+            $this->output->set_status_header(401);
+            echo json_encode(['estado' => 0, 'mensaje' => 'Sesion no valida. Vuelva a iniciar sesion.']);
+            return;
+        }
+
+        $this->output->set_content_type('application/json', 'utf-8');
+        $request = json_decode(file_get_contents('php://input'));
+        $accion = isset($request->accion) ? (string) $request->accion : 'consultar';
+        $codalmacen = (int) $_SESSION['phuyu_codalmacen'];
+
+        $resumen = $this->db->query(
+            "select count(*) as ubicaciones, count(distinct pu.codproducto) as productos,
+                    coalesce(min(least(pu.stockactual, pu.stockactualreal, pu.stockactualconvertido)), 0) as stock_minimo
+             from almacen.productoubicacion pu
+             inner join almacen.productos p on p.codproducto=pu.codproducto
+             where pu.codalmacen=? and pu.estado=1 and p.estado=1
+               and coalesce(pu.stockactualconvertido,0)<0",
+            [$codalmacen]
+        )->row_array();
+
+        $ubicaciones = isset($resumen['ubicaciones']) ? (int) $resumen['ubicaciones'] : 0;
+        $productos = isset($resumen['productos']) ? (int) $resumen['productos'] : 0;
+
+        if ($accion !== 'ejecutar') {
+            echo json_encode([
+                'estado' => 1,
+                'ubicaciones' => $ubicaciones,
+                'productos' => $productos,
+                'stock_minimo' => isset($resumen['stock_minimo']) ? (float) $resumen['stock_minimo'] : 0
+            ]);
+            return;
+        }
+
+        if ($ubicaciones === 0) {
+            echo json_encode(['estado' => 1, 'actualizados' => 0, 'productos' => 0, 'mensaje' => 'No hay stock negativo en el almacen actual.']);
+            return;
+        }
+
+        $this->db->trans_begin();
+        $actualizados = $this->db->query(
+            "update almacen.productoubicacion pu
+             set stockactual=0,
+                 stockactualreal=0,
+                 stockactualconvertido=0,
+                 preciostockvalorizado=0
+             from almacen.productos p
+             where p.codproducto=pu.codproducto
+               and pu.codalmacen=? and pu.estado=1 and p.estado=1
+               and coalesce(pu.stockactualconvertido,0)<0
+             returning pu.codproducto",
+            [$codalmacen]
+        );
+
+        if ($actualizados === false || $this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            $error = $this->db->error();
+            echo json_encode([
+                'estado' => 0,
+                'mensaje' => isset($error['message']) && $error['message'] !== '' ? $error['message'] : 'No se pudo corregir el stock negativo.'
+            ]);
+            return;
+        }
+
+        $filas = $actualizados->result_array();
+        $productosActualizados = [];
+        foreach ($filas as $fila) {
+            $productosActualizados[(int) $fila['codproducto']] = true;
+        }
+        $this->db->trans_commit();
+
+        echo json_encode([
+            'estado' => 1,
+            'actualizados' => count($filas),
+            'productos' => count($productosActualizados),
+            'mensaje' => 'Stock negativo corregido en el almacen actual.'
+        ]);
+    }
+
     public function unir_duplicados()
     {
         if (!$this->input->is_ajax_request() || !isset($_SESSION['phuyu_codusuario'])) {
@@ -843,7 +924,7 @@ class Productos extends CI_Controller
 
         $productos = $this->productos_duplicados_por_valor($tipo, $valor);
         if (count($productos) < 2) {
-            echo json_encode(['estado' => 0, 'mensaje' => 'El grupo ya no tiene duplicados activos.']);
+            echo json_encode(['estado' => 0, 'omitido' => true, 'mensaje' => 'El grupo ya no tiene duplicados activos.']);
             return;
         }
 

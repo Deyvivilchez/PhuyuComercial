@@ -12,7 +12,8 @@ class Movimientos extends CI_Controller {
 				$caja = $this->Caja_model->phuyu_estadocaja();
 				$transferencias = $this->db->query("select count(*) as cantidad from caja.movimientos where codcaja_ref=".$_SESSION["phuyu_codcaja"]." and transferido=0 and estado=1")->result_array();
 				$tipopagos = $this->db->query("select codtipopago, descripcion from caja.tipopagos where estado=1 order by descripcion")->result_array();
-				$this->load->view("caja/movimientos/index",compact("transferencias","tipopagos"));
+				$puede_restaurar = $this->puede_restaurar_movimientos();
+				$this->load->view("caja/movimientos/index",compact("transferencias","tipopagos","puede_restaurar"));
 			}else{
 				$this->load->view("phuyu/505");
 			}
@@ -28,7 +29,7 @@ class Movimientos extends CI_Controller {
 			$pagina = isset($this->request->pagina) ? max(1, (int)$this->request->pagina) : 1;
 			$offset = $pagina * $limit - $limit;
 			$filtros = (array)$this->request;
-			$where = " WHERE ".$this->filtro_consulta_movimientos($filtros, 'movimientos', 'personas', 'conceptos');
+			$where = " WHERE ".$this->filtro_consulta_movimientos($filtros, 'movimientos', 'personas', 'conceptos', true);
 			$join_documento = $this->join_documento_movimiento('movimientos');
 			$join_pagos = "
 				left join (
@@ -270,6 +271,83 @@ class Movimientos extends CI_Controller {
 		}
 	}
 
+
+    private function puede_restaurar_movimientos()
+    {
+        if (empty($_SESSION['phuyu_codusuario'])) { return false; }
+        $usuario = $this->db->query(
+            "SELECT u.codusuario FROM seguridad.usuarios u JOIN seguridad.perfiles p ON p.codperfil=u.codperfil
+             WHERE u.codusuario=? AND u.estado=1 AND p.estado=1
+             AND UPPER(TRIM(p.descripcion)) IN ('ADMINISTRADOR', 'DESARROLLADOR', 'GERENTE')",
+            [(int)$_SESSION['phuyu_codusuario']]
+        );
+        return $usuario && $usuario->num_rows() === 1;
+    }
+
+    private function respuesta_restauracion($exito, $mensaje, $http = 200)
+    {
+        return $this->output->set_status_header($http)->set_content_type('application/json', 'utf-8')
+            ->set_output(json_encode(['exito'=>(bool)$exito, 'mensaje'=>$mensaje]));
+    }
+
+    public function restaurar()
+    {
+        if (!$this->input->is_ajax_request() || $this->input->method(true) !== 'POST') {
+            return $this->respuesta_restauracion(false, 'Solicitud no válida.', 400);
+        }
+        if (!$this->puede_restaurar_movimientos()) {
+            return $this->respuesta_restauracion(false, 'Solo Gerente, Administrador o Desarrollador pueden restaurar movimientos anulados.', 403);
+        }
+        $solicitud = json_decode(file_get_contents('php://input'));
+        $id = isset($solicitud->codregistro) ? (int)$solicitud->codregistro : 0;
+        if ($id <= 0) { return $this->respuesta_restauracion(false, 'Seleccione un movimiento válido.', 400); }
+        if (empty($_SESSION['phuyu_codcaja']) || empty($_SESSION['phuyu_codcontroldiario']) || empty($_SESSION['phuyu_codsucursal'])) {
+            return $this->respuesta_restauracion(false, 'Abra la caja para restaurar un movimiento.', 409);
+        }
+        $this->db->trans_begin();
+        $consulta = $this->db->query(
+            "SELECT m.*, cd.cerrado AS apertura_vigente, cd.estado AS estado_apertura
+             FROM caja.movimientos m JOIN caja.controldiario cd ON cd.codcontroldiario=m.codcontroldiario
+             WHERE m.codmovimiento=? AND m.codcaja=? AND cd.codsucursal=? FOR UPDATE OF m, cd",
+            [$id, (int)$_SESSION['phuyu_codcaja'], (int)$_SESSION['phuyu_codsucursal']]
+        );
+        $movimiento = $consulta ? $consulta->row_array() : [];
+        $mensaje = '';
+        if (!$movimiento) { $mensaje = 'El movimiento no pertenece a la caja seleccionada.'; }
+        elseif ((int)$movimiento['estado'] !== 0) { $mensaje = 'El movimiento ya está activo o no está anulado.'; }
+        elseif ((int)$movimiento['codcontroldiario'] !== (int)$_SESSION['phuyu_codcontroldiario'] || (int)$movimiento['apertura_vigente'] !== 1 || (int)$movimiento['estado_apertura'] !== 1) {
+            $mensaje = 'Solo puede restaurar movimientos de la apertura vigente de esta caja.';
+        }
+        elseif ((int)$movimiento['codkardex'] > 0) { $mensaje = 'Este movimiento pertenece a una venta o compra. Restaure el documento de origen.'; }
+        elseif ((int)$movimiento['transferido'] === 1 || (int)($movimiento['codmovimiento_ref'] ?? 0) > 0) {
+            $mensaje = 'La transferencia ya fue recibida. Debe revisarse junto con su movimiento de destino.';
+        }
+        if ($mensaje === '') {
+            $relacion = $this->db->query(
+                "SELECT 1 FROM kardex.creditos WHERE codmovimiento=?
+                 UNION ALL SELECT 1 FROM kardex.cuotaspagos WHERE codmovimiento=?
+                 UNION ALL SELECT 1 FROM caja.movimientos WHERE codmovimiento_ref=? LIMIT 1", [$id, $id, $id]
+            );
+            if (!$relacion || $relacion->num_rows() > 0) { $mensaje = 'El movimiento está vinculado a un crédito o transferencia. Revise la operación de origen.'; }
+            $detalle = $this->db->query('SELECT 1 FROM caja.movimientosdetalle WHERE codmovimiento=? LIMIT 1', [$id]);
+            if (!$detalle || $detalle->num_rows() === 0) { $mensaje = 'El movimiento no tiene detalle de pago. Revíselo antes de restaurarlo.'; }
+        }
+        if ($mensaje !== '') {
+            $this->db->trans_rollback();
+            return $this->respuesta_restauracion(false, $mensaje, 409);
+        }
+        $guardado = $this->db->query('UPDATE caja.movimientos SET estado=1 WHERE codmovimiento=? AND estado=0', [$id]);
+        if (!$guardado || $this->db->affected_rows() !== 1 || $this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            return $this->respuesta_restauracion(false, 'No se pudo restaurar el movimiento.', 500);
+        }
+        if (!$this->db->trans_commit()) {
+            return $this->respuesta_restauracion(false, 'No se pudo confirmar la restauración. Revise el estado del movimiento.', 500);
+        }
+        return $this->respuesta_restauracion(true, 'Movimiento restaurado. Vuelve a incluirse en los saldos y totales.');
+    }
+
+
 	function transferencias(){
 		if ($this->input->is_ajax_request()) {
 			$lista = $this->db->query("select movimientos.*, round(movimientos.importe,2) as importe_r, personas.razonsocial,conceptos.descripcion as concepto,cajas.descripcion as caja from caja.movimientos as movimientos inner join public.personas as personas on(movimientos.codpersona=personas.codpersona) inner join caja.conceptos as conceptos on(movimientos.codconcepto=conceptos.codconcepto) inner join caja.cajas as cajas on(movimientos.codcaja=cajas.codcaja) where movimientos.codcaja_ref=".$_SESSION["phuyu_codcaja"]." and movimientos.transferido=0 and movimientos.estado=1")->result_array();
@@ -398,7 +476,7 @@ class Movimientos extends CI_Controller {
         LEFT JOIN caja.comprobantetipos tipo_ref ON tipo_ref.codcomprobantetipo=$m.codcomprobantetipo_ref ";
     }
 
-    private function filtro_consulta_movimientos($filtros, $m, $p, $c)
+    private function filtro_consulta_movimientos($filtros, $m, $p, $c, $incluir_anulados = false)
     {
         $historial = isset($filtros['vista']) && $filtros['vista'] === 'historial';
         $desde = isset($filtros['fecha_desde']) ? trim($filtros['fecha_desde']) : '';
@@ -416,7 +494,7 @@ class Movimientos extends CI_Controller {
             show_error('Seleccione un rango de fechas valido para consultar el historial.', 422);
             exit;
         }
-        $where = "$m.codcaja=".(int)$_SESSION['phuyu_codcaja']." AND $m.estado=1 AND $m.condicionpago=1";
+        $where = "$m.codcaja=".(int)$_SESSION['phuyu_codcaja']." AND ".($incluir_anulados ? "$m.estado IN (0,1)" : "$m.estado=1")." AND $m.condicionpago=1";
         if (!$historial) {
             $where .= " AND $m.codcontroldiario=".(int)$_SESSION['phuyu_codcontroldiario'];
         }
@@ -563,12 +641,13 @@ public function exportar_pdf_detallado()
     $filtros['vista'] = 'historial';
     $filtros['fecha_desde'] = $desde;
     $filtros['fecha_hasta'] = $hasta;
-    $where = $this->filtro_consulta_movimientos($filtros, 'm', 'p', 'c');
+    $where = $this->filtro_consulta_movimientos($filtros, 'm', 'p', 'c', true);
     $join_documento = $this->join_documento_movimiento('m');
     $sql = "
         SELECT 
             m.codmovimiento,
             m.tipomovimiento,
+            m.estado,
             m.fechamovimiento,
             COALESCE(
                 TO_CHAR(m.horamovimiento, 'HH24:MI:SS'),
@@ -579,19 +658,19 @@ public function exportar_pdf_detallado()
             m.codkardex,
             p.razonsocial,
             c.descripcion         AS concepto_caja,
-            tp.descripcion        AS tipopago,
-            md.importe            AS importe_pago,
-            md.importeentregado   AS importe_entregado,
-            md.vuelto             AS vuelto,
+            COALESCE(tp.descripcion, 'Sin detalle') AS tipopago,
+            COALESCE(md.importe, m.importe) AS importe_pago,
+            COALESCE(md.importeentregado, 0) AS importe_entregado,
+            COALESCE(md.vuelto, 0) AS vuelto,
             ROUND(m.importe, 2)   AS total_movimiento,
             COALESCE(documento.comprobante, NULLIF(CONCAT(m.seriecomprobante_ref, '-', m.nrocomprobante_ref), '-'), '') AS comprobante_referencia,
             COALESCE(documento.tipo, tipo_ref.descripcion, '') AS tipo_comprobante_referencia,
             documento.fecha AS fecha_comprobante_referencia
-        FROM caja.movimientosdetalle AS md
-        JOIN caja.movimientos AS m       ON m.codmovimiento = md.codmovimiento
+        FROM caja.movimientos AS m
+        LEFT JOIN caja.movimientosdetalle AS md ON md.codmovimiento = m.codmovimiento
         JOIN public.personas AS p        ON p.codpersona = m.codpersona
         JOIN caja.conceptos AS c         ON c.codconcepto = m.codconcepto
-        JOIN caja.tipopagos AS tp        ON tp.codtipopago = md.codtipopago
+        LEFT JOIN caja.tipopagos AS tp        ON tp.codtipopago = md.codtipopago
         LEFT JOIN kardex.kardex AS k          ON k.codkardex = m.codkardex
         {$join_documento}
         WHERE {$where}

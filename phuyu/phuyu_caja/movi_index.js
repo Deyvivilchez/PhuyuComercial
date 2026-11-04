@@ -1,7 +1,7 @@
 var phuyu_datos = new Vue({
 	el: "#phuyu_datos",
 	data: {
-		cargando: true, registro:0, buscar: "", datos: [], transferencias:[],
+		cargando: true, registro:0, restaurando: 0, buscar: "", datos: [], transferencias:[],
 		transferencias_pendientes: Number(document.getElementById("phuyu_datos").getAttribute("data-transferencias-pendientes")) || 0,
 		campos_t:{"codmovimiento":"","codpersona":"","codcaja":0,"codtipopago":0,"importe":0,"codcomprobantetipo":0,
 		"seriecomprobante":"","nrocomprobante":"","fechadocbanco":"","nrodocbanco":""},
@@ -13,7 +13,7 @@ var phuyu_datos = new Vue({
 			const campos = {pagado: "importe_pagado", entregado: "importe_entregado", vuelto: "vuelto", total: "importe_r"};
 			const totales = {};
 			Object.keys(campos).forEach((nombre) => {
-				const centimos = this.datos.reduce((suma, dato) => suma + Math.round(Number(dato[campos[nombre]]) * 100), 0);
+				const centimos = this.datos.filter(dato => Number(dato.estado) !== 0).reduce((suma, dato) => suma + Math.round(Number(dato[campos[nombre]]) * 100), 0);
 				totales[nombre] = centimos / 100;
 			});
 			return totales;
@@ -155,6 +155,23 @@ var phuyu_datos = new Vue({
 					phuyu_sistema.phuyu_finloader("phuyu_formulario");
 				});
 			}
+		},
+		phuyu_restaurar(dato) {
+			if (this.restaurando !== 0 || Number(dato.estado) !== 0) return;
+			this.restaurando = dato.codmovimiento;
+			swal({title: "¿Restaurar movimiento?", text: "El recibo " + dato.seriecomprobante + "-" + dato.nrocomprobante + " volverá a sumar " + this.formato_importe(dato.importe_r) + " a los movimientos de caja.", icon: "warning", buttons: ["Cancelar", "Sí, restaurar"]}).then((confirmar) => {
+				if (!confirmar) { this.restaurando = 0; return; }
+				this.$http.post(url + phuyu_controller + "/restaurar", {codregistro: dato.codmovimiento}).then(function(respuesta) {
+					this.restaurando = 0;
+					if (respuesta.body && respuesta.body.exito === true) {
+						phuyu_sistema.phuyu_alerta("MOVIMIENTO RESTAURADO", respuesta.body.mensaje, "success");
+						this.phuyu_datos(); this.phuyu_transferencias(false);
+					} else { phuyu_sistema.phuyu_alerta("NO SE PUDO RESTAURAR", (respuesta.body && respuesta.body.mensaje) || "Revise el estado del movimiento.", "error"); }
+				}, function(error) {
+					this.restaurando = 0;
+					phuyu_sistema.phuyu_alerta("NO SE PUDO RESTAURAR", error.body && error.body.mensaje ? error.body.mensaje : "Revise su conexión y el estado del movimiento antes de reintentar.", "error");
+				});
+			});
 		},
 		phuyu_eliminar: function(){
 			if (this.registro==0) {

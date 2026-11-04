@@ -2,7 +2,8 @@ var phuyu_datos = new Vue({
 	el: "#phuyu_datos",
 	data: {
 		cargando: true, registro: 0, buscar: "", datos: [],
-		mostrarDuplicados: false, cargandoDuplicados: false, tipoDuplicado: "todos", filtroDuplicado: "", duplicados: [],
+		normalizandoStock: false,
+		mostrarDuplicados: false, cargandoDuplicados: false, uniendoDuplicados: false, progresoDuplicados: 0, totalDuplicados: 0, tipoDuplicado: "todos", filtroDuplicado: "", duplicados: [],
 		paginacion: { "total": 0, "actual": 1, "ultima": 0, "desde": 0, "hasta": 0 }, offset: 3
 	},
 	computed: {
@@ -64,6 +65,52 @@ var phuyu_datos = new Vue({
 			phuyu_controller = "almacen/migrarstock";
 			phuyu_sistema.phuyu_modulo();
 		},
+		phuyu_normalizar_stock: function () {
+			if (this.normalizandoStock) { return; }
+			this.normalizandoStock = true;
+			this.$http.post(url + "almacen/productos/normalizar_stock_negativo", { "accion": "consultar" }).then(function (data) {
+				var resumen = data.body;
+				if (!resumen || resumen.estado != 1) {
+					phuyu_sistema.phuyu_alerta("NO SE PUDO CONSULTAR", resumen && resumen.mensaje ? resumen.mensaje : "No se pudo consultar el stock.", "error");
+					this.normalizandoStock = false;
+					return;
+				}
+				if (resumen.ubicaciones == 0) {
+					phuyu_sistema.phuyu_alerta("STOCK CORRECTO", "No hay productos con stock negativo en el almacén actual.", "success");
+					this.normalizandoStock = false;
+					return;
+				}
+
+				swal({
+					title: "¿COLOCAR STOCK NEGATIVO EN CERO?",
+					text: "Se corregirán " + resumen.ubicaciones + " ubicaciones de " + resumen.productos + " productos del almacén actual. Se conservará el historial de movimientos.",
+					icon: "warning",
+					dangerMode: true,
+					buttons: ["CANCELAR", "SÍ, COLOCAR EN CERO"]
+				}).then((confirmado) => {
+					if (!confirmado) {
+						this.normalizandoStock = false;
+						return;
+					}
+					this.$http.post(url + "almacen/productos/normalizar_stock_negativo", { "accion": "ejecutar" }).then(function (respuesta) {
+						if (respuesta.body && respuesta.body.estado == 1) {
+							phuyu_sistema.phuyu_alerta("STOCK CORREGIDO", respuesta.body.productos + " productos y " + respuesta.body.actualizados + " ubicaciones fueron colocados en cero.", "success");
+							this.phuyu_opcion();
+						} else {
+							phuyu_sistema.phuyu_alerta("NO SE PUDO CORREGIR", respuesta.body && respuesta.body.mensaje ? respuesta.body.mensaje : "Error del servidor.", "error");
+						}
+						this.normalizandoStock = false;
+					}, function () {
+						phuyu_sistema.phuyu_alerta("NO SE PUDO CORREGIR", "Error de red o sesión.", "error");
+						this.normalizandoStock = false;
+					});
+				});
+			}, function (error) {
+				var mensaje = error && error.message ? error.message : "Error de red o sesión.";
+				phuyu_sistema.phuyu_alerta("NO SE PUDO CONSULTAR", mensaje, "error");
+				this.normalizandoStock = false;
+			});
+		},
 		phuyu_duplicados: function () {
 			this.mostrarDuplicados = true;
 			this.$nextTick(function () {
@@ -77,6 +124,7 @@ var phuyu_datos = new Vue({
 			this.phuyu_cargar_duplicados();
 		},
 		phuyu_cargar_duplicados: function () {
+			if (this.uniendoDuplicados) { return; }
 			this.cargandoDuplicados = true;
 			this.$http.post(url + "almacen/productos/duplicados", { "tipo": this.tipoDuplicado }).then(function (data) {
 				var respuesta = data.body;
@@ -101,6 +149,7 @@ var phuyu_datos = new Vue({
 			});
 		},
 		phuyu_unir_duplicado: function (grupo) {
+			if (this.cargandoDuplicados || this.uniendoDuplicados) { return; }
 			var maestro = grupo.productos && grupo.productos.length > 0 ? grupo.productos[0].codproducto : 0;
 			swal({
 				title: "UNIR PRODUCTOS DUPLICADOS?",
@@ -109,7 +158,7 @@ var phuyu_datos = new Vue({
 				dangerMode: true,
 				buttons: ["CANCELAR", "SI, UNIR"],
 			}).then((unir) => {
-				if (unir) {
+				if (unir && !this.uniendoDuplicados && !this.cargandoDuplicados) {
 					this.cargandoDuplicados = true;
 					this.$http.post(url + "almacen/productos/unir_duplicados", {
 						"tipo": grupo.tipo,
@@ -129,6 +178,58 @@ var phuyu_datos = new Vue({
 					});
 				}
 			});
+		},
+		phuyu_unir_todos_duplicados: async function () {
+			if (this.cargandoDuplicados || this.uniendoDuplicados) { return; }
+			var grupos = this.duplicadosFiltrados.map(function (grupo) {
+				return { tipo: grupo.tipo, valor: grupo.valor };
+			});
+			if (grupos.length === 0) { return; }
+
+			this.uniendoDuplicados = true;
+			this.progresoDuplicados = 0;
+			this.totalDuplicados = grupos.length;
+			var unidos = 0, omitidos = 0, error = "", confirmado = false;
+			try {
+				confirmado = await swal({
+					title: "¿UNIR TODOS LOS DUPLICADOS?",
+					text: "Se procesarán los " + grupos.length + " grupos mostrados con los filtros actuales. Se conservará el menor ID activo de cada grupo, se sumará el stock por almacén y unidad y los demás productos quedarán deshabilitados. Incluye coincidencias por descripción si están mostradas. El historial se conserva en sus registros originales.",
+					icon: "warning",
+					dangerMode: true,
+					buttons: ["CANCELAR", "SÍ, UNIR TODOS"]
+				});
+				if (!confirmado) { return; }
+
+				for (var i = 0; i < grupos.length; i++) {
+					var data = await this.$http.post(url + "almacen/productos/unir_duplicados", grupos[i]);
+					var respuesta = data.body;
+					if (typeof respuesta === "string") { respuesta = JSON.parse(respuesta); }
+					if (respuesta && respuesta.estado == 1) {
+						unidos++;
+					} else if (respuesta && respuesta.omitido === true) {
+						// Un producto puede figurar en grupos de barra, código y descripción.
+						omitidos++;
+					} else {
+						error = respuesta && respuesta.mensaje ? respuesta.mensaje : "Respuesta inválida del servidor.";
+						break;
+					}
+					this.progresoDuplicados = i + 1;
+				}
+			} catch (e) {
+				error = "Se interrumpió la conexión o la respuesta no fue válida. Actualice la lista para verificar el último grupo antes de continuar.";
+			} finally {
+				this.uniendoDuplicados = false;
+				if (confirmado) {
+					this.phuyu_cargar_duplicados();
+					this.phuyu_opcion();
+				}
+			}
+			var resumen = "Grupos unidos: " + unidos + ". Grupos que ya no tenían duplicados: " + omitidos + ".";
+			if (error) {
+				phuyu_sistema.phuyu_alerta("PROCESO INTERRUMPIDO", resumen + " " + error + " Las uniones completadas se conservan.", "error");
+			} else {
+				phuyu_sistema.phuyu_alerta("PROCESO COMPLETADO", resumen, "success");
+			}
 		},
 		phuyu_datos_1: function () {
 			this.cargando = true; this.registro = 0;

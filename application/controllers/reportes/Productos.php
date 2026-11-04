@@ -47,6 +47,62 @@ class Productos extends CI_Controller {
 		}
 	}
 
+	public function exportar_migracion(){
+		if (empty($_SESSION['phuyu_codusuario'])) {
+			show_error('Debe iniciar sesion para exportar productos.', 401);
+			return;
+		}
+
+		$codalmacen = (int)$this->input->get('codalmacen');
+		$almacen = $this->db->query(
+			"SELECT a.* FROM almacen.almacenes a
+			 INNER JOIN seguridad.sucursalusuarios su ON su.codsucursal=a.codsucursal
+			 WHERE a.codalmacen=? AND a.estado=1 AND su.codusuario=? LIMIT 1",
+			[$codalmacen, (int)$_SESSION['phuyu_codusuario']]
+		)->row_array();
+		if (empty($almacen)) {
+			show_error('Seleccione un almacen al que tenga acceso.', 403);
+			return;
+		}
+
+		// Conservar ambos registros: los precios y barras del almacen pueden diferir del catalogo.
+		$registros = $this->db->query(
+			"SELECT row_to_json(p) AS producto, row_to_json(pu) AS unidad_producto,
+			 row_to_json(ub) AS ubicacion, f.descripcion AS familia, l.descripcion AS linea,
+			 m.descripcion AS marca, u.descripcion AS unidad,
+			 ac.descripcion AS afectacion_compra, av.descripcion AS afectacion_venta
+			 FROM almacen.productoubicacion ub
+			 INNER JOIN almacen.productos p ON p.codproducto=ub.codproducto
+			 LEFT JOIN almacen.productounidades pu ON pu.codproducto=ub.codproducto AND pu.codunidad=ub.codunidad
+			 LEFT JOIN almacen.familias f ON f.codfamilia=p.codfamilia
+			 LEFT JOIN almacen.lineas l ON l.codlinea=p.codlinea
+			 LEFT JOIN almacen.marcas m ON m.codmarca=p.codmarca
+			 LEFT JOIN almacen.unidades u ON u.codunidad=ub.codunidad
+			 LEFT JOIN afectacionigv ac ON ac.codafectacionigv=ub.codafectacionigvcompra
+			 LEFT JOIN afectacionigv av ON av.codafectacionigv=ub.codafectacionigvventa
+			 WHERE ub.codalmacen=? ORDER BY p.codproducto, ub.factor, ub.codunidad",
+			[$codalmacen]
+		)->result_array();
+
+		$this->load->library('Producto_migracion_export');
+		$mostrarErrores = ini_get('display_errors');
+		ini_set('display_errors', '0');
+		try {
+			$archivo = $this->producto_migracion_export->crear($registros, $almacen);
+		} finally {
+			ini_set('display_errors', $mostrarErrores);
+		}
+		while (ob_get_level() > 0) { ob_end_clean(); }
+		header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+		header('Content-Disposition: attachment; filename="productos-migracion-almacen-'.$codalmacen.'-'.date('Ymd-His').'.xlsx"');
+		header('Cache-Control: private, no-store, max-age=0');
+		try {
+			readfile($archivo);
+		} finally {
+			unlink($archivo);
+		}
+	}
+
 	function cambiar_fecha(){
 		if ($this->input->is_ajax_request()) {
 			$this->request = json_decode(file_get_contents('php://input'));

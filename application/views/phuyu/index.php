@@ -150,7 +150,7 @@
 
     <div class="phuyu-support-access">
         <?php if (!empty($soporte_grupo_url)): ?>
-        <a class="phuyu-support-button" href="<?php echo htmlspecialchars($soporte_grupo_url, ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener noreferrer" aria-label="Abrir grupo de soporte Phuyu en WhatsApp" title="Grupo de soporte Phuyu">
+        <a class="phuyu-support-button" onclick="return phuyu_abrir_soporte(event, this);" href="<?php echo htmlspecialchars($soporte_grupo_url, ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener noreferrer" aria-label="Abrir grupo de soporte Phuyu en WhatsApp" title="Grupo de soporte Phuyu">
         <?php else: ?>
         <button type="button" class="phuyu-support-button" aria-label="Soporte Phuyu" title="Soporte Phuyu" onclick="swal('Soporte Phuyu', 'Tu empresa todavía no tiene un grupo de soporte asignado. Solicita al administrador que lo configure.', 'info');">
         <?php endif; ?>
@@ -176,6 +176,7 @@
 
     <?php include("phuyu_js.php"); ?>
     <script src="<?php echo base_url(); ?>phuyu/phuyu_base.js"></script>
+    <script src="<?php echo base_url(); ?>phuyu/phuyu_soporte.js?v=<?php echo filemtime(FCPATH . 'phuyu/phuyu_soporte.js'); ?>"></script>
 </body>
 
 </html>
