@@ -85,6 +85,13 @@
 		margin-top: 6px;
 		padding-top: 18px;
 	}
+	#phuyu_form.phuyu-almacen-form .phuyu-detail-table thead th {
+		background: #f3f6f9;
+		color: #495057;
+		font-size: 11px;
+		text-transform: uppercase;
+		white-space: nowrap;
+	}
 	@media (max-width: 767.98px) {
 		#phuyu_form.phuyu-almacen-form .phuyu-form-header {
 			align-items: flex-start;
@@ -151,6 +158,40 @@
 						<label>FECHA KARDEX</label>
 							<input type="date" class="form-control" name="fechakardex" id="fechakardex" v-model="campos.fechakardex" autocomplete="off" required>
 					</div>
+				</div>
+
+				<div class="table-responsive mb-3">
+					<table class="table table-hover align-middle mb-0 phuyu-detail-table">
+						<thead>
+							<tr>
+								<th width="5px">ID</th>
+								<th>CODIGO</th>
+								<th>PRODUCTO</th>
+								<th>UNIDAD</th>
+								<th>CANTIDAD</th>
+								<th>PRECIO</th>
+								<th>SUBTOTAL</th>
+							</tr>
+						</thead>
+						<tbody>
+							<?php foreach ($detalle as $value) { ?>
+								<tr>
+									<td><?php echo $value["codproducto"];?></td>
+									<td><?php echo $value["codigo"];?></td>
+									<td><?php echo $value["producto"];?></td>
+									<td><?php echo $value["unidad"];?></td>
+									<td><?php echo round($value["cantidad"], 4);?></td>
+									<td><?php echo round($value["preciounitario"], 2);?></td>
+									<td><?php echo round($value["subtotal"], 2);?></td>
+								</tr>
+							<?php } ?>
+							<?php if (count($detalle) == 0) { ?>
+								<tr>
+									<td colspan="7" class="text-center text-muted py-3">Sin productos en el detalle.</td>
+								</tr>
+							<?php } ?>
+						</tbody>
+					</table>
 				</div>
 
 				<div class="phuyu-form-actions">

@@ -93,7 +93,7 @@
 				</div>
 				<div class="col-8 col-lg-5">
 					<label>Documento</label>
-					<input type="text" class="form-control line-danger" name="documento" v-model="campos.documento" id="documento" placeholder="Numero" required autocomplete="off" minlength="8" maxlength="8" ref="documento">
+					<input type="text" class="form-control line-danger" name="documento" v-model="campos.documento" id="documento" placeholder="Numero" required autocomplete="off" minlength="8" maxlength="8" ref="documento" v-on:input="phuyu_documento()">
 				</div>
 				<div class="col-4 col-lg-2">
 					<label>&nbsp;</label>

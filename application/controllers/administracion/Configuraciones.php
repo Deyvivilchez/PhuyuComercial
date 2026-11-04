@@ -140,6 +140,19 @@ class Configuraciones extends CI_Controller {
 			if(count($ubigeo)>0){
 				$codubigeo = $ubigeo[0]["codubigeo"];
 			} */
+			$this->load->helper('phuyu_soporte');
+			$grupo_enviado = isset($_POST['soporte_whatsapp_grupo']);
+			$grupo = trim((string)($_POST['soporte_whatsapp_grupo'] ?? ''));
+			if ($grupo !== '' && phuyu_url_grupo_soporte($grupo) === '') {
+				$this->responder_guardar(0, 'Ingrese el enlace de invitación del grupo: https://chat.whatsapp.com/...');
+				return;
+			}
+			$columna_soporte = $this->db->query("SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='empresas' AND column_name='soporte_whatsapp_grupo'")->num_rows() > 0;
+			if ($grupo !== '' && !$columna_soporte) {
+				$this->responder_guardar(0, 'Ejecute la migración 008 de phuyu_migraciones_ordenado2.sql para configurar el grupo de soporte.');
+				return;
+			}
+
 			$codubigeo = isset($_POST["codubigeo"]) ? (int)$_POST["codubigeo"] : 0;
 
 			$ubigeo = $this->db->query("select * from public.ubigeo where codubigeo=?", [$codubigeo])->result_array();
@@ -177,6 +190,10 @@ class Configuraciones extends CI_Controller {
 			$_POST["leyendasamazonia"],
 			$_POST["codleyendasamazonia"],
 			$_POST["urlconsultacomprobantes"]];
+			if ($grupo_enviado && $columna_soporte) {
+				$campos[] = 'soporte_whatsapp_grupo';
+				$valores[] = $grupo;
+			}
 			$estado = $this->phuyu_model->phuyu_editar("public.empresas", $campos, $valores,"codempresa",$_POST["codempresa"]);
 
 			$file = $this->guardar_imagen_configuracion("logo", "logo");

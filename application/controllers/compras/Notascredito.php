@@ -76,9 +76,17 @@ class Notascredito extends CI_Controller {
 		}
 	}
 
-	function comprobantes($codpersona,$fechacomprobante){
+	function comprobantes($codpersona,$fechacomprobante,$seriecomprobante="-",$nrocomprobante="-"){
 		if ($this->input->is_ajax_request()) {
-			$lista = $this->db->query("select personas.documento,personas.razonsocial as cliente,personas.direccion,personas.nombrecomercial, kardex.codkardex, kardex.codcomprobantetipo, kardex.seriecomprobante,kardex.nrocomprobante,kardex.codmoneda,kardex.tipocambio, kardex.fechacomprobante,round(kardex.importe,2) as importe,kardex.estado from kardex.kardex as kardex inner join public.personas as personas on (kardex.codpersona=personas.codpersona) inner join caja.comprobantetipos as comprobantes on(kardex.codcomprobantetipo=comprobantes.codcomprobantetipo) where kardex.fechacomprobante='".$fechacomprobante."' and kardex.codpersona=".$codpersona." and kardex.codmovimientotipo=2 and kardex.codsucursal=".$_SESSION["phuyu_codsucursal"]." and kardex.estado=1 order by kardex.codkardex")->result_array();
+			$where_comprobante = "";
+			if ($seriecomprobante!="-" && $seriecomprobante!="") {
+				$where_comprobante .= " and upper(kardex.seriecomprobante)=upper(".$this->db->escape($seriecomprobante).")";
+			}
+			if ($nrocomprobante!="-" && $nrocomprobante!="") {
+				$where_comprobante .= " and (kardex.nrocomprobante=".$this->db->escape($nrocomprobante)." or kardex.nrocomprobante=".$this->db->escape(str_pad($nrocomprobante, 8, "0", STR_PAD_LEFT)).")";
+			}
+
+			$lista = $this->db->query("select personas.documento,personas.razonsocial as cliente,personas.direccion,personas.nombrecomercial, kardex.codkardex, kardex.codcomprobantetipo, kardex.seriecomprobante,kardex.nrocomprobante,kardex.codmoneda,kardex.tipocambio, kardex.fechacomprobante,round(kardex.importe,2) as importe,kardex.estado from kardex.kardex as kardex inner join public.personas as personas on (kardex.codpersona=personas.codpersona) inner join caja.comprobantetipos as comprobantes on(kardex.codcomprobantetipo=comprobantes.codcomprobantetipo) where kardex.fechacomprobante='".$fechacomprobante."' and kardex.codpersona=".$codpersona." and kardex.codmovimientotipo=2 and kardex.codsucursal=".$_SESSION["phuyu_codsucursal"]." and kardex.estado=1 ".$where_comprobante." order by kardex.codkardex")->result_array();
 			foreach ($lista as $key => $value) {
 				$motivo = $this->db->query("select k.codmotivonota,mn.descripcion from kardex.kardex as k inner join kardex.motivonotas as mn on(k.codmotivonota=mn.codmotivonota) where k.codkardex_ref=".$value["codkardex"])->result_array();
 
@@ -112,6 +120,17 @@ class Notascredito extends CI_Controller {
 		if ($this->input->is_ajax_request()) {
 			if (isset( $_SESSION["phuyu_codusuario"]) ) {
 				$this->request = json_decode(file_get_contents('php://input'));
+
+				if (empty($this->request->campos->codkardex_ref) || empty($this->request->detalle)) {
+					echo json_encode(["estado" => 0, "mensaje" => "Debe seleccionar un comprobante de referencia con detalle."]);
+					return;
+				}
+
+				$compra = $this->db->query("select codkardex, importe from kardex.kardex where codkardex=".(int)$this->request->campos->codkardex_ref." and codpersona=".(int)$this->request->campos->codpersona." and codmovimientotipo=2 and codsucursal=".$_SESSION["phuyu_codsucursal"]." and estado=1")->result_array();
+				if (count($compra)==0) {
+					echo json_encode(["estado" => 0, "mensaje" => "Comprobante de compra no encontrado o no pertenece a la sucursal actual."]);
+					return;
+				}
 
 				$this->db->trans_begin();
 
@@ -147,6 +166,11 @@ class Notascredito extends CI_Controller {
 				// REGISTRO KARDEX ALMACEN //
 				$comprobante_almacen = 4;
 				$series = $this->db->query("select seriecomprobante from caja.comprobantes where codcomprobantetipo=".$comprobante_almacen." and codsucursal=".$_SESSION["phuyu_codsucursal"]." and codalmacen=".$_SESSION["phuyu_codalmacen"]." and estado=1")->result_array();
+				if (count($series)==0) {
+					$this->db->trans_rollback();
+					echo json_encode(["estado" => 0, "mensaje" => "No existe serie activa para el comprobante de salida de almacen."]);
+					return;
+				}
 
 				$campos = ["codsucursal","codalmacen","codkardex","codusuario","codmovimientotipo","fechakardex","codcomprobantetipo","seriecomprobante"];
 				$valores = [

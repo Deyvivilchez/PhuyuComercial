@@ -122,19 +122,25 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <?php
-                            foreach ($detalle as $key => $value) { ?>
+                        <?php foreach ($detalle as $key => $value) { ?>
                                 <tr>
                                     <td><?php echo $value["codproducto"];?></td>
                                     <td><?php echo $value["codigo"];?></td>
                                     <td><?php echo $value["producto"];?></td>
                                     <td><?php echo $value["unidad"];?></td>
-                                    <td><?php echo round($value["cantidad"],2);?></td>
+                                    <td><?php echo round($value["cantidad"],4);?></td>
                                     <td><?php echo round($value["preciounitario"],2);?></td>
                                     <td><?php echo round($value["subtotal"],2);?></td>
                                 </tr>
-                            <?php }
-                        ?>
+                            <?php } ?>
+                        <?php if (count($detalle) == 0) { ?>
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-3">
+                                    Esta salida no tiene productos registrados en el detalle. Si es salida por produccion,
+                                    revise que el plato tenga receta/insumos configurados al momento de vender.
+                                </td>
+                            </tr>
+                        <?php } ?>
                     </tbody>
                 </table>
             </div>

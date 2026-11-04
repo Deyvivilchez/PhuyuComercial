@@ -9,6 +9,7 @@ class Productos extends CI_Controller
     {
         parent::__construct();
         $this->load->model('phuyu_model');
+        $this->load->model('Stock_reservas_model');
     }
 
     public function index()
@@ -74,11 +75,12 @@ class Productos extends CI_Controller
                     $codunidad = 0;
                     $lista[$key]['costo'] = 0.0;
                 } else {
-                    $lista[$key]['precio'] = number_format(round($precio[0]['pventapublico'], 2), 2);
+                    $lista[$key]['precio'] = number_format(round($precio[0]['pventapublico'], 4), 4);
                     $codunidad = $precio[0]['codunidad'];
-                    $lista[$key]['costo'] = number_format(round($precio[0]['preciocosto'], 2), 2);
+                    $lista[$key]['costo'] = number_format(round($precio[0]['preciocosto'], 4), 4);
                 }
 
+                $lista[$key]['codunidad'] = $codunidad;
                 $stock = $this->db->query('select pu.stockactualconvertido,u.descripcion as unidad from almacen.productoubicacion as pu inner join almacen.unidades as u on(pu.codunidad=u.codunidad) where pu.codproducto=' . $value['codproducto'] . ' and pu.codunidad=' . $codunidad . ' and pu.codalmacen=' . $codalmacen . ' and pu.estado=1')->result_array();
                 if (count($stock) == 0) {
                     $lista[$key]['stock'] = 0;
@@ -88,6 +90,11 @@ class Productos extends CI_Controller
                     $lista[$key]['unidad'] = $stock[0]['unidad'];
                 }
             }
+
+            foreach ($lista as &$producto) {
+                $producto = $this->Stock_reservas_model->enriquecer($producto);
+            }
+            unset($producto);
 
             $total = $this->db->query("select count(*) as total from almacen.productos as productos inner join almacen.marcas as marcas on(productos.codmarca=marcas.codmarca) where (UPPER(productos.descripcion) like UPPER('%" . $this->request->buscar . "%') or UPPER(productos.codigo) like UPPER('%" . $this->request->buscar . "%') or UPPER(marcas.descripcion) like UPPER('%" . $this->request->buscar . "%') OR EXISTS (SELECT 1 FROM almacen.productounidades pbu WHERE pbu.codproducto = productos.codproducto AND pbu.estado = 1 AND UPPER(COALESCE(pbu.codigobarra, '')) LIKE UPPER('%" . $this->request->buscar . "%')) OR EXISTS (SELECT 1 FROM almacen.productoubicacion pbo WHERE pbo.codproducto = productos.codproducto AND pbo.codalmacen=" . $codalmacen . " AND pbo.estado = 1 AND UPPER(COALESCE(pbo.codigobarra, '')) LIKE UPPER('%" . $this->request->buscar . "%')) ) and productos.estado=1 and exists (select 1 from almacen.productoubicacion pub where pub.codproducto=productos.codproducto and pub.codalmacen=" . $codalmacen . " and pub.estado=1)")->result_array();
 
@@ -424,7 +431,54 @@ class Productos extends CI_Controller
         if ($this->input->is_ajax_request()) {
             $this->request = json_decode(file_get_contents('php://input'));
 
-            $campos = ['codfamilia', 'codlinea', 'codmarca', 'codempresa', 'codigo', 'descripcion', 'afectoicbper', 'codatencion', 'paraventa', 'calcular', 'controlstock', 'caracteristicas', 'tipo', 'controlarseries'];
+            $es_venta = isset($this->request->campos->es_venta) ? (int) $this->request->campos->es_venta : 1;
+            $es_insumo = isset($this->request->campos->es_insumo) ? (int) $this->request->campos->es_insumo : 0;
+            $es_preparado = isset($this->request->campos->es_preparado) ? (int) $this->request->campos->es_preparado : 0;
+            $merma_porcentaje = isset($this->request->campos->merma_porcentaje) ? (float) $this->request->campos->merma_porcentaje : 0;
+            $es_restaurante = isset($_SESSION['phuyu_rubro']) && (int) $_SESSION['phuyu_rubro'] == 3;
+
+            $es_venta = $es_venta == 1 ? 1 : 0;
+            $es_insumo = $es_insumo == 1 ? 1 : 0;
+            $es_preparado = $es_preparado == 1 ? 1 : 0;
+
+            if (!$es_restaurante) {
+                $es_venta = 1;
+                $es_insumo = 0;
+                $es_preparado = 0;
+                $merma_porcentaje = 0;
+            }
+
+            if ($es_restaurante && $es_venta == 0 && $es_insumo == 0 && $es_preparado == 0) {
+                echo 0;
+                return;
+            }
+
+            if ($es_restaurante && $es_preparado == 1 && $es_venta == 0 && $es_insumo == 0) {
+                echo 0;
+                return;
+            }
+
+            if (!isset($this->request->unidades) || !is_array($this->request->unidades) || count($this->request->unidades) == 0) {
+                echo 0;
+                return;
+            }
+
+            foreach ($this->request->unidades as $key => $unidad) {
+                if ($es_restaurante && $es_venta == 0) {
+                    $this->request->unidades[$key]->pventapublico = 0;
+                    $this->request->unidades[$key]->pventamin = 0;
+                    $this->request->unidades[$key]->pventacredito = 0;
+                    $this->request->unidades[$key]->pventaxmayor = 0;
+                    $this->request->unidades[$key]->pventaadicional = 0;
+                }
+
+                if ($es_restaurante && $es_venta == 1 && (float) $this->request->unidades[$key]->pventapublico <= 0) {
+                    echo 0;
+                    return;
+                }
+            }
+
+            $campos = ['codfamilia', 'codlinea', 'codmarca', 'codempresa', 'codigo', 'descripcion', 'afectoicbper', 'codatencion', 'paraventa', 'calcular', 'controlstock', 'caracteristicas', 'tipo', 'controlarseries', 'es_venta', 'es_insumo', 'es_preparado', 'merma_porcentaje'];
             $valores = [
                 (int) $this->request->campos->codfamilia,
                 (int) $this->request->campos->codlinea,
@@ -440,6 +494,10 @@ class Productos extends CI_Controller
                 $this->request->campos->caracteristicas,
                 (int) $this->request->campos->tipo,
                 (int) $this->request->campos->controlarseries, //controlarseries
+                $es_venta,
+                $es_insumo,
+                $es_preparado,
+                $merma_porcentaje,
             ];
 
             $campos_1 = ['codproducto', 'codunidad', 'codsucursal', 'factor', 'preciocompra', 'preciocosto', 'pventapublico', 'pventamin', 'pventacredito', 'pventaxmayor', 'pventaadicional', 'codigobarra', 'estado'];
@@ -748,6 +806,331 @@ class Productos extends CI_Controller
         }
     }
 
+    public function duplicados()
+    {
+        if (!$this->input->is_ajax_request() || !isset($_SESSION['phuyu_codusuario'])) {
+            $this->load->view('phuyu/404');
+            return;
+        }
+
+        $this->output->set_content_type('application/json', 'utf-8');
+        $request = json_decode(file_get_contents('php://input'));
+        $tipo = isset($request->tipo) ? (string) $request->tipo : 'todos';
+        $lista = [];
+
+        if ($tipo === 'todos' || $tipo === 'barra') {
+            $lista = array_merge($lista, $this->grupos_duplicados_productos('barra'));
+        }
+        if ($tipo === 'todos' || $tipo === 'codigo') {
+            $lista = array_merge($lista, $this->grupos_duplicados_productos('codigo'));
+        }
+        if ($tipo === 'todos' || $tipo === 'descripcion') {
+            $lista = array_merge($lista, $this->grupos_duplicados_productos('descripcion'));
+        }
+
+        echo json_encode(['lista' => $lista]);
+    }
+
+    public function normalizar_stock_negativo()
+    {
+        if (!$this->input->is_ajax_request() || !isset($_SESSION['phuyu_codusuario'], $_SESSION['phuyu_codalmacen'])) {
+            $this->output->set_status_header(401);
+            echo json_encode(['estado' => 0, 'mensaje' => 'Sesion no valida. Vuelva a iniciar sesion.']);
+            return;
+        }
+
+        $this->output->set_content_type('application/json', 'utf-8');
+        $request = json_decode(file_get_contents('php://input'));
+        $accion = isset($request->accion) ? (string) $request->accion : 'consultar';
+        $codalmacen = (int) $_SESSION['phuyu_codalmacen'];
+
+        $resumen = $this->db->query(
+            "select count(*) as ubicaciones, count(distinct pu.codproducto) as productos,
+                    coalesce(min(least(pu.stockactual, pu.stockactualreal, pu.stockactualconvertido)), 0) as stock_minimo
+             from almacen.productoubicacion pu
+             inner join almacen.productos p on p.codproducto=pu.codproducto
+             where pu.codalmacen=? and pu.estado=1 and p.estado=1
+               and coalesce(pu.stockactualconvertido,0)<0",
+            [$codalmacen]
+        )->row_array();
+
+        $ubicaciones = isset($resumen['ubicaciones']) ? (int) $resumen['ubicaciones'] : 0;
+        $productos = isset($resumen['productos']) ? (int) $resumen['productos'] : 0;
+
+        if ($accion !== 'ejecutar') {
+            echo json_encode([
+                'estado' => 1,
+                'ubicaciones' => $ubicaciones,
+                'productos' => $productos,
+                'stock_minimo' => isset($resumen['stock_minimo']) ? (float) $resumen['stock_minimo'] : 0
+            ]);
+            return;
+        }
+
+        if ($ubicaciones === 0) {
+            echo json_encode(['estado' => 1, 'actualizados' => 0, 'productos' => 0, 'mensaje' => 'No hay stock negativo en el almacen actual.']);
+            return;
+        }
+
+        $this->db->trans_begin();
+        $actualizados = $this->db->query(
+            "update almacen.productoubicacion pu
+             set stockactual=0,
+                 stockactualreal=0,
+                 stockactualconvertido=0,
+                 preciostockvalorizado=0
+             from almacen.productos p
+             where p.codproducto=pu.codproducto
+               and pu.codalmacen=? and pu.estado=1 and p.estado=1
+               and coalesce(pu.stockactualconvertido,0)<0
+             returning pu.codproducto",
+            [$codalmacen]
+        );
+
+        if ($actualizados === false || $this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            $error = $this->db->error();
+            echo json_encode([
+                'estado' => 0,
+                'mensaje' => isset($error['message']) && $error['message'] !== '' ? $error['message'] : 'No se pudo corregir el stock negativo.'
+            ]);
+            return;
+        }
+
+        $filas = $actualizados->result_array();
+        $productosActualizados = [];
+        foreach ($filas as $fila) {
+            $productosActualizados[(int) $fila['codproducto']] = true;
+        }
+        $this->db->trans_commit();
+
+        echo json_encode([
+            'estado' => 1,
+            'actualizados' => count($filas),
+            'productos' => count($productosActualizados),
+            'mensaje' => 'Stock negativo corregido en el almacen actual.'
+        ]);
+    }
+
+    public function unir_duplicados()
+    {
+        if (!$this->input->is_ajax_request() || !isset($_SESSION['phuyu_codusuario'])) {
+            $this->load->view('phuyu/404');
+            return;
+        }
+
+        $this->output->set_content_type('application/json', 'utf-8');
+        $request = json_decode(file_get_contents('php://input'));
+        $tipo = isset($request->tipo) ? (string) $request->tipo : '';
+        $valor = isset($request->valor) ? strtoupper($this->normalizar_texto($request->valor)) : '';
+
+        if (!in_array($tipo, ['barra', 'codigo', 'descripcion'], true) || $valor === '') {
+            echo json_encode(['estado' => 0, 'mensaje' => 'Debe indicar un grupo duplicado valido.']);
+            return;
+        }
+
+        $productos = $this->productos_duplicados_por_valor($tipo, $valor);
+        if (count($productos) < 2) {
+            echo json_encode(['estado' => 0, 'omitido' => true, 'mensaje' => 'El grupo ya no tiene duplicados activos.']);
+            return;
+        }
+
+        $codproductoMaestro = (int) $productos[0]['codproducto'];
+        $duplicados = 0;
+        $ubicaciones = 0;
+
+        $this->db->trans_begin();
+
+        foreach ($productos as $producto) {
+            $codproductoDuplicado = (int) $producto['codproducto'];
+            if ($codproductoDuplicado === $codproductoMaestro) {
+                continue;
+            }
+
+            $ubicaciones += $this->mover_unidades_duplicado_producto($codproductoMaestro, $codproductoDuplicado);
+            $ubicaciones += $this->mover_ubicaciones_duplicado_producto($codproductoMaestro, $codproductoDuplicado);
+
+            $this->db->where('codproducto', $codproductoDuplicado);
+            $this->db->update('almacen.productounidades', ['estado' => 0]);
+
+            $this->db->where('codproducto', $codproductoDuplicado);
+            $this->db->update('almacen.productoubicacion', [
+                'stockactual' => 0,
+                'stockactualreal' => 0,
+                'stockactualconvertido' => 0,
+                'preciostockvalorizado' => 0,
+                'estado' => 0
+            ]);
+
+            $this->db->where('codproducto', $codproductoDuplicado);
+            $this->db->update('almacen.productos', ['estado' => 0]);
+            $duplicados++;
+        }
+
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            echo json_encode(['estado' => 0, 'mensaje' => 'No se pudo unir los productos duplicados.']);
+            return;
+        }
+
+        $this->db->trans_commit();
+
+        echo json_encode([
+            'estado' => 1,
+            'mensaje' => 'Producto principal #' . $codproductoMaestro . '. Duplicados deshabilitados: ' . $duplicados . '. Ubicaciones movidas o consolidadas: ' . $ubicaciones . '.'
+        ]);
+    }
+
+    private function grupos_duplicados_productos($tipo)
+    {
+        if ($tipo === 'barra') {
+            $grupos = $this->db->query(
+                "select 'barra' as tipo, 'Codigo de barra' as tipo_nombre, upper(trim(pu.codigobarra)) as valor, count(distinct p.codproducto) as cantidad
+                 from almacen.productounidades pu
+                 inner join almacen.productos p on (p.codproducto=pu.codproducto)
+                 where p.estado=1 and pu.estado=1 and coalesce(trim(pu.codigobarra),'') <> ''
+                 group by upper(trim(pu.codigobarra))
+                 having count(distinct p.codproducto) > 1
+                 order by cantidad desc, valor
+                 limit 100"
+            )->result_array();
+        } elseif ($tipo === 'codigo') {
+            $grupos = $this->db->query(
+                "select 'codigo' as tipo, 'Codigo interno' as tipo_nombre, upper(trim(p.codigo)) as valor, count(*) as cantidad
+                 from almacen.productos p
+                 where p.estado=1 and coalesce(trim(p.codigo),'') <> ''
+                 group by upper(trim(p.codigo))
+                 having count(*) > 1
+                 order by cantidad desc, valor
+                 limit 100"
+            )->result_array();
+        } else {
+            $grupos = $this->db->query(
+                "select 'descripcion' as tipo, 'Descripcion' as tipo_nombre, regexp_replace(upper(trim(p.descripcion)), '\s+', ' ', 'g') as valor, count(*) as cantidad
+                 from almacen.productos p
+                 where p.estado=1 and coalesce(trim(p.descripcion),'') <> ''
+                 group by regexp_replace(upper(trim(p.descripcion)), '\s+', ' ', 'g')
+                 having count(*) > 1
+                 order by cantidad desc, valor
+                 limit 100"
+            )->result_array();
+        }
+
+        foreach ($grupos as $key => $grupo) {
+            $grupos[$key]['cantidad'] = (int) $grupo['cantidad'];
+            $grupos[$key]['productos'] = $this->productos_duplicados_por_valor($grupo['tipo'], $grupo['valor']);
+        }
+
+        return $grupos;
+    }
+
+    private function productos_duplicados_por_valor($tipo, $valor)
+    {
+        if ($tipo === 'barra') {
+            return $this->db->query(
+                "select p.codproducto, p.codigo, p.descripcion, string_agg(distinct nullif(trim(un.codigobarra), ''), ', ') as codigobarra, coalesce(sum(pu.stockactualconvertido),0) as stock
+                 from almacen.productos p
+                 inner join almacen.productounidades un on (un.codproducto=p.codproducto and un.estado=1)
+                 left join almacen.productoubicacion pu on (pu.codproducto=p.codproducto and pu.estado=1)
+                 where p.estado=1 and upper(trim(un.codigobarra))=?
+                 group by p.codproducto, p.codigo, p.descripcion
+                 order by p.codproducto",
+                [$valor]
+            )->result_array();
+        }
+
+        if ($tipo === 'codigo') {
+            return $this->db->query(
+                "select p.codproducto, p.codigo, p.descripcion, string_agg(distinct nullif(trim(un.codigobarra), ''), ', ') as codigobarra, coalesce(sum(pu.stockactualconvertido),0) as stock
+                 from almacen.productos p
+                 left join almacen.productounidades un on (un.codproducto=p.codproducto and un.estado=1)
+                 left join almacen.productoubicacion pu on (pu.codproducto=p.codproducto and pu.estado=1)
+                 where p.estado=1 and upper(trim(p.codigo))=?
+                 group by p.codproducto, p.codigo, p.descripcion
+                 order by p.codproducto",
+                [$valor]
+            )->result_array();
+        }
+
+        return $this->db->query(
+            "select p.codproducto, p.codigo, p.descripcion, string_agg(distinct nullif(trim(un.codigobarra), ''), ', ') as codigobarra, coalesce(sum(pu.stockactualconvertido),0) as stock
+             from almacen.productos p
+             left join almacen.productounidades un on (un.codproducto=p.codproducto and un.estado=1)
+             left join almacen.productoubicacion pu on (pu.codproducto=p.codproducto and pu.estado=1)
+             where p.estado=1 and regexp_replace(upper(trim(p.descripcion)), '\s+', ' ', 'g')=?
+             group by p.codproducto, p.codigo, p.descripcion
+             order by p.codproducto",
+            [$valor]
+        )->result_array();
+    }
+
+    private function mover_unidades_duplicado_producto($codproductoMaestro, $codproductoDuplicado)
+    {
+        $unidades = $this->db->get_where('almacen.productounidades', ['codproducto' => (int) $codproductoDuplicado, 'estado' => 1])->result_array();
+        $movidas = 0;
+
+        foreach ($unidades as $unidad) {
+            $existe = $this->db->get_where('almacen.productounidades', [
+                'codproducto' => (int) $codproductoMaestro,
+                'codunidad' => (int) $unidad['codunidad']
+            ])->row_array();
+
+            if (empty($existe)) {
+                $unidad['codproducto'] = (int) $codproductoMaestro;
+                $this->db->insert('almacen.productounidades', $unidad);
+                $movidas++;
+                continue;
+            }
+
+            if (empty($existe['codigobarra']) && !empty($unidad['codigobarra'])) {
+                $this->db->where('codproducto', (int) $codproductoMaestro);
+                $this->db->where('codunidad', (int) $unidad['codunidad']);
+                $this->db->update('almacen.productounidades', [
+                    'codigobarra' => $unidad['codigobarra'],
+                    'estado' => 1
+                ]);
+            }
+        }
+
+        return $movidas;
+    }
+
+    private function mover_ubicaciones_duplicado_producto($codproductoMaestro, $codproductoDuplicado)
+    {
+        $ubicaciones = $this->db->get_where('almacen.productoubicacion', ['codproducto' => (int) $codproductoDuplicado])->result_array();
+        $movidas = 0;
+
+        foreach ($ubicaciones as $ubicacion) {
+            $filtro = [
+                'codalmacen' => (int) $ubicacion['codalmacen'],
+                'codproducto' => (int) $codproductoMaestro,
+                'codunidad' => (int) $ubicacion['codunidad']
+            ];
+            $maestro = $this->db->get_where('almacen.productoubicacion', $filtro)->row_array();
+
+            if (empty($maestro)) {
+                $ubicacion['codproducto'] = (int) $codproductoMaestro;
+                $this->db->insert('almacen.productoubicacion', $ubicacion);
+                $movidas++;
+                continue;
+            }
+
+            foreach ($filtro as $campo => $dato) {
+                $this->db->where($campo, $dato);
+            }
+            $this->db->update('almacen.productoubicacion', [
+                'stockactual' => (float) $maestro['stockactual'] + (float) $ubicacion['stockactual'],
+                'stockactualreal' => (float) $maestro['stockactualreal'] + (float) $ubicacion['stockactualreal'],
+                'stockactualconvertido' => (float) $maestro['stockactualconvertido'] + (float) $ubicacion['stockactualconvertido'],
+                'preciostockvalorizado' => (float) $maestro['preciostockvalorizado'] + (float) $ubicacion['preciostockvalorizado'],
+                'estado' => ((int) $maestro['estado'] === 1 || (int) $ubicacion['estado'] === 1) ? 1 : 0
+            ]);
+            $movidas++;
+        }
+
+        return $movidas;
+    }
+
     // BUSCAR PRODUCTOS EN COMPRAS, EN VENTAS, EN INGRESOS Y EGRESOS ALMACEN //
 
     function buscar($operacion)
@@ -766,9 +1149,12 @@ class Productos extends CI_Controller
     function buscar_codigobarra($codigobarra)
     {
         if ($this->input->is_ajax_request()) {
+            $codigobarra = trim((string) $codigobarra);
+            $codalmacen = (int) $_SESSION['phuyu_codalmacen'];
             $info = $this->db
                 ->query(
-                    "select p.codproducto,p.descripcion,p.caracteristicas, p.afectoicbper,p.controlstock, p.afectoigvcompra, p.afectoigvventa, p.codigo,p.calcular,p.foto,p.controlarseries,u.codunidad,u.descripcion as unidad,round(pu.stockactual,3) as stock, m.descripcion as marca, puv.factor, puv.factor as factormaximo, round(puv.pventapublico,2) as precio, round(puv.pventamin,2) as preciomin, round(puv.pventacredito,2) as preciocredito, round(puv.pventaxmayor,2) as preciomayor, round(puv.preciocosto,2) as preciocosto, round(puv.pventaadicional,2) as precioadicional,
+                    "select distinct on (p.codproducto)
+                    p.codproducto,p.descripcion,p.caracteristicas, p.afectoicbper,p.controlstock, p.afectoigvcompra, p.afectoigvventa, p.codigo,p.calcular,p.foto,p.controlarseries,u.codunidad,u.descripcion as unidad,round(pu.stockactualconvertido,3) as stock, m.descripcion as marca, puv.factor, puv.factor as factormaximo, round(puv.pventapublico,2) as precio, round(puv.pventamin,2) as preciomin, round(puv.pventacredito,2) as preciocredito, round(puv.pventaxmayor,2) as preciomayor, round(puv.preciocosto,2) as preciocosto, round(puv.pventaadicional,2) as precioadicional,
                     COALESCE(
                         (SELECT vpun.unidades
                         FROM almacen.v_productounidades vpun
@@ -788,16 +1174,51 @@ class Productos extends CI_Controller
                         FROM almacen.series s
                         WHERE s.codproducto = p.codproducto
                         AND s.estado = 'EN_ALMACEN'
-                        AND s.codalmacen = " . $_SESSION['phuyu_codalmacen'] . "),
+                        AND s.codalmacen = ?),
                         '[]'::jsonb
                     ) AS series
-                    from almacen.productos as p inner join almacen.productoubicacion as pu on(p.codproducto=pu.codproducto) inner join almacen.unidades as u on(u.codunidad=pu.codunidad) inner join almacen.marcas as m on(p.codmarca=m.codmarca) inner join almacen.productounidades as puv on(pu.codproducto=puv.codproducto and pu.codunidad=puv.codunidad) where puv.codigobarra='" .
-                        $codigobarra .
-                        "' and p.estado=1 and pu.estado=1 and pu.codalmacen=" .
-                        $_SESSION['phuyu_codalmacen'],
+                    from almacen.productos as p
+                    inner join almacen.productoubicacion as pu on(p.codproducto=pu.codproducto)
+                    inner join almacen.unidades as u on(u.codunidad=pu.codunidad)
+                    inner join almacen.marcas as m on(p.codmarca=m.codmarca)
+                    inner join almacen.productounidades as puv on(pu.codproducto=puv.codproducto and pu.codunidad=puv.codunidad)
+                    where (
+                        exists (
+                            select 1
+                            from almacen.productounidades pub
+                            where pub.codproducto = p.codproducto
+                            and pub.estado = 1
+                            and upper(trim(coalesce(pub.codigobarra, ''))) = upper(?)
+                        )
+                        or exists (
+                            select 1
+                            from almacen.productoubicacion pubi
+                            where pubi.codproducto = p.codproducto
+                            and pubi.codalmacen = pu.codalmacen
+                            and pubi.estado = 1
+                            and upper(trim(coalesce(pubi.codigobarra, ''))) = upper(?)
+                        )
+                    )
+                    and p.estado=1
+                    and pu.estado=1
+                    and puv.estado=1
+                    and pu.codalmacen=?
+                    and pu.codunidad = (
+                        select pu0.codunidad
+                        from almacen.productoubicacion pu0
+                        inner join almacen.productounidades puv0 on(puv0.codproducto=pu0.codproducto and puv0.codunidad=pu0.codunidad and puv0.estado=1)
+                        where pu0.codproducto = p.codproducto
+                        and pu0.codalmacen = pu.codalmacen
+                        and pu0.estado = 1
+                        order by puv0.factor asc, pu0.codunidad asc
+                        limit 1
+                    )
+                    order by p.codproducto, puv.factor asc",
+                    [$codalmacen, $codigobarra, $codigobarra, $codalmacen]
                 )
                 ->result_array();
             foreach ($info as &$producto) {
+                $producto = $this->Stock_reservas_model->enriquecer($producto);
                 if (!empty($producto['series']) && is_string($producto['series'])) {
                     $producto['series'] = json_decode($producto['series'], true);
                 } else {
@@ -901,20 +1322,30 @@ class Productos extends CI_Controller
 
                 if ($value['unidades'] != '' || $value['unidades'] != null) {
                     $unidades = explode(';', $value['unidades']);
+                    $unidadMenor = null;
                     foreach ($unidades as $k => $v) {
                         $factores = explode('|', $v);
-                        if ($factores[8] == 1) {
-                            $lista[$key]['factormaximo'] = $factormaximo[0]['factor'];
-                            $lista[$key]['factor'] = $factores[8];
-                            $lista[$key]['precio'] = $factores[5];
-                            $lista[$key]['precioventa'] = $factores[5];
-                            $lista[$key]['preciomin'] = round((float) $factores[6], 2);
-                            $lista[$key]['preciocredito'] = round((float) $factores[7], 2);
-                            $lista[$key]['preciomayor'] = round((float) $factores[10], 2);
-                            $lista[$key]['stock'] = $factores[3];
-                            $lista[$key]['stockproveedor'] = $factores[4];
-                            $lista[$key]['unidad'] = $factores[1];
+                        if (count($factores) > 8 && ($unidadMenor === null || (float) $factores[8] < (float) $unidadMenor[8])) {
+                            $unidadMenor = $factores;
                         }
+                    }
+                    if ($unidadMenor !== null) {
+                        $lista[$key]['factormaximo'] = $factormaximo[0]['factor'];
+                        $lista[$key]['codunidad'] = $unidadMenor[0];
+                        $lista[$key]['factor'] = $unidadMenor[8];
+                        $lista[$key]['precio'] = $unidadMenor[5];
+                        $lista[$key]['precioventa'] = $unidadMenor[5];
+                        $merma = isset($lista[$key]['merma_porcentaje']) ? (float) $lista[$key]['merma_porcentaje'] : 0;
+                        $rendimiento = max(1 + ($merma / 100), 0.0001);
+                        $preciocosto = ((float) $unidadMenor[9] > 0 ? (float) $unidadMenor[9] : (float) $unidadMenor[5]);
+                        $lista[$key]['preciocosto'] = round($preciocosto / $rendimiento, 2);
+                        $lista[$key]['merma_porcentaje'] = $merma;
+                        $lista[$key]['preciomin'] = round((float) $unidadMenor[6], 2);
+                        $lista[$key]['preciocredito'] = round((float) $unidadMenor[7], 2);
+                        $lista[$key]['preciomayor'] = round((float) $unidadMenor[10], 2);
+                        $lista[$key]['stock'] = $unidadMenor[3];
+                        $lista[$key]['stockproveedor'] = $unidadMenor[4];
+                        $lista[$key]['unidad'] = $unidadMenor[1];
                     }
                 }
             }
@@ -943,6 +1374,7 @@ class Productos extends CI_Controller
             $paginacion['desde'] = $offset;
             $paginacion['hasta'] = $offset + $limit;
             foreach ($lista as &$producto) {
+                $producto = $this->Stock_reservas_model->enriquecer($producto);
                 if (!empty($producto['series']) && is_string($producto['series'])) {
                     $producto['series'] = json_decode($producto['series'], true);
                 } else {
@@ -1005,6 +1437,12 @@ class Productos extends CI_Controller
                 }
             }
 
+            foreach ($lista as &$producto) {
+                $producto['codproducto'] = (int)$this->request->codproducto;
+                $producto = $this->Stock_reservas_model->enriquecer($producto);
+            }
+            unset($producto);
+
             echo json_encode($lista);
         }
     }
@@ -1043,15 +1481,19 @@ class Productos extends CI_Controller
 
                 if ($value['unidades'] != '') {
                     $unidades = explode(';', $value['unidades']);
+                    $unidadMenor = null;
                     foreach ($unidades as $k => $v) {
                         $factores = explode('|', $v);
-                        if ($factores[8] == 1) {
-                            $lista[$key]['factormaximo'] = $factormaximo[0]['factor'];
-                            $lista[$key]['factor'] = $factores[8];
-                            $lista[$key]['precio'] = $factores[9];
-                            $lista[$key]['stock'] = $factores[3];
-                            $lista[$key]['preciomayor'] = round((float) $factores[10], 2);
+                        if (count($factores) > 8 && ($unidadMenor === null || (float) $factores[8] < (float) $unidadMenor[8])) {
+                            $unidadMenor = $factores;
                         }
+                    }
+                    if ($unidadMenor !== null) {
+                        $lista[$key]['factormaximo'] = $factormaximo[0]['factor'];
+                        $lista[$key]['factor'] = $unidadMenor[8];
+                        $lista[$key]['precio'] = $unidadMenor[9];
+                        $lista[$key]['stock'] = $unidadMenor[3];
+                        $lista[$key]['preciomayor'] = round((float) $unidadMenor[10], 2);
                     }
                 }
             }
@@ -1260,12 +1702,8 @@ class Productos extends CI_Controller
         $lista = $query->result_array();
 
         foreach ($lista as $k => $row) {
-            $stock = (float) $row['stock'];
-            $comprometido = (float) $row['comprometido'];
-            $disponible = round($stock - $comprometido, 2);
-
-            $lista[$k]['mostrarstock'] = 'STOCK: ' . $disponible;
-            $lista[$k]['stockdisponible'] = $disponible;
+            $lista[$k] = $this->Stock_reservas_model->enriquecer($row);
+            $lista[$k]['mostrarstock'] = 'DISPONIBLE: ' . $lista[$k]['stockdisponible'];
 
             $lista[$k]['precio'] = round((float) ($row['pventapublico'] ?? 0), 2);
             $lista[$k]['preciomin'] = round((float) ($row['pventamin'] ?? 0), 2);
@@ -1273,6 +1711,21 @@ class Productos extends CI_Controller
             $lista[$k]['preciomayor'] = round((float) ($row['pventaxmayor'] ?? 0), 2);
             $lista[$k]['preciocosto'] = round((float) ($row['preciocosto'] ?? 0), 2);
             $lista[$k]['precioadicional'] = round((float) ($row['pventaadicional'] ?? 0), 2);
+            $lista[$k]['unidades'] = $this->db->query(
+                "select
+                    pu.codunidad,
+                    u.descripcion as unidad,
+                    round(pu.stockactualconvertido,2) as stock,
+                    round(pun.pventapublico,2) as precio,
+                    round(pun.factor,4) as factor
+                from almacen.productoubicacion as pu
+                inner join almacen.unidades as u on(u.codunidad=pu.codunidad)
+                inner join almacen.productounidades as pun on(pun.codproducto=pu.codproducto and pun.codunidad=pu.codunidad and pun.estado=1)
+                where pu.codproducto=" . (int)$row['codproducto'] . "
+                  and pu.codalmacen=" . $codalmacen . "
+                  and pu.estado=1
+                order by pun.factor asc, u.descripcion asc"
+            )->result_array();
         }
 
         $this->output->set_content_type('application/json')->set_output(json_encode($lista));
@@ -1296,6 +1749,96 @@ class Productos extends CI_Controller
             }
             echo json_encode($lista);
         }
+    }
+
+    function servicio_tipopedido($tipopedido)
+    {
+        if (!$this->input->is_ajax_request()) {
+            $this->load->view('phuyu/404');
+            return;
+        }
+
+        $this->output->set_content_type('application/json', 'utf-8');
+
+        $tipopedido = (int) $tipopedido;
+        if (!in_array($tipopedido, [1, 2], true)) {
+            echo json_encode(['estado' => 0, 'mensaje' => 'Tipo de pedido sin servicio configurado.']);
+            return;
+        }
+
+        $codsucursal = (int) ($_SESSION['phuyu_codsucursal'] ?? 0);
+        $codalmacen = (int) ($_SESSION['phuyu_codalmacen'] ?? 0);
+        if ($codsucursal <= 0 || $codalmacen <= 0) {
+            echo json_encode(['estado' => 0, 'mensaje' => 'Seleccione sucursal y almacen antes de cargar el servicio.']);
+            return;
+        }
+
+        $campoProducto = $tipopedido === 2 ? 'codproducto_delivery' : 'codproducto_llevar';
+        $campoUnidad = $tipopedido === 2 ? 'codunidad_delivery' : 'codunidad_llevar';
+        $servicio = $this->db->query(
+            "select {$campoProducto} as codproducto, {$campoUnidad} as codunidad
+             from public.sucursales
+             where codsucursal=?
+             limit 1",
+            [$codsucursal]
+        )->row_array();
+
+        if (
+            !$servicio
+            || (int) ($servicio['codproducto'] ?? 0) <= 0
+            || (int) ($servicio['codunidad'] ?? 0) <= 0
+        ) {
+            echo json_encode(['estado' => 0, 'mensaje' => 'No hay servicio configurado para este tipo de pedido.']);
+            return;
+        }
+
+        $producto = $this->db->query(
+            "select
+                p.codproducto,
+                p.descripcion,
+                p.afectoicbper,
+                p.afectoigvventa,
+                p.calcular,
+                p.controlstock,
+                u.codunidad,
+                u.descripcion as unidad,
+                coalesce(pu.stockactualconvertido, 0) as stock,
+                coalesce(pun.pventapublico, 0) as precio
+             from almacen.productos p
+             inner join almacen.productounidades pun on(pun.codproducto=p.codproducto and pun.codunidad=? and pun.estado=1)
+             inner join almacen.unidades u on(u.codunidad=pun.codunidad)
+             left join almacen.productoubicacion pu on(
+                pu.codproducto=p.codproducto
+                and pu.codunidad=pun.codunidad
+                and pu.codalmacen=?
+                and pu.estado=1
+             )
+             where p.codproducto=?
+             and p.estado=1
+             limit 1",
+            [(int) $servicio['codunidad'], $codalmacen, (int) $servicio['codproducto']]
+        )->row_array();
+
+        if (!$producto) {
+            echo json_encode(['estado' => 0, 'mensaje' => 'El producto de servicio no esta disponible en este almacen.']);
+            return;
+        }
+
+        $producto['precio'] = round((float) $producto['precio'], 2);
+        $producto['stock'] = round((float) $producto['stock'], 2);
+        $producto['control'] = 0;
+        $producto['controlstock'] = 0;
+        $producto['servicio_tipopedido'] = 1;
+        $producto['tipo_servicio_pedido'] = $tipopedido === 2 ? 'delivery' : 'llevar';
+        $producto['unidades'] = [[
+            'codunidad' => (int) $producto['codunidad'],
+            'unidad' => $producto['unidad'],
+            'stock' => $producto['stock'],
+            'precio' => $producto['precio'],
+            'factor' => 1,
+        ]];
+
+        echo json_encode(['estado' => 1, 'producto' => $producto]);
     }
 
 	    public function stockextra()

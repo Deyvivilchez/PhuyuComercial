@@ -1,5 +1,30 @@
 <?php include("application/views/phuyu/phuyu_velzon_module.php");?>
 
+<style>
+	#phuyu_datos .phuyu-product-filter label {
+		color: #475569;
+		font-size: 11px;
+		font-weight: 900;
+		letter-spacing: .03em;
+		margin-bottom: 6px;
+		text-transform: uppercase;
+	}
+
+	#phuyu_datos .phuyu-consultar-productos {
+		align-items: center;
+		box-shadow: 0 10px 22px rgba(64, 81, 137, .18);
+		display: inline-flex;
+		font-weight: 900;
+		gap: 7px;
+		justify-content: center;
+		min-height: 38px;
+	}
+
+	#phuyu_datos .phuyu-consultar-productos i {
+		font-size: 15px;
+	}
+</style>
+
 <div id="phuyu_datos" class="phuyu-reportes-velzon phuyu-velzon-list">
 	<div class="phuyu_body">
 		<div class="card">
@@ -59,7 +84,7 @@
 						</div>
 					</div>
 				</div>
-				<div class="row g-2 align-items-end mb-2" >
+				<div class="row g-2 align-items-end mb-2 phuyu-product-filter" >
 					<div class="col-lg-3 col-md-6">
 						<label>ALMACEN</label>
 						<select class="form-select" v-model="campos.codalmacen">
@@ -99,7 +124,7 @@
 					</div>
 				</div>
 
-				<div class="row g-2 align-items-end mb-2" >
+				<div class="row g-2 align-items-end mb-2 phuyu-product-filter" >
 					<div class="col-lg-4 col-md-6">
 						<label>BUSCAR</label>
 						<input type="text" class="form-control" v-model="campos.buscar" placeholder="BUSCAR PRODUCTO . . ." v-on:keyup.13="buscar_productos()">
@@ -113,7 +138,7 @@
 					</div>
 					<div class="col-lg-2 col-md-3">
 						<label>&nbsp;</label>
-						<button type="button" class="btn btn-white btn-icon w-100" v-on:click="buscar_productos()">
+						<button type="button" class="btn btn-primary w-100 phuyu-consultar-productos" v-on:click="buscar_productos()">
 							<i class="bi bi-search"></i>
 							Consultar
 						</button>
@@ -131,6 +156,14 @@
 							</label>
 						</div>
 					</div>
+				</div>
+				<div class="alert alert-info d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3">
+					<div>
+						<strong>Respaldo para migración de productos</strong><br>
+						Exporta todos los productos del almacén seleccionado, sin aplicar los otros filtros.
+						Incluye códigos de barras, unidades, precios y stock actual; los inactivos van en la hoja de respaldo.
+					</div>
+					<button type="button" class="btn btn-success" v-on:click="exportar_migracion()">Exportar para migración (Excel)</button>
 				</div>
 				<div class="detalle" v-if="consultar.precios==1" style="height:150px;overflow-y:auto;">
 					<div v-for="dato in datos" v-if="dato.tiene!=0">
@@ -418,4 +451,4 @@
 	var pantalla = jQuery(document).height(); $("#reportes_modal").css({height: pantalla - 65});
 	$(".detalle").css({height: pantalla - 280});
 </script>
-<script src="<?php echo base_url();?>phuyu/phuyu_reportes/productos.js"> </script>
+<script src="<?php echo base_url();?>phuyu/phuyu_reportes/productos.js?v=migracion1"> </script>

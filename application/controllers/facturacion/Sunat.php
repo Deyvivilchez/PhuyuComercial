@@ -90,10 +90,111 @@ class Sunat extends CI_Controller {
         return $texto !== "" ? $texto : "SUNAT no devolvio una respuesta interpretable para ".$operacion.".";
     }
 
+	protected function phuyu_get_certificados_dir(){
+        $candidatos = array(
+            rtrim(FCPATH, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . "sunat" . DIRECTORY_SEPARATOR . "certificados",
+            rtrim(getcwd(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . "sunat" . DIRECTORY_SEPARATOR . "certificados",
+            dirname(APPPATH) . DIRECTORY_SEPARATOR . "sunat" . DIRECTORY_SEPARATOR . "certificados"
+        );
+
+        foreach ($candidatos as $dir) {
+            if (is_dir($dir)) {
+                return $dir;
+            }
+        }
+
+        $dir = $candidatos[0];
+        @mkdir($dir, 0775, true);
+        return $dir;
+    }
+
+    protected function phuyu_recuperar_certificados_faltantes(){
+        $dir = $this->phuyu_get_certificados_dir();
+        $private_key_file = $dir . DIRECTORY_SEPARATOR . "private_key.pem";
+        $public_key_file = $dir . DIRECTORY_SEPARATOR . "public_key.pem";
+
+        if (is_readable($private_key_file) && is_readable($public_key_file)) {
+            return true;
+        }
+
+        $pfx_archivo = null;
+        $pfx_files = glob($dir . DIRECTORY_SEPARATOR . "*.pfx");
+        if (is_array($pfx_files) && !empty($pfx_files)) {
+            $pfx_archivo = $pfx_files[0];
+        }
+
+        if (!empty($_SESSION["phuyu_codempresa"])) {
+            $empresa = $this->db->query("SELECT certificado_pfx, certificado_clave FROM public.webservice WHERE codempresa = ? LIMIT 1", array((int)$_SESSION["phuyu_codempresa"]))->row_array();
+            if (is_array($empresa) && !empty($empresa["certificado_pfx"])) {
+                $ruta_pfx = $dir . DIRECTORY_SEPARATOR . $empresa["certificado_pfx"];
+                if (is_readable($ruta_pfx)) {
+                    $pfx_archivo = $ruta_pfx;
+                }
+            }
+        }
+
+        if (empty($pfx_archivo)) {
+            return false;
+        }
+
+        $password = "";
+        if (!empty($_SESSION["phuyu_codempresa"])) {
+            $empresa = $this->db->query("SELECT certificado_clave FROM public.webservice WHERE codempresa = ? LIMIT 1", array((int)$_SESSION["phuyu_codempresa"]))->row_array();
+            if (is_array($empresa)) {
+                $password = (string)($empresa["certificado_clave"] ?? "");
+            }
+        }
+
+        if ($password === "" && !empty($_POST["certificado_clave"])) {
+            $password = (string)$_POST["certificado_clave"];
+        }
+
+        if ($password === "") {
+            return false;
+        }
+
+        $pkcs12 = @file_get_contents($pfx_archivo);
+        if ($pkcs12 === false) {
+            return false;
+        }
+
+        $certificados = array();
+        $respuesta = openssl_pkcs12_read($pkcs12, $certificados, $password);
+        if (!$respuesta || empty($certificados["cert"]) || empty($certificados["pkey"])) {
+            return false;
+        }
+
+        $tmp_private = $dir . DIRECTORY_SEPARATOR . ".private_key.pem." . getmypid() . ".tmp";
+        $tmp_public = $dir . DIRECTORY_SEPARATOR . ".public_key.pem." . getmypid() . ".tmp";
+
+        if (file_put_contents($tmp_private, $certificados["pkey"], LOCK_EX) === false) {
+            return false;
+        }
+        if (file_put_contents($tmp_public, $certificados["cert"], LOCK_EX) === false) {
+            @unlink($tmp_private);
+            return false;
+        }
+
+        chmod($tmp_private, 0644);
+        chmod($tmp_public, 0644);
+
+        if (!@rename($tmp_private, $private_key_file) || !@rename($tmp_public, $public_key_file)) {
+            @unlink($tmp_private);
+            @unlink($tmp_public);
+            return false;
+        }
+
+        chmod($private_key_file, 0644);
+        chmod($public_key_file, 0644);
+
+        return true;
+    }
+
 	function phuyu_firmarXML($carpeta_phuyu,$phuyu,$respuesta_detallada = false){
+        $this->phuyu_recuperar_certificados_faltantes();
         $xml_file = $carpeta_phuyu.".xml";
-        $private_key_file = "./sunat/certificados/private_key.pem";
-        $public_key_file = "./sunat/certificados/public_key.pem";
+        $private_key_file = $this->phuyu_get_certificados_dir() . DIRECTORY_SEPARATOR . "private_key.pem";
+        $public_key_file = $this->phuyu_get_certificados_dir() . DIRECTORY_SEPARATOR . "public_key.pem";
 
         try {
             if (!is_readable($xml_file)) {

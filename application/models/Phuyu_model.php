@@ -30,6 +30,8 @@ class Phuyu_model extends CI_Model {
             $_SESSION["phuyu_usuario"] = $existe[0]["usuario"];
             $_SESSION["phuyu_codperfil"] = $existe[0]["codperfil"];
             $_SESSION["phuyu_perfil"] = $existe[0]["perfil"];
+            $_SESSION["phuyu_editar_pventa"] = isset($existe[0]["editar_pventa"]) ? (int)$existe[0]["editar_pventa"] : 0;
+            $_SESSION["phuyu_eliminar_venta"] = isset($existe[0]["eliminar_venta"]) ? (int)$existe[0]["eliminar_venta"] : 0;
             $_SESSION["phuyu_codempleado"] = $existe[0]["codempleado"];
 
             $_SESSION["phuyu_foto"] = $empleado[0]["foto"];
@@ -88,7 +90,12 @@ class Phuyu_model extends CI_Model {
 		$_SESSION["phuyu_conpedido"] = $info[0]["conpedido"];
 		$_SESSION["phuyu_afectacionigv"] = $info[0]["codafectacionigv"];
 
-        $info = $this->db->query("select *from caja.cajas where codcaja=? and codsucursal=? and estado=1", [$caja, $sucursal])->result_array();
+        $info = $this->db->query(
+			"select c.* from caja.cajas c
+			inner join seguridad.cajausuarios cu on(cu.codcaja=c.codcaja and cu.codsucursal=c.codsucursal)
+			where cu.codusuario=? and c.codcaja=? and c.codsucursal=? and c.estado=1",
+			[$codusuario, $caja, $sucursal]
+		)->result_array();
 		if (count($info) == 0) {
 			return 0;
 		}

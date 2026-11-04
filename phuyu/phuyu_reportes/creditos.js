@@ -121,13 +121,13 @@ var phuyu_datos = new Vue({
 
 		pdf_creditos: function () {
 			this.phuyu_fecha();
-			var phuyu_url = url + phuyu_controller + "/pdf_creditos?datos=" + JSON.stringify(this.campos);
+			var phuyu_url = url + phuyu_controller + "/pdf_creditos?datos=" + encodeURIComponent(JSON.stringify(this.campos));
 			$("#phuyu_pdf").attr("src", phuyu_url); 
 			$("#modal_reportes").modal("show");
 		},
 		excel_creditos: function () {
 			this.phuyu_fecha();
-			window.open(url + phuyu_controller + "/excel_creditos?datos=" + JSON.stringify(this.campos), "_blank");
+			window.open(url + phuyu_controller + "/excel_creditos?datos=" + encodeURIComponent(JSON.stringify(this.campos)), "_blank");
 		}
 	},
 	created: function () {
