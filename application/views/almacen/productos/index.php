@@ -211,7 +211,7 @@
 								<th>MARCA</th>
 								<th>PRECIO COSTO</th>
 								<th>PRECIO VENTA</th>
-								<th>STOCK</th>
+								<th>STOCK</th><th>RESERVADO</th><th>DISPONIBLE</th>
 								<th width="5px;"> <center> <i class="bi bi-record-circle"></i> </center> </th>
 							</tr>
 						</thead>
@@ -224,7 +224,7 @@
                                 <td>{{dato.marca}}</td>
 								<td>S/. {{dato.costo}}</td>
 								<td>S/. {{dato.precio}}</td>
-								<td>{{dato.stock}}</td>
+								<td>{{dato.stock}}</td><td>{{dato.reservado}}</td><td :class="dato.stockdisponible <= 0 ? 'text-danger' : 'text-success'">{{dato.stockdisponible}}</td>
 								<td> 
 									<input type="radio" class=" form-check-input" name="phuyu_seleccionar" v-on:click="phuyu_seleccionar(dato.codproducto,dato.estado)"> 
 								</td>

@@ -77,7 +77,7 @@
 							<th>DESCRIPCION PRODUCTO</th>
 							<th>MARCA</th>
 							<th>CARACTERISTICAS</th>
-							<th>STOCK</th>
+							<th>STOCK</th><th>RESERVADO</th><th>DISPONIBLE</th>
 							<th>PRECIO</th>
 						</tr>
 					</thead>
@@ -91,7 +91,7 @@
 							<td>
 								<span class="badge bg-danger" v-if="dato.stock<=0">STOCK: {{dato.stock}} {{dato.unidad}} </span>
 								<span class="badge bg-info" v-if="dato.stock>0">STOCK: {{dato.stock}} {{dato.unidad}} </span>
-							</td>
+							</td><td>{{dato.reservado}}</td><td>{{dato.stockdisponible}}</td>
 							<td>S/. <b>{{dato.precio}}</b></td>
 						</tr>
 					</tbody>

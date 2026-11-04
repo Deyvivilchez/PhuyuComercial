@@ -442,7 +442,8 @@ var phuyu_operacion = new Vue({
             }
 
             var producto = resultado.producto || resultado;
-            var stockClase = this.phuyu_clase_stock_rapido(producto.stock);
+            var stockDisponible = producto.stockdisponible !== undefined ? producto.stockdisponible : producto.stock;
+            var stockClase = this.phuyu_clase_stock_rapido(stockDisponible);
             var serie = parseInt(producto.controlarseries) === 1 ?
                 '<span class="badge bg-info">SERIE</span>' :
                 '<span class="badge bg-success-subtle text-success border border-success-subtle">DIRECTO</span>';
@@ -454,7 +455,7 @@ var phuyu_operacion = new Vue({
                         '<div class="phuyu-product-result-meta">' +
                             this.phuyu_escape_producto_rapido(producto.codigo) + ' · ' +
                             '<span class="phuyu-product-result-stock ' + stockClase + '">' +
-                                '<i class="bi bi-box-seam"></i> Stock ' + this.phuyu_escape_producto_rapido(producto.stock) + ' ' + this.phuyu_escape_producto_rapido(producto.unidad) +
+                                '<i class="bi bi-box-seam"></i> Disponible ' + this.phuyu_escape_producto_rapido(stockDisponible) + ' ' + this.phuyu_escape_producto_rapido(producto.unidad) +
                             '</span>' +
                             ' · S/. ' + this.phuyu_escape_producto_rapido(producto.precio) +
                         '</div>' +
@@ -685,8 +686,9 @@ var phuyu_operacion = new Vue({
                 return false;
             }
 
+            if (producto.stockdisponible !== undefined) { producto.stock = producto.stockdisponible; }
             var validaStock = parseInt(this.stockalmacen) === 1 && parseInt(producto.controlstock) === 1;
-            if (validaStock && parseFloat(producto.stock) <= 0) {
+            if (validaStock && parseFloat(producto.stockdisponible !== undefined ? producto.stockdisponible : producto.stock) <= 0) {
                 phuyu_sistema.phuyu_alerta(
                     "NO HAY STOCK DISPONIBLE PARA ESTE PRODUCTO",
                     producto.descripcion + " · STOCK: " + producto.stock + " " + producto.unidad,
@@ -941,6 +943,24 @@ var phuyu_operacion = new Vue({
 
         },
         phuyu_additem: function(producto, precio) {
+            if (producto.stockdisponible !== undefined) {
+                producto.stock = parseFloat(producto.stockdisponible) || 0;
+                producto.unidades = producto.unidades_disponibles || producto.unidades;
+            }
+            if (parseInt(this.stockalmacen) === 1 && parseInt(producto.controlstock) === 1) {
+                var factorStock = parseFloat(producto.factor) || 1;
+                var solicitadoBase = factorStock;
+                (this.detalle || []).forEach(function(item) {
+                    if (item.codproducto == producto.codproducto) {
+                        solicitadoBase += (parseFloat(item.cantidad) || 0) * (parseFloat(item.factor) || 1);
+                    }
+                });
+                if (solicitadoBase > (parseFloat(producto.stock) || 0) * factorStock + 0.000001) {
+                    phuyu_sistema.phuyu_alerta("STOCK DISPONIBLE INSUFICIENTE", producto.descripcion + " · Disponible: " + producto.stock + " " + producto.unidad, "error");
+                    return false;
+                }
+            }
+
             var existe_item = [];
             if ($("#itemrepetir").val() == 0) {
                 var existe_item = this.detalle.filter(function(p) {
@@ -1119,7 +1139,7 @@ var phuyu_operacion = new Vue({
                     producto.igv = Number((producto.subtotal - producto.valorventa).toFixed(2));
                 }
                 this.detalle[index].codunidad = codunidad;
-                this.detalle[index].stock = data.body[0].stock;
+                this.detalle[index].stock = data.body[0].stockdisponible !== undefined ? data.body[0].stockdisponible : data.body[0].stock;
                 this.phuyu_itemcalcular(producto, 1)
             });
         },
@@ -1140,6 +1160,7 @@ var phuyu_operacion = new Vue({
             $("#modal_itemdetalle").modal('show');
         },
         phuyu_itemcalcular: function(item, tipoprecio) {
+            this.phuyu_limitar_disponible(item);
             var porcentaje = 1;
             if (item.codafectacionigv == 21) {
                 item.preciobruto = 0;
@@ -1201,7 +1222,23 @@ var phuyu_operacion = new Vue({
             }
             $("#modal_itemdetalle").modal("hide");
         },
-        phuyu_calcular: function(producto) {
+                phuyu_limitar_disponible: function(producto) {
+            if (parseInt(this.stockalmacen) !== 1 || parseInt(producto.control) !== 1) { return; }
+            var factor = parseFloat(producto.factor) || 1;
+            var otros = 0;
+            (this.detalle || []).forEach(function(item) {
+                if (item !== producto && item.codproducto == producto.codproducto) {
+                    otros += (parseFloat(item.cantidad) || 0) * (parseFloat(item.factor) || 1);
+                }
+            });
+            var maximo = Math.max(0, ((parseFloat(producto.stock) || 0) * factor - otros) / factor);
+            if ((parseFloat(producto.cantidad) || 0) > maximo + 0.000001) {
+                producto.cantidad = Math.floor(maximo * 1000 + 0.000001) / 1000;
+                phuyu_sistema.phuyu_alerta("STOCK DISPONIBLE INSUFICIENTE", "Disponible para esta fila: " + producto.cantidad + " " + producto.unidad, "error");
+            }
+        },
+phuyu_calcular: function(producto) {
+            this.phuyu_limitar_disponible(producto);
             if (!this.puede_modificar_precio && arguments.length <= 1) {
                 producto.precio = producto.preciooriginal || producto.preciorefunitario || producto.precio;
             }
