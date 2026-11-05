@@ -12,10 +12,11 @@ class Ventas extends CI_Controller
         // Aplicar cambios de permisos tambien a las sesiones que ya estan abiertas.
         if (!empty($_SESSION['phuyu_codusuario'])) {
             $usuario = $this->db->query(
-                "select editar_pventa from seguridad.usuarios where codusuario=? and estado=1",
+                "select u.editar_pventa, coalesce((to_jsonb(u)->>'eliminar_venta')::integer, 0) as eliminar_venta from seguridad.usuarios u where u.codusuario=? and u.estado=1",
                 [(int)$_SESSION['phuyu_codusuario']]
             )->row_array();
             $_SESSION['phuyu_editar_pventa'] = (int)($usuario['editar_pventa'] ?? 0);
+            $_SESSION['phuyu_eliminar_venta'] = (int)($usuario['eliminar_venta'] ?? 0);
         }
     }
 
@@ -43,8 +44,12 @@ class Ventas extends CI_Controller
     private function phuyu_precio_venta_producto($codproducto, $codunidad)
     {
         return $this->db->query(
-            "select pventapublico from almacen.productounidades where codproducto=? and codunidad=? and estado=1 limit 1",
-            [(int)$codproducto, (int)$codunidad]
+            "select round(ub.pventapublico, 2) as pventapublico
+             from almacen.productoubicacion ub
+             join almacen.productounidades un using(codproducto, codunidad)
+             where ub.codproducto=? and ub.codunidad=? and ub.codalmacen=? and ub.codsucursal=?
+               and ub.estado=1 and un.estado=1 limit 1",
+            [(int)$codproducto, (int)$codunidad, (int)$_SESSION['phuyu_codalmacen'], (int)$_SESSION['phuyu_codsucursal']]
         )->row_array();
     }
 

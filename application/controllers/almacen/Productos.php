@@ -1409,7 +1409,7 @@ class Productos extends CI_Controller
             foreach ($lista as $key => $value) {
                 $factormaximo = $this->db->query('select max(factor) as factor from almacen.productounidades where codproducto=' . $this->request->codproducto . ' and estado=1')->result_array();
 
-                $precio = $this->db->query('select factor,pventapublico,pventamin,pventacredito,pventaxmayor, preciocosto,pventaadicional from almacen.productounidades where codproducto=' . $this->request->codproducto . ' and codunidad=' . $this->request->codunidad . ' and estado=1')->result_array();
+                $precio = $this->db->query('select factor,pventapublico,pventamin,pventacredito,pventaxmayor, preciocosto,pventaadicional from almacen.productoubicacion where codproducto=? and codunidad=? and codalmacen=? and codsucursal=? and estado=1', [(int)$this->request->codproducto, (int)$this->request->codunidad, (int)$_SESSION['phuyu_codalmacen'], (int)$_SESSION['phuyu_codsucursal']])->result_array();
                 if (count($precio) == 0) {
                     $lista[$key]['factor'] = 0;
                     $lista[$key]['factormaximo'] = 0;

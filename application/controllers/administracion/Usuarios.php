@@ -11,6 +11,15 @@ class Usuarios extends CI_Controller {
 		return !empty($existe["tabla"]);
 	}
 
+	private function permiso_eliminar_venta_existe(){
+		// El driver PostgreSQL de esta version no separa esquema y tabla en field_exists.
+		$campo = $this->db->query(
+			"select count(*) as total from information_schema.columns where table_schema=? and table_name=? and column_name=?",
+			["seguridad", "usuarios", "eliminar_venta"]
+		)->row_array();
+		return (int)($campo["total"] ?? 0) > 0;
+	}
+
 	private function responder_json($data){
 		$this->output->set_content_type("application/json", "utf-8");
 		echo json_encode($data);
@@ -86,10 +95,13 @@ class Usuarios extends CI_Controller {
 			$this->request = json_decode(file_get_contents('php://input'));
 			$valores = [$this->request->campos->codempleado,$this->request->campos->codperfil,$this->request->campos->usuario,$this->request->campos->clave,(int)$this->request->campos->editar_pventa];
 
-			// Algunas instalaciones aun no tienen el permiso independiente de anulacion.
-			if ($this->db->field_exists("eliminar_venta", "seguridad.usuarios")) {
+			// Evitar informar exito si la instalacion no puede guardar el permiso de anulacion.
+			if ($this->permiso_eliminar_venta_existe()) {
 				$campos[] = "eliminar_venta";
 				$valores[] = (int)($this->request->campos->eliminar_venta ?? 0);
+			} elseif ((int)($this->request->campos->eliminar_venta ?? 0) === 1) {
+				$this->responder_json(["estado" => 0, "mensaje" => "Falta ejecutar la migracion del permiso de eliminar ventas: 20261104_usuarios_eliminar_venta.sql."]);
+				return;
 			}
 
 			if (!$this->tabla_cajausuarios_existe()) {
