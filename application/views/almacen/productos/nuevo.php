@@ -203,11 +203,11 @@
               </td>
               <td><input type="number" step="0.000001" class="form-control number" v-model.number="uni.factor" min="0.000001" required></td>
               <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.preciocompra" min="0" required></td>
-              <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventapublico" v-bind:min="campos.es_venta == 1 ? 0.0001 : 0" v-bind:required="campos.es_venta == 1" v-bind:disabled="campos.es_venta != 1"></td>
-              <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventamin" min="0" v-bind:required="campos.es_venta == 1" v-bind:disabled="campos.es_venta != 1"></td>
-              <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventacredito" min="0" v-bind:required="campos.es_venta == 1" v-bind:disabled="campos.es_venta != 1"></td>
-              <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventaxmayor" min="0" v-bind:required="campos.es_venta == 1" v-bind:disabled="campos.es_venta != 1"></td>
-              <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventaadicional" min="0" v-bind:required="campos.es_venta == 1" v-bind:disabled="campos.es_venta != 1"></td>
+              <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventapublico" v-bind:min="phuyu_precios_venta_habilitados ? 0.0001 : 0" v-bind:required="phuyu_precios_venta_habilitados" v-bind:disabled="!phuyu_precios_venta_habilitados"></td>
+              <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventamin" min="0" v-bind:required="phuyu_precios_venta_habilitados" v-bind:disabled="!phuyu_precios_venta_habilitados"></td>
+              <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventacredito" min="0" v-bind:required="phuyu_precios_venta_habilitados" v-bind:disabled="!phuyu_precios_venta_habilitados"></td>
+              <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventaxmayor" min="0" v-bind:required="phuyu_precios_venta_habilitados" v-bind:disabled="!phuyu_precios_venta_habilitados"></td>
+              <td><input type="number" step="0.0001" class="form-control number" v-model.number="uni.pventaadicional" min="0" v-bind:required="phuyu_precios_venta_habilitados" v-bind:disabled="!phuyu_precios_venta_habilitados"></td>
               <td><input type="text" class="form-control number" v-model="uni.codigobarra"></td>
               <td>
                 <button type="button" class="btn btn-primary btn-sm" v-on:click="phuyu_calcular_precios_desde(index)" title="Calcular precios desde esta unidad">
@@ -390,4 +390,4 @@
   };
 </script>
 
-<script src="<?php echo base_url(); ?>phuyu/phuyu_almacen/productos.js"></script>
+<script src="<?php echo base_url(); ?>phuyu/phuyu_almacen/productos.js?v=<?php echo filemtime(FCPATH . 'phuyu/phuyu_almacen/productos.js'); ?>"></script>

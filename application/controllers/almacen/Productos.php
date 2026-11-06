@@ -478,7 +478,7 @@ class Productos extends CI_Controller
                 }
             }
 
-            $campos = ['codfamilia', 'codlinea', 'codmarca', 'codempresa', 'codigo', 'descripcion', 'afectoicbper', 'codatencion', 'paraventa', 'calcular', 'controlstock', 'caracteristicas', 'tipo', 'controlarseries', 'es_venta', 'es_insumo', 'es_preparado', 'merma_porcentaje'];
+            $campos = ['codfamilia', 'codlinea', 'codmarca', 'codempresa', 'codigo', 'descripcion', 'afectoicbper', 'codatencion', 'paraventa', 'calcular', 'controlstock', 'caracteristicas', 'tipo', 'controlarseries'];
             $valores = [
                 (int) $this->request->campos->codfamilia,
                 (int) $this->request->campos->codlinea,
@@ -494,11 +494,14 @@ class Productos extends CI_Controller
                 $this->request->campos->caracteristicas,
                 (int) $this->request->campos->tipo,
                 (int) $this->request->campos->controlarseries, //controlarseries
-                $es_venta,
-                $es_insumo,
-                $es_preparado,
-                $merma_porcentaje,
             ];
+
+            // La clasificacion de recetas solo pertenece al rubro restaurante.
+            // Las instalaciones comerciales pueden no tener estas columnas.
+            if ($es_restaurante) {
+                $campos = array_merge($campos, ['es_venta', 'es_insumo', 'es_preparado', 'merma_porcentaje']);
+                $valores = array_merge($valores, [$es_venta, $es_insumo, $es_preparado, $merma_porcentaje]);
+            }
 
             $campos_1 = ['codproducto', 'codunidad', 'codsucursal', 'factor', 'preciocompra', 'preciocosto', 'pventapublico', 'pventamin', 'pventacredito', 'pventaxmayor', 'pventaadicional', 'codigobarra', 'estado'];
 

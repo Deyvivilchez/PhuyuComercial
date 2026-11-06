@@ -1,6 +1,12 @@
 var phuyu_form = new Vue({
 	el: "#phuyu_form",
 	data: { estado: 0, editar: 0, factor: 0, campos: campos, familias: [], lineas: [], marcas: [], unidades: [], campos_1: campos_1 },
+	computed: {
+		phuyu_precios_venta_habilitados: function () {
+			var esRestaurante = typeof phuyu_rubro !== "undefined" && parseInt(phuyu_rubro) == 3;
+			return !esRestaurante || parseInt(this.campos.es_venta) == 1;
+		}
+	},
 	methods: {
 		phuyu_datos: function () {
 			this.phuyu_extencion("almacen/familias", 0); this.phuyu_extencion("almacen/lineas", 0); this.phuyu_extencion("almacen/marcas", 0);
@@ -99,7 +105,7 @@ var phuyu_form = new Vue({
 			}
 
 			var camposPrecio = ["preciocompra"];
-			if (parseInt(this.campos.es_venta || 0) == 1) {
+			if (this.phuyu_precios_venta_habilitados) {
 				camposPrecio = ["preciocompra", "pventapublico", "pventamin", "pventacredito", "pventaxmayor", "pventaadicional"];
 			}
 			var tienePrecio = false;
