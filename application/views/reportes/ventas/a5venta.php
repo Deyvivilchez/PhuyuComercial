@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . "/../../../helpers/descripcion_item_helper.php";
 if (!function_exists('texto_doc')) {
     function texto_doc($texto){
         return htmlspecialchars((string)$texto, ENT_QUOTES, 'UTF-8');
@@ -38,7 +39,7 @@ $condicionPago    = ((int)($venta['condicionpago'] ?? 0) === 1)
 <title><?= texto_doc($venta['comprobante'] ?? 'Comprobante') ?></title>
 <style>
 @page {
-    margin: 8mm 8mm 14mm 8mm;
+    size: 148mm 210mm; margin: 7mm 7mm 16mm 7mm;
 }
 
 body {
@@ -51,13 +52,13 @@ body {
 
 .watermark {
     position: fixed;
-    top: 50%;
-    left: 50%;
+    top: 48mm;
+    left: 6mm;
     width: 120mm;
-    opacity: 0.14;
+    opacity: 0.17;
     z-index: 0;
     text-align: center;
-    transform: translate(-50%, -50%);
+
 }
 
 .watermark img {
@@ -68,7 +69,7 @@ body {
 .content {
     position: relative;
     z-index: 2;
-    padding-bottom: 22mm;
+    padding-bottom: 0;
 }
 
 table {
@@ -357,13 +358,14 @@ table {
 
 .footer-fixed {
     position: fixed;
-    bottom: 4mm;
+    bottom: -11mm;
+    height: 7mm;
     left: 0mm;
     right: 0mm;
-    background: #4c1d95;
-    color: #fff;
-    padding: 7px 8px;
-    border-radius: 8px 8px 0 0;
+    background: transparent;
+    color: #654379;
+    padding: 4px 0 0;
+    border-top: 1px solid #d9c6e9;
     z-index: 3;
 }
 
@@ -393,6 +395,57 @@ table {
     opacity: 0.92;
     font-weight: normal;
 }
+/* A5 vertical, misma identidad que la nota de credito. */
+.invoice-kicker { font-size:6px; color:#80668e; letter-spacing:1px; border-top:3px solid #581c87; padding-top:5px; }
+.invoice-header { margin-top:9px; margin-bottom:9px; table-layout:fixed; }
+.invoice-logo { max-width:85px; max-height:60px; }
+.invoice-company { font-size:10px; line-height:1.4; font-weight:bold; color:#251330; }
+.invoice-company-meta { font-size:8px; color:#64586d; line-height:1.6; margin-top:4px; }
+.invoice-slogan { font-size:7px; color:#766280; margin-top:4px; }
+.invoice-type { color:#581c87; font-size:15px; font-weight:bold; line-height:1.2; }
+.invoice-number { font-size:12px; font-weight:bold; margin-top:9px; color:#271737; }
+.invoice-meta { background:#f6f2fa; border-top:1px solid #e8def0; border-bottom:1px solid #e8def0; }
+.invoice-meta td { width:33.33%; padding:6px 7px; font-size:9px; line-height:1.5; }
+.invoice-meta span, .invoice-caption { font-size:6.5px; color:#806c92; letter-spacing:0.5px; }
+.invoice-client { border-top:1px solid #e9e1f0; border-bottom:1px solid #e9e1f0; }
+.invoice-client td { padding:6px 0; font-size:9px; line-height:1.4; vertical-align:top; }
+.invoice-caption { margin-bottom:3px; }
+.section-title { font-size:8px; margin-top:10px; margin-bottom:5px; }
+.detalle-table thead th { font-size:6.5pt; padding:5px 3px; }
+.detalle-table tbody td { font-size:7pt; padding:5px 3px; line-height:1.3; }
+.bottom-left { width:44%; padding-right:8px; }
+.bottom-right { width:56%; }
+.bottom-left .box { border:0; padding:4px 0; background:transparent; }
+.son-value { font-size:9px; line-height:1.5; }
+.qr-image img { max-width:76px; max-height:76px; }
+.totales-box { border:0; background:transparent; }
+.totales-box td { font-size:8px; padding:4px 6px; }
+.total-final td { background:#581c87; padding-top:7px; padding-bottom:7px; }
+.total-final .totales-label { color:#fff; font-size:10px; }
+.total-final .totales-value { color:#fff; font-size:13px; }
+<?php if (!empty($es_pedido)): ?>
+/* Mantener la identidad aprobada, con filas compactas y texto sin negrita excesiva. */
+body { color:#43384e; }
+.invoice-company { font-size:10px; color:#3f2b50; }
+.invoice-type { font-size:15px; letter-spacing:0; }
+.invoice-meta b, .invoice-client b { font-weight:normal; }
+.invoice-header { margin-top:7px; margin-bottom:6px; }
+.invoice-meta td { padding:4px 6px; }
+.invoice-client td { padding:4px 0; }
+.section-title { margin-top:8px; margin-bottom:4px; }
+.detalle-table thead th { background:#581c87; color:#fff; font-size:6.5pt; font-weight:normal; padding:5px 3px; }
+.detalle-table tbody td { font-size:7pt; color:#43384e; line-height:1.25; padding:4px 3px; }
+.detalle-table tbody td strong { font-weight:normal; }
+.pedido-observaciones { margin:6px 0; padding:5px 7px; border-left:2px solid #8752ae; background:#faf7ff; color:#6d5c78; font-size:7px; line-height:1.4; }
+.totales-label, .totales-value { font-weight:normal; }
+.son-value { font-weight:normal; font-size:8px; line-height:1.45; }
+.bottom-grid { margin-top:6px; }
+.totales-box td { padding:3px 6px; }
+.watermark { opacity:0.12; }
+.total-final td { background:#581c87; padding-top:6px; padding-bottom:6px; }
+.total-final .totales-label { color:#fff; font-weight:normal; font-size:10px; }
+.total-final .totales-value { color:#fff; font-weight:bold; font-size:12px; }
+<?php endif; ?>
 </style>
 </head>
 <body>
@@ -420,76 +473,44 @@ table {
 
 <div class="content">
 
-    <div class="title-ribbon">
-        <div class="doc-name"><?= texto_doc($venta['comprobante'] ?? 'COMPROBANTE') ?></div>
-        <div class="doc-serie"><?= texto_doc($serieNumero) ?> · <?= texto_doc($fechaEmision) ?></div>
-    </div>
+    <div class="invoice-kicker"><?= !empty($es_pedido) ? 'PEDIDO COMERCIAL' : 'DOCUMENTO ELECTRÓNICO' ?> · <?= texto_doc($fechaEmision) ?></div>
+    <table class="invoice-header"><tr>
+        <td width="60%" style="padding-right:10px;vertical-align:top">
+            <table><tr>
+                <?php if (!empty($logo_src)): ?><td width="32%" style="padding-right:8px"><img class="invoice-logo" src="<?= $logo_src ?>" alt="Logo"></td><?php endif; ?>
+                <td style="vertical-align:middle">
+                    <div class="invoice-company"><?= texto_doc($nombre_empresa ?? '') ?></div>
+                    <div class="invoice-company-meta">RUC <?= texto_doc($empresa['documento'] ?? '-') ?><br><?= texto_doc($sucursal['direccion'] ?? '-') ?><br><?= texto_doc($sucursal['telefonos'] ?? '') ?></div>
+                </td>
+            </tr></table>
+            <?php if (!empty($slogan)): ?><div class="invoice-slogan"><?= texto_doc($slogan) ?></div><?php endif; ?>
+            <?php if (!empty($publicidad)): ?><div class="invoice-slogan"><?= texto_doc($publicidad) ?></div><?php endif; ?>
+        </td>
+        <td width="40%" style="text-align:right;vertical-align:top">
+            <div class="invoice-type"><?= texto_doc($venta['comprobante'] ?? 'COMPROBANTE') ?></div>
+            <div class="invoice-number"><?= texto_doc($serieNumero) ?></div>
+            <div class="invoice-company-meta">Emisión <?= texto_doc($fechaEmision) ?></div>
+        </td>
+    </tr></table>
+    <table class="invoice-meta"><tr>
+        <td><span>CONDICIÓN DE PAGO</span><br><b><?= texto_doc($condicionPago) ?></b></td>
+        <td><span>MONEDA</span><br><b>Soles · PEN</b></td>
+        <td><span>VENCIMIENTO</span><br><b><?= texto_doc($fechaVence) ?></b></td>
+    </tr></table>
+    <div class="section-title">01 · Datos del cliente</div>
+    <table class="invoice-client"><tr>
+        <td width="72%"><div class="invoice-caption">RAZÓN SOCIAL / NOMBRE</div><b><?= texto_doc($cliente) ?></b></td>
+        <td width="28%"><div class="invoice-caption">DNI / RUC</div><b><?= texto_doc($documentoCliente) ?></b></td>
+    </tr><tr><td colspan="2"><div class="invoice-caption">DIRECCIÓN</div><?= texto_doc($direccionCliente) ?></td></tr></table>
+    <?php if (!empty($venta['nroplaca']) || $mesaRestaurante !== ''): ?>
+    <div class="extra-data"><?php if (!empty($venta['nroplaca'])): ?>Placa: <?= texto_doc($venta['nroplaca']) ?><?php endif; ?>
+    <?php if ($mesaRestaurante !== ''): ?> · Mesa: <?= texto_doc($mesaRestaurante) ?><?php endif; ?></div>
+    <?php endif; ?>
 
-    <table class="top-grid">
-        <tr>
-            <td class="top-left">
-                <div class="box">
-                    <div class="company-logo">
-                        <?php if (!empty($logo_src)): ?>
-                            <img src="<?= $logo_src ?>" alt="Logo">
-                        <?php endif; ?>
-                    </div>
-                    <div class="company-name"><?= texto_doc($nombre_empresa ?? '') ?></div>
-                    <div class="company-meta">
-                        <?php if (!empty($slogan)): ?>
-                            <?= texto_doc($slogan) ?><br>
-                        <?php endif; ?>
-                        <?php if (!empty($publicidad)): ?>
-                            <?= texto_doc($publicidad) ?><br>
-                        <?php endif; ?>
-                        <?= texto_doc($sucursal['direccion'] ?? '-') ?><br>
-                        <?= texto_doc($sucursal['telefonos'] ?? '-') ?>
-                    </div>
-                </div>
-            </td>
-            <td class="top-right">
-                <div class="box">
-                    <div class="doc-box-title">Datos del comprobante</div>
-                    <div class="doc-row"><strong>RUC:</strong> <?= texto_doc($empresa['documento'] ?? '-') ?></div>
-                    <div class="doc-row"><strong>Serie:</strong> <?= texto_doc($serieNumero) ?></div>
-                    <div class="doc-row"><strong>Fecha:</strong> <?= texto_doc($fechaEmision) ?></div>
-                    <div class="doc-row"><strong>Vence:</strong> <?= texto_doc($fechaVence) ?></div>
-                    <div class="doc-row"><strong>Pago:</strong> <?= texto_doc($condicionPago) ?></div>
-                    <?php if ($mesaRestaurante !== ''): ?>
-                    <div class="doc-row"><strong>Mesa:</strong> <?= texto_doc($mesaRestaurante) ?></div>
-                    <?php endif; ?>
-                </div>
-            </td>
-        </tr>
-    </table>
-
-    <div class="section-title">Datos del cliente</div>
-    <div class="box">
-        <table class="info-box">
-            <tr>
-                <td class="info-label">Cliente:</td>
-                <td class="info-value"><strong><?= texto_doc($cliente) ?></strong></td>
-                <td class="info-label">Vendedor:</td>
-                <td class="info-value"><strong><?= texto_doc($vendedor) ?></strong></td>
-            </tr>
-            <tr>
-                <td class="info-label">DNI / RUC:</td>
-                <td class="info-value"><?= texto_doc($documentoCliente) ?></td>
-                <td class="info-label">Moneda:</td>
-                <td class="info-value">SOLES</td>
-            </tr>
-            <tr>
-                <td class="info-label">Dirección:</td>
-                <td class="info-value"><?= texto_doc($direccionCliente) ?></td>
-                <td class="info-label">Placa:</td>
-                <td class="info-value"><?= texto_doc($venta['nroplaca'] ?? '-') ?></td>
-            </tr>
-        </table>
-    </div>
-
- 
-
-    <div class="section-title">Detalle</div>
+    <?php if (!empty($es_pedido) && trim((string)($venta['descripcion'] ?? '')) !== ''): ?>
+    <div class="pedido-observaciones"><b>Observaciones:</b><br><?= nl2br(texto_doc($venta['descripcion'])) ?></div>
+    <?php endif; ?>
+    <div class="section-title">02 · <?= !empty($es_pedido) ? 'Detalle del pedido' : 'Detalle del comprobante' ?></div>
     <table class="detalle-table">
         <thead>
             <tr>
@@ -503,18 +524,21 @@ table {
         </thead>
         <tbody>
             <?php if (!empty($detalle)): ?>
-                <?php foreach ($detalle as $item): ?>
+                <?php foreach ($detalle as $i => $item): ?>
                     <tr>
-                        <td class="text-center"><?= str_pad((string)($item['item'] ?? 0), 2, '0', STR_PAD_LEFT) ?></td>
-                        <td><?= texto_doc(trim(
-                            ($item['producto'] ?? '') .
-                            ($mesaRestaurante === '' ? ' ' . ($item['descripcion'] ?? '') : '')
-                        )) ?></td>
+                        <td class="text-center"><?= str_pad((string)($item['item'] ?? ($i + 1)), 2, '0', STR_PAD_LEFT) ?></td>
+                        <?php $bloquesDescripcion = phuyu_descripcion_bloques($mesaRestaurante === '' ? ($item['descripcion'] ?? '') : ''); ?>
+                        <td style="word-wrap:break-word"><strong><?= texto_doc($item['producto'] ?? '') ?></strong><?php if (!empty($bloquesDescripcion)): ?><br><?= nl2br(texto_doc(array_shift($bloquesDescripcion))) ?><?php endif; ?></td>
                         <td><?= texto_doc($item['unidad'] ?? '-') ?></td>
                         <td class="text-right"><?= numero_doc($item['cantidad'] ?? 0) ?></td>
                         <td class="text-right"><?= numero_doc($item['preciounitario'] ?? 0) ?></td>
                         <td class="text-right"><?= numero_doc($item['subtotal'] ?? 0) ?></td>
                     </tr>
+                    <?php foreach ($bloquesDescripcion as $continuacion): ?>
+                    <tr class="descripcion-continuacion">
+                        <td></td><td colspan="5" style="text-align:left;word-wrap:break-word;line-height:1.5"><?= nl2br(texto_doc($continuacion)) ?></td>
+                    </tr>
+                    <?php endforeach; ?>
                 <?php endforeach; ?>
             <?php else: ?>
                 <tr>
@@ -529,17 +553,21 @@ table {
             <td class="bottom-left">
                 <div class="box">
                     <div class="son-label">Importe en letras</div>
-                    <div class="son-value">SON: <?= texto_doc(strtoupper($total_texto) . ' Y 00/100 SOLES') ?></div>
+                    <div class="son-value"><?= texto_doc($importe_en_letras ?? ('SON: ' . strtoupper($total_texto) . ' Y ' . explode('.', number_format((float)($venta['importe'] ?? 0), 2, '.', ''))[1] . '/100 SOLES')) ?></div>
 
+                    <?php if ($vendedor !== '-'): ?>
                     <div class="extra-data">
-                        <strong>Condición:</strong> <?= texto_doc($condicionPago) ?><br>
                         <strong>Vendedor:</strong> <?= texto_doc($vendedor) ?>
                     </div>
+                    <?php endif; ?>
 
                     <?php if (!empty($qr_src)): ?>
                         <div class="qr-image">
                             <img src="<?= $qr_src ?>" alt="QR">
                         </div>
+                        <?php if (!empty($parametros['urlconsultacomprobantes'])): ?>
+                        <div style="font-size:6px;line-height:1.4;text-align:center;word-wrap:break-word;margin-top:4px"><?= texto_doc($parametros['urlconsultacomprobantes']) ?></div>
+                        <?php endif; ?>
                     <?php elseif (!empty($es_proforma)): ?>
                         <div class="proforma-note">
                             <div class="proforma-note-title">Proforma valida para cotizacion</div>
@@ -554,6 +582,9 @@ table {
 
             <td class="bottom-right">
                 <table class="totales-box">
+                    <?php if (!empty($es_pedido)): ?>
+                    <tr><td class="totales-label">Subtotal</td><td class="totales-value">S/ <?= numero_doc($venta['valorventa'] ?? 0) ?></td></tr>
+                    <?php else: ?>
                     <tr>
                         <td class="totales-label">Op. gravadas</td>
                         <td class="totales-value">S/ <?= numero_doc($totales['gravado'] ?? 0) ?></td>
@@ -570,6 +601,7 @@ table {
                         <td class="totales-label">Op. gratuitas</td>
                         <td class="totales-value">S/ <?= numero_doc($totales['gratuito'] ?? 0) ?></td>
                     </tr>
+                    <?php endif; ?>
                     <tr>
                         <td class="totales-label">Descuento</td>
                         <td class="totales-value">S/ <?= numero_doc($venta['descglobal'] ?? 0) ?></td>
@@ -586,6 +618,10 @@ table {
             </td>
         </tr>
     </table>
+
+    <?php if (!empty($es_pedido)): ?>
+    <div class="extra-data" style="margin-top:8px;text-align:center">Documento comercial de pedido. No constituye comprobante de pago.</div>
+    <?php endif; ?>
 
     <?php if (!empty($cuentascorrientes)): ?>
         <div class="footer-info">

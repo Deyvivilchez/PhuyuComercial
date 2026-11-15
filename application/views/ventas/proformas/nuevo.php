@@ -648,7 +648,7 @@
 
 					<div class="mb-3">
 						<label class="form-label">Descripción del item de venta</label>
-						<textarea class="form-control" v-model="item.descripcion" rows="3" maxlength="250"></textarea>
+						<?php include __DIR__ . '/../descripcion_item_editor.php'; ?>
 					</div>
 
 					<div class="text-center">
@@ -685,7 +685,8 @@
 
 </div>
 
-<script src="<?php echo base_url();?>phuyu/phuyu_proformas/nuevo.js"></script>
+<?php include __DIR__ . '/../descripcion_item_assets.php'; ?>
+<script src="<?php echo base_url();?>phuyu/phuyu_proformas/nuevo.js?v=<?php echo filemtime(FCPATH . 'phuyu/phuyu_proformas/nuevo.js'); ?>"></script>
 <script src="<?php echo base_url();?>phuyu/phuyu_personas_2.js"></script>
 
 <script>

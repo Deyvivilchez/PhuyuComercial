@@ -1,6 +1,7 @@
 var phuyu_operacion = new Vue({
 	el: "#phuyu_operacion",
 	data: {
+        descripcion_editor_activo: false,
 		estado:0, codigobarra: "",codtipodocumento:0,
 		stockalmacen: $("#stockalmacen").val(), igvsunat:$("#igvsunat").val(), icbpersunat:$("#icbpersunat").val(), rubro:0, series:[], seriesreferencia:[], detalle:[], cuotas:[],putunidades:[],
 		campos:{
@@ -234,6 +235,7 @@ var phuyu_operacion = new Vue({
 		},
 		phuyu_itemdetalle: function(index,producto){
 			this.item = producto; $("#modal_itemdetalle").modal('show');
+            this.$nextTick(function() { PhuyuDescripcionItem.inicializar(this); });
 		},
 		phuyu_itemcalcular: function (item,tipoprecio) {
 			var porcentaje = 1;
@@ -282,6 +284,10 @@ var phuyu_operacion = new Vue({
 			this.phuyu_totales();
 		},
 		phuyu_itemcalcular_cerrar: function (item) {
+            if (String(item.descripcion || '').length > 5000) {
+                phuyu_sistema.phuyu_noti('DESCRIPCION DEMASIADO LARGA', 'Reduzca el texto a 5000 caracteres.', 'warning');
+                return false;
+            }
 			if (parseFloat(item.subtotal) < 0) {
 				phuyu_sistema.phuyu_noti("EL SUBTOTAL DEBE SER MAYOR A CERO","REVISAR LOS CAMPOS DEL ITEM","danger"); return false;
 			}

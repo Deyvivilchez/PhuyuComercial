@@ -1,7 +1,28 @@
 var phuyu_form = new Vue({
 	el: "#phuyu_form",
-	data: {estado: 0, campos: campos, caja:false, caja_alerta:false, almacen:false,almacen_alerta:false, nota:false,nota_alerta:false, editable_identidad:1},
+	data: {vistas_logo: {logo:"",logoauspiciador:""}, archivos_logo: {logo:"",logoauspiciador:""}, errores_logo: {logo:false,logoauspiciador:false}, estado: 0, campos: campos, caja:false, caja_alerta:false, almacen:false,almacen_alerta:false, nota:false,nota_alerta:false, editable_identidad:1},
 	methods: {
+        phuyu_logo_src: function(campo) {
+            if (this.errores_logo[campo]) return '';
+            if (this.vistas_logo[campo]) return this.vistas_logo[campo];
+            return this.campos[campo] ? url + 'public/img/empresa/' + encodeURIComponent(this.campos[campo]) : '';
+        },
+        phuyu_logo_error: function(campo) { this.errores_logo[campo] = true; },
+        phuyu_previsualizar_logo: function(event, campo) {
+            if (this.vistas_logo[campo]) URL.revokeObjectURL(this.vistas_logo[campo]);
+            this.vistas_logo[campo] = '';
+            this.archivos_logo[campo] = '';
+            this.errores_logo[campo] = false;
+            var archivo = event.target.files[0];
+            if (!archivo) return;
+            if (!/^image\/(jpeg|png|gif|webp)$/.test(archivo.type)) {
+                event.target.value = '';
+                phuyu_sistema.phuyu_alerta('IMAGEN NO VALIDA', 'Seleccione JPG, PNG, GIF o WEBP.', 'error');
+                return;
+            }
+            this.vistas_logo[campo] = URL.createObjectURL(archivo);
+            this.archivos_logo[campo] = archivo.name;
+        },
 		phuyu_tipocomprobante : function(){
 			if(this.campos.codcomprobantetipo>=1 && this.campos.codcomprobantetipo<=2){
 				if (this.campos.codsucursal!=undefined) {
@@ -124,7 +145,7 @@ var phuyu_form = new Vue({
 					phuyu_sistema.phuyu_alerta("SERIE YA REGISTRADA", "EL SISTEMA YA TIENE REGISTRADO ESTE TIPO DOCUMENTO CON ESTA SERIE","error");
 					this.estado= 0;
 				}else{
-					phuyu_sistema.phuyu_alerta("OCURRIO UN ERROR AL REGISTRAR", "NO SE PUEDE REGISTRAR","error");
+					phuyu_sistema.phuyu_alerta("OCURRIO UN ERROR AL REGISTRAR", (data.body && data.body.mensaje) || "NO SE PUEDE REGISTRAR","error");
 					this.estado= 0;
 				}
 				if (data.body==1) {
@@ -139,6 +160,10 @@ var phuyu_form = new Vue({
 			$(".compose").slideToggle();
 		}
 	},
+    beforeDestroy: function() {
+        var vistas = this.vistas_logo;
+        Object.keys(vistas).forEach(function(campo) { if (vistas[campo]) URL.revokeObjectURL(vistas[campo]); });
+    },
 	created: function(){
 		if (phuyu_datos.registro!="0") {
 			//this.phuyu_editarcomprobante();

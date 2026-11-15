@@ -627,7 +627,7 @@
 
   <!-- MODALES (se mantienen igual, solo se ajustan algunos iconos y botones de cierre) -->
   <div id="modal_masconfiguraciones" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header">
           <button type="button" class="close" data-dismiss="modal" style="font-size:30px;margin-bottom:0px;">
@@ -718,7 +718,7 @@
           </div>
           <div class="form-group">
             <label>DESCRIPCION DEL ITEM DE VENTA</label>
-            <textarea class="form-control" v-model="item.descripcion" rows="3" maxlength="250"></textarea>
+            <?php include __DIR__ . '/../descripcion_item_editor.php'; ?>
           </div>
           <div class="text-center">
             <button type="button" class="btn btn-success" v-on:click="phuyu_itemcalcular_cerrar(item)">
@@ -967,7 +967,7 @@
     echo $puedePrecio;
   ?>;
 </script>
-<!-- Scripts: se mantienen exactamente igual -->
+<?php include __DIR__ . '/../descripcion_item_assets.php'; ?>
 <script src="<?php echo base_url(); ?>phuyu/phuyu_ventas/nuevo.js?v=<?php echo filemtime(FCPATH . 'phuyu/phuyu_ventas/nuevo.js'); ?>"></script>
 <script src="<?php echo base_url(); ?>phuyu/phuyu_personas_2.js"></script>
 <script>

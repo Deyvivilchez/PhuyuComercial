@@ -66,6 +66,8 @@ $agradecimiento = $formatoData['agradecimiento'] ?? '';
     <meta charset="utf-8">
     <title><?= texto_ticket($comprobante . ' ' . $serieNumero) ?></title>
     <style>
+        /* Alto contraste para impresoras termicas: texto negro sin depender
+           de fondos impresos. No aplicar filtros al QR ni al logo original. */
         @page {
             margin: 2mm 2mm 4mm 2mm;
         }
@@ -73,11 +75,11 @@ $agradecimiento = $formatoData['agradecimiento'] ?? '';
         body {
             margin: 0;
             padding: 0;
-            font-family: DejaVu Sans, Arial, Helvetica, sans-serif;
-            color: #1f172a;
+            font-family: Arial, Helvetica, DejaVu Sans, sans-serif;
+            color: #000000;
             background: #ffffff;
-            font-size: 10px;
-            line-height: 1.3;
+            font-size: 11px;
+            line-height: 1.35;
         }
 
         .ticket {
@@ -96,15 +98,15 @@ $agradecimiento = $formatoData['agradecimiento'] ?? '';
         }
 
         .muted {
-            color: #6b6575;
+            color: #000000;
         }
 
         .tiny {
-            font-size: 8px;
+            font-size: 10px;
         }
 
         .small {
-            font-size: 9px;
+            font-size: 10px;
         }
 
         .strong {
@@ -129,33 +131,33 @@ $agradecimiento = $formatoData['agradecimiento'] ?? '';
         }
 
         .brand-name {
-            font-size: 13px;
+            font-size: 15px;
             font-weight: bold;
             text-transform: uppercase;
-            color: #4c1d95;
+            color: #000000;
             line-height: 1.2;
         }
 
         .brand-meta {
-            font-size: 8.5px;
+            font-size: 10px;
             line-height: 1.35;
-            color: #5f586d;
+            color: #000000;
             margin-top: 2px;
         }
 
         .doc-box {
-            border: 1px solid #d9c2ff;
+            border: 1px solid #000000;
             border-radius: 8px;
             padding: 6px 6px 5px 6px;
             margin-bottom: 6px;
             text-align: center;
-            background: #faf7ff;
+            background: #ffffff;
         }
 
         .doc-ruc {
             font-size: 10px;
             font-weight: bold;
-            color: #4c1d95;
+            color: #000000;
             margin-bottom: 2px;
         }
 
@@ -163,20 +165,20 @@ $agradecimiento = $formatoData['agradecimiento'] ?? '';
             font-size: 11px;
             font-weight: bold;
             text-transform: uppercase;
-            color: #1f172a;
+            color: #000000;
             margin-bottom: 2px;
         }
 
         .doc-serie {
-            font-size: 10px;
+            font-size: 14px;
             font-weight: bold;
-            color: #4c1d95;
+            color: #000000;
         }
 
         .block {
             margin-bottom: 6px;
-            border-top: 1px dashed #cdb9ef;
-            border-bottom: 1px dashed #cdb9ef;
+            border-top: 1px dashed #000000;
+            border-bottom: 1px dashed #000000;
             padding: 5px 0;
         }
 
@@ -191,24 +193,24 @@ $agradecimiento = $formatoData['agradecimiento'] ?? '';
             width: 27%;
             vertical-align: top;
             font-weight: bold;
-            color: #5e556e;
+            color: #000000;
         }
 
         .value {
             display: inline-block;
             width: 71%;
             vertical-align: top;
-            color: #1f172a;
+            color: #000000;
         }
 
         .obs {
             margin-top: 4px;
             padding: 5px 6px;
-            background: #faf7ff;
-            border-left: 3px solid #6d28d9;
+            background: #ffffff;
+            border-left: 3px solid #000000;
             border-radius: 5px;
-            font-size: 8.5px;
-            color: #5e556e;
+            font-size: 10px;
+            color: #000000;
         }
 
         table.items {
@@ -219,18 +221,18 @@ $agradecimiento = $formatoData['agradecimiento'] ?? '';
         }
 
         table.items thead th {
-            font-size: 8px;
+            font-size: 10px;
             text-transform: uppercase;
-            color: #ffffff;
-            background: #4c1d95;
+            color: #000000;
+            background: #ffffff;
             padding: 4px 3px;
-            border: 1px solid #d9c2ff;
+            border: 1px solid #000000;
         }
 
         table.items tbody td {
-            font-size: 8px;
+            font-size: 10px;
             padding: 4px 3px;
-            border-bottom: 1px dashed #e7dbfb;
+            border-bottom: 1px dashed #000000;
             vertical-align: top;
         }
 
@@ -239,63 +241,80 @@ $agradecimiento = $formatoData['agradecimiento'] ?? '';
             text-align: center;
         }
 
-        .item-desc {
-            width: 44%;
+        table.items { table-layout: fixed; }
+        table.items .item-desc {
+            width: auto;
+            padding: 6px 2px 1px;
+            border-bottom: 0;
+            overflow-wrap: anywhere;
         }
+        table.items .item-values td {
+            padding: 2px 2px 6px;
+            font-size: 11px;
+        }
+        .item-values .item-pu, .item-values .item-imp {
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+        }
+        .value { overflow-wrap: anywhere; }
+        thead { display: table-header-group; }
+        tr, .doc-box, .grand-total, .qr-wrap { break-inside: avoid; }
+
 
         .item-und {
-            width: 12%;
+            width: 25%;
             text-align: center;
         }
 
         .item-cant {
-            width: 12%;
+            width: 25%;
             text-align: right;
         }
 
         .item-pu {
-            width: 12%;
+            width: 25%;
             text-align: right;
         }
 
         .item-imp {
-            width: 12%;
+            width: 25%;
             text-align: right;
         }
 
         .prod {
+            font-size: 11px;
             font-weight: bold;
-            color: #1f172a;
+            color: #000000;
             line-height: 1.25;
         }
 
         .prod-extra {
-            font-size: 7.5px;
-            color: #746c83;
+            font-size: 10px;
+            color: #000000;
             line-height: 1.2;
             margin-top: 1px;
         }
 
         .amount-box {
-            border: 1px solid #dcc9fb;
+            border: 1px solid #000000;
             border-radius: 8px;
-            background: #fcfbff;
+            background: #ffffff;
             padding: 6px;
             margin-bottom: 6px;
         }
 
         .amount-title {
-            font-size: 8px;
+            font-size: 10px;
             text-transform: uppercase;
             font-weight: bold;
-            color: #6b5b95;
+            color: #000000;
             margin-bottom: 4px;
         }
 
         .amount-text {
-            font-size: 9px;
+            font-size: 10px;
             font-weight: bold;
-            color: #1f172a;
+            color: #000000;
             line-height: 1.35;
         }
 
@@ -307,35 +326,35 @@ $agradecimiento = $formatoData['agradecimiento'] ?? '';
 
         table.totals td {
             padding: 3px 2px;
-            font-size: 8.5px;
+            font-size: 10px;
         }
 
         .totals-label {
-            color: #5e556e;
+            color: #000000;
             font-weight: bold;
         }
 
         .totals-value {
             text-align: right;
-            color: #1f172a;
+            color: #000000;
             font-weight: bold;
         }
 
         .grand-total td {
-            border-top: 1px solid #d8c3fb;
-            border-bottom: 1px solid #d8c3fb;
+            border-top: 1px solid #000000;
+            border-bottom: 1px solid #000000;
             padding-top: 5px;
             padding-bottom: 5px;
-            color: #4c1d95;
-            font-size: 9.5px;
+            color: #000000;
+            font-size: 16px;
             font-weight: bold;
-            background: #f7f2ff;
+            background: #ffffff;
         }
 
         .pay-box {
-            border: 1px solid #dcc9fb;
+            border: 1px solid #000000;
             border-radius: 8px;
-            background: #faf7ff;
+            background: #ffffff;
             padding: 6px;
             margin-bottom: 6px;
         }
@@ -347,13 +366,14 @@ $agradecimiento = $formatoData['agradecimiento'] ?? '';
         }
 
         .qr-wrap img {
-            max-width: 85px;
-            max-height: 85px;
+            width: 28mm;
+            height: 28mm;
+            object-fit: contain;
         }
 
         .consult {
-            font-size: 7.5px;
-            color: #6b6575;
+            font-size: 10px;
+            color: #000000;
             text-align: center;
             line-height: 1.3;
             margin-top: 4px;
@@ -362,8 +382,8 @@ $agradecimiento = $formatoData['agradecimiento'] ?? '';
 
         .thanks {
             text-align: center;
-            font-size: 8px;
-            color: #5e556e;
+            font-size: 10px;
+            color: #000000;
             line-height: 1.35;
             margin-top: 6px;
         }
@@ -371,27 +391,27 @@ $agradecimiento = $formatoData['agradecimiento'] ?? '';
         .footer-phuyu {
             margin-top: 8px;
             padding-top: 6px;
-            border-top: 1px dashed #d5c3f5;
+            border-top: 1px dashed #000000;
             text-align: center;
         }
 
         .footer-phuyu-brand {
-            font-size: 8.5px;
+            font-size: 10px;
             font-weight: bold;
-            color: #4c1d95;
+            color: #000000;
         }
 
         .footer-phuyu-text {
-            font-size: 7px;
-            color: #7a7286;
+            font-size: 10px;
+            color: #000000;
             line-height: 1.3;
             margin-top: 2px;
         }
 
         .footer-phuyu-site {
-            font-size: 7.2px;
+            font-size: 10px;
             font-weight: bold;
-            color: #4c1d95;
+            color: #000000;
             margin-top: 2px;
         }
     </style>
@@ -408,7 +428,6 @@ $agradecimiento = $formatoData['agradecimiento'] ?? '';
     <div class="brand">
         <div class="brand-name"><?= texto_ticket($nombre) ?></div>
         <div class="brand-meta">
-            RUC: <?= texto_ticket($empresaData['documento'] ?? '-') ?><br>
             <?= texto_ticket($sucursalData['direccion'] ?? '-') ?><br>
             <?= texto_ticket($sucursalData['telefonos'] ?? '-') ?>
         </div>
@@ -419,6 +438,18 @@ $agradecimiento = $formatoData['agradecimiento'] ?? '';
         <div class="doc-type"><?= texto_ticket($comprobante) ?></div>
         <div class="doc-serie"><?= texto_ticket($serieNumero) ?></div>
     </div>
+
+    <?php if (!empty($nota_credito)): ?>
+    <div class="block">
+        <div class="strong">COMPROBANTE AFECTADO</div>
+        <div><?= texto_ticket($nota_credito['comprobante']) ?></div>
+        <div class="strong"><?= texto_ticket($nota_credito['numero']) ?></div>
+        <div><strong>Motivo:</strong> <?= texto_ticket($nota_credito['motivo']) ?></div>
+        <?php if ($nota_credito['descripcion'] !== ''): ?>
+        <div class="value" style="width:100%; word-break:break-word"><?= texto_ticket($nota_credito['descripcion']) ?></div>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
 
     <div class="block">
         <div class="row">
@@ -463,27 +494,21 @@ $agradecimiento = $formatoData['agradecimiento'] ?? '';
         <?php endif; ?>
     </div>
 
-    <div class="obs">
-        <strong>Items:</strong>
-    </div>
-
     <table class="items">
         <thead>
             <tr>
-                <th class="item-num">#</th>
-                <th class="item-desc">Descripción</th>
-                <th class="item-und">Und</th>
-                <th class="item-cant">Cant</th>
-                <th class="item-pu">P.U.</th>
-                <th class="item-imp">Imp.</th>
+                <th class="item-cant">Cant.</th>
+                <th class="item-und">Unidad</th>
+                <th class="item-pu">P. unit.</th>
+                <th class="item-imp">Importe</th>
             </tr>
         </thead>
         <tbody>
             <?php if (!empty($detalle)): ?>
                 <?php foreach ($detalle as $i => $item): ?>
                     <tr>
-                        <td class="item-num"><?= str_pad((string)($item['item'] ?? ($i + 1)), 2, '0', STR_PAD_LEFT) ?></td>
-                        <td class="item-desc">
+                        <!-- Nombre a todo el ancho: evita comprimir productos largos. -->
+                        <td colspan="4" class="item-desc">
                             <div class="prod"><?= texto_ticket($item['producto'] ?? '') ?></div>
                             <?php
                             $productoDescripcion = trim((string)($item['producto'] ?? ''));
@@ -498,18 +523,20 @@ $agradecimiento = $formatoData['agradecimiento'] ?? '';
                             }
                             ?>
                             <?php if ($mesaRestaurante === '' && $descripcionExtra !== ''): ?>
-                                <div class="prod-extra"><?= texto_ticket($descripcionExtra) ?></div>
+                                <div class="prod-extra"><?= nl2br(texto_ticket($descripcionExtra)) ?></div>
                             <?php endif; ?>
                         </td>
-                        <td class="item-und"><?= texto_ticket($item['unidad'] ?? '-') ?></td>
+                    </tr>
+                    <tr class="item-values">
                         <td class="item-cant"><?= numero_ticket($item['cantidad'] ?? 0) ?></td>
+                        <td class="item-und"><?= texto_ticket($item['unidad'] ?? '-') ?></td>
                         <td class="item-pu"><?= numero_ticket($item['preciounitario'] ?? 0) ?></td>
                         <td class="item-imp"><?= numero_ticket($item['subtotal'] ?? 0) ?></td>
                     </tr>
                 <?php endforeach; ?>
             <?php else: ?>
                 <tr>
-                    <td colspan="6" class="center">No hay detalles para mostrar.</td>
+                    <td colspan="4" class="center">No hay detalles para mostrar.</td>
                 </tr>
             <?php endif; ?>
         </tbody>
@@ -583,8 +610,7 @@ $agradecimiento = $formatoData['agradecimiento'] ?? '';
     <?php endif; ?>
 
     <div class="footer-phuyu">
-        <div class="footer-phuyu-brand">PhuyuSystem ☁</div>
-        <div class="footer-phuyu-text">Gracias por ser parte de la nube que nos impulsa</div>
+        <div class="footer-phuyu-brand">PhuyuSystem</div>
         <div class="footer-phuyu-site">phuyusystem.com</div>
     </div>
 

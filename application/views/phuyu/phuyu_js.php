@@ -170,6 +170,21 @@
         $('.compose').slideToggle();
     });
 
+    // Esc cierra el panel auxiliar sin salir de la venta ni borrar su detalle.
+    // Un selector, alerta o modal encima recibe primero su propio Escape.
+    document.addEventListener('keydown', function (event) {
+        if (event.key !== 'Escape' || event.repeat || event.isComposing) return;
+        if ($('.select2-container--open, .modal.show, .modal.in, .offcanvas.show, .swal-overlay--show-modal, .swal2-container.swal2-shown').length) return;
+        var $panel = $('.compose:visible').last();
+        if (!$panel.length) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        $panel.stop(true, true).slideUp();
+        // Devolver el teclado al buscador de la venta cuando esta disponible.
+        var $buscador = $('#producto_rapido_select:visible');
+        if ($buscador.length) $buscador.trigger('focus');
+    }, true);
+
     function phuyuOpenActiveSidebarLink() {
         if (!$SIDEBAR_MENU.length) {
             return;

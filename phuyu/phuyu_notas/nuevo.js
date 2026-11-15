@@ -84,7 +84,7 @@ var phuyu_operacion = new Vue({
 			});
 		},
 		phuyu_calcular: function(producto,tipo){
-			producto.preciooriginal = producto.precio;
+
 			producto.valorventa = Number((parseFloat(producto.cantidad) * parseFloat(producto.preciosinigv)).toFixed(2));
 			producto.subtotal = Number((parseFloat(producto.cantidad) * parseFloat(producto.precio)).toFixed(2));
 			
@@ -117,6 +117,20 @@ var phuyu_operacion = new Vue({
 			}
 		},
 		phuyu_guardar: function(){
+            if (this.estado == 1) return false;
+            if (!this.campos.codkardex_ref || !this.campos.seriecomprobante) {
+                phuyu_sistema.phuyu_noti('DATOS INCOMPLETOS', 'Seleccione la venta y la serie de la nota.', 'danger');
+                return false;
+            }
+            for (var i = 0; i < this.detalle.length; i++) {
+                var item = this.detalle[i];
+                if (!Number.isFinite(Number(item.cantidad)) || Number(item.cantidad) <= 0 ||
+                    Number(item.cantidad) > Number(item.stock) + 0.000001 ||
+                    !Number.isFinite(Number(item.precio)) || Number(item.precio) < 0) {
+                    phuyu_sistema.phuyu_alerta('DETALLE NO VALIDO', 'Revise la cantidad pendiente y el precio del item ' + (i + 1), 'error');
+                    return false;
+                }
+            }
 			if (this.detalle.length==0) {
 				phuyu_sistema.phuyu_noti("DEBE SELECCIONAR UNA VENTA","PARA REGISTRAR LA NOTA ELECTRONICA","danger"); 
 				return false;
@@ -143,14 +157,15 @@ var phuyu_operacion = new Vue({
 							}
 						});
 						phuyu_sistema.phuyu_noti("NOTA REGISTRADA CORRECTAMENTE","NOTA REGISTRADA EN EL SISTEMA","success");
+                        phuyu_sistema.phuyu_modulo();
 					}else{
 						var mensaje = data.body.mensaje || "ERROR DE RED";
 						phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR NOTA ELECTRONICA", mensaje, "danger");
 					}
 				}
-				phuyu_sistema.phuyu_fin(); phuyu_sistema.phuyu_modulo();
+				phuyu_sistema.phuyu_fin(); this.estado = 0;
 			}, function(){
-				phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR NOTA ELECTRONICA","ERROR DE RED","danger"); phuyu_sistema.phuyu_fin();
+				phuyu_sistema.phuyu_alerta("ERROR AL REGISTRAR NOTA ELECTRONICA","ERROR DE RED","danger"); phuyu_sistema.phuyu_fin(); this.estado = 0;
 			});
 		},
 		phuyu_cerrar: function(){

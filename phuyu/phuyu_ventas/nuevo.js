@@ -1,6 +1,7 @@
 var phuyu_operacion = new Vue({
     el: "#phuyu_operacion",
     data: {
+        descripcion_editor_activo: false,
         afectacionigv: $("#afectacionigv").val(),
         estado: 0,
         puede_modificar_precio: (typeof phuyu_puede_modificar_precio !== "undefined" && parseInt(phuyu_puede_modificar_precio) === 1),
@@ -855,18 +856,43 @@ var phuyu_operacion = new Vue({
             }
 
         },
+        // Sincroniza el select nativo, Vue y Select2, sin tocar el buscador de productos.
+        phuyu_seleccionar_cliente: function(persona) {
+            // Crear la opcion ANTES de asignar v-model. Si Vue actualiza el
+            // select sin esa opcion, lo invalida y emite change con valor null.
+            var $cliente = $("#codpersona");
+            var codigo = String(persona["codpersona"]);
+            var opcion = $cliente.find('option').filter(function() {
+                return this.value === codigo;
+            });
+            if (!opcion.length) {
+                $cliente.append(new Option(persona["razonsocial"], codigo, true, true));
+            }
+            this.campos.codpersona = persona["codpersona"];
+            var clientesVarios = persona["codpersona"] == 2;
+            $("#acv").prop('checked', clientesVarios);
+            $("#codpersona").prop('disabled', clientesVarios).prop('required', !clientesVarios);
+            $("#cliente").prop('readonly', !clientesVarios);
+            // Select2 AJAX necesita una opcion real; cambiar solo el texto
+            // visible deja el cliente sin seleccionar y afecta otros selects.
+            this.$nextTick(function() {
+                // Actualizar Select2 sin consultar otra vez la ficha y
+                // sobrescribir los datos historicos del comprobante.
+                $cliente.val(codigo).trigger('change.select2');
+            });
+        },
         phuyu_addproforma: function(proforma) {
             var existe_proforma = [];
             if (this.codproforma == proforma.codproforma) {
                 phuyu_sistema.phuyu_noti("CUIDADO", "LA PROFORMA YA FUE SELECCIONADO", "danger");
                 return false;
             }
-            $(".select2-selection__rendered").text(proforma.razonsocial);
+            this.phuyu_seleccionar_cliente(proforma);
             this.codproforma = proforma.codproforma
             this.codpedido = 0;
             this.campos.cliente = proforma.razonsocial
             this.campos.direccion = proforma.direccion
-            this.campos.codpersona = parseInt(proforma.codpersona)
+            this.campos.nrodocumento = proforma.documento || "";
             this.campos.codempleado = proforma.codempleado;
             this.campos.condicionpago = proforma.condicionpago;
             if (proforma.condicionpago == 2) {
@@ -926,6 +952,7 @@ var phuyu_operacion = new Vue({
                                 subtotal_tem: v.subtotal,
                                 descripcion: v.descripcion,
                                 itemproforma: v.item,
+                                factor: v.factor,
                                 stock: v.stock,
                                 control: v.control,
                                 calcular: v.calcular
@@ -937,7 +964,13 @@ var phuyu_operacion = new Vue({
                         this.detalle = filas
                         this.phuyu_totales();
                     }
-                    this.phuyu_series(true, proforma.codpersona)
+                    this.phuyu_series();
+                    this.$http.get(url + "ventas/clientes/infocliente/" + proforma.codpersona).then(function(info) {
+                        if (String(this.campos.codpersona) !== String(proforma.codpersona) || !info.body[0]) return;
+                        this.campos.nrodocumento = info.body[0].documento;
+                        this.codtipodocumento = info.body[0].coddocumentotipo;
+                    });
+                    this.phuyu_validar_stock_detalle();
                 });
             }
 
@@ -1158,6 +1191,10 @@ var phuyu_operacion = new Vue({
             }
             this.item = producto;
             $("#modal_itemdetalle").modal('show');
+            this.$nextTick(function() { this.phuyu_editor_descripcion(); });
+        },
+        phuyu_editor_descripcion: function() {
+            PhuyuDescripcionItem.inicializar(this);
         },
         phuyu_itemcalcular: function(item, tipoprecio) {
             this.phuyu_limitar_disponible(item);
@@ -1216,6 +1253,10 @@ var phuyu_operacion = new Vue({
             this.phuyu_totales();
         },
         phuyu_itemcalcular_cerrar: function(item) {
+            if (String(item.descripcion || '').length > 5000) {
+                phuyu_sistema.phuyu_noti('DESCRIPCION DEMASIADO LARGA', 'Reduzca el texto a 5000 caracteres.', 'warning');
+                return false;
+            }
             if (parseFloat(item.subtotal) < 0) {
                 phuyu_sistema.phuyu_noti("EL SUBTOTAL DEBE SER MAYOR A CERO", "REVISAR LOS CAMPOS DEL ITEM", "danger");
                 return false;
@@ -1350,7 +1391,30 @@ phuyu_calcular: function(producto) {
             //console.log(subtotal_tem)
             this.totales.importe = Number((subtotal_tem + this.totales.igv + this.totales.icbper).toFixed(2));
         },
+        // No recorta lo cotizado silenciosamente: exige corregir las cantidades.
+        // El servidor vuelve a validar stock/reservas e ingredientes al guardar.
+        phuyu_validar_stock_detalle: function() {
+            if (parseInt(this.stockalmacen) !== 1) return true;
+            var detalle = this.detalle || [];
+            for (var i = 0; i < detalle.length; i++) {
+                var item = detalle[i];
+                if (parseInt(item.control) !== 1) continue;
+                var factor = parseFloat(item.factor) || 1;
+                var solicitado = detalle.reduce(function(total, fila) {
+                    return total + (fila.codproducto == item.codproducto ?
+                        (parseFloat(fila.cantidad) || 0) * (parseFloat(fila.factor) || 1) : 0);
+                }, 0);
+                if (solicitado > (parseFloat(item.stock) || 0) * factor + 0.000001) {
+                    phuyu_sistema.phuyu_alerta("STOCK DISPONIBLE INSUFICIENTE",
+                        item.producto + ": disponible " + item.stock + " " + item.unidad +
+                        ". Revise las cantidades antes de continuar.", "error");
+                    return false;
+                }
+            }
+            return true;
+        },
         phuyu_validar_consistencia_venta: function() {
+            if (!this.phuyu_validar_stock_detalle()) return false;
             if (!this.detalle || this.detalle.length == 0) {
                 phuyu_sistema.phuyu_noti("REGISTRAR UN PRODUCTO EN EL DETALLE", "REGISTRAR ITEM PARA LA VENTA", "danger");
                 return false;
@@ -2098,23 +2162,14 @@ phuyu_calcular: function(producto) {
             this.resetear_formulario(pedido)
         },
         phuyu_clonar: function() {
-            this.titulo = "NUEVA COMPRA";
+            this.titulo = "NUEVA VENTA";
             this.$http.post(url + phuyu_controller + "/clonar", { "codregistro": phuyu_ventas.registro }).then(function(data) {
-                var socio = eval(data.body.socio);
+                var socio = data.body.socio;
 
-                $(".select2-selection__rendered").empty().removeAttr('title');
-                this.campos.codpersona = socio[0]["codpersona"];
-                if (socio[0]["codpersona"] == 2) {
-                    $("#codpersona").attr('disabled', true);
-                    $("#acv").attr('checked', true);
-                } else {
-                    $("#codpersona").removeAttr('disabled');
-                    $("#acv").removeAttr('checked');
-                    $(".select2-selection__rendered").empty().append(socio[0]["razonsocial"]);
-                }
+                this.phuyu_seleccionar_cliente(socio[0]);
                 this.campos.nrodocumento = socio[0]["documento"];
                 this.codtipodocumento = socio[0]["coddocumentotipo"];
-                this.campos.cliente = socio[0]["razonsocial"];
+                this.campos.cliente = data.body.campos[0].cliente || socio[0]["razonsocial"];
                 this.campos.direccion = data.body.campos[0].direccion;
                 this.campos.condicionpago = data.body.campos[0].condicionpago;
 
@@ -2154,6 +2209,7 @@ phuyu_calcular: function(producto) {
                 }); */
 
                 this.detalle = data.body.detalle;
+                this.phuyu_validar_stock_detalle();
                 this.phuyu_series();
                 this.phuyu_totales();
                 phuyu_sistema.phuyu_fin();
