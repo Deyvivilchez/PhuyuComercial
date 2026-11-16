@@ -19,8 +19,11 @@ class Phuyu_model extends CI_Model {
 
 		if (count($existe)>0) {
 			$empleado = $this->db->query("select *from public.personas where codpersona=?", [(int) $existe[0]["codempleado"]])->result_array();
-
-			$empresa = $this->db->query("select personas.documento, personas.nombrecomercial, personas.foto, empresas.igvsunat,empresas.icbpersunat,empresas.rubro,itemrepetircomprobante from empresas as empresas inner join public.personas as personas on (empresas.codpersona=personas.codpersona) where empresas.codempresa=1")->result_array();
+			$empresa = $this->db->query("select personas.documento, personas.nombrecomercial, personas.foto,
+			 empresas.igvsunat,empresas.icbpersunat,empresas.rubro,itemrepetircomprobante 
+			 from empresas as empresas 
+			 inner join public.personas as personas on (empresas.codpersona=personas.codpersona) 
+			 where empresas.codempresa=1")->result_array();
 
 			if (count($empleado) == 0 || count($empresa) == 0) {
 				return 0;
