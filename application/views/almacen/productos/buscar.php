@@ -23,7 +23,7 @@
   <div class="table-responsive">
     <table class="table table-hover align-middle table-sm projects" style="font-size: 11px;">
       <tbody>
-        <tr v-for="(dato, index) in productos" :key="dato.codproducto">
+        <tr v-for="(dato, index) in productos" :key="dato.codproducto" :class="esVenta && almacenControlStock == 1 && dato.controlstock == 1 && dato.stock <= 0 ? 'table-danger' : ''">
           <td style="width:100%; cursor:pointer; padding: 12px 10px;" v-on:click="phuyu_seleccionado(index, dato)">
             <div class="row g-2">
               <div class="col-md-9">
@@ -34,8 +34,9 @@
                 </div>
                 <div>
                   <span :class="dato.stock > 0 ? 'text-success' : 'text-danger'">
-                    <i class="bi bi-box-seam me-1"></i> STOCK {{ dato.stock }} {{ dato.unidad }}
+                    <i class="bi bi-box-seam me-1"></i> {{ esVenta ? 'DISPONIBLE' : 'STOCK' }} {{ dato.stock }} {{ dato.unidad }}
                   </span>
+                  <span class="text-muted ms-2" v-if="esVenta">Stock: {{dato.stock_fisico}} · Reservado: {{dato.reservado}}</span>
                   <span class="text-muted ms-2" v-if="dato.stockproveedor">
                     <i class="bi bi-truck"></i> STOCK P: {{ dato.stockproveedor }}
                   </span>
@@ -311,6 +312,7 @@
             buscar: "",
             rubro: "<?php echo $_SESSION['phuyu_rubro']; ?>",
             almacenControlStock: <?php echo isset($_SESSION['phuyu_stockalmacen']) ? (int)$_SESSION['phuyu_stockalmacen'] : 1; ?>,
+            esVenta: ["ventas/ventas", "ventas/nuevaventa"].indexOf(phuyu_controller) !== -1,
             verprecios: 1,
             putunidades: [],
             mostrarprecio: 0,
@@ -431,7 +433,13 @@
                     "buscar": this.buscar,
                     "pagina": this.paginacion.actual
                 }).then(function(data) {
-                    this.productos = data.body.lista;
+                    this.productos = (data.body.lista || []).map(function(producto) {
+                        if (this.esVenta && producto.stockdisponible !== undefined) {
+                            producto.stock = producto.stockdisponible;
+                            producto.unidades = producto.unidades_disponibles || producto.unidades;
+                        }
+                        return producto;
+                    }, this);
                     this.paginacion = data.body.paginacion;
                     this.cargando = false;
                 }, function() {

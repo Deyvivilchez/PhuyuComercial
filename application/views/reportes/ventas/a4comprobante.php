@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . "/../../../helpers/descripcion_item_helper.php";
 $modo_pdf = isset($modo_pdf) ? (bool)$modo_pdf : false;
 
 if (!function_exists('texto_doc')) {
@@ -43,7 +44,7 @@ $condicionPago = ((int)($venta['condicionpago'] ?? 0) === 1)
     <title><?= texto_doc(($venta['comprobante'] ?? 'COMPROBANTE') . ' ' . $serieNumero) ?></title>
     <style>
         @page {
-            margin: 10mm 9mm 14mm 9mm;
+            margin: 10mm 9mm 24mm 9mm;
         }
 
         body {
@@ -61,7 +62,7 @@ $condicionPago = ((int)($venta['condicionpago'] ?? 0) === 1)
         .page-content {
             position: relative;
             z-index: 2;
-            padding-bottom: 30mm;
+            padding-bottom: 0;
         }
 
         .watermark-wrap {
@@ -446,15 +447,17 @@ $condicionPago = ((int)($venta['condicionpago'] ?? 0) === 1)
             line-height: 1.45;
         }
 
+        /* Pie compartido: fuera del flujo y dentro del margen reservado de cada hoja. */
         .footer-band-fixed {
             position: fixed;
-            left: 9mm;
-            right: 9mm;
-            bottom: 8mm;
-            background: linear-gradient(160deg, rgba(88, 28, 135, 0.96) 0%, rgba(40, 24, 79, 0.96) 100%);
-            color: #ffffff;
-            padding: 10px 12px;
-            border-radius: 12px 12px 0 0;
+            left: 0;
+            right: 0;
+            bottom: -16mm;
+            height: 10mm;
+            padding: 7px 0 0;
+            border-top: 1px solid #d9c6e9;
+            background: transparent;
+            color: #654379;
             z-index: 3;
         }
 
@@ -488,17 +491,161 @@ $condicionPago = ((int)($venta['condicionpago'] ?? 0) === 1)
             opacity: 0.92;
             font-weight: normal;
         }
+        <?php if (!empty($nota_credito)): ?>
+        /* La nota suma un bloque de referencia: compactar sin reducir legibilidad. */
+        .company-logo img { max-width: 150px; max-height: 65px; }
+        .company-logo { margin-bottom: 5px; }
+        .brand-block { padding: 9px 12px; }
+        .doc-box { padding: 9px 12px; }
+        .info-table td { padding-top: 2px; padding-bottom: 2px; }
+        .section-title { margin-top: 9px; margin-bottom: 4px; }
+        .page-content { padding-bottom: 8mm; }
+        .footer-band-fixed { background: #581c87; }
+        .brand-footnote { display: none; }
+        .title-ribbon { padding: 16px 18px 14px; border-radius: 0 20px 0 20px; }
+        .doc-name { font-size: 23px; letter-spacing: 0; }
+        .doc-serie { margin-top: 6px; font-size: 10px; }
+        .brand-block { border: none; background: transparent; }
+        .company-name { font-size: 15px; }
+        .company-meta { font-size: 9.5px; color: #51475f; }
+        .doc-box { min-height: 0; background: #faf7ff; border: 1px solid #e5d9f2; }
+        .doc-row { font-size: 9.5px; line-height: 1.75; }
+        .watermark-wrap { top: 73mm; left: 21mm; width: 150mm; transform: none; }
+        .watermark-wrap img { opacity: 0.17; }
+        .section-title { border-bottom: 1px solid #e4d5f3; letter-spacing: 0.5px; }
+        .note-client td { padding: 6px 8px; vertical-align: top; }
+        .note-caption { font-size: 8px; text-transform: uppercase; color: #6b5c7b; letter-spacing: 0.6px; }
+        .note-client-name { font-size: 11px; font-weight: bold; color: #241533; line-height: 1.5; }
+        .note-address { font-size: 10px; line-height: 1.5; }
+        .note-reference { border-left: 4px solid #7c3bad; background: rgba(250,247,255,0.65); }
+        .note-reference .info-label { width: 16%; color: #63318a; }
+        .detalle-table th { padding: 9px 6px; }
+        .detalle-table td { padding: 9px 6px; line-height: 1.5; }
+        .son-value { font-size: 11px; line-height: 1.55; }
+        .total-final td { background: #581c87; padding-top: 11px; padding-bottom: 11px; }
+        .total-final .totales-label { font-size: 12px; color: #ffffff; }
+        .total-final .totales-value { font-size: 17px; color: #ffffff; }
+        .note-kicker { color: #77658b; font-size: 8px; letter-spacing: 1.4px; border-top: 4px solid #581c87; padding-top: 10px; }
+        .note-kicker span { padding: 0 8px; color: #bca5d1; }
+        .note-header { margin-top: 12px; margin-bottom: 10px; table-layout: fixed; }
+        .note-header td { vertical-align: top; }
+        .note-brand { width: 62%; padding-right: 18px; }
+        .note-brand-grid { table-layout: fixed; }
+        .note-brand-logo { width: 34%; padding-right: 12px; vertical-align: middle; }
+        .note-brand-copy { width: 66%; vertical-align: middle; }
+        .note-logo { max-width: 120px; max-height: 85px; margin: 0; }
+        .note-company { font-size: 12px; color: #251330; font-weight: bold; line-height: 1.4; }
+        .note-company-details { margin-top: 5px; font-size: 9px; color: #64586d; line-height: 1.6; }
+        .note-identity { width: 38%; text-align: right; }
+        .note-type { color: #581c87; font-size: 20px; line-height: 1.25; font-weight: bold; letter-spacing: -0.2px; }
+        .note-electronic { margin-top: 4px; color: #897197; font-size: 8px; letter-spacing: 1.2px; }
+        .note-number { font-size: 17px; font-weight: bold; color: #271737; margin-top: 12px; }
+        .note-date { margin-top: 5px; font-size: 9px; color: #64586d; }
+        .note-meta { background: #f6f2fa; border-top: 1px solid #e8def0; border-bottom: 1px solid #e8def0; margin-bottom: 10px; }
+        .note-meta td { width: 33.33%; padding: 7px 13px; font-size: 10px; line-height: 1.6; }
+        .note-meta span { font-size: 7px; letter-spacing: 0.7px; color: #806c92; }
+        .section-title { border: 0; font-size: 9px; color: #a182bb; margin-top: 11px; margin-bottom: 6px; }
+        .section-title span { color: #581c87; padding-left: 8px; }
+        .info-box { border: 0; border-top: 1px solid #e9e1f0; border-bottom: 1px solid #e9e1f0; border-radius: 0; padding: 5px 0; background: transparent; }
+        .note-client td { padding: 6px 0; }
+        .note-reference-card { padding: 9px 13px; border: 1px solid #e5d8ef; border-left: 3px solid #8752ae; border-radius: 0 8px 8px 0; background: rgba(249,246,252,0.35); }
+        .note-reference-grid td { vertical-align: top; padding-right: 12px; }
+        .note-ref-number { font-size: 12px; font-weight: bold; margin-top: 5px; color: #332040; }
+        .note-ref-motive { font-size: 11px; margin-top: 5px; color: #332040; }
+        .note-observation { margin-top: 10px; padding-top: 8px; border-top: 1px solid #e9e0f1; font-size: 9px; color: #665570; }
+        .detalle-table th { font-size: 8px; background: #581c87; border: 0; padding: 9px 6px; }
+        .detalle-table td { font-size: 9px; border: 0; border-bottom: 1px solid #eae3f0; padding: 10px 6px; }
+        .detalle-table tbody td { background: rgba(255,255,255,0.35); }
+        .detalle-table tbody tr:nth-child(even) td { background: rgba(249,246,252,0.4); }
+        .son-box { border: none; padding: 7px 0; background: transparent; }
+        .son-label { color: #897694; letter-spacing: 0.8px; font-size: 7px; }
+        .totales-box { border: 0; background: transparent; }
+        .totales-label { font-weight: normal; color: #766580; }
+        .totales-box td { padding: 5px 9px; }
+        .footer-band-fixed { border-radius: 0; padding: 9px 0; background: transparent; border-top: 1px solid #d9c6e9; color: #654379; bottom: 3mm; }
+        .footer-fixed-small { color: #8b7998; }
+        /* Pie real en cada hoja. El margen inferior reserva su espacio. */
+        @page { margin: 10mm 9mm 24mm 9mm; }
+        .footer-band-fixed {
+            position: fixed; left: 0; right: 0; bottom: -16mm;
+            height: 10mm; padding: 7px 0 0; margin: 0;
+            border-top: 1px solid #d9c6e9;
+        }
+        .footer-fixed-left, .footer-fixed-right { vertical-align: top; line-height: 1.5; }
+        .footer-fixed-small { font-size: 7.5px; }
+        .page-content { padding-bottom: 0; }
+
+        <?php endif; ?>
+        <?php if (!empty($nota_credito) && ($papel_nota ?? 'A4') === 'A5'): ?>
+        /* A5 vertical: medidas propias, no reducir una hoja A4 al imprimir. */
+        @page { size: 148mm 210mm; margin: 7mm 7mm 16mm 7mm; }
+        body { font-size: 7.5pt; }
+        .note-kicker { font-size: 6px; padding-top: 4px; border-top-width: 2px; }
+        .note-header { margin-top: 3px; margin-bottom: 3px; }
+        .note-logo { max-width: 80px; max-height: 43px; }
+        .note-company { font-size: 10px; }
+        .note-company-details { font-size: 7px; line-height: 1.3; margin-top: 2px; }
+        .note-type { font-size: 15px; }
+        .note-electronic { font-size: 6px; margin-top: 1px; }
+        .note-number { font-size: 12px; margin-top: 3px; }
+        .note-date { font-size: 7px; margin-top: 1px; }
+        .note-meta { margin-bottom: 3px; }
+        .note-meta td { padding: 3px 8px; font-size: 8px; line-height: 1.3; }
+        .note-meta span { font-size: 6px; }
+        .section-title { font-size: 7px; margin: 4px 0 2px; padding-bottom: 1px; }
+        .info-box { padding: 2px 0; margin-bottom: 2px; }
+        .note-client td { padding: 2px 0; }
+        .note-caption { font-size: 6px; }
+        .note-client-name, .note-address { font-size: 8px; line-height: 1.3; }
+        .note-reference-card { padding: 4px 8px; }
+        .note-ref-number, .note-ref-motive { font-size: 8px; margin-top: 2px; }
+        .note-observation { font-size: 7px; margin-top: 3px; padding-top: 3px; }
+        .detalle-table thead th { font-size: 7pt; padding: 4px; }
+        .detalle-table tbody td { font-size: 7pt; padding: 3px 4px; line-height: 1.25; }
+        .bottom-grid { margin-top: 3px; }
+        .son-box { padding: 3px 0; }
+        .son-label { font-size: 6px; margin-bottom: 3px; }
+        .son-value { font-size: 8px; line-height: 1.35; }
+        .qr-image { margin-top: 4px; }
+        .qr-image img { max-width: 55px; max-height: 55px; }
+        .qr-text, .agradecimiento { font-size: 6px; margin-top: 2px; }
+        .totales-box td { font-size: 7px; padding: 2px 7px; }
+        .total-final .totales-label { font-size: 9px; }
+        .total-final .totales-value { font-size: 11px; }
+        .total-final td { padding-top: 4px; padding-bottom: 4px; }
+        .watermark-wrap { top: 28mm; left: 38mm; width: 115mm; }
+        .footer-band-fixed { bottom: -9mm; height: 6mm; padding-top: 3px; }
+        .footer-fixed-left, .footer-fixed-right { font-size: 7px; }
+        .footer-fixed-small { font-size: 6px; }
+        .note-brand { width: 60%; padding-right: 10px; }
+        .note-brand-logo { width: 34%; padding-right: 7px; }
+        .note-identity { width: 40%; }
+        .note-company { font-size: 10px; }
+        .note-company-details { font-size: 8px; }
+        .note-type { font-size: 14px; }
+        .note-number { font-size: 12px; }
+        .note-meta td { padding: 5px 7px; font-size: 9px; }
+        .note-caption { font-size: 7px; }
+        .note-client-name, .note-address { font-size: 9px; }
+        .note-ref-number, .note-ref-motive { font-size: 9px; }
+        .note-reference-grid td { padding-right: 6px; }
+        .note-observation { font-size: 8px; }
+        .section-title { margin-top: 7px; font-size: 8px; }
+        .detalle-table thead th { font-size: 6.5pt; padding: 5px 3px; }
+        .detalle-table tbody td { font-size: 7pt; padding: 5px 3px; }
+        .son-col { width: 44%; padding-right: 8px; }
+        .total-col { width: 56%; }
+        .son-value { font-size: 9px; }
+        .qr-image img { max-width: 76px; max-height: 76px; }
+        .totales-box td { font-size: 8px; padding: 4px 6px; }
+        .total-final .totales-value { font-size: 13px; }
+        .total-final .totales-label { font-size: 10px; }
+        .watermark-wrap { top: 48mm; left: 6mm; width: 120mm; }
+        .footer-band-fixed { bottom: -11mm; height: 7mm; }
+        <?php endif; ?>
     </style>
 </head>
 <body>
-    <div class="page">
-
-        <?php if (!empty($logo_src)): ?>
-            <div class="watermark-wrap">
-                <img src="<?= $logo_src ?>" alt="Marca de agua">
-            </div>
-        <?php endif; ?>
-
         <div class="footer-band-fixed">
             <table>
                 <tr>
@@ -514,8 +661,42 @@ $condicionPago = ((int)($venta['condicionpago'] ?? 0) === 1)
             </table>
         </div>
 
+    <div class="page">
+
+        <?php if (!empty($logo_src)): ?>
+            <div class="watermark-wrap">
+                <img src="<?= $logo_src ?>" alt="Marca de agua">
+            </div>
+        <?php endif; ?>
+
         <div class="page-content">
 
+            <?php if (!empty($nota_credito)): ?>
+            <div class="note-kicker">DOCUMENTO ELECTRÓNICO <span>·</span> <?= texto_doc($fechaEmision) ?></div>
+            <table class="note-header">
+                <tr>
+                    <td class="note-brand">
+                        <table class="note-brand-grid"><tr>
+                        <?php if (!empty($logo_src)): ?><td class="note-brand-logo"><img class="note-logo" src="<?= $logo_src ?>" alt="Logo de empresa"></td><?php endif; ?>
+                        <td class="note-brand-copy"<?= empty($logo_src) ? ' style="width:100%"' : '' ?>>
+                        <div class="note-company"><?= texto_doc($nombre_empresa ?? '') ?></div>
+                        <div class="note-company-details">RUC <?= texto_doc($empresa['documento'] ?? '-') ?><br><?= texto_doc($sucursal['direccion'] ?? '-') ?><br><?= texto_doc($sucursal['telefonos'] ?? '') ?></div>
+                        </td></tr></table>
+                    </td>
+                    <td class="note-identity">
+                        <div class="note-type">NOTA DE CRÉDITO</div>
+                        <div class="note-electronic">ELECTRÓNICA</div>
+                        <div class="note-number"><?= texto_doc($serieNumero) ?></div>
+                        <div class="note-date">Emisión <?= texto_doc($fechaEmision) ?></div>
+                    </td>
+                </tr>
+            </table>
+            <table class="note-meta"><tr>
+                <td><span>CONDICIÓN DE PAGO</span><br><strong><?= texto_doc($condicionPago) ?></strong></td>
+                <td><span>MONEDA</span><br><strong>Soles · PEN</strong></td>
+                <td><span>TIPO DE DOCUMENTO</span><br><strong>Nota de crédito · 07</strong></td>
+            </tr></table>
+            <?php else: ?>
             <div class="title-ribbon">
                 <div class="doc-name"><?= texto_doc($venta['comprobante'] ?? 'COMPROBANTE') ?></div>
                 <div class="doc-serie"><?= texto_doc($serieNumero) ?> · Emitido el <?= texto_doc($fechaEmision) ?></div>
@@ -567,8 +748,18 @@ $condicionPago = ((int)($venta['condicionpago'] ?? 0) === 1)
                 </tr>
             </table>
 
-            <div class="section-title">Datos del cliente y operación</div>
+            <?php endif; ?>
+            <div class="section-title"><?= !empty($nota_credito) ? '01 <span>Datos del cliente</span>' : 'Datos del cliente y operación' ?></div>
             <div class="info-box">
+                <?php if (!empty($nota_credito)): ?>
+                <table class="note-client">
+                    <tr>
+                        <td width="72%"><div class="note-caption">Razón social / nombre</div><div class="note-client-name"><?= texto_doc($cliente) ?></div></td>
+                        <td width="28%"><div class="note-caption">DNI / RUC</div><div class="note-client-name"><?= texto_doc($documentoCliente) ?></div></td>
+                    </tr>
+                    <tr><td colspan="2"><div class="note-caption">Dirección</div><div class="note-address"><?= texto_doc($direccionCliente) ?></div></td></tr>
+                </table>
+                <?php else: ?>
                 <table class="info-table">
                     <tr>
                         <td class="info-label">Código:</td>
@@ -595,9 +786,23 @@ $condicionPago = ((int)($venta['condicionpago'] ?? 0) === 1)
                         <td class="info-value"><?= texto_doc($venta['oficial'] ?? '-') ?></td>
                     </tr>
                 </table>
+                <?php endif; ?>
             </div>
 
-            <div class="section-title">Detalle del comprobante</div>
+            <?php if (!empty($nota_credito)): ?>
+            <div class="section-title">02 <span>Referencia de la nota</span></div>
+            <div class="note-reference-card">
+                <table class="note-reference-grid"><tr>
+                    <td width="40%"><div class="note-caption">COMPROBANTE AFECTADO</div><div class="note-ref-number"><?= texto_doc($nota_credito['referencia']) ?></div></td>
+                    <td width="60%"><div class="note-caption">MOTIVO</div><div class="note-ref-motive"><?= texto_doc($nota_credito['motivo']) ?></div></td>
+                </tr></table>
+                <?php if (trim((string)$nota_credito['descripcion']) !== ''): ?>
+                <div class="note-observation"><strong>Descripción:</strong> <?= texto_doc($nota_credito['descripcion']) ?></div>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+
+            <div class="section-title"><?= !empty($nota_credito) ? '03 <span>Detalle de la nota</span>' : 'Detalle del comprobante' ?></div>
             <table class="detalle-table">
                 <thead>
                     <tr>
@@ -614,15 +819,18 @@ $condicionPago = ((int)($venta['condicionpago'] ?? 0) === 1)
                         <?php foreach ($detalle as $i => $item): ?>
                             <tr>
                                 <td class="text-center"><?= str_pad((string)($i + 1), 2, '0', STR_PAD_LEFT) ?></td>
-                                <td><?= texto_doc(trim(
-                                    ($item['producto'] ?? '') .
-                                    ($mesaRestaurante === '' ? ' ' . ($item['descripcion'] ?? '') : '')
-                                )) ?></td>
+                                <?php $bloquesDescripcion = phuyu_descripcion_bloques($mesaRestaurante === '' ? ($item['descripcion'] ?? '') : ''); ?>
+                        <td style="word-wrap:break-word"><strong><?= texto_doc($item['producto'] ?? '') ?></strong><?php if (!empty($bloquesDescripcion)): ?><br><?= nl2br(texto_doc(array_shift($bloquesDescripcion))) ?><?php endif; ?></td>
                                 <td><?= texto_doc($item['unidad'] ?? '-') ?></td>
                                 <td class="text-right"><?= numero_doc($item['cantidad'] ?? 0) ?></td>
                                 <td class="text-right">S/ <?= numero_doc($item['preciounitario'] ?? 0) ?></td>
                                 <td class="text-right">S/ <?= numero_doc($item['subtotal'] ?? 0) ?></td>
                             </tr>
+                    <?php foreach ($bloquesDescripcion as $continuacion): ?>
+                    <tr class="descripcion-continuacion">
+                        <td></td><td colspan="5" style="text-align:left;word-wrap:break-word;line-height:1.5"><?= nl2br(texto_doc($continuacion)) ?></td>
+                    </tr>
+                    <?php endforeach; ?>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
@@ -637,7 +845,7 @@ $condicionPago = ((int)($venta['condicionpago'] ?? 0) === 1)
                     <td class="son-col">
                         <div class="son-box">
                             <div class="son-label">Importe en letras</div>
-                            <div class="son-value">SON: <?= texto_doc(strtoupper($total_texto) . ' Y 00/100 SOLES') ?></div>
+                            <div class="son-value"><?= texto_doc($importe_en_letras ?? ('SON: ' . strtoupper($total_texto ?? '') . ' Y 00/100 SOLES')) ?></div>
 
                             <?php if (!empty($qr_src)): ?>
                                 <div class="qr-image">
@@ -733,12 +941,10 @@ $condicionPago = ((int)($venta['condicionpago'] ?? 0) === 1)
                 </div>
             <?php endif; ?>
 
-            <div class="brand-footnote">
-                Impreso desde <strong>PhuyuSystem</strong> • Gracias por ser parte de la nube que nos inspira ☁️<br>
-                <span>www.phuyusystem.com</span>
-            </div>
+
 
         </div>
+
     </div>
 </body>
 </html>

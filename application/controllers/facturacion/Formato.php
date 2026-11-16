@@ -1920,7 +1920,8 @@ class Formato extends CI_Controller
 
     $this->load->library('Number');
     $number = new Number();
-    $total_texto = $number->convertirNumeroEnLetras(round((float)$venta['importe'], 2));
+    $partesImporte = explode('.', number_format((float)$venta['importe'], 2, '.', ''));
+    $total_texto = $number->convertirNumeroEnLetras($partesImporte[0]);
 
     $data = [
         'modo_pdf' => true,
@@ -1976,6 +1977,8 @@ class Formato extends CI_Controller
         $venta['nrocomprobante'] . '.pdf'
     );
 
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
     $dompdf->stream($nombre_archivo, ['Attachment' => false]);
 }
 
@@ -2157,9 +2160,10 @@ class Formato extends CI_Controller
 
         $logoSrc = '';
         if (!empty($logoArchivo) && file_exists($logoArchivo)) {
-            $extension = strtolower(pathinfo($logoArchivo, PATHINFO_EXTENSION));
-            $mime = ($extension === 'jpg' || $extension === 'jpeg') ? 'jpeg' : 'png';
-            $logoSrc = 'data:image/' . $mime . ';base64,' . base64_encode(file_get_contents($logoArchivo));
+            $imagenLogo = @getimagesize($logoArchivo);
+            if ($imagenLogo && in_array($imagenLogo['mime'], ['image/jpeg', 'image/png', 'image/gif', 'image/webp'], true)) {
+                $logoSrc = 'data:' . $imagenLogo['mime'] . ';base64,' . base64_encode(file_get_contents($logoArchivo));
+            }
         }
 
         $slogan = !empty($formato['slogan']) ? $formato['slogan'] : ($parametros['slogan'] ?? '');
@@ -3299,160 +3303,57 @@ class Formato extends CI_Controller
 
     public function a5pedido($codkardex)
     {
-        $estilo = 'border-left:1px solid #000; border-right:1px solid #000;';
-        $estilo1 = 'border-top:1px solid #000; border-left:1px solid #000; border-right:1px solid #000;text-align:right';
-
-        $empresa = $this->db->query('select documento,razonsocial,nombrecomercial from public.personas where codpersona=1')->result_array();
-        $sucursal = $this->db->query('select *from public.sucursales where codsucursal=' . $_SESSION['phuyu_codsucursal'])->result_array();
-        $parametros = $this->db->query('select *from public.empresas limit 1')->result_array();
-
-        $venta = $this->db
-            ->query(
-                "select k.codpedido,k.fechapedido,ct.descripcion as comprobante, k.codcomprobantetipo, v.razonsocial as vendedor,pu.razonsocial as usuario ,
-     k.seriecomprobante,k.nrocomprobante, p.documento,k.cliente,k.direccion,k.valorventa,k.descglobal,k.igv,k.importe, k.codempleado,k.condicionpago,
-     k.codpersona,k.descripcion from kardex.pedidos as k inner join public.personas as p on(k.codpersona=p.codpersona)
-     inner join public.personas as v on(k.codempleado=v.codpersona)
-     inner join seguridad.usuarios as u on(k.codusuario=u.codusuario)
-     inner join public.personas as pu on(u.codempleado=pu.codpersona)
-     inner join caja.comprobantetipos as ct on(k.codcomprobantetipo=ct.codcomprobantetipo) where k.codpedido=" . $codkardex,
-            )
-            ->result_array();
-
-        $totales = $this->db->query('select (select coalesce(sum(subtotal),0) from kardex.pedidosdetalle where codpedido=' . $codkardex . " and codafectacionigv='10') as gravado, (select coalesce(sum(subtotal),0) from kardex.pedidosdetalle where codpedido=" . $codkardex . " and codafectacionigv='20') as exonerado, (select coalesce(sum(subtotal),0) from kardex.pedidosdetalle where codpedido=" . $codkardex . " and codafectacionigv='30') as inafecto, (select coalesce(sum(subtotal),0) from kardex.pedidosdetalle where codpedido=" . $codkardex . " and codafectacionigv='21') as gratuito")->result_array();
-        $detalle = $this->db->query('select kd.item,kd.cantidad,p.descripcion as producto,u.descripcion as unidad,kd.preciounitario,kd.subtotal, kd.descripcion from kardex.pedidosdetalle as kd inner join almacen.productos as p on(p.codproducto=kd.codproducto) inner join almacen.unidades as u on(u.codunidad=kd.codunidad) where kd.codpedido=' . $codkardex . ' order by kd.item')->result_array();
-
-        //$html = $this->load->view("facturacion/formato/a5",compact("empresa","parametros","venta"),true);
-
-        if ($empresa[0]['nombrecomercial'] == '') {
-            $nombre = $empresa[0]['razonsocial'];
-        } else {
-            $nombre = $empresa[0]['nombrecomercial'];
+        if (!isset($_SESSION['phuyu_codusuario'])) {
+            $this->load->view('phuyu/505'); return;
         }
-
-        $vendedor = $this->db->query('select razonsocial from public.personas where codpersona=' . $venta[0]['codempleado'])->result_array();
-        $html = '<table width="100%" align="center">';
-        $html .= '<tr>';
-        $html .= '<th style="width:20%">';
-        $html .= '<img src="' . base_url() . 'public/img/' . $_SESSION['phuyu_logo'] . '" style="height:100px;">';
-        $html .= '</th>';
-        $html .= '<th style="width:40%">';
-        $html .= '<h2>' . $nombre . '</h2>';
-        $html .= '<h4>' . $parametros[0]['slogan'] . '</h4>';
-        $html .= '</th>';
-        $html .= '<th style="width:2%;"></th>';
-        $html .= '<th style="width:38%;border:1px solid #000;color:#000;">';
-        $html .= '<h3>RUC: ' . $empresa[0]['documento'] . '</h3> <h3>' . $venta[0]['comprobante'] . '</h3>';
-        $html .= '<h3>' . $venta[0]['seriecomprobante'] . ' - ' . $venta[0]['nrocomprobante'] . '</h3>';
-        $html .= '</th>';
-        $html .= '</tr>';
-        $html .= '</table>';
-
-        $html .= '<table cellpadding="2" width="100%">';
-        $html .= '<tr>';
-        $html .= '<td style="width:100%;"><b>' . $sucursal[0]['direccion'] . '</b> </td>';
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td>TELF: ' . $sucursal[0]['telefonos'] . '</td>';
-        $html .= '</tr>';
-        $html .= '</table>';
-
-        $html .= '<table cellpadding="2" width="100%" style="border:1px solid #000;font-size:9px;">';
-        $html .= '<tr>';
-        $html .= '<td style="width:16%;"> <b>CLIENTE</b> </td>';
-        $html .= '<td style="width:54%;">: ' . $venta[0]['cliente'] . '</td>';
-        $html .= '<td style="width:15%"> <b>PAGO AL</b> </td>';
-        if ($venta[0]['condicionpago'] == 1) {
-            $html .= '<td style="width:15%;">: CONTADO</td>';
-        } else {
-            $html .= '<td style="width:15%;">: CREDITO</td>';
+        $codkardex = (int)$codkardex;
+        if ($codkardex <= 0) { show_error('Codigo invalido.', 400); return; }
+        $data = $this->obtenerDataPedido($codkardex);
+        if (empty($data['venta'])) { show_error('Pedido no encontrado.', 404); return; }
+        $venta = $data['venta'];
+        $formato = $this->db->query('select * from caja.comprobantes where codsucursal=? and codcomprobantetipo=? and seriecomprobante=? limit 1', [(int)$data['codsucursal'], (int)$venta['codcomprobantetipo'], $venta['seriecomprobante']])->row_array();
+        $logoPath = !empty($formato['logo']) ? FCPATH . 'public/img/empresa/' . basename($formato['logo']) : FCPATH . 'public/img/' . ($_SESSION['phuyu_logo'] ?? '');
+        $data['logo_src'] = '';
+        if (is_file($logoPath)) {
+            $imagen = @getimagesize($logoPath);
+            if ($imagen && in_array($imagen['mime'], ['image/jpeg','image/png','image/gif','image/webp'], true)) {
+                $data['logo_src'] = 'data:' . $imagen['mime'] . ';base64,' . base64_encode(file_get_contents($logoPath));
+            }
         }
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td> <b>DIRECCION</b> </td>';
-        $html .= '<td>: ' . $venta[0]['direccion'] . ' </td>';
-        $html .= '<td> <b>MONEDA</b> </td>';
-        $html .= '<td>: SOLES</td>';
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td> <b>DNI / RUC</b> </td>';
-        $html .= '<td>: ' . $venta[0]['documento'] . '</td>';
-        $html .= '<td> <b>FECHA</b> </td>';
-        $html .= '<td>: ' . $venta[0]['fechapedido'] . '</td>';
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td> <b>VENDEDOR</b> </td>';
-        $html .= '<td>: ' . $venta[0]['vendedor'] . '</td>';
-        $html .= '<td> <b>USUARIO</b> </td>';
-        $html .= '<td>: ' . $venta[0]['usuario'] . '</td>';
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td> <b>GLOSA</b> </td>';
-        $html .= '<td>: ' . $venta[0]['descripcion'] . '</td>';
-        $html .= '</tr>';
-        $html .= '</table>';
-
-        $this->load->library('Number');
-        $number = new Number();
-        $total_texto = $number->convertirNumeroEnLetras(round($venta[0]['importe'], 2));
-
-        $html .= '<table cellpadding="4" width="100%" style="border:1px solid #000;font-size:8px;margin-top:-5px">';
-        $html .= '<tr>';
-        $html .= '<td style="' . $estilo . 'width:7%;"> <b>ITEM</b> </td>';
-        $html .= '<td style="' . $estilo . 'width:40%;"> <b>DESCRIPCION</b> </td>';
-        $html .= '<td style="' . $estilo . 'width:15%;"> <b>UND MEDIDA</b> </td>';
-        $html .= '<td style="' . $estilo . 'width:12%;"> <b>CANTIDAD</b> </td>';
-        $html .= '<td style="' . $estilo . 'width:13%;"> <b>P.UNITARIO</b> </td>';
-        $html .= '<td style="' . $estilo . 'width:13%;"> <b>IMPORTE</b> </td>';
-        $html .= '</tr>';
-        foreach ($detalle as $value) {
-            $html .= '<tr>';
-            $html .= '<td style="' . $estilo . 'width:7%;"> 0' . $value['item'] . ' </td>';
-            $html .= '<td style="' . $estilo . 'width:40%;"> ' . $value['producto'] . ' ' . $value['descripcion'] . '</td>';
-            $html .= '<td style="' . $estilo . 'width:15%;"> ' . $value['unidad'] . ' </td>';
-            $html .= '<td style="' . $estilo . 'width:12%;text-align:right"> ' . number_format($value['cantidad'], 2) . ' </td>';
-            $html .= '<td style="' . $estilo . 'width:13%;text-align:right"> ' . number_format($value['preciounitario'], 2) . ' </td>';
-            $html .= '<td style="' . $estilo . 'width:13%;text-align:right"> ' . number_format($value['subtotal'], 2) . ' </td>';
-            $html .= '</tr>';
-        }
-        $html .= '</table>';
-
-        $html .= '<table cellpadding="4" width="100%" style="border:1px solid #000;font-size:8px">';
-        $html .= '<tr>';
-        $html .= '<td style="' . $estilo . ' width:62%" rowspan="5" align="center">';
-        $html .= '<h4> SON: ' . strtoupper($total_texto) . ' Y 00/100 SOLES</h4>';
-        $html .= '</td>';
-        $html .= '<td style="' . $estilo . ' width:25%;text-align:right"> <b>SUBTOTAL S/</b> </td>';
-        $html .= '<td style="' . $estilo . ' width:13%;text-align:right">' . number_format($venta[0]['valorventa'], 2) . ' </td>';
-        $html .= '</tr>';
-        $html .= '<tr> <td style="' . $estilo1 . '"> <b>DESCUENTO S/</b>  </td> <td style="' . $estilo1 . '">' . number_format($venta[0]['descglobal'], 2) . ' </td> </tr>';
-        $html .= '<tr> <td style="' . $estilo1 . '"> <b>IGV S/</b> </td> <td style="' . $estilo1 . '">' . number_format($venta[0]['igv'], 2) . ' </td> </tr>';
-        $html .= '<tr> <td style="' . $estilo1 . '"> <b>TOTAL S/</b> </td> <td style="' . $estilo1 . '">' . number_format($venta[0]['importe'], 2) . ' </td> </tr>';
-        $html .= '</table>';
-
-        $html .= '<h5 style="color:#000;" align="center">' . $parametros[0]['publicidad'] . '</h5>';
-
-        $this->load->library('Pdf');
-
-        $pdf = new Pdf('L', 'mm', 'A4', true, 'UTF-8', false);
-        $pdf->SetCreator(PDF_CREATOR);
-        $pdf->SetAuthor('WEB phuyu');
-        $pdf->SetTitle('WEB phuyu | IMPRIMIR PEDIDO');
-        $pdf->SetSubject('WEB phuyu');
-
-        $pdf->setPrintHeader(false);
-
-        $pdf->SetAutoPageBreak(true, PDF_MARGIN_BOTTOM);
-        $pdf->setImageScale(PDF_IMAGE_SCALE_RATIO);
-
-        $pdf->setFontSubsetting(true);
-        $pdf->SetFont('helvetica', '', 9);
-        $pdf->AddPage('L', 'A5');
-        //$pdf->AddPage('L', 'A5');
-        // $pdf->SetLeftMargin(0);
-        $pdf->writeHTML($html, true, 0, true, 0);
-
-        $nombre_archivo = utf8_decode($venta[0]['comprobante'] . ' ' . $venta[0]['seriecomprobante'] . '-' . $venta[0]['nrocomprobante'] . '.pdf');
-        $pdf->Output($nombre_archivo, 'I');
+        $data['venta']['fechacomprobante'] = $venta['fechapedido'];
+        $data['es_pedido'] = true;
+        $data['modo_pdf'] = true;
+        $data['importe_en_letras'] = 'SON: ' . $data['total_texto'];
+        $data['empleado'] = ['razonsocial' => $venta['vendedor'] ?? ''];
+        $data['credito'] = [];
+        $data['cuentascorrientes'] = [];
+        $data['formato'] = $formato;
+        $data['slogan'] = !empty($formato['slogan']) ? $formato['slogan'] : ($data['parametros']['slogan'] ?? '');
+        $data['publicidad'] = !empty($formato['publicidad']) ? $formato['publicidad'] : ($data['parametros']['publicidad'] ?? '');
+        $data['fechavencimiento'] = '';
+        $data['qr_src'] = '';
+        $data['mesa_restaurante'] = '';
+        // El pedido conserva su glosa y no usa enlaces de consulta tributaria.
+        $data['parametros']['urlconsultacomprobantes'] = '';
+        if (!empty($formato['nombrecomercial'])) $data['nombre_empresa'] = $formato['nombrecomercial'];
+        $html = $this->load->view('reportes/ventas/a5venta', $data, true);
+        require_once FCPATH . 'vendor/autoload.php';
+        $tempDir = FCPATH . 'application/cache/dompdf';
+        if (!is_dir($tempDir)) mkdir($tempDir, 0775, true);
+        $options = new \Dompdf\Options();
+        $options->set('defaultFont', 'DejaVu Sans');
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('chroot', FCPATH);
+        $options->set('tempDir', $tempDir);
+        $options->set('fontDir', FCPATH . 'vendor/dompdf/dompdf/lib/fonts');
+        $options->set('fontCache', $tempDir);
+        $pdf = new \Dompdf\Dompdf($options);
+        $pdf->loadHtml($html, 'UTF-8');
+        $pdf->setPaper([0,0,148*72/25.4,210*72/25.4], 'portrait');
+        $pdf->render();
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+        $pdf->stream('Pedido-' . $venta['seriecomprobante'] . '-' . $venta['nrocomprobante'] . '-A5.pdf', ['Attachment' => false]);
     }
 
     public function ticketpedido($codkardex)
@@ -3496,15 +3397,31 @@ class Formato extends CI_Controller
 
     public function a4notacredito($codkardex)
     {
-        $estilo = 'border-left:1px solid #000; border-right:1px solid #000;';
-        $estilo1 = 'border-top:1px solid #000; border-left:1px solid #000; border-right:1px solid #000;text-align:right';
+        $this->imprimir_notacredito($codkardex, 'A4');
+    }
+
+    private function imprimir_notacredito($codkardex, $papel_nota)
+    {
+        if (!isset($_SESSION['phuyu_codusuario'])) {
+            $this->load->view('phuyu/505');
+            return;
+        }
+        $codkardex = (int)$codkardex;
+        if ($codkardex <= 0) { show_error('Codigo invalido.', 400); return; }
 
         $empresa = $this->db->query('select documento,razonsocial,nombrecomercial from public.personas where codpersona=1')->result_array();
         $sucursal = $this->db->query('select *from public.sucursales where codsucursal=' . $_SESSION['phuyu_codsucursal'])->result_array();
         $principal = $this->db->query('select *from public.sucursales where principal=1 and estado=1')->result_array();
         $parametros = $this->db->query('select *from public.empresas limit 1')->result_array();
 
-        $venta = $this->db->query("select k.codkardex,k.fechacomprobante,ct.descripcion as comprobante, k.codcomprobantetipo, k.seriecomprobante,k.nrocomprobante,( CASE WHEN  codcomprobantetipo_ref = 10 THEN 'FACT' ELSE 'BOL' END) AS comprobante_ref,k.seriecomprobante_ref,k.nrocomprobante_ref, mn.descripcion as motivo, p.documento,k.cliente,k.direccion,k.valorventa,k.descglobal,k.igv,k.importe, k.codempleado,k.condicionpago,k.nroplaca, k.codpersona, k.icbper from kardex.kardex as k inner join public.personas as p on(k.codpersona=p.codpersona) inner join caja.comprobantetipos as ct on(k.codcomprobantetipo=ct.codcomprobantetipo) inner join kardex.motivonotas as mn on(k.codmotivonota=mn.codmotivonota) where k.codkardex=" . $codkardex)->result_array();
+        $venta = $this->db->query("select k.codsucursal,k.descripcion,k.codkardex,k.fechacomprobante,ct.descripcion as comprobante, k.codcomprobantetipo, k.seriecomprobante,k.nrocomprobante,( CASE WHEN  codcomprobantetipo_ref = 10 THEN 'FACT' ELSE 'BOL' END) AS comprobante_ref,k.seriecomprobante_ref,k.nrocomprobante_ref, mn.descripcion as motivo, p.documento,k.cliente,k.direccion,k.valorventa,k.descglobal,k.igv,k.importe, k.codempleado,k.condicionpago,k.nroplaca, k.codpersona, k.icbper from kardex.kardex as k inner join public.personas as p on(k.codpersona=p.codpersona) inner join caja.comprobantetipos as ct on(k.codcomprobantetipo=ct.codcomprobantetipo) inner join kardex.motivonotas as mn on(k.codmotivonota=mn.codmotivonota) where k.codkardex=" . $codkardex)->result_array();
+        if (empty($venta) || (int)$venta[0]['codcomprobantetipo'] !== 14) {
+            show_error('Nota de credito no encontrada.', 404); return;
+        }
+        $sucursal = $this->db->query('select * from public.sucursales where codsucursal=?', [(int)$venta[0]['codsucursal']])->result_array();
+        $formatoNota = $this->db->query('select * from caja.comprobantes where codsucursal=? and codcomprobantetipo=14 and seriecomprobante=? limit 1', [(int)$venta[0]['codsucursal'], $venta[0]['seriecomprobante']])->row_array();
+        $logoNota = !empty($formatoNota['logo']) ? FCPATH . 'public/img/empresa/' . basename($formatoNota['logo']) : FCPATH . 'public/img/' . ($_SESSION['phuyu_logo'] ?? '');
+        $credito = [];
         if ($venta[0]['condicionpago'] == 2) {
             $credito = $this->db->query('SELECT *FROM kardex.creditos WHERE codkardex=' . $venta[0]['codkardex'])->result_array();
         }
@@ -3517,336 +3434,63 @@ class Formato extends CI_Controller
             $nombre = $empresa[0]['nombrecomercial'];
         }
 
-        $html = '<table cellpadding="6" width="100%" align="center">';
-        $html .= '<tr>';
-        $html .= '<th style="width:30%">';
-        $html .= '<h4></h4> <img src="' . base_url() . 'public/img/' . $_SESSION['phuyu_logo'] . '" style="height:100px">';
-        $html .= '</th>';
-        $html .= '<th style="width:35%">';
-        $html .= '<h3>' . $nombre . '</h3>';
-        $html .= '<p>' . $parametros[0]['slogan'] . '</p>';
-        $html .= '<p>' . $parametros[0]['publicidad'] . '</p>';
-        $html .= '</th>';
-        $html .= '<th style="width:35%;border:1px solid #000;color:#000;padding:10px !important;">';
-        $html .= '<h2>RUC: ' . $empresa[0]['documento'] . '</h2> <h6></h6> <h3>' . $venta[0]['comprobante'] . '</h3>';
-        $html .= '<h3>' . $venta[0]['seriecomprobante'] . ' - ' . $venta[0]['nrocomprobante'] . '</h3>';
-        $html .= '</th>';
-        $html .= '</tr>';
-        $html .= '</table>';
-
-        $html .= '<table cellpadding="2" width="100%">';
-        if (count($principal) > 0) {
-            if ($_SESSION['phuyu_codsucursal'] != $principal[0]['codsucursal']) {
-                $html .= '<tr>';
-                $html .= '<td style="width:100%;"> <b>PRINCIPAL: ' . $principal[0]['direccion'] . '</b> </td>';
-                $html .= '</tr>';
-
-                $html .= '<tr>';
-                $html .= '<td style="width:100%;"> <b>SUCURSAL: ' . $sucursal[0]['direccion'] . '</b> </td>';
-                //$html .= '<td style="width:40%;"> <b> SOPORTE TECNICO: 997644742 </b> </td>';
-                $html .= '</tr>';
-            } else {
-                $html .= '<tr>';
-                $html .= '<td style="width:100%;"> <b>' . $sucursal[0]['direccion'] . '</b> </td>';
-                //$html .= '<td style="width:40%;"> <b> SOPORTE TECNICO: 997644742 </b> </td>';
-                $html .= '</tr>';
-            }
-        } else {
-            $html .= '<tr>';
-            $html .= '<td style="width:100%;"> <b>' . $sucursal[0]['direccion'] . '</b> </td>';
-            //$html .= '<td style="width:40%;"> <b> SOPORTE TECNICO: 997644742 </b> </td>';
-            $html .= '</tr>';
-        }
-
-        $html .= '<tr>';
-        $html .= '<td> <b>' . $sucursal[0]['telefonos'] . '</b> </td>';
-        // $html .= '<td> E-MAIL: '.$empresa[0]["email"].' </td>';
-        $html .= '</tr>';
-        $html .= '</table>';
-        $html .= '<table cellpadding="0" width="100%"> <tr> <th style="height:5px;"></th> </tr> </table>';
-
-        $html .= '<table cellpadding="3" width="100%" style="border:1px solid #000;border-radius:50%">';
-        $html .= '<tr>';
-        $html .= '<td style="width:16%;font-size:10px"> <b>CODIGO CLIENTE</b> </td>';
-        $html .= '<td style="width:44%;font-size:10px">: 000' . $venta[0]['codpersona'] . '</td>';
-        $html .= '<td style="width:18%;font-size:10px"> <b>CONDICION PAGO</b> </td>';
-        if ($venta[0]['condicionpago'] == 1) {
-            $html .= '<td style="width:22%;font-size:10px">: CONTADO</td>';
-        } else {
-            $html .= '<td style="width:22%;font-size:10px">: CREDITO: ' . $credito[0]['nrodias'] . ' dias</td>';
-        }
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td style="font-size:10px"> <b>RAZON SOCIAL</b> </td>';
-        $html .= '<td style="font-size:10px">: ' . $venta[0]['cliente'] . '</td>';
-        $html .= '<td style="font-size:10px"> <b>GUIA N°</b> </td>';
-        $html .= '<td>: </td>';
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td style="font-size:10px"> <b>DIRECCION</b> </td>';
-        $html .= '<td style="font-size:10px">: ' . $venta[0]['direccion'] . ' </td>';
-        $html .= '<td style="font-size:10px"> <b>MONEDA</b> </td>';
-        $html .= '<td style="font-size:10px">: SOLES</td>';
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td> <b>DNI / RUC</b> </td>';
-        $html .= '<td>: ' . $venta[0]['documento'] . '</td>';
-        $html .= '<td> <b>FECHA</b> </td>';
-        $html .= '<td>: ' . $venta[0]['fechacomprobante'] . '</td>';
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td> <b>REFERENCIA</b> </td>';
-        $html .= '<td>: ' . $venta[0]['comprobante_ref'] . ': ' . $venta[0]['seriecomprobante_ref'] . '-' . $venta[0]['nrocomprobante_ref'] . '</td>';
-        $html .= '<td> <b>MOTIVO</b> </td>';
-        $html .= '<td style="font-size:10px">: ' . $venta[0]['motivo'] . '</td>';
-        $html .= '</tr>';
-        $html .= '</table>';
-        $html .= '<table cellpadding="1" width="100%"> <tr> <th style="height:10px;"></th> </tr> </table>';
-
-        $html .= '<table cellpadding="2" width="100%" style="border:1px solid #000;">';
-        $html .= '<tr>';
-        $html .= '<td style="' . $estilo . 'width:6%;"> <b>ITEM</b> </td>';
-        $html .= '<td style="' . $estilo . 'width:40%;"> <b>DESCRIPCION</b> </td>';
-        $html .= '<td style="' . $estilo . 'width:15%;"> <b>UND MEDIDA</b> </td>';
-        $html .= '<td style="' . $estilo . 'width:13%;"> <b>CANTIDAD</b> </td>';
-        $html .= '<td style="' . $estilo . 'width:13%;"> <b>P.UNITARIO</b> </td>';
-        $html .= '<td style="' . $estilo . 'width:13%;"> <b>IMPORTE</b> </td>';
-        $html .= '</tr>';
-        $html .= '</table>';
-        $c = 1;
-        $html .= '<table cellpadding="1" width="100%" style="border:1px solid #000;">';
-        foreach ($detalle as $value) {
-            $html .= '<tr>';
-            $html .= '<td style="' . $estilo . 'width:6%;"> 0' . $c . ' </td>';
-            $html .= '<td style="' . $estilo . 'width:40%;font-size:10px;"> ' . $value['producto'] . ' ' . $value['descripcion'] . '</td>';
-            $html .= '<td style="' . $estilo . 'width:15%;font-size:10px;"> ' . $value['unidad'] . ' </td>';
-            $html .= '<td style="' . $estilo . 'width:13%;text-align:right;font-size:10px;"> ' . number_format($value['cantidad'], 2) . ' </td>';
-            $html .= '<td style="' . $estilo . 'width:13%;text-align:right;font-size:10px;"> ' . number_format($value['preciounitario'], 2) . ' </td>';
-            $html .= '<td style="' . $estilo . 'width:13%;text-align:right;font-size:10px;"> ' . number_format($value['subtotal'], 2) . ' </td>';
-            $html .= '</tr>';
-            $c++;
-        }
-        /* for ($i=0; $i < 7 - count($detalle); $i++) {
-            $html .= '<tr>';
- $html .= '<td style="'.$estilo.'"> </td>';
- $html .= '<td style="'.$estilo.'"> </td>';
- $html .= '<td style="'.$estilo.'"> </td>';
- $html .= '<td style="'.$estilo.'"> </td>';
- $html .= '<td style="'.$estilo.'"> </td>';
- $html .= '<td style="'.$estilo.'"> </td>';
- $html .= '</tr>';
-            } */
-        $html .= '</table>';
-        $html .= '<table cellpadding="1" width="100%"> <tr> <th style="height:10px;"></th> </tr> </table>';
+        if (!empty($formatoNota['nombrecomercial'])) { $nombre = $formatoNota['nombrecomercial']; }
 
         $this->load->library('Number');
         $number = new Number();
-        $total_texto = $number->convertirNumeroEnLetras(round($venta[0]['importe'], 2));
+        $partesImporte = explode('.', number_format((float)$venta[0]['importe'], 2, '.', ''));
+        $textoNota = 'SON ' . strtoupper($number->convertirNumeroEnLetras($partesImporte[0])) . ' Y ' . $partesImporte[1] . '/100 SOLES';
         $qrSrc = $this->phuyu_qr_data_uri($this->phuyu_qr_texto_comprobante($empresa[0], $venta[0]));
+        $html = $this->load->view('facturacion/formato/a4_notacredito', compact('empresa', 'sucursal', 'parametros', 'venta', 'totales', 'detalle', 'nombre', 'formatoNota', 'logoNota', 'textoNota', 'qrSrc', 'credito', 'principal', 'papel_nota'), true);
 
-        $html .= '<table cellpadding="2" width="100%" style="border:1px solid #000;">';
-        $html .= '<tr>';
-        $html .= '<td style="' . $estilo . ' width:65%" rowspan="8" align="center"> ';
-        $html .= '<h4> SON: ' . strtoupper($total_texto) . ' Y 00/100 SOLES</h4> <br> ';
-        $html .= '<img src="' . $qrSrc . '" style="height:100px">';
-        $html .= '</td>';
-        $html .= '<td style="' . $estilo . ' width:20%;text-align:right"> <b>OP.GRAVADAS S/</b> </td>';
-        $html .= '<td style="' . $estilo . ' width:15%;text-align:right">' . number_format($totales[0]['gravado'] - $venta[0]['igv'], 2) . ' </td>';
-        $html .= '</tr>';
-        $html .= '<tr> <td style="' . $estilo1 . '"> <b>OP.INAFECTAS S/</b> </td> <td style="' . $estilo1 . '">' . number_format($totales[0]['inafecto'], 2) . ' </td> </tr>';
-        $html .= '<tr> <td style="' . $estilo1 . '"> <b>OP.EXONERADAS S/</b> </td> <td style="' . $estilo1 . '">' . number_format($totales[0]['exonerado'], 2) . ' </td> </tr>';
-        $html .= '<tr> <td style="' . $estilo1 . '"> <b>O.GRATUITAS S/</b> </td> <td style="' . $estilo1 . '">' . number_format($totales[0]['gratuito'], 2) . ' </td> </tr>';
-        $html .= '<tr> <td style="' . $estilo1 . '"> <b>DESCUENTO S/</b>  </td> <td style="' . $estilo1 . '">' . number_format($venta[0]['descglobal'], 2) . ' </td> </tr>';
-        $html .= '<tr> <td style="' . $estilo1 . '"> <b>IGV S/</b> </td> <td style="' . $estilo1 . '">' . number_format($venta[0]['igv'], 2) . ' </td> </tr>';
-        $html .= '<tr> <td style="' . $estilo1 . '"> <b>ICBPER S/</b> </td> <td style="' . $estilo1 . '">' . number_format($venta[0]['icbper'], 2) . ' </td> </tr>';
-        $html .= '<tr> <td style="' . $estilo1 . '"> <b>TOTAL S/</b> </td> <td style="' . $estilo1 . '">' . number_format($venta[0]['importe'], 2) . ' </td> </tr>';
-        $html .= '</table>';
-
-        $html .= '<p>CONSULTE SU COMPROBANTE EN: ' . $parametros[0]['urlconsultacomprobantes'] . '</p>';
-        $html .= '<p>' . $parametros[0]['agradecimiento'] . '</p>';
-
-        $this->load->library('Pdf');
-
-        $pdf = new Pdf('P', 'mm', 'A4', true, 'UTF-8', false);
-        $pdf->SetCreator(PDF_CREATOR);
-        $pdf->SetAuthor('WEB phuyu');
-        $pdf->SetTitle('WEB phuyu | IMPRIMIR VENTA');
-        $pdf->SetSubject('WEB phuyu');
-
-        $pdf->setPrintHeader(false);
-
-        $pdf->SetAutoPageBreak(true, PDF_MARGIN_BOTTOM);
-        $pdf->setImageScale(PDF_IMAGE_SCALE_RATIO);
-
-        $pdf->setFontSubsetting(true);
-        $pdf->SetFont('helvetica', '', 9);
-        $pdf->AddPage('A');
-        $pdf->writeHTML($html, true, 0, true, 0);
-        //$pdf->writeHTML($html, true, false, true, false, '');
-
-        $nombre_archivo = utf8_decode($venta[0]['comprobante'] . ' ' . $venta[0]['seriecomprobante'] . '-' . $venta[0]['nrocomprobante'] . '.pdf');
-        $pdf->Output($nombre_archivo, 'I');
+        // Mismo motor de la factura: CSS, transparencias y marca de agua.
+        require_once FCPATH . 'vendor/autoload.php';
+        $tempDir = FCPATH . 'application/cache/dompdf';
+        if (!is_dir($tempDir)) { mkdir($tempDir, 0775, true); }
+        $options = new \Dompdf\Options();
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('isRemoteEnabled', true);
+        $options->set('defaultFont', 'DejaVu Sans');
+        $options->set('chroot', FCPATH);
+        $options->set('tempDir', $tempDir);
+        $options->set('fontDir', FCPATH . 'vendor/dompdf/dompdf/lib/fonts');
+        $options->set('fontCache', $tempDir);
+        $options->set('dpi', 96);
+        $pdf = new \Dompdf\Dompdf($options);
+        $pdf->loadHtml($html, 'UTF-8');
+        // A5 exacto 148 x 210 mm, sin heredar orientacion de otra impresion.
+        if ($papel_nota === 'A5') {
+            $pdf->setPaper([0, 0, 148 * 72 / 25.4, 210 * 72 / 25.4], 'portrait');
+        } else {
+            $pdf->setPaper('A4', 'portrait');
+        }
+        $pdf->render();
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        $pdf->stream($venta[0]['seriecomprobante'] . '-' . $venta[0]['nrocomprobante'] . '-' . $papel_nota . '-vertical.pdf', ['Attachment' => false]);
     }
 
     public function a5notacredito($codkardex)
     {
-        $estilo = 'border-left:1px solid #000; border-right:1px solid #000;';
-        $estilo1 = 'border-top:1px solid #000; border-left:1px solid #000; border-right:1px solid #000;text-align:right';
-
-        $empresa = $this->db->query('select documento,razonsocial,nombrecomercial from public.personas where codpersona=1')->result_array();
-        $sucursal = $this->db->query('select *from public.sucursales where codsucursal=' . $_SESSION['phuyu_codsucursal'])->result_array();
-        $parametros = $this->db->query('select *from public.empresas limit 1')->result_array();
-
-        $venta = $this->db->query("select k.codkardex,k.fechacomprobante,ct.descripcion as comprobante, k.codcomprobantetipo, k.seriecomprobante,k.nrocomprobante,( CASE WHEN  codcomprobantetipo_ref = 10 THEN 'FACT' ELSE 'BOL' END) AS comprobante_ref,k.seriecomprobante_ref,k.nrocomprobante_ref, mn.descripcion as motivo, p.documento,k.cliente,k.direccion,k.valorventa,k.descglobal,k.igv,k.importe, k.codempleado,k.condicionpago,k.nroplaca, k.codpersona, k.icbper from kardex.kardex as k inner join public.personas as p on(k.codpersona=p.codpersona) inner join caja.comprobantetipos as ct on(k.codcomprobantetipo=ct.codcomprobantetipo) inner join kardex.motivonotas as mn on(k.codmotivonota=mn.codmotivonota) where k.codkardex=" . $codkardex)->result_array();
-        if ($venta[0]['condicionpago'] == 2) {
-            $credito = $this->db->query('SELECT *FROM kardex.creditos WHERE codkardex=' . $venta[0]['codkardex'])->result_array();
-        }
-        $totales = $this->db->query('select (select coalesce(sum(subtotal),0) from kardex.kardexdetalle where codkardex=' . $codkardex . " and codafectacionigv='10') as gravado, (select coalesce(sum(subtotal),0) from kardex.kardexdetalle where codkardex=" . $codkardex . " and codafectacionigv='20') as exonerado, (select coalesce(sum(subtotal),0) from kardex.kardexdetalle where codkardex=" . $codkardex . " and codafectacionigv='30') as inafecto, (select coalesce(sum(subtotal),0) from kardex.kardexdetalle where codkardex=" . $codkardex . " and codafectacionigv='21') as gratuito")->result_array();
-        $detalle = $this->db->query('select kd.item,kd.cantidad,p.descripcion as producto,u.descripcion as unidad,kd.preciounitario,kd.subtotal, kd.descripcion from kardex.kardexdetalle as kd inner join almacen.productos as p on(p.codproducto=kd.codproducto) inner join almacen.unidades as u on(u.codunidad=kd.codunidad) where kd.codkardex=' . $codkardex . ' order by kd.item')->result_array();
-
-        //$html = $this->load->view("facturacion/formato/a5",compact("empresa","parametros","venta"),true);
-
-        if ($empresa[0]['nombrecomercial'] == '') {
-            $nombre = $empresa[0]['razonsocial'];
-        } else {
-            $nombre = $empresa[0]['nombrecomercial'];
-        }
-
-        $vendedor = $this->db->query('select razonsocial from public.personas where codpersona=' . $venta[0]['codempleado'])->result_array();
-        $html = '<table width="100%" align="center">';
-        $html .= '<tr>';
-        $html .= '<th style="width:20%">';
-        $html .= '<img src="' . base_url() . 'public/img/' . $_SESSION['phuyu_logo'] . '" style="height:80px;">';
-        $html .= '</th>';
-        $html .= '<th style="width:40%">';
-        $html .= '<h2>' . $nombre . '</h2>';
-        $html .= '<h4>' . $parametros[0]['slogan'] . '</h4>';
-        $html .= '</th>';
-        $html .= '<th style="width:2%;"></th>';
-        $html .= '<th style="width:38%;border:1px solid #000;color:#000;">';
-        $html .= '<h3>RUC: ' . $empresa[0]['documento'] . '</h3> <h3>' . $venta[0]['comprobante'] . '</h3>';
-        $html .= '<h3>' . $venta[0]['seriecomprobante'] . ' - ' . $venta[0]['nrocomprobante'] . '</h3>';
-        $html .= '</th>';
-        $html .= '</tr>';
-        $html .= '</table>';
-
-        $html .= '<table cellpadding="2" width="100%">';
-        $html .= '<tr>';
-        $html .= '<td style="width:100%;"><b>' . $sucursal[0]['direccion'] . '</b> </td>';
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td>TELF: ' . $sucursal[0]['telefonos'] . '</td>';
-        $html .= '</tr>';
-        $html .= '</table>';
-
-        $html .= '<table cellpadding="2" width="100%" style="border:1px solid #000;font-size:9px;">';
-        $html .= '<tr>';
-        $html .= '<td style="width:16%;"> <b>CLIENTE</b> </td>';
-        $html .= '<td style="width:54%;">: ' . $venta[0]['cliente'] . '</td>';
-        $html .= '<td style="width:15%"> <b>PAGO AL</b> </td>';
-        if ($venta[0]['condicionpago'] == 1) {
-            $html .= '<td style="width:15%;">: CONTADO</td>';
-        } else {
-            $html .= '<td style="width:15%;">: CREDITO: ' . $credito[0]['nrodias'] . ' dias</td>';
-        }
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td> <b>DIRECCION</b> </td>';
-        $html .= '<td>: ' . $venta[0]['direccion'] . ' </td>';
-        $html .= '<td> <b>MONEDA</b> </td>';
-        $html .= '<td>: SOLES</td>';
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td> <b>DNI / RUC</b> </td>';
-        $html .= '<td>: ' . $venta[0]['documento'] . '</td>';
-        $html .= '<td> <b>FECHA</b> </td>';
-        $html .= '<td>: ' . $venta[0]['fechacomprobante'] . '</td>';
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td> <b>REFERENCIA</b> </td>';
-        $html .= '<td>: ' . $venta[0]['comprobante_ref'] . ': ' . $venta[0]['seriecomprobante_ref'] . '-' . $venta[0]['nrocomprobante_ref'] . '</td>';
-        $html .= '<td> <b>MOTIVO</b> </td>';
-        $html .= '<td>: ' . $venta[0]['motivo'] . '</td>';
-        $html .= '</tr>';
-        $html .= '</table>';
-
-        $this->load->library('Number');
-        $number = new Number();
-        $total_texto = $number->convertirNumeroEnLetras(round($venta[0]['importe'], 2));
-        $qrSrc = $this->phuyu_qr_data_uri($this->phuyu_qr_texto_comprobante($empresa[0], $venta[0]));
-
-        $html .= '<table cellpadding="4" width="100%" style="border:1px solid #000;font-size:8px;margin-top:-5px">';
-        $html .= '<tr>';
-        $html .= '<td style="' . $estilo . 'width:7%;"> <b>ITEM</b> </td>';
-        $html .= '<td style="' . $estilo . 'width:40%;"> <b>DESCRIPCION</b> </td>';
-        $html .= '<td style="' . $estilo . 'width:15%;"> <b>UND MEDIDA</b> </td>';
-        $html .= '<td style="' . $estilo . 'width:12%;"> <b>CANTIDAD</b> </td>';
-        $html .= '<td style="' . $estilo . 'width:13%;"> <b>P.UNITARIO</b> </td>';
-        $html .= '<td style="' . $estilo . 'width:13%;"> <b>IMPORTE</b> </td>';
-        $html .= '</tr>';
-        foreach ($detalle as $value) {
-            $html .= '<tr>';
-            $html .= '<td style="' . $estilo . 'width:7%;"> 0' . $value['item'] . ' </td>';
-            $html .= '<td style="' . $estilo . 'width:40%;"> ' . $value['producto'] . ' ' . $value['descripcion'] . '</td>';
-            $html .= '<td style="' . $estilo . 'width:15%;"> ' . $value['unidad'] . ' </td>';
-            $html .= '<td style="' . $estilo . 'width:12%;text-align:right"> ' . number_format($value['cantidad'], 2) . ' </td>';
-            $html .= '<td style="' . $estilo . 'width:13%;text-align:right"> ' . number_format($value['preciounitario'], 2) . ' </td>';
-            $html .= '<td style="' . $estilo . 'width:13%;text-align:right"> ' . number_format($value['subtotal'], 2) . ' </td>';
-            $html .= '</tr>';
-        }
-        $html .= '</table>';
-
-        $html .= '<table cellpadding="4" width="100%" style="border:1px solid #000;font-size:8px">';
-        $html .= '<tr>';
-        $html .= '<td style="' . $estilo . ' width:62%" rowspan="7" align="center">';
-        $html .= '<h4> SON: ' . strtoupper($total_texto) . ' Y 00/100 SOLES</h4>';
-        $html .= '<img src="' . $qrSrc . '" style="height:80px">';
-        $html .= '</td>';
-        $html .= '<td style="' . $estilo . ' width:25%;text-align:right"> <b>OP.GRAVADAS S/</b> </td>';
-        $html .= '<td style="' . $estilo . ' width:13%;text-align:right">' . number_format($totales[0]['gravado'], 2) . ' </td>';
-        $html .= '</tr>';
-
-        $html .= '<tr> <td style="' . $estilo1 . '"> <b>OP.INAFECTAS S/</b> </td> <td style="' . $estilo1 . '">' . number_format($totales[0]['inafecto'], 2) . ' </td> </tr>';
-        $html .= '<tr> <td style="' . $estilo1 . '"> <b>OP.EXONERADAS S/</b> </td> <td style="' . $estilo1 . '">' . number_format($totales[0]['exonerado'], 2) . ' </td> </tr>';
-        $html .= '<tr> <td style="' . $estilo1 . '"> <b>O.GRATUITAS S/</b> </td> <td style="' . $estilo1 . '">' . number_format($totales[0]['gratuito'], 2) . ' </td> </tr>';
-        $html .= '<tr> <td style="' . $estilo1 . '"> <b>DESCUENTO S/</b>  </td> <td style="' . $estilo1 . '">' . number_format($venta[0]['descglobal'], 2) . ' </td> </tr>';
-        $html .= '<tr> <td style="' . $estilo1 . '"> <b>IGV S/</b> </td> <td style="' . $estilo1 . '">' . number_format($venta[0]['igv'], 2) . ' </td> </tr>';
-        $html .= '<tr> <td style="' . $estilo1 . '"> <b>TOTAL S/</b> </td> <td style="' . $estilo1 . '">' . number_format($venta[0]['importe'], 2) . ' </td> </tr>';
-        $html .= '</table>';
-
-        $html .= '<h5 style="color:#000;" align="center">' . $parametros[0]['publicidad'] . '</h5>';
-
-        $this->load->library('Pdf');
-
-        $pdf = new Pdf('L', 'mm', 'A4', true, 'UTF-8', false);
-        $pdf->SetCreator(PDF_CREATOR);
-        $pdf->SetAuthor('WEB phuyu');
-        $pdf->SetTitle('WEB phuyu | IMPRIMIR VENTA');
-        $pdf->SetSubject('WEB phuyu');
-
-        $pdf->setPrintHeader(false);
-
-        $pdf->SetAutoPageBreak(true, PDF_MARGIN_BOTTOM);
-        $pdf->setImageScale(PDF_IMAGE_SCALE_RATIO);
-
-        $pdf->setFontSubsetting(true);
-        $pdf->SetFont('helvetica', '', 9);
-        $pdf->AddPage('L', 'A5');
-        //$pdf->AddPage('L', 'A5');
-        // $pdf->SetLeftMargin(0);
-        $pdf->writeHTML($html, true, 0, true, 0);
-
-        $nombre_archivo = utf8_decode('ImprimirVenta.pdf');
-        $pdf->Output($nombre_archivo, 'I');
+        $this->imprimir_notacredito($codkardex, 'A5');
     }
 
     public function ticketnotacredito($codkardex)
     {
+        $codkardex = (int)$codkardex;
+        if ($codkardex <= 0) { show_error('Codigo invalido.', 400); return; }
         if (isset($_SESSION['phuyu_codusuario'])) {
             $empresa = $this->db->query('select documento,razonsocial,nombrecomercial from public.personas where codpersona=1')->result_array();
             $sucursal = $this->db->query('select sucursal.*,empresa.publicidad,empresa.agradecimiento from public.sucursales as sucursal inner join public.empresas as empresa on(sucursal.codempresa=empresa.codempresa) where sucursal.codsucursal=' . $_SESSION['phuyu_codsucursal'])->result_array();
 
-            $venta = $this->db->query('select k.fechacomprobante,ct.descripcion as comprobante, k.codcomprobantetipo, k.seriecomprobante,k.nrocomprobante, p.documento,k.cliente,k.direccion,k.valorventa,k.descglobal,k.igv,k.importe, k.codempleado,k.condicionpago,k.nroplaca from kardex.kardex as k inner join public.personas as p on(k.codpersona=p.codpersona) inner join caja.comprobantetipos as ct on(k.codcomprobantetipo=ct.codcomprobantetipo) where k.codkardex=' . $codkardex)->result_array();
+            $venta = $this->db->query('select k.codsucursal,k.codmotivonota,k.descripcion,k.codcomprobantetipo_ref,k.seriecomprobante_ref,k.nrocomprobante_ref,k.fechacomprobante,ct.descripcion as comprobante, k.codcomprobantetipo, k.seriecomprobante,k.nrocomprobante, p.documento,k.cliente,k.direccion,k.valorventa,k.descglobal,k.igv,k.importe, k.codempleado,k.condicionpago,k.nroplaca from kardex.kardex as k inner join public.personas as p on(k.codpersona=p.codpersona) inner join caja.comprobantetipos as ct on(k.codcomprobantetipo=ct.codcomprobantetipo) where k.codkardex=' . $codkardex)->result_array();
+            if (empty($venta) || (int)$venta[0]['codcomprobantetipo'] !== 14) {
+                show_error('Nota de credito no encontrada.', 404);
+                return;
+            }
+            // Usar la sucursal de la nota al reimprimir, no la sesion actual.
+            $sucursal = $this->db->query('select s.*,e.publicidad,e.agradecimiento from public.sucursales s join public.empresas e on e.codempresa=s.codempresa where s.codsucursal=?', [(int)$venta[0]['codsucursal']])->result_array();
             $totales = $this->db->query('select (select coalesce(sum(subtotal),0) from kardex.kardexdetalle where codkardex=' . $codkardex . " and codafectacionigv='10') as gravado, (select coalesce(sum(subtotal),0) from kardex.kardexdetalle where codkardex=" . $codkardex . " and codafectacionigv='20') as exonerado, (select coalesce(sum(subtotal),0) from kardex.kardexdetalle where codkardex=" . $codkardex . " and codafectacionigv='30') as inafecto, (select coalesce(sum(subtotal),0) from kardex.kardexdetalle where codkardex=" . $codkardex . " and codafectacionigv='21') as gratuito")->result_array();
             $detalle = $this->db->query('select kd.item,kd.cantidad,p.descripcion as producto,u.descripcion as unidad,kd.preciounitario,kd.subtotal, kd.descripcion from kardex.kardexdetalle as kd inner join almacen.productos as p on(p.codproducto=kd.codproducto) inner join almacen.unidades as u on(u.codunidad=kd.codunidad) where kd.codkardex=' . $codkardex . ' order by kd.item')->result_array();
 
@@ -3867,18 +3511,32 @@ class Formato extends CI_Controller
 
             $texto_importe = 'SON ' . strtoupper($det_imptotaltexto) . ' Y ' . $imptotaltexto[1] . '/100 SOLES';
 
-            $ticket = 'ticket';
-            if ($empresa[0]['documento'] == '20209000831') {
-                $ticket = 'ticket_20209000831';
+            // Compartir el diseño termico legible con el ticket de venta.
+            $formato = $this->db->query('select * from caja.comprobantes where codsucursal=? and codcomprobantetipo=14 and seriecomprobante=? limit 1', [(int)$venta[0]['codsucursal'], $venta[0]['seriecomprobante']])->row_array();
+            $parametros = $sucursal[0] ?? [];
+            $nombre = !empty($formato['nombrecomercial']) ? $formato['nombrecomercial'] :
+                ($empresa[0]['nombrecomercial'] ?: $empresa[0]['razonsocial']);
+            $logoArchivo = !empty($formato['logo']) ? FCPATH . 'public/img/empresa/' . $formato['logo'] :
+                FCPATH . 'public/img/' . ($_SESSION['phuyu_logo'] ?? '');
+            $logo_src = '';
+            if (is_file($logoArchivo)) {
+                $imagen = @getimagesize($logoArchivo);
+                if ($imagen && in_array($imagen['mime'], ['image/jpeg','image/png','image/gif','image/webp'], true)) {
+                    $logo_src = 'data:' . $imagen['mime'] . ';base64,' . base64_encode(file_get_contents($logoArchivo));
+                }
             }
-            if ($empresa[0]['documento'] == '20602165869') {
-                $ticket = 'ticket_20602165869';
-            }
-            if ($empresa[0]['documento'] == '20570793986') {
-                $ticket = 'ticket_20570793986';
-            }
+            $motivo = $this->db->query('select descripcion from kardex.motivonotas where codmotivonota=?', [(int)$venta[0]['codmotivonota']])->row_array();
+            $tipoReferencia = $this->db->query('select descripcion from caja.comprobantetipos where codcomprobantetipo=?', [(int)$venta[0]['codcomprobantetipo_ref']])->row_array();
+            $nota_credito = [
+                'comprobante' => $tipoReferencia['descripcion'] ?? 'Comprobante',
+                'numero' => $venta[0]['seriecomprobante_ref'] . '-' . $venta[0]['nrocomprobante_ref'],
+                'motivo' => $motivo['descripcion'] ?? '',
+                'descripcion' => $venta[0]['descripcion'] ?? ''
+            ];
+            $qr_src = $qrSrc;
+            $efectivo = 0;
+            $this->load->view('facturacion/formato/ticket_Phuyu', compact('empresa', 'sucursal', 'venta', 'totales', 'detalle', 'vendedor', 'credito', 'texto_importe', 'qr_src', 'logo_src', 'nombre', 'formato', 'parametros', 'efectivo', 'nota_credito'));
 
-            $this->load->view('facturacion/formato/' . $ticket, compact('empresa', 'sucursal', 'venta', 'totales', 'detalle', 'vendedor', 'credito', 'texto_importe', 'qrSrc'));
         } else {
             $this->load->view('phuyu/404');
         }

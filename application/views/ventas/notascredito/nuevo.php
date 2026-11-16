@@ -424,7 +424,7 @@
 	</form>
 </div>
 
-<script src="<?php echo base_url();?>phuyu/phuyu_notas/nuevo.js"></script>
+<script src="<?php echo base_url();?>phuyu/phuyu_notas/nuevo.js?v=<?php echo filemtime(FCPATH . 'phuyu/phuyu_notas/nuevo.js'); ?>"></script>
 <script src="<?php echo base_url();?>phuyu/phuyu_personas_2.js"></script>
 
 <script>

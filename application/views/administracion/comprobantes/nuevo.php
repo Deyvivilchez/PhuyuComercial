@@ -133,12 +133,28 @@
 
 						<div class="col-12 col-md-6">
 							<label class="form-label">Logo serie</label>
-							<input type="file" class="form-control" name="logoa" accept="image/*">
+							<input type="file" class="form-control" name="logoa" accept="image/jpeg,image/png,image/gif,image/webp" v-on:change="phuyu_previsualizar_logo($event, 'logo')">
+                            <div class="border rounded p-2 mt-2 text-center" style="background:#fff">
+                                <template v-if="phuyu_logo_src('logo')">
+                                    <img v-bind:src="phuyu_logo_src('logo')" alt="Logo serie" style="max-width:100%;max-height:120px;object-fit:contain" v-on:error="phuyu_logo_error('logo')">
+                                    <div class="small text-break mt-1">{{ archivos_logo.logo || campos.logo }}</div>
+                                    <div class="small text-muted">{{ archivos_logo.logo ? 'Vista previa. Se guardara al pulsar Guardar.' : 'Logo guardado' }}</div>
+                                </template>
+                                <span v-else class="small text-muted">{{ errores_logo.logo ? 'No se pudo cargar el logo guardado. Puede seleccionar otra imagen.' : 'Sin logo asignado a esta serie.' }}</span>
+                            </div>
 						</div>
 
 						<div class="col-12 col-md-6">
 							<label class="form-label">Logo auspiciador</label>
-							<input type="file" class="form-control" name="auspiciadora" accept="image/*">
+							<input type="file" class="form-control" name="auspiciadora" accept="image/jpeg,image/png,image/gif,image/webp" v-on:change="phuyu_previsualizar_logo($event, 'logoauspiciador')">
+                            <div class="border rounded p-2 mt-2 text-center" style="background:#fff">
+                                <template v-if="phuyu_logo_src('logoauspiciador')">
+                                    <img v-bind:src="phuyu_logo_src('logoauspiciador')" alt="Logo auspiciador" style="max-width:100%;max-height:120px;object-fit:contain" v-on:error="phuyu_logo_error('logoauspiciador')">
+                                    <div class="small text-break mt-1">{{ archivos_logo.logoauspiciador || campos.logoauspiciador }}</div>
+                                    <div class="small text-muted">{{ archivos_logo.logoauspiciador ? 'Vista previa. Se guardara al pulsar Guardar.' : 'Logo guardado' }}</div>
+                                </template>
+                                <span v-else class="small text-muted">{{ errores_logo.logoauspiciador ? 'No se pudo cargar el logo guardado. Puede seleccionar otra imagen.' : 'Sin logo asignado a esta serie.' }}</span>
+                            </div>
 						</div>
 
 						<div class="col-12">

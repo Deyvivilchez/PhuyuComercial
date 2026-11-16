@@ -717,7 +717,10 @@ public function exportar_pdf_detallado()
         $pdf->setPrintFooter(true);
         $pdf->SetFont('dejavusans', '', 7);
         $pdf->AddPage();
-        $pdf->writeHTML($html, true, false, true, false, '');
+        // Evitar que TCPDF construya el DOM de todos los movimientos a la vez.
+        foreach (explode('<!-- phuyu-pdf-block -->', $html) as $bloque) {
+            $pdf->writeHTML($bloque, true, false, true, false, '');
+        }
         $contenido = $pdf->Output('', 'S');
     } catch (Throwable $error) {
         while (ob_get_level() > $nivel_buffer) { ob_end_clean(); }

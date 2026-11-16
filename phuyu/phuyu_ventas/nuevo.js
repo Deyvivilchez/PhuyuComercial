@@ -1,6 +1,7 @@
 var phuyu_operacion = new Vue({
     el: "#phuyu_operacion",
     data: {
+        descripcion_editor_activo: false,
         afectacionigv: $("#afectacionigv").val(),
         estado: 0,
         puede_modificar_precio: (typeof phuyu_puede_modificar_precio !== "undefined" && parseInt(phuyu_puede_modificar_precio) === 1),
@@ -442,7 +443,8 @@ var phuyu_operacion = new Vue({
             }
 
             var producto = resultado.producto || resultado;
-            var stockClase = this.phuyu_clase_stock_rapido(producto.stock);
+            var stockDisponible = producto.stockdisponible !== undefined ? producto.stockdisponible : producto.stock;
+            var stockClase = this.phuyu_clase_stock_rapido(stockDisponible);
             var serie = parseInt(producto.controlarseries) === 1 ?
                 '<span class="badge bg-info">SERIE</span>' :
                 '<span class="badge bg-success-subtle text-success border border-success-subtle">DIRECTO</span>';
@@ -454,7 +456,7 @@ var phuyu_operacion = new Vue({
                         '<div class="phuyu-product-result-meta">' +
                             this.phuyu_escape_producto_rapido(producto.codigo) + ' · ' +
                             '<span class="phuyu-product-result-stock ' + stockClase + '">' +
-                                '<i class="bi bi-box-seam"></i> Stock ' + this.phuyu_escape_producto_rapido(producto.stock) + ' ' + this.phuyu_escape_producto_rapido(producto.unidad) +
+                                '<i class="bi bi-box-seam"></i> Disponible ' + this.phuyu_escape_producto_rapido(stockDisponible) + ' ' + this.phuyu_escape_producto_rapido(producto.unidad) +
                             '</span>' +
                             ' · S/. ' + this.phuyu_escape_producto_rapido(producto.precio) +
                         '</div>' +
@@ -685,8 +687,9 @@ var phuyu_operacion = new Vue({
                 return false;
             }
 
+            if (producto.stockdisponible !== undefined) { producto.stock = producto.stockdisponible; }
             var validaStock = parseInt(this.stockalmacen) === 1 && parseInt(producto.controlstock) === 1;
-            if (validaStock && parseFloat(producto.stock) <= 0) {
+            if (validaStock && parseFloat(producto.stockdisponible !== undefined ? producto.stockdisponible : producto.stock) <= 0) {
                 phuyu_sistema.phuyu_alerta(
                     "NO HAY STOCK DISPONIBLE PARA ESTE PRODUCTO",
                     producto.descripcion + " · STOCK: " + producto.stock + " " + producto.unidad,
@@ -853,18 +856,43 @@ var phuyu_operacion = new Vue({
             }
 
         },
+        // Sincroniza el select nativo, Vue y Select2, sin tocar el buscador de productos.
+        phuyu_seleccionar_cliente: function(persona) {
+            // Crear la opcion ANTES de asignar v-model. Si Vue actualiza el
+            // select sin esa opcion, lo invalida y emite change con valor null.
+            var $cliente = $("#codpersona");
+            var codigo = String(persona["codpersona"]);
+            var opcion = $cliente.find('option').filter(function() {
+                return this.value === codigo;
+            });
+            if (!opcion.length) {
+                $cliente.append(new Option(persona["razonsocial"], codigo, true, true));
+            }
+            this.campos.codpersona = persona["codpersona"];
+            var clientesVarios = persona["codpersona"] == 2;
+            $("#acv").prop('checked', clientesVarios);
+            $("#codpersona").prop('disabled', clientesVarios).prop('required', !clientesVarios);
+            $("#cliente").prop('readonly', !clientesVarios);
+            // Select2 AJAX necesita una opcion real; cambiar solo el texto
+            // visible deja el cliente sin seleccionar y afecta otros selects.
+            this.$nextTick(function() {
+                // Actualizar Select2 sin consultar otra vez la ficha y
+                // sobrescribir los datos historicos del comprobante.
+                $cliente.val(codigo).trigger('change.select2');
+            });
+        },
         phuyu_addproforma: function(proforma) {
             var existe_proforma = [];
             if (this.codproforma == proforma.codproforma) {
                 phuyu_sistema.phuyu_noti("CUIDADO", "LA PROFORMA YA FUE SELECCIONADO", "danger");
                 return false;
             }
-            $(".select2-selection__rendered").text(proforma.razonsocial);
+            this.phuyu_seleccionar_cliente(proforma);
             this.codproforma = proforma.codproforma
             this.codpedido = 0;
             this.campos.cliente = proforma.razonsocial
             this.campos.direccion = proforma.direccion
-            this.campos.codpersona = parseInt(proforma.codpersona)
+            this.campos.nrodocumento = proforma.documento || "";
             this.campos.codempleado = proforma.codempleado;
             this.campos.condicionpago = proforma.condicionpago;
             if (proforma.condicionpago == 2) {
@@ -924,6 +952,7 @@ var phuyu_operacion = new Vue({
                                 subtotal_tem: v.subtotal,
                                 descripcion: v.descripcion,
                                 itemproforma: v.item,
+                                factor: v.factor,
                                 stock: v.stock,
                                 control: v.control,
                                 calcular: v.calcular
@@ -935,12 +964,36 @@ var phuyu_operacion = new Vue({
                         this.detalle = filas
                         this.phuyu_totales();
                     }
-                    this.phuyu_series(true, proforma.codpersona)
+                    this.phuyu_series();
+                    this.$http.get(url + "ventas/clientes/infocliente/" + proforma.codpersona).then(function(info) {
+                        if (String(this.campos.codpersona) !== String(proforma.codpersona) || !info.body[0]) return;
+                        this.campos.nrodocumento = info.body[0].documento;
+                        this.codtipodocumento = info.body[0].coddocumentotipo;
+                    });
+                    this.phuyu_validar_stock_detalle();
                 });
             }
 
         },
         phuyu_additem: function(producto, precio) {
+            if (producto.stockdisponible !== undefined) {
+                producto.stock = parseFloat(producto.stockdisponible) || 0;
+                producto.unidades = producto.unidades_disponibles || producto.unidades;
+            }
+            if (parseInt(this.stockalmacen) === 1 && parseInt(producto.controlstock) === 1) {
+                var factorStock = parseFloat(producto.factor) || 1;
+                var solicitadoBase = factorStock;
+                (this.detalle || []).forEach(function(item) {
+                    if (item.codproducto == producto.codproducto) {
+                        solicitadoBase += (parseFloat(item.cantidad) || 0) * (parseFloat(item.factor) || 1);
+                    }
+                });
+                if (solicitadoBase > (parseFloat(producto.stock) || 0) * factorStock + 0.000001) {
+                    phuyu_sistema.phuyu_alerta("STOCK DISPONIBLE INSUFICIENTE", producto.descripcion + " · Disponible: " + producto.stock + " " + producto.unidad, "error");
+                    return false;
+                }
+            }
+
             var existe_item = [];
             if ($("#itemrepetir").val() == 0) {
                 var existe_item = this.detalle.filter(function(p) {
@@ -1119,7 +1172,7 @@ var phuyu_operacion = new Vue({
                     producto.igv = Number((producto.subtotal - producto.valorventa).toFixed(2));
                 }
                 this.detalle[index].codunidad = codunidad;
-                this.detalle[index].stock = data.body[0].stock;
+                this.detalle[index].stock = data.body[0].stockdisponible !== undefined ? data.body[0].stockdisponible : data.body[0].stock;
                 this.phuyu_itemcalcular(producto, 1)
             });
         },
@@ -1138,8 +1191,13 @@ var phuyu_operacion = new Vue({
             }
             this.item = producto;
             $("#modal_itemdetalle").modal('show');
+            this.$nextTick(function() { this.phuyu_editor_descripcion(); });
+        },
+        phuyu_editor_descripcion: function() {
+            PhuyuDescripcionItem.inicializar(this);
         },
         phuyu_itemcalcular: function(item, tipoprecio) {
+            this.phuyu_limitar_disponible(item);
             var porcentaje = 1;
             if (item.codafectacionigv == 21) {
                 item.preciobruto = 0;
@@ -1195,13 +1253,33 @@ var phuyu_operacion = new Vue({
             this.phuyu_totales();
         },
         phuyu_itemcalcular_cerrar: function(item) {
+            if (String(item.descripcion || '').length > 5000) {
+                phuyu_sistema.phuyu_noti('DESCRIPCION DEMASIADO LARGA', 'Reduzca el texto a 5000 caracteres.', 'warning');
+                return false;
+            }
             if (parseFloat(item.subtotal) < 0) {
                 phuyu_sistema.phuyu_noti("EL SUBTOTAL DEBE SER MAYOR A CERO", "REVISAR LOS CAMPOS DEL ITEM", "danger");
                 return false;
             }
             $("#modal_itemdetalle").modal("hide");
         },
-        phuyu_calcular: function(producto) {
+                phuyu_limitar_disponible: function(producto) {
+            if (parseInt(this.stockalmacen) !== 1 || parseInt(producto.control) !== 1) { return; }
+            var factor = parseFloat(producto.factor) || 1;
+            var otros = 0;
+            (this.detalle || []).forEach(function(item) {
+                if (item !== producto && item.codproducto == producto.codproducto) {
+                    otros += (parseFloat(item.cantidad) || 0) * (parseFloat(item.factor) || 1);
+                }
+            });
+            var maximo = Math.max(0, ((parseFloat(producto.stock) || 0) * factor - otros) / factor);
+            if ((parseFloat(producto.cantidad) || 0) > maximo + 0.000001) {
+                producto.cantidad = Math.floor(maximo * 1000 + 0.000001) / 1000;
+                phuyu_sistema.phuyu_alerta("STOCK DISPONIBLE INSUFICIENTE", "Disponible para esta fila: " + producto.cantidad + " " + producto.unidad, "error");
+            }
+        },
+phuyu_calcular: function(producto) {
+            this.phuyu_limitar_disponible(producto);
             if (!this.puede_modificar_precio && arguments.length <= 1) {
                 producto.precio = producto.preciooriginal || producto.preciorefunitario || producto.precio;
             }
@@ -1313,7 +1391,30 @@ var phuyu_operacion = new Vue({
             //console.log(subtotal_tem)
             this.totales.importe = Number((subtotal_tem + this.totales.igv + this.totales.icbper).toFixed(2));
         },
+        // No recorta lo cotizado silenciosamente: exige corregir las cantidades.
+        // El servidor vuelve a validar stock/reservas e ingredientes al guardar.
+        phuyu_validar_stock_detalle: function() {
+            if (parseInt(this.stockalmacen) !== 1) return true;
+            var detalle = this.detalle || [];
+            for (var i = 0; i < detalle.length; i++) {
+                var item = detalle[i];
+                if (parseInt(item.control) !== 1) continue;
+                var factor = parseFloat(item.factor) || 1;
+                var solicitado = detalle.reduce(function(total, fila) {
+                    return total + (fila.codproducto == item.codproducto ?
+                        (parseFloat(fila.cantidad) || 0) * (parseFloat(fila.factor) || 1) : 0);
+                }, 0);
+                if (solicitado > (parseFloat(item.stock) || 0) * factor + 0.000001) {
+                    phuyu_sistema.phuyu_alerta("STOCK DISPONIBLE INSUFICIENTE",
+                        item.producto + ": disponible " + item.stock + " " + item.unidad +
+                        ". Revise las cantidades antes de continuar.", "error");
+                    return false;
+                }
+            }
+            return true;
+        },
         phuyu_validar_consistencia_venta: function() {
+            if (!this.phuyu_validar_stock_detalle()) return false;
             if (!this.detalle || this.detalle.length == 0) {
                 phuyu_sistema.phuyu_noti("REGISTRAR UN PRODUCTO EN EL DETALLE", "REGISTRAR ITEM PARA LA VENTA", "danger");
                 return false;
@@ -1397,9 +1498,7 @@ var phuyu_operacion = new Vue({
             }
             this.campos.fechacomprobante = $("#fechacomprobante").val();
             this.campos.fechakardex = $("#fechakardex").val();
-            this.pagos.monto_efectivo = this.totales.importe;
-
-            this.phuyu_vuelto();
+            this.phuyu_pagotarjeta();
             this.phuyu_lineascredito();
             if (this.campos.condicionpago == 2) {
                 if (!this.cuotas.length) {
@@ -1468,32 +1567,52 @@ var phuyu_operacion = new Vue({
                 $("#nrovoucher").attr("readonly", "true");
                 $("#nrovoucher").removeAttr("required");
             } else {
+                // El medio seleccionado cubre el total; se puede reducir para un pago mixto.
+                this.pagos.monto_tarjeta = Number((parseFloat(this.totales.importe) || 0).toFixed(2));
+                this.pagos.monto_efectivo = 0;
                 $("#monto_tarjeta").removeAttr("readonly");
                 $("#monto_tarjeta").attr("required", "true");
                 $("#nrovoucher").removeAttr("readonly");
                 $("#nrovoucher").attr("required", "true");
             }
+            this.phuyu_vuelto();
         },
         phuyu_tipopago_inicial: function() {
             if (parseInt(this.pagos.inicial_codtipopago) == 1) {
                 this.pagos.inicial_nrodocbanco = "";
             }
         },
+        phuyu_validar_pago_contado: function() {
+            var total = Math.round(Number(this.totales.importe) * 100);
+            var efectivo = Number(this.pagos.monto_efectivo);
+            var digital = Number(this.pagos.monto_tarjeta);
+            var usaDigital = this.pagos.codtipopago_tarjeta != 0;
+            if (!Number.isFinite(total) || total <= 0 || !Number.isFinite(efectivo) || efectivo < 0 ||
+                !Number.isFinite(digital) || digital < 0 || (usaDigital && Math.round(digital * 100) <= 0) ||
+                (!usaDigital && digital != 0) || Math.round(digital * 100) > total) {
+                phuyu_sistema.phuyu_noti("REVISE LOS IMPORTES DEL PAGO", "Ingrese un importe valido para cada medio seleccionado.", "danger");
+                return false;
+            }
+            var recibido = Math.round(efectivo * 100) + Math.round(digital * 100);
+            if (recibido < total) {
+                phuyu_sistema.phuyu_noti("EL PAGO NO CUBRE EL TOTAL DE LA VENTA", "FALTAN S/. " + ((total - recibido) / 100).toFixed(2), "danger");
+                return false;
+            }
+            // El vuelto sale solo del efectivo; recalcular tambien al enviar el formulario.
+            this.pagos.vuelto_efectivo = (recibido - total) / 100;
+            return true;
+        },
         phuyu_vuelto: function(flag) {
+            var total = Math.max(0, parseFloat(this.totales.importe) || 0);
+            var digital = this.pagos.codtipopago_tarjeta == 0 ? 0 : Math.max(0, parseFloat(this.pagos.monto_tarjeta) || 0);
+            if (this.pagos.codtipopago_tarjeta == 0) {
+                this.pagos.monto_tarjeta = 0;
+            }
             if (flag == 1) {
-                this.pagos.monto_efectivo = parseFloat(this.totales.importe) - parseFloat(this.pagos.monto_tarjeta);
-                if (this.pagos.monto_efectivo <= 0) {
-                    this.pagos.monto_efectivo = 0;
-                }
+                this.pagos.monto_efectivo = Number(Math.max(0, total - digital).toFixed(2));
             }
-            if (this.pagos.monto_efectivo > 0) {
-                this.pagos.vuelto_efectivo = Number(((parseFloat(this.pagos.monto_efectivo) + parseFloat(this.pagos.monto_tarjeta)) - this.totales.importe).toFixed(2));
-                if (this.pagos.vuelto_efectivo <= 0) {
-                    this.pagos.vuelto_efectivo = 0;
-                }
-            } else {
-                this.pagos.vuelto_efectivo = 0;
-            }
+            var efectivo = Math.max(0, parseFloat(this.pagos.monto_efectivo) || 0);
+            this.pagos.vuelto_efectivo = Number(Math.max(0, efectivo - Math.max(0, total - digital)).toFixed(2));
         },
 
         phuyu_condicionpago: function() {
@@ -1763,29 +1882,7 @@ var phuyu_operacion = new Vue({
             this.calcular_credito();
 
             if (this.campos.condicionpago == 1) {
-                if (this.pagos.codtipopago_tarjeta == 0) {
-                    if (parseFloat(this.pagos.monto_efectivo) < parseFloat(this.totales.importe)) {
-                        phuyu_sistema.phuyu_noti("EL IMPORTE DEBE SER MAYOR O IGUAL AL TOTAL DE LA VENTA", "FALTAN S/. " +
-                            Number((parseFloat(this.totales.importe - this.pagos.monto_efectivo)).toFixed(2)), "danger");
-                        return false;
-                    }
-                } else {
-                    var suma_importe = parseFloat(this.pagos.monto_efectivo) + parseFloat(this.pagos.monto_tarjeta);
-                    if (this.pagos.monto_efectivo == 0) {
-                        if (parseFloat(suma_importe) != parseFloat(this.totales.importe)) {
-                            phuyu_sistema.phuyu_noti("LA SUMA DE LOS IMPORTES DEBE SER IGUAL AL TOTAL DE LA VENTA", "DIFERENCIA S/. " +
-                                Number((parseFloat(this.totales.importe - suma_importe)).toFixed(2)), "danger");
-                            return false;
-                        }
-                    } else {
-                        if (parseFloat(suma_importe) < parseFloat(this.totales.importe)) {
-                            phuyu_sistema.phuyu_noti("LA SUMA DE LOS IMPORTES DEBE SER IGUAL AL TOTAL DE LA VENTA", "DIFERENCIA S/. " +
-                                Number((parseFloat(this.totales.importe - suma_importe)).toFixed(2)), "danger");
-                            return false;
-                        }
-                    }
-
-                }
+                if (!this.phuyu_validar_pago_contado()) return false;
             } else {
                 this.campos.codlote = $("#codlote").val()
                 if (this.campos.codpersona == 2) {
@@ -2065,23 +2162,14 @@ var phuyu_operacion = new Vue({
             this.resetear_formulario(pedido)
         },
         phuyu_clonar: function() {
-            this.titulo = "NUEVA COMPRA";
+            this.titulo = "NUEVA VENTA";
             this.$http.post(url + phuyu_controller + "/clonar", { "codregistro": phuyu_ventas.registro }).then(function(data) {
-                var socio = eval(data.body.socio);
+                var socio = data.body.socio;
 
-                $(".select2-selection__rendered").empty().removeAttr('title');
-                this.campos.codpersona = socio[0]["codpersona"];
-                if (socio[0]["codpersona"] == 2) {
-                    $("#codpersona").attr('disabled', true);
-                    $("#acv").attr('checked', true);
-                } else {
-                    $("#codpersona").removeAttr('disabled');
-                    $("#acv").removeAttr('checked');
-                    $(".select2-selection__rendered").empty().append(socio[0]["razonsocial"]);
-                }
+                this.phuyu_seleccionar_cliente(socio[0]);
                 this.campos.nrodocumento = socio[0]["documento"];
                 this.codtipodocumento = socio[0]["coddocumentotipo"];
-                this.campos.cliente = socio[0]["razonsocial"];
+                this.campos.cliente = data.body.campos[0].cliente || socio[0]["razonsocial"];
                 this.campos.direccion = data.body.campos[0].direccion;
                 this.campos.condicionpago = data.body.campos[0].condicionpago;
 
@@ -2121,6 +2209,7 @@ var phuyu_operacion = new Vue({
                 }); */
 
                 this.detalle = data.body.detalle;
+                this.phuyu_validar_stock_detalle();
                 this.phuyu_series();
                 this.phuyu_totales();
                 phuyu_sistema.phuyu_fin();

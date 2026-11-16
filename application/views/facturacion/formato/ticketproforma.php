@@ -91,7 +91,7 @@
 									<td align="left" class="Detallenumeritos1" style="padding-right:5px;">
 										&nbsp;<span style="font-size:14px;"><?php echo round($value["cantidad"],2)?></span>&nbsp;<?php echo substr($value["unidad"],0,3);?>
 									</td>
-									<td align="left" class="Detalle"><?php echo $value["producto"];?></td>
+									<td align="left" class="Detalle" style="word-wrap:break-word"><?php echo htmlspecialchars($value["producto"], ENT_QUOTES, 'UTF-8');?><?php if (!empty($value['descripcion'])): ?><br><span style="font-size:11px;line-height:1.4"><?php echo nl2br(htmlspecialchars($value['descripcion'], ENT_QUOTES, 'UTF-8')); ?></span><?php endif; ?></td>
 									<td align="right" class="Detallenumeritos1" style="font-size:13px;"><?php echo number_format($value["preciounitario"],2);?>&nbsp;</td>
 									<td align="right" class="Detallenumeritos1" style="font-size:13px;"><?php echo number_format($value["subtotal"],2);?></td>
 								</tr>

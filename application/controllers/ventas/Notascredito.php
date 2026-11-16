@@ -139,10 +139,20 @@ class Notascredito extends CI_Controller {
 			if (isset( $_SESSION["phuyu_codusuario"]) ) {
 				$this->request = json_decode(file_get_contents('php://input'));
 
+                if (!$this->request || empty($this->request->campos) || empty($this->request->totales) ||
+                    empty($this->request->detalle) || !is_array($this->request->detalle)) {
+                    echo json_encode(['estado' => 0, 'mensaje' => 'Seleccione una venta y un detalle valido.']);
+                    return;
+                }
+                $importeValidar = $this->request->totales->importe ?? null;
+                if (!is_numeric($importeValidar) || !is_finite((float)$importeValidar) || (float)$importeValidar <= 0) {
+                    echo json_encode(['estado' => 0, 'mensaje' => 'El importe de la nota debe ser mayor a cero.']);
+                    return;
+                }
 				$codkardex_ref = (int)$this->request->campos->codkardex_ref;
 				$importeNota = (double)$this->request->totales->importe;
-				$comprobante = $this->db->query("select importe from kardex.kardex where codkardex=".$codkardex_ref)->result_array();
-				$comprobanteAceptado = $this->db->query("select codkardexsunat from sunat.kardexsunat where codkardex=".$codkardex_ref." and estado=1")->result_array();
+				$comprobante = $this->db->query('select importe from kardex.kardex where codkardex=? and codsucursal=? and codmovimientotipo=20 and codcomprobantetipo in (10,12) and estado=1', [$codkardex_ref, (int)$_SESSION['phuyu_codsucursal']])->result_array();
+				$comprobanteAceptado = $this->db->query("select codkardex from sunat.kardexsunat where codkardex=".$codkardex_ref." and estado=1")->result_array();
 				$notasExistentes = $this->db->query("select coalesce(sum(importe),0) as total from kardex.kardex where codkardex_ref=".$codkardex_ref." and codcomprobantetipo=14 and estado=1")->result_array();
 
 				if (count($comprobante)==0) {
@@ -319,8 +329,9 @@ class Notascredito extends CI_Controller {
 				}else{
 					if ($estado!=1) {
 						$this->db->trans_rollback(); $estado = 0;
-					}
-					$this->db->trans_commit();
+					} else {
+                        $this->db->trans_commit();
+                    }
 				}
 				$data["estado"] = $estado; $data["codkardex"] = $codkardex;
 				echo json_encode($data);

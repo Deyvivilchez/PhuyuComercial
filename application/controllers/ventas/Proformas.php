@@ -133,6 +133,7 @@ class Proformas extends CI_Controller {
 
 	public function buscarproductos($codproforma){
 		if ($this->input->is_ajax_request()) {
+			$this->load->model('Stock_reservas_model');
 			$productos = $this->db->query("select pd.*,p.descripcion as producto,p.calcular,u.descripcion as unidad,p.controlstock as control FROM kardex.proformasdetalle pd JOIN almacen.productos p ON pd.codproducto = p.codproducto JOIN almacen.unidades u ON pd.codunidad = u.codunidad where codproforma=".$codproforma." and pd.cantidad > pd.cantidadcomprobante")->result_array();
 
 			foreach ($productos as $key => $value) {
@@ -146,7 +147,13 @@ class Proformas extends CI_Controller {
 					$productos[$key]["stock"] = round($stock[0]["stockactualconvertido"],2);
 				}
 
-				$productos[$key]["unidades"] = $unidades[0]["unidades"];
+				$productos[$key]["unidades"] = $unidades[0]["unidades"] ?? '';
+                // La proforma no garantiza stock: descontar reservas actuales.
+                $productos[$key] = $this->Stock_reservas_model->enriquecer($productos[$key]);
+                $productos[$key]['stock'] = $productos[$key]['stockdisponible'];
+                $productos[$key]['unidades'] = $productos[$key]['unidades_disponibles'] ?? $productos[$key]['unidades'];
+                $factor = $this->db->query('SELECT factor FROM almacen.productounidades WHERE codproducto=? AND codunidad=?', [(int)$value['codproducto'], (int)$value['codunidad']])->row_array();
+                $productos[$key]['factor'] = (float)($factor['factor'] ?? 1);
 			}
 
 			echo json_encode($productos);

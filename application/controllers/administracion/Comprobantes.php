@@ -1,6 +1,7 @@
 <?php defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Comprobantes extends CI_Controller {
+    private $error_imagen = "No se pudo guardar la imagen. Revise el formato y los permisos de la carpeta de logos.";
 
 	public function __construct(){
 		parent::__construct(); 
@@ -176,7 +177,7 @@ class Comprobantes extends CI_Controller {
 				$logoSubido = $this->guardar_imagen_comprobante("logoa", "logo");
 				if ($logoSubido === false) {
 					$this->db->trans_rollback();
-					echo 0;
+                    $this->output->set_content_type('application/json')->set_output(json_encode(['estado' => 0, 'mensaje' => $this->error_imagen]));
 					return;
 				}
 				if ($logoSubido !== null) {
@@ -188,7 +189,7 @@ class Comprobantes extends CI_Controller {
 				$auspiciadorSubido = $this->guardar_imagen_comprobante("auspiciadora", "auspiciador");
 				if ($auspiciadorSubido === false) {
 					$this->db->trans_rollback();
-					echo 0;
+                    $this->output->set_content_type('application/json')->set_output(json_encode(['estado' => 0, 'mensaje' => $this->error_imagen]));
 					return;
 				}
 				if ($auspiciadorSubido !== null) {
@@ -238,7 +239,7 @@ class Comprobantes extends CI_Controller {
 				$logoSubido = $this->guardar_imagen_comprobante("logoa", "logo");
 				if ($logoSubido === false) {
 					$this->db->trans_rollback();
-					echo 0;
+                    $this->output->set_content_type('application/json')->set_output(json_encode(['estado' => 0, 'mensaje' => $this->error_imagen]));
 					return;
 				}
 				if ($logoSubido !== null) {
@@ -249,7 +250,7 @@ class Comprobantes extends CI_Controller {
 				$auspiciadorSubido = $this->guardar_imagen_comprobante("auspiciadora", "auspiciador");
 				if ($auspiciadorSubido === false) {
 					$this->db->trans_rollback();
-					echo 0;
+                    $this->output->set_content_type('application/json')->set_output(json_encode(['estado' => 0, 'mensaje' => $this->error_imagen]));
 					return;
 				}
 				if ($auspiciadorSubido !== null) {
@@ -326,7 +327,8 @@ class Comprobantes extends CI_Controller {
 			@mkdir($destino, 0775, true);
 		}
 		if (!is_dir($destino) || !is_writable($destino)) {
-			log_message("error", "Directorio de logos de comprobantes no escribible: " . $destino);
+			$this->error_imagen = 'El servidor no tiene permiso para guardar los logos. Solicite habilitar escritura en la carpeta de logos de la empresa.';
+            log_message("error", "Directorio de logos de comprobantes no escribible: " . $destino);
 			return false;
 		}
 
@@ -336,6 +338,15 @@ class Comprobantes extends CI_Controller {
 			log_message("error", "Extension de imagen no permitida en comprobantes. Campo=" . $campo . " extension=" . $extension);
 			return false;
 		}
+
+        // Verificar el contenido, no solo el nombre del archivo subido.
+        $imagen = @getimagesize($_FILES[$campo]['tmp_name']);
+        $tipos = ['jpg' => IMAGETYPE_JPEG, 'jpeg' => IMAGETYPE_JPEG,
+            'png' => IMAGETYPE_PNG, 'gif' => IMAGETYPE_GIF, 'webp' => IMAGETYPE_WEBP];
+        if (!$imagen || $imagen[2] !== $tipos[$extension]) {
+            log_message('error', 'Contenido de imagen invalido en comprobantes. Campo=' . $campo);
+            return false;
+        }
 
 		$nombre = $prefijo . "_comprobante_" . date("YmdHis") . "_" . mt_rand(1000, 9999) . "." . $extension;
 		if (!@move_uploaded_file($_FILES[$campo]["tmp_name"], $destino . $nombre)) {

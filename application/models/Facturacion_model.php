@@ -772,13 +772,14 @@ class Facturacion_model extends CI_Model
             $item = $xml->createElement("cac:Item");
             $item = $line->appendChild($item);
             $descripcion_item = $value["producto"] . " " . $value["descripcion"];
-            $descripcion_item = preg_replace("/[\n|\r|\n\r]/i", "", $descripcion_item);
+            // Mantener separacion de palabras y no cortar tildes al dividir texto UTF-8.
+            $descripcion_item = str_replace(["\r\n", "\r", "\n"], ' ', $descripcion_item);
 
-            if (strlen($descripcion_item) > 250) {
-                $cbc = $xml->createElement("cbc:Description", htmlspecialchars(substr($descripcion_item, 0, 250)));
+            if (mb_strlen($descripcion_item, 'UTF-8') > 250) {
+                $cbc = $xml->createElement("cbc:Description", htmlspecialchars(mb_substr($descripcion_item, 0, 250, 'UTF-8')));
                 $cbc = $item->appendChild($cbc);
 
-                $cbc = $xml->createElement("cbc:Description", htmlspecialchars(substr($descripcion_item, 250, strlen($descripcion_item))));
+                $cbc = $xml->createElement("cbc:Description", htmlspecialchars(mb_substr($descripcion_item, 250, null, 'UTF-8')));
                 $cbc = $item->appendChild($cbc);
             } else {
                 $cbc = $xml->createElement("cbc:Description", htmlspecialchars($descripcion_item));

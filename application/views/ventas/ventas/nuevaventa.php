@@ -584,7 +584,7 @@ if ($_SESSION['phuyu_codcontroldiario'] > 0) { ?>
               </div>
               <div class="col-md-4 col-xs-12">
                 <label>S/. MONTO RECIBIDO</label>
-                <input type="number" step="0.01" class="form-control number phuyu-money-success" min="0" required v-model="pagos.monto_efectivo" placeholder="S/. 0.00" v-on:keyup="phuyu_vuelto()">
+                <input type="number" step="0.01" class="form-control number phuyu-money-success" min="0" required v-model="pagos.monto_efectivo" placeholder="S/. 0.00" v-on:input="phuyu_vuelto(0)">
               </div>
               <div class="col-md-4 col-xs-12">
                 <label>VUELTO</label>
@@ -606,7 +606,7 @@ if ($_SESSION['phuyu_codcontroldiario'] > 0) { ?>
               </div>
               <div class="col-md-4 col-xs-12">
                 <label>S/. MONTO</label>
-                <input type="number" step="0.01" class="form-control number phuyu-money-success" min="0.01" id="monto_tarjeta" v-model="pagos.monto_tarjeta" placeholder="S/. 0.00" readonly>
+                <input type="number" step="0.01" class="form-control number phuyu-money-success" min="0.01" id="monto_tarjeta" v-model="pagos.monto_tarjeta" v-on:input="phuyu_vuelto(1)" v-bind:max="totales.importe" v-bind:disabled="pagos.codtipopago_tarjeta==0" v-bind:readonly="pagos.codtipopago_tarjeta==0" v-bind:required="pagos.codtipopago_tarjeta!=0" placeholder="S/. 0.00">
               </div>
               <div class="col-md-4 col-xs-12">
                 <label>NRO VOUCHER</label>

@@ -8,6 +8,16 @@ class Ventas extends CI_Controller
         $this->load->model('phuyu_model');
         $this->load->model('Caja_model');
         $this->load->model('Kardex_model');
+
+        // Aplicar cambios de permisos tambien a las sesiones que ya estan abiertas.
+        if (!empty($_SESSION['phuyu_codusuario'])) {
+            $usuario = $this->db->query(
+                "select u.editar_pventa, coalesce((to_jsonb(u)->>'eliminar_venta')::integer, 0) as eliminar_venta from seguridad.usuarios u where u.codusuario=? and u.estado=1",
+                [(int)$_SESSION['phuyu_codusuario']]
+            )->row_array();
+            $_SESSION['phuyu_editar_pventa'] = (int)($usuario['editar_pventa'] ?? 0);
+            $_SESSION['phuyu_eliminar_venta'] = (int)($usuario['eliminar_venta'] ?? 0);
+        }
     }
 
     private function phuyu_json($data)
@@ -34,8 +44,12 @@ class Ventas extends CI_Controller
     private function phuyu_precio_venta_producto($codproducto, $codunidad)
     {
         return $this->db->query(
-            "select pventapublico from almacen.productounidades where codproducto=? and codunidad=? and estado=1 limit 1",
-            [(int)$codproducto, (int)$codunidad]
+            "select round(ub.pventapublico, 2) as pventapublico
+             from almacen.productoubicacion ub
+             join almacen.productounidades un using(codproducto, codunidad)
+             where ub.codproducto=? and ub.codunidad=? and ub.codalmacen=? and ub.codsucursal=?
+               and ub.estado=1 and un.estado=1 limit 1",
+            [(int)$codproducto, (int)$codunidad, (int)$_SESSION['phuyu_codalmacen'], (int)$_SESSION['phuyu_codsucursal']]
         )->row_array();
     }
 
@@ -2500,6 +2514,7 @@ class Ventas extends CI_Controller
                 $socio = $this->db->query('Select *from personas WHERE codpersona=' . $info[0]['codpersona'])->result_array();
                 $detalle = $this->db->query('select kd.*,p.descripcion as producto,u.descripcion as unidad from kardex.kardexdetalle as kd inner join almacen.productos as p on(kd.codproducto=p.codproducto) inner join almacen.unidades as u on(kd.codunidad=u.codunidad) where kd.codkardex=' . $this->request->codregistro . ' and kd.estado=1 order by kd.item')->result_array();
 
+                $this->load->model('Stock_reservas_model');
                 foreach ($detalle as $key => $value) {
                     $unn = $this->db
                         ->query(
@@ -2531,7 +2546,17 @@ class Ventas extends CI_Controller
                     $detalle[$key]['unidades'] = $putunidades;
                     $detalle[$key]['precio'] = round($detalle[$key]['preciounitario'], 2);
                     $detalle[$key]['cantidad'] = round($detalle[$key]['cantidad'], 2);
-                    $detalle[$key]['control'] = 0;
+                    // El stock y su control se obtienen del almacen actual,
+                    // no del comprobante clonado ni de datos enviados por el cliente.
+                    $producto = $this->db->query('SELECT controlstock FROM almacen.productos WHERE codproducto=?', [(int)$value['codproducto']])->row_array();
+                    $factor = $this->db->query('SELECT factor FROM almacen.productounidades WHERE codproducto=? AND codunidad=?', [(int)$value['codproducto'], (int)$value['codunidad']])->row_array();
+                    $disponible = $this->Stock_reservas_model->enriquecer([
+                        'codproducto' => $value['codproducto'], 'codunidad' => $value['codunidad'],
+                        'stock' => $detalle[$key]['stock'] ?? 0
+                    ]);
+                    $detalle[$key]['stock'] = $disponible['stockdisponible'];
+                    $detalle[$key]['factor'] = (float)($factor['factor'] ?? 1);
+                    $detalle[$key]['control'] = (int)($producto['controlstock'] ?? 1);
                 }
 
                 echo json_encode(['campos' => $info, 'socio' => $socio, 'detalle' => $detalle, 'cuotas' => $cuotas]);

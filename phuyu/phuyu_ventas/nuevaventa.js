@@ -313,6 +313,24 @@ var phuyu_operacion = new Vue({
 
 		},
 		phuyu_additem: function(producto,precio){
+            if (producto.stockdisponible !== undefined) {
+                producto.stock = parseFloat(producto.stockdisponible) || 0;
+                producto.unidades = producto.unidades_disponibles || producto.unidades;
+            }
+            if (parseInt(this.stockalmacen) === 1 && parseInt(producto.controlstock) === 1) {
+                var factorStock = parseFloat(producto.factor) || 1;
+                var solicitadoBase = factorStock;
+                (this.detalle || []).forEach(function(item) {
+                    if (item.codproducto == producto.codproducto) {
+                        solicitadoBase += (parseFloat(item.cantidad) || 0) * (parseFloat(item.factor) || 1);
+                    }
+                });
+                if (solicitadoBase > (parseFloat(producto.stock) || 0) * factorStock + 0.000001) {
+                    phuyu_sistema.phuyu_alerta("STOCK DISPONIBLE INSUFICIENTE", producto.descripcion + " · Disponible: " + producto.stock + " " + producto.unidad, "error");
+                    return false;
+                }
+            }
+
 
 			var controlaSeries = parseInt(producto.controlarseries) === 1;
 			if (controlaSeries && (!producto.serie_seleccionada || !producto.serie_seleccionada.id_serie)) {
@@ -427,7 +445,8 @@ var phuyu_operacion = new Vue({
 					producto.igv = Number((producto.subtotal - producto.valorventa).toFixed(2));
 				}
 				this.detalle[index].codunidad = codunidad;
-				this.detalle[index].stock = data.body[0].stock;
+                this.detalle[index].factor = data.body[0].factor;
+				this.detalle[index].stock = data.body[0].stockdisponible !== undefined ? data.body[0].stockdisponible : data.body[0].stock;
 				this.phuyu_itemcalcular(producto,1)
 			});
 		},
@@ -439,6 +458,7 @@ var phuyu_operacion = new Vue({
 			this.item = producto; $("#modal_itemdetalle").modal({backdrop: 'static', keyboard: false});
 		},
 		phuyu_itemcalcular: function (item,tipoprecio) {
+            this.phuyu_limitar_disponible(item);
 			var porcentaje = 1;
 			if (item.codafectacionigv==21) {
 				item.preciobruto = 0; item.porcdescuento = 0; item.descuento = 0; item.preciosinigv = 0; item.precio = 0; 
@@ -490,7 +510,23 @@ var phuyu_operacion = new Vue({
 			}
 			$("#modal_itemdetalle").modal("hide");
 		},
-		phuyu_calcular: function(producto){
+		        phuyu_limitar_disponible: function(producto) {
+            if (parseInt(this.stockalmacen) !== 1 || parseInt(producto.control) !== 1) { return; }
+            var factor = parseFloat(producto.factor) || 1;
+            var otros = 0;
+            (this.detalle || []).forEach(function(item) {
+                if (item !== producto && item.codproducto == producto.codproducto) {
+                    otros += (parseFloat(item.cantidad) || 0) * (parseFloat(item.factor) || 1);
+                }
+            });
+            var maximo = Math.max(0, ((parseFloat(producto.stock) || 0) * factor - otros) / factor);
+            if ((parseFloat(producto.cantidad) || 0) > maximo + 0.000001) {
+                producto.cantidad = Math.floor(maximo * 1000 + 0.000001) / 1000;
+                phuyu_sistema.phuyu_alerta("STOCK DISPONIBLE INSUFICIENTE", "Disponible para esta fila: " + producto.cantidad + " " + producto.unidad, "error");
+            }
+        },
+phuyu_calcular: function(producto){
+            this.phuyu_limitar_disponible(producto);
 			producto.preciooriginal = producto.precio;
 			var porcentaje = 1;
 			if (producto.codafectacionigv==10) {
@@ -598,9 +634,8 @@ var phuyu_operacion = new Vue({
 			}
 			this.campos.fechacomprobante = $("#fechacomprobante").val();
 			this.campos.fechakardex = $("#fechakardex").val();
-			this.pagos.monto_efectivo = this.totales.importe;
-
-			this.phuyu_vuelto(); this.phuyu_lineascredito(); this.calcular_credito();
+			this.phuyu_pagotarjeta();
+			this.phuyu_lineascredito(); this.calcular_credito();
 			$("#modal_finventa").modal({backdrop: 'static', keyboard: false});
 		},
 
@@ -637,22 +672,58 @@ var phuyu_operacion = new Vue({
 			}
 		},
 
-		phuyu_pagotarjeta: function(){
-			if (this.pagos.codtipopago_tarjeta==0) {
-				this.pagos.monto_tarjeta = 0; this.pagos.nrovoucher = "";
-				$("#monto_tarjeta").attr("readonly","true"); $("#monto_tarjeta").removeAttr("required");
-				$("#nrovoucher").attr("readonly","true"); $("#nrovoucher").removeAttr("required");
-			}else{
-				$("#monto_tarjeta").removeAttr("readonly"); $("#monto_tarjeta").attr("required","true");
-				$("#nrovoucher").removeAttr("readonly"); $("#nrovoucher").attr("required","true");
-			}
-		},
-		phuyu_vuelto: function(){
-			this.pagos.vuelto_efectivo = Number((this.pagos.monto_efectivo - this.totales.importe).toFixed(2));
-			if (this.pagos.vuelto_efectivo<=0) {
-				this.pagos.vuelto_efectivo = 0;
-			}
-		},
+        phuyu_pagotarjeta: function() {
+            if (this.pagos.codtipopago_tarjeta == 0) {
+                this.pagos.monto_efectivo = this.totales.importe;
+                this.pagos.monto_tarjeta = 0;
+                this.pagos.nrovoucher = "";
+                $("#monto_tarjeta").attr("readonly", "true");
+                $("#monto_tarjeta").removeAttr("required");
+                $("#nrovoucher").attr("readonly", "true");
+                $("#nrovoucher").removeAttr("required");
+            } else {
+                // El medio seleccionado cubre el total; se puede reducir para un pago mixto.
+                this.pagos.monto_tarjeta = Number((parseFloat(this.totales.importe) || 0).toFixed(2));
+                this.pagos.monto_efectivo = 0;
+                $("#monto_tarjeta").removeAttr("readonly");
+                $("#monto_tarjeta").attr("required", "true");
+                $("#nrovoucher").removeAttr("readonly");
+                $("#nrovoucher").attr("required", "true");
+            }
+            this.phuyu_vuelto();
+        },
+        phuyu_validar_pago_contado: function() {
+            var total = Math.round(Number(this.totales.importe) * 100);
+            var efectivo = Number(this.pagos.monto_efectivo);
+            var digital = Number(this.pagos.monto_tarjeta);
+            var usaDigital = this.pagos.codtipopago_tarjeta != 0;
+            if (!Number.isFinite(total) || total <= 0 || !Number.isFinite(efectivo) || efectivo < 0 ||
+                !Number.isFinite(digital) || digital < 0 || (usaDigital && Math.round(digital * 100) <= 0) ||
+                (!usaDigital && digital != 0) || Math.round(digital * 100) > total) {
+                phuyu_sistema.phuyu_noti("REVISE LOS IMPORTES DEL PAGO", "Ingrese un importe valido para cada medio seleccionado.", "danger");
+                return false;
+            }
+            var recibido = Math.round(efectivo * 100) + Math.round(digital * 100);
+            if (recibido < total) {
+                phuyu_sistema.phuyu_noti("EL PAGO NO CUBRE EL TOTAL DE LA VENTA", "FALTAN S/. " + ((total - recibido) / 100).toFixed(2), "danger");
+                return false;
+            }
+            // El vuelto sale solo del efectivo; recalcular tambien al enviar el formulario.
+            this.pagos.vuelto_efectivo = (recibido - total) / 100;
+            return true;
+        },
+        phuyu_vuelto: function(flag) {
+            var total = Math.max(0, parseFloat(this.totales.importe) || 0);
+            var digital = this.pagos.codtipopago_tarjeta == 0 ? 0 : Math.max(0, parseFloat(this.pagos.monto_tarjeta) || 0);
+            if (this.pagos.codtipopago_tarjeta == 0) {
+                this.pagos.monto_tarjeta = 0;
+            }
+            if (flag == 1) {
+                this.pagos.monto_efectivo = Number(Math.max(0, total - digital).toFixed(2));
+            }
+            var efectivo = Math.max(0, parseFloat(this.pagos.monto_efectivo) || 0);
+            this.pagos.vuelto_efectivo = Number(Math.max(0, efectivo - Math.max(0, total - digital)).toFixed(2));
+        },
 
 		phuyu_condicionpago: function(){
 			if (this.campos.condicionpago==2) {
@@ -790,18 +861,7 @@ var phuyu_operacion = new Vue({
 			}
 
 			if (this.campos.condicionpago==1) {
-				if (this.pagos.codtipopago_tarjeta==0) {
-					if (parseFloat(this.pagos.monto_efectivo) < parseFloat(this.totales.importe)) {
-						phuyu_sistema.phuyu_noti("EL IMPORTE DEBE SER MAYOR O IGUAL AL TOTAL DE LA VENTA","FALTAN S/. "+
-						Number(( parseFloat(this.totales.importe - this.pagos.monto_efectivo) ).toFixed(2)),"error"); return false;
-					}
-				}else{
-					var suma_importe = parseFloat(this.pagos.monto_efectivo) + parseFloat(this.pagos.monto_tarjeta);
-					if (parseFloat(suma_importe)!=parseFloat(this.totales.importe)) {
-						phuyu_sistema.phuyu_noti("LA SUMA DE LOS IMPORTES DEBE SER IGUAL AL TOTAL DE LA VENTA","DIFERENCIA S/. "+
-						Number(( parseFloat(this.totales.importe - suma_importe) ).toFixed(2)),"error"); return false;
-					}
-				}
+                if (!this.phuyu_validar_pago_contado()) return false;
 			}else{
 				this.campos.codlote = $("#codlote").val()
 				if (this.campos.codpersona==2) {

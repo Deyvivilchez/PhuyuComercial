@@ -766,75 +766,14 @@ class Pedidos extends CI_Controller {
 			}
 
 			$codpedidoActual = ((int)($this->request->campos->pedidonuevo ?? 1) === 1) ? 0 : (int)($this->request->campos->codpedido ?? 0);
-			$detalleAgrupado = [];
-			foreach ($this->request->detalle ?? [] as $value) {
-				$detalleItem = is_object($value) ? $value : (object)$value;
-				$codproducto = (int)($detalleItem->codproducto ?? 0);
-				$codunidad = (int)($detalleItem->codunidad ?? 0);
-				$cantidad = (double)($detalleItem->cantidad ?? 0);
-				if ($codproducto <= 0 || $codunidad <= 0) {
-					continue;
-				}
-
-				$key = $codproducto."|".$codunidad;
-				if (!isset($detalleAgrupado[$key])) {
-					$detalleAgrupado[$key] = [
-						"codproducto" => $codproducto,
-						"codunidad" => $codunidad,
-						"cantidad" => 0,
-						"producto" => $detalleItem->producto ?? $detalleItem->descripcion ?? "PRODUCTO",
-					];
-				}
-				$detalleAgrupado[$key]["cantidad"] += $cantidad;
-			}
-
-			foreach ($detalleAgrupado as $itemValidar) {
-				$stockInfo = $this->db->query(
-					"select p.descripcion, p.controlstock,
-						coalesce((
-							select pu.stockactualconvertido
-							from almacen.productoubicacion pu
-							where pu.codalmacen=? and pu.codproducto=? and pu.codunidad=? and pu.estado=1
-							limit 1
-						),0) as stock,
-						coalesce((
-							select sum(pd.cantidad)
-							from kardex.pedidos pedi
-							inner join restaurante.mesaspedido mp on mp.codpedido=pedi.codpedido and mp.estado=1
-							inner join kardex.pedidosdetalle pd on pd.codpedido=pedi.codpedido and pd.estado=1
-							where pedi.estado=1
-								and pedi.codpedido<>?
-								and pd.codproducto=?
-								and pd.codunidad=?
-						),0) as comprometido
-					from almacen.productos p
-					where p.codproducto=?
-					limit 1",
-					[
-						(int)($_SESSION["phuyu_codalmacen"] ?? 0),
-						$itemValidar["codproducto"],
-						$itemValidar["codunidad"],
-						$codpedidoActual,
-						$itemValidar["codproducto"],
-						$itemValidar["codunidad"],
-						$itemValidar["codproducto"],
-					]
-				)->row_array();
-
-				if (!empty($stockInfo) && (int)$stockInfo["controlstock"] === 1) {
-					$maximo = round((double)$stockInfo["stock"] - (double)$stockInfo["comprometido"], 3);
-					$solicitado = round((double)$itemValidar["cantidad"], 3);
-					if ($solicitado > $maximo) {
-						echo json_encode([
-							"estado" => 0,
-							"mensaje" => "STOCK INSUFICIENTE\n".$stockInfo["descripcion"]."\nDisponible: ".$maximo." UND\nSolicitado: ".$solicitado." UND",
-						]);
-						return;
-					}
-				}
-			}
-
 			$this->db->trans_begin();
+            $this->load->model('Stock_reservas_model');
+            $validacion = $this->Stock_reservas_model->validar($this->request->detalle ?? [], $codpedidoActual);
+            if (!$validacion['success']) {
+                $this->db->trans_rollback();
+                echo json_encode(['estado' => 0, 'mensaje' => 'STOCK DISPONIBLE INSUFICIENTE: '.implode(', ', $validacion['producto']), 'informacion' => $validacion]);
+                return;
+            }
 
 			// --- suma total de detalle (seguro para objetos o arrays) ---
 			$suma_total = array_sum(array_map(function($item) {
@@ -1147,6 +1086,15 @@ class Pedidos extends CI_Controller {
 				$this->request->totales->importe = $importeDetalle;
 
 				$this->db->trans_begin();
+                $this->load->model('Stock_reservas_model');
+                $this->Stock_reservas_model->bloquear(array_map(function($item) { return (int)$item->codproducto; }, $this->request->detalle));
+                $pedidoActivo = $this->db->query('SELECT estado FROM kardex.pedidos WHERE codpedido=? FOR UPDATE', [$codpedidoCobro])->row_array();
+                if (!$pedidoActivo || (int)$pedidoActivo['estado'] !== 1) {
+                    $this->db->trans_rollback();
+                    echo json_encode(['estado' => 0, 'mensaje' => 'EL PEDIDO YA FUE COBRADO O ANULADO']);
+                    return;
+                }
+
 
 				// REGISTRO KARDEX //
 
@@ -1155,7 +1103,12 @@ class Pedidos extends CI_Controller {
 				if ($retirar == true) {
 					$codkardexalmacen = $this->Kardex_model->phuyu_kardexalmacen($codkardex, 4, $this->request->campos);
 				}
-				$detalle = $this->Kardex_model->phuyu_kardexdetalle($codkardex, $codkardexalmacen, $this->request->detalle, $retirar, 0);
+				$detalle = $this->Kardex_model->phuyu_kardexdetalle($codkardex, $codkardexalmacen, $this->request->detalle, $retirar, 0, $codpedidoCobro);
+                if (empty($detalle['success'])) {
+                    $this->db->trans_rollback();
+                    echo json_encode(['estado' => 0, 'mensaje' => 'STOCK DISPONIBLE INSUFICIENTE: '.implode(', ', $detalle['producto'] ?? []), 'informacion' => $detalle]);
+                    return;
+                }
 				
 				// REGISTRO MOVIMIENTO DE CAJA //
 

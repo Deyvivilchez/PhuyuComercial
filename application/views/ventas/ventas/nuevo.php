@@ -627,7 +627,7 @@
 
   <!-- MODALES (se mantienen igual, solo se ajustan algunos iconos y botones de cierre) -->
   <div id="modal_masconfiguraciones" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header">
           <button type="button" class="close" data-dismiss="modal" style="font-size:30px;margin-bottom:0px;">
@@ -718,7 +718,7 @@
           </div>
           <div class="form-group">
             <label>DESCRIPCION DEL ITEM DE VENTA</label>
-            <textarea class="form-control" v-model="item.descripcion" rows="3" maxlength="250"></textarea>
+            <?php include __DIR__ . '/../descripcion_item_editor.php'; ?>
           </div>
           <div class="text-center">
             <button type="button" class="btn btn-success" v-on:click="phuyu_itemcalcular_cerrar(item)">
@@ -848,7 +848,7 @@
                 </div>
                 <div class="col-md-4 col-xs-12">
                   <label>S/. MONTO RECIBIDO</label>
-                  <input type="number" step="0.01" class="form-control number phuyu-money-success" min="0" required v-model="pagos.monto_efectivo" placeholder="S/. 0.00" v-on:keyup="phuyu_vuelto(0)">
+                  <input type="number" step="0.01" class="form-control number phuyu-money-success" min="0" required v-model="pagos.monto_efectivo" placeholder="S/. 0.00" v-on:input="phuyu_vuelto(0)">
                 </div>
                 <div class="col-md-4 col-xs-12">
                   <label>VUELTO</label>
@@ -859,9 +859,9 @@
               <div class="phuyu-linea"></div>
               <div class="row form-group">
                 <div class="col-md-4 col-xs-12">
-                  <label><i class="fa fa-money"></i> TARJETA O CHEQUE</label>
+                  <label><i class="fa fa-money"></i> YAPE / PLIN / TRANSFERENCIA / TARJETA</label>
                   <select class="form-select" v-model="pagos.codtipopago_tarjeta" v-on:change="phuyu_pagotarjeta()" required>
-                    <option value="0">SIN TARJETA</option>
+                    <option value="0">SOLO EFECTIVO</option>
                     <?php foreach ($tipopagos as $value) { if ($value["codtipopago"] != 1) { ?>
                       <option value="<?php echo $value['codtipopago']; ?>"><?php echo $value['descripcion']; ?></option>
                     <?php } } ?>
@@ -869,10 +869,10 @@
                 </div>
                 <div class="col-md-4 col-xs-12">
                   <label>S/. MONTO</label>
-                  <input type="number" step="0.01" class="form-control number phuyu-money-success" min="0.01" id="monto_tarjeta" v-model="pagos.monto_tarjeta" v-on:keyup="phuyu_vuelto(1)" placeholder="S/. 0.00" readonly>
+                  <input type="number" step="0.01" class="form-control number phuyu-money-success" min="0.01" id="monto_tarjeta" v-model="pagos.monto_tarjeta" v-on:input="phuyu_vuelto(1)" v-bind:max="totales.importe" v-bind:disabled="pagos.codtipopago_tarjeta==0" v-bind:readonly="pagos.codtipopago_tarjeta==0" v-bind:required="pagos.codtipopago_tarjeta!=0" placeholder="S/. 0.00">
                 </div>
                 <div class="col-md-4 col-xs-12">
-                  <label>NRO VOUCHER</label>
+                  <label>NRO OPERACIÓN / VOUCHER</label>
                   <input type="text" class="form-control phuyu-money-default" id="nrovoucher" v-model.trim="pagos.nrovoucher" autocomplete="off" readonly>
                 </div>
               </div>
@@ -967,7 +967,7 @@
     echo $puedePrecio;
   ?>;
 </script>
-<!-- Scripts: se mantienen exactamente igual -->
+<?php include __DIR__ . '/../descripcion_item_assets.php'; ?>
 <script src="<?php echo base_url(); ?>phuyu/phuyu_ventas/nuevo.js?v=<?php echo filemtime(FCPATH . 'phuyu/phuyu_ventas/nuevo.js'); ?>"></script>
 <script src="<?php echo base_url(); ?>phuyu/phuyu_personas_2.js"></script>
 <script>

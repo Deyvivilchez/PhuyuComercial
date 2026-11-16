@@ -60,9 +60,9 @@
 	            <td colspan="3" align="center" class="Cabecera2-numeros1">RUC: <?php echo $empresa[0]['documento'];?></td>
 	        </tr>
 	        
-	        <tr>
+	        <!-- <tr>
 	            <td colspan="3" align="center" class="footer">VENDEDOR <?php echo $vendedor[0]["razonsocial"];?> </td>
-	        </tr>
+	        </tr> -->
 
 	        <tr>
 	            <td colspan="3" align="center" class="footer">USUARIO: <?php echo $_SESSION["phuyu_usuario"];?> </td>
