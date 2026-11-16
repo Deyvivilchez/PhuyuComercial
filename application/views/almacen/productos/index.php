@@ -103,6 +103,9 @@
 
 							<button type="button" class="btn btn-info" v-on:click="phuyu_operacion()" title="Importar productos o servicios desde Excel"> <i class="bi bi-upload me-1"></i> Importar productos</button>
 							<button type="button" class="btn btn-primary" v-on:click="phuyu_migrar_stock()" title="Migrar productos nuevos y actualizar stock desde Excel"> <i class="bi bi-file-earmark-spreadsheet me-1"></i> Migrar productos/stock</button>
+							<button type="button" class="btn btn-secondary" :disabled="normalizandoStock" v-on:click="phuyu_normalizar_stock()" title="Colocar en cero las existencias negativas del almacén actual">
+								<i class="bi bi-arrow-counterclockwise me-1"></i> {{ normalizandoStock ? 'Revisando stock...' : 'Negativos a cero' }}
+							</button>
 							<button type="button" class="btn btn-dark" v-on:click="phuyu_duplicados()"> <i class="bi bi-intersect me-1"></i> Duplicados</button>
 	                      <button
 	                        class="btn eliminar btn-danger"
@@ -131,18 +134,23 @@
 								<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
 									<div class="input-group input-group-sm" style="width:280px">
 										<span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-										<input type="text" class="form-control" v-model="filtroDuplicado" placeholder="Filtrar por ID, codigo o producto">
+										<input type="text" class="form-control" v-model="filtroDuplicado" :disabled="cargandoDuplicados || uniendoDuplicados" placeholder="Filtrar por ID, codigo o producto">
 									</div>
 									<div class="d-flex flex-wrap gap-2">
-										<select class="form-select form-select-sm" style="width:180px" v-model="tipoDuplicado" v-on:change="phuyu_cargar_duplicados()">
+										<select class="form-select form-select-sm" style="width:180px" v-model="tipoDuplicado" :disabled="cargandoDuplicados || uniendoDuplicados" v-on:change="phuyu_cargar_duplicados()">
 											<option value="todos">Todos</option>
 											<option value="barra">Codigo de barra</option>
 											<option value="codigo">Codigo interno</option>
 											<option value="descripcion">Descripcion exacta</option>
 										</select>
-										<button type="button" class="btn btn-sm btn-outline-secondary" v-on:click="phuyu_cargar_duplicados()"><i class="bi bi-arrow-clockwise me-1"></i> Actualizar</button>
+										<button type="button" class="btn btn-sm btn-warning" :disabled="cargandoDuplicados || uniendoDuplicados || duplicadosFiltrados.length==0" v-on:click="phuyu_unir_todos_duplicados()">
+											{{ uniendoDuplicados ? 'Procesando ' + progresoDuplicados + '/' + totalDuplicados : 'Unir todos' }}
+										</button>
+										<button type="button" class="btn btn-sm btn-outline-secondary" :disabled="cargandoDuplicados || uniendoDuplicados" v-on:click="phuyu_cargar_duplicados()"><i class="bi bi-arrow-clockwise me-1"></i> Actualizar</button>
 									</div>
 								</div>
+								<p class="text-muted small mb-2">Unir todos procesa los grupos mostrados según los filtros actuales. Se muestran hasta 100 grupos por tipo; actualice la lista para revisar si quedan más.</p>
+								<div class="alert alert-info py-2" v-if="uniendoDuplicados" role="status" aria-live="polite">Procesando grupos: {{progresoDuplicados}} de {{totalDuplicados}}. Mantenga esta página abierta hasta terminar.</div>
 								<div class="table-responsive">
 									<table class="table table-sm table-hover align-middle mb-0 phuyu-data-table phuyu-duplicados-table">
 										<thead>
@@ -175,7 +183,7 @@
 													</div>
 												</td>
 												<td>
-													<button type="button" class="btn btn-sm btn-warning" v-on:click="phuyu_unir_duplicado(grupo)">Unir</button>
+													<button type="button" class="btn btn-sm btn-warning" :disabled="cargandoDuplicados || uniendoDuplicados" v-on:click="phuyu_unir_duplicado(grupo)">Unir</button>
 												</td>
 											</tr>
 										</tbody>
@@ -240,4 +248,4 @@
     }
 </script>
 
-<script src="<?php echo base_url();?>phuyu/phuyu_almacen/productos_index.js"> </script>
+<script src="<?php echo base_url();?>phuyu/phuyu_almacen/productos_index.js?v=stock-negativo-1"> </script>

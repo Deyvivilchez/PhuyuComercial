@@ -1,0 +1,54 @@
+PHUYU - SERVIDOR LOCAL PHP 7.4
+============================
+
+Copia el bloque que necesites y pegalo en una terminal de PowerShell.
+Las lineas que empiezan con # son comentarios.
+
+INICIAR EL SERVIDOR
+------------------
+
+# Inicia PHP 7.4 con el router local, en segundo plano.
+# No necesitas cambiar la version de PHP de XAMPP.
+# Ejecuta este comando una sola vez por sesion de trabajo.
+powershell -ExecutionPolicy Bypass -File C:\php74\phuyu-local\iniciar-phuyu.ps1
+
+# Luego abre esta direccion en tu navegador:
+# http://127.0.0.1:8080/
+
+# Cerrar la terminal no detiene el servidor.
+# Si el puerto 8080 ya esta ocupado, no se podra iniciar otra instancia.
+
+DETENER EL SERVIDOR
+------------------
+
+# Busca el proceso que escucha en el puerto local de Phuyu.
+$phuyuServidor = Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue
+
+if ($phuyuServidor) {
+    # Verifica que sea el ejecutable PHP 7.4 antes de detenerlo.
+    $phuyuProceso = Get-Process -Id ($phuyuServidor.OwningProcess | Select-Object -Unique) -ErrorAction SilentlyContinue
+    if ($phuyuProceso -and $phuyuProceso.Path -eq 'C:\php74\php.exe') {
+        Stop-Process -Id $phuyuProceso.Id
+        Write-Host 'Servidor de Phuyu detenido.'
+    } else {
+        Write-Host 'El puerto 8080 pertenece a otro proceso. No se detuvo.'
+    }
+} else {
+    Write-Host 'El servidor de Phuyu ya esta detenido.'
+}
+
+TRABAJAR CON EL OTRO PROYECTO (PHP 8.2)
+-------------------------------------
+
+# Inicia Apache desde el panel de XAMPP y usa la URL habitual del proyecto.
+# Ambos servidores pueden funcionar al mismo tiempo si usan puertos distintos.
+# Estos comandos no cambian las rutas del proyecto ni la version de XAMPP.
+# Mantiene encendido tambien el servicio de base de datos que necesites.
+
+ARCHIVOS LOCALES NECESARIOS
+--------------------------
+
+# El script y el router estan fuera del repositorio compartido:
+# C:\php74\phuyu-local\iniciar-phuyu.ps1
+# C:\php74\phuyu-local\router.php
+# Son archivos de esta computadora; no se incluyen al clonar el proyecto.

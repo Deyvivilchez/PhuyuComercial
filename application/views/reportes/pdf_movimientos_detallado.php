@@ -1,217 +1,69 @@
-<!DOCTYPE html>
-<html lang="es">
-
-<head>
-    <meta charset="UTF-8">
-    <title>Reporte de Movimientos</title>
-</head>
-
-<body
-    style="font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; font-size: 8pt; margin: 0; padding: 15px; color: #2c3e50; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh;">
-    <div style="width: 100%; max-width: 100%;">
-        <!-- ENCABEZADO SUPER ELEGANTE CON LOGO REAL -->
-        <div
-            style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px 30px; margin-bottom: 25px; border-radius: 15px; box-shadow: 0 10px 30px
-             rgba(0,0,0,0.2); position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.2);">
-            <div
-                style="position: absolute; top: -50%; right: -50%; width: 100%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 20px 20px; transform: rotate(25deg);">
-            </div>
-
-            <div
-                style="display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 2;">
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <div
-                        style="width: 80px; height: 80px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 2px solid rgba(255,255,255,0.3); backdrop-filter: blur(10px); overflow: hidden; padding: 5px;">
-                        <?php
-                        
-                        echo $logoEmpresa != '' ? "<img src='" . base_url() . 'public/img/' . $logoEmpresa . "' alt='Logo' style='max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px;'>" : "<div style='width: 100%; height: 100%; background: rgba(255,255,255,0.3); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 9pt; text-align: center;'>LOGO<br>EMPRESA</div>";
-                        ?>
-                    </div>
-                    <div style="color: white;">
-                        <div
-                            style="font-size: 20pt; font-weight: 800; margin-bottom: 5px; letter-spacing: 0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">
-                            <?php echo $nombreEmpresa; ?>.</div>
-                        <div style="font-size: 9pt; font-weight: 300; opacity: 0.9; font-style: italic;">Phuyu System
-                        </div>
-                    </div>
-                </div>
-
-                <div style="text-align: right; color: white;">
-                    <div
-                        style="font-size: 16pt; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">
-                        Reporte Financiero</div>
-                    <div
-                        style="font-size: 10pt; font-weight: 500; background: rgba(255,255,255,0.2); padding: 8px 15px; border-radius: 20px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3);">
-                        📅 <?php echo $desde; ?> - <?php echo $hasta; ?></div>
-                    <div style="font-size: 8pt; margin-top: 5px; opacity: 0.8;">Generado: <?php echo date('d/m/Y H:i:s'); ?></div>
-                </div>
-            </div>
-        </div>
-
-        <?php
-            $resumenTotalPago = 0;
-            $resumenTotalEntregado = 0;
-            $resumenTotalVuelto = 0;
-            $resumenTotalMovimiento = 0;
-
-            foreach ($movimientos as $movimientoResumen) {
-                $resumenTotalPago += (double)$movimientoResumen['importe_pago'];
-                $resumenTotalEntregado += (double)$movimientoResumen['importe_entregado'];
-                $resumenTotalVuelto += (double)$movimientoResumen['vuelto'];
-                $resumenTotalMovimiento += (double)$movimientoResumen['importe_pago'];
-            }
-        ?>
-
-        <!-- RESUMEN SUPERIOR -->
-        <div style="margin: 0 0 18px 0;">
-            <table style="width: 100%; border-collapse: separate; border-spacing: 8px 0; font-size: 8pt;">
-                <tr>
-                    <td style="background: #ffffff; border-left: 5px solid #2c3e50; border-radius: 8px; padding: 10px 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.10);">
-                        <div style="color: #7f8c8d; font-size: 6.5pt; font-weight: 700; text-transform: uppercase;">Registros</div>
-                        <div style="color: #2c3e50; font-size: 13pt; font-weight: 800;"><?php echo count($movimientos); ?></div>
-                    </td>
-                    <td style="background: #ffffff; border-left: 5px solid #00b894; border-radius: 8px; padding: 10px 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.10);">
-                        <div style="color: #7f8c8d; font-size: 6.5pt; font-weight: 700; text-transform: uppercase;">Total pagado</div>
-                        <div style="color: #00a085; font-size: 13pt; font-weight: 800;">S/ <?php echo number_format($resumenTotalPago, 2); ?></div>
-                    </td>
-                    <td style="background: #ffffff; border-left: 5px solid #0984e3; border-radius: 8px; padding: 10px 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.10);">
-                        <div style="color: #7f8c8d; font-size: 6.5pt; font-weight: 700; text-transform: uppercase;">Entregado</div>
-                        <div style="color: #086cc3; font-size: 13pt; font-weight: 800;">S/ <?php echo number_format($resumenTotalEntregado, 2); ?></div>
-                    </td>
-                    <td style="background: #ffffff; border-left: 5px solid #e17055; border-radius: 8px; padding: 10px 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.10);">
-                        <div style="color: #7f8c8d; font-size: 6.5pt; font-weight: 700; text-transform: uppercase;">Vuelto</div>
-                        <div style="color: #d35400; font-size: 13pt; font-weight: 800;">S/ <?php echo number_format($resumenTotalVuelto, 2); ?></div>
-                    </td>
-                    <td style="background: #ffffff; border-left: 5px solid #6c5ce7; border-radius: 8px; padding: 10px 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.10);">
-                        <div style="color: #7f8c8d; font-size: 6.5pt; font-weight: 700; text-transform: uppercase;">Total</div>
-                        <div style="color: #6c5ce7; font-size: 13pt; font-weight: 800;">S/ <?php echo number_format($resumenTotalMovimiento, 2); ?></div>
-                    </td>
-                </tr>
-            </table>
-        </div>
-
-        <!-- TABLA ELEGANTE -->
-        <div
-            style="margin: 20px 0; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.15); background: white;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 7.5pt;">
-                <thead style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);">
-                    <tr>
-                        <th
-                            style="color: #ffffff; font-weight: 600; padding: 12px 6px; border: none; text-align: center; text-transform: uppercase; letter-spacing: 0.8px; font-size: 7pt; position: relative; width: 30px;">
-                            #
-                        </th>
-                        <th
-                            style="color: #ffffff; font-weight: 600; padding: 12px 6px; border: none; text-align: center; text-transform: uppercase; letter-spacing: 0.8px; font-size: 7pt; position: relative; width: 60px;">
-                            Fecha / Hora
-                        </th>
-                        <th
-                            style="color: #ffffff; font-weight: 600; padding: 12px 6px; border: none; text-align: center; text-transform: uppercase; letter-spacing: 0.8px; font-size: 7pt; position: relative; width: 80px;">
-                            Comp movimiento
-                        </th>
-                         <th
-                            style="color: #ffffff; font-weight: 600; padding: 12px 6px; border: none; text-align: center; text-transform: uppercase; letter-spacing: 0.8px; font-size: 7pt; position: relative; width: 80px;">
-                            Comprobante ref
-                        </th>
-                        <th
-                            style="color: #ffffff; font-weight: 600; padding: 12px 6px; border: none; text-align: left; text-transform: uppercase; letter-spacing: 0.8px; font-size: 7pt; position: relative; width: 170px;">
-                            Cliente
-                        </th>
-                        <th
-                            style="color: #ffffff; font-weight: 600; padding: 12px 6px; border: none; text-align: left; text-transform: uppercase; letter-spacing: 0.8px; font-size: 7pt; position: relative; width: 140px;">
-                            Concepto
-                        </th>
-                        <th
-                            style="color: #ffffff; font-weight: 600; padding: 12px 6px; border: none; text-align: center; text-transform: uppercase; letter-spacing: 0.8px; font-size: 7pt; position: relative; width: 70px;">
-                            Forma Pago
-                        </th>
-                        <th
-                            style="color: #ffffff; font-weight: 600; padding: 12px 6px; border: none; text-align: center; text-transform: uppercase; letter-spacing: 0.8px; font-size: 7pt; position: relative; width: 75px;">
-                            Pagado
-                        </th>
-                        <th
-                            style="color: #ffffff; font-weight: 600; padding: 12px 6px; border: none; text-align: center; text-transform: uppercase; letter-spacing: 0.8px; font-size: 7pt; position: relative; width: 75px;">
-                            Entregado
-                        </th>
-                        <th
-                            style="color: #ffffff; font-weight: 600; padding: 12px 6px; border: none; text-align: center; text-transform: uppercase; letter-spacing: 0.8px; font-size: 7pt; position: relative; width: 65px;">
-                            Vuelto
-                        </th>
-                        <th
-                            style="color: #ffffff; font-weight: 600; padding: 12px 6px; border: none; text-align: center; text-transform: uppercase; letter-spacing: 0.8px; font-size: 7pt; position: relative; width: 80px;">
-                            Total
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php
-                    $i = 1;
-                    $totalPago = 0;
-                    $totalEntregado = 0;
-                    $totalVuelto = 0;
-                    $totalMovimiento = 0;
-                    
-                    foreach ($movimientos as $m) {
-                        $tipoPago = strtolower($m['tipopago']);
-                        $badge_style = 'background: linear-gradient(135deg, #636e72 0%, #2d3436 100%); color: white;';
-                        if (strpos($tipoPago, 'efectivo') !== false) {
-                            $badge_style = 'background: linear-gradient(135deg, #00b894 0%, #00a085 100%); color: white;';
-                        } elseif (strpos($tipoPago, 'tarjeta') !== false) {
-                            $badge_style = 'background: linear-gradient(135deg, #0984e3 0%, #086cc3 100%); color: white;';
-                        } elseif (strpos($tipoPago, 'transferencia') !== false) {
-                            $badge_style = 'background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%); color: white;';
-                        }
-                    
-                        echo "<tr style='transition: all 0.3s ease;'>";
-                        echo "<td style='padding: 8px 6px; border-bottom: 1px solid #ecf0f1; vertical-align: middle; text-align: center;'><strong>{$i}</strong></td>";
-                        $horaMovimiento = !empty($m['horamovimiento']) ? $m['horamovimiento'] : '--:--:--';
-                        echo "<td style='padding: 8px 6px; border-bottom: 1px solid #ecf0f1; vertical-align: middle; text-align: center;'><strong>{$m['fechamovimiento']}</strong><br><span style='font-size: 6.5pt; color: #7f8c8d;'>{$horaMovimiento}</span></td>";
-                        echo "<td style='padding: 8px 6px; border-bottom: 1px solid #ecf0f1; vertical-align: middle; text-align: center;'><span style='font-family: \"SF Mono\", monospace; font-weight: 700; color: #2c3e50; letter-spacing: 0.5px; background: #f8f9fa; padding: 3px 6px; border-radius: 4px; border: 1px solid #e9ecef;'>{$m['seriecomprobante']}-{$m['nrocomprobante']}</span></td>";
-                        echo "<td style='padding: 8px 6px; border-bottom: 1px solid #ecf0f1; vertical-align: middle; text-align: left; font-weight: 600; color: #34495e;'>{$m['comprobante_referencia']}</td>";
-                        echo "<td style='padding: 8px 6px; border-bottom: 1px solid #ecf0f1; vertical-align: middle; text-align: left; font-weight: 600; color: #34495e;'>{$m['razonsocial']}</td>";
-
-                        echo "<td style='padding: 8px 6px; border-bottom: 1px solid #ecf0f1; vertical-align: middle; text-align: left; color: #5d6d7e; font-style: italic;'>{$m['concepto_caja']}</td>";
-                        echo "<td style='padding: 8px 6px; border-bottom: 1px solid #ecf0f1; vertical-align: middle; text-align: center;'><span style='display: inline-block; padding: 4px 10px; border-radius: 15px; font-size: 6.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); {$badge_style}'>{$m['tipopago']}</span></td>";
-                        echo "<td style='padding: 8px 6px; border-bottom: 1px solid #ecf0f1; vertical-align: middle; text-align: right; font-family: \"SF Mono\", \"Monaco\", \"Consolas\", monospace; font-weight: 700; color: #2c3e50;'><span style='font-size: 6pt; color: #7f8c8d; margin-right: 2px; font-weight: 600;'>S/</span>" . number_format($m['importe_pago'], 2) . '</td>';
-                        echo "<td style='padding: 8px 6px; border-bottom: 1px solid #ecf0f1; vertical-align: middle; text-align: right; font-family: \"SF Mono\", \"Monaco\", \"Consolas\", monospace; font-weight: 500;'><span style='font-size: 6pt; color: #7f8c8d; margin-right: 2px; font-weight: 600;'>S/</span>" . number_format($m['importe_entregado'], 2) . '</td>';
-                        echo "<td style='padding: 8px 6px; border-bottom: 1px solid #ecf0f1; vertical-align: middle; text-align: right; font-family: \"SF Mono\", \"Monaco\", \"Consolas\", monospace; font-weight: 500;'><span style='font-size: 6pt; color: #7f8c8d; margin-right: 2px; font-weight: 600;'>S/</span>" . number_format($m['vuelto'], 2) . '</td>';
-                        echo "<td style='padding: 8px 6px; border-bottom: 1px solid #ecf0f1; vertical-align: middle; text-align: right; font-family: \"SF Mono\", \"Monaco\", \"Consolas\", monospace; font-weight: 700; color: #2c3e50;'><strong><span style='font-size: 6pt; color: #7f8c8d; margin-right: 2px; font-weight: 600;'>S/</span>" . number_format($m['importe_pago'], 2) . '</strong></td>';
-                        echo '</tr>';
-                    
-                        $totalPago += $m['importe_pago'];
-                        $totalEntregado += $m['importe_entregado'];
-                        $totalVuelto += $m['vuelto'];
-                        $totalMovimiento += $m['importe_pago'];
-                        $i++;
-                    }
-                    ?>
-
-                    <!-- FILA DE TOTALES ELEGANTE -->
-                    <tr
-                        style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important; color: #ffffff; font-weight: 800;">
-                        <td colspan="7"
-                            style="padding: 12px 6px; border: none; font-size: 8pt; text-shadow: 0 1px 2px rgba(0,0,0,0.3); text-align: right; padding-right: 20px;">
-                            <strong>TOTALES GENERALES</strong>
-                        </td>
-                        <td
-                            style="padding: 12px 6px; border: none; font-size: 8pt; text-shadow: 0 1px 2px rgba(0,0,0,0.3); text-align: right; font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;">
-                            <strong>S/ <?php echo number_format($totalPago, 2); ?></strong></td>
-                        <td
-                            style="padding: 12px 6px; border: none; font-size: 8pt; text-shadow: 0 1px 2px rgba(0,0,0,0.3); text-align: right; font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;">
-                            <strong>S/ <?php echo number_format($totalEntregado, 2); ?></strong></td>
-                        <td
-                            style="padding: 12px 6px; border: none; font-size: 8pt; text-shadow: 0 1px 2px rgba(0,0,0,0.3); text-align: right; font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;">
-                            <strong>S/ <?php echo number_format($totalVuelto, 2); ?></strong></td>
-                        <td
-                            style="padding: 12px 6px; border: none; font-size: 8pt; text-shadow: 0 1px 2px rgba(0,0,0,0.3); text-align: right; font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;">
-                            <strong>S/ <?php echo number_format($totalMovimiento, 2); ?></strong></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- FOOTER CON ESTADÍSTICAS -->
-      
-    </div>
-</body>
-
-</html>
+<?php defined('BASEPATH') OR exit('No direct script access allowed');
+$esc = function($valor) { return htmlspecialchars((string)$valor, ENT_QUOTES, 'UTF-8'); };
+$dinero = function($valor) { return 'S/ '.number_format((float)$valor, 2, '.', ','); };
+$ingresos = 0; $egresos = 0; $recibos = []; $pagado = 0; $entregado = 0; $vuelto = 0; $total = 0;
+foreach ($movimientos as $m) {
+    if ((int)($m['estado'] ?? 1) === 0) { continue; }
+    if ((int)$m['tipomovimiento'] === 1) { $ingresos += (float)$m['importe_pago']; }
+    else { $egresos += (float)$m['importe_pago']; }
+    $pagado += (float)$m['importe_pago']; $entregado += (float)$m['importe_entregado']; $vuelto += (float)$m['vuelto'];
+    if (!isset($recibos[$m['codmovimiento']])) { $total += (float)$m['total_movimiento']; $recibos[$m['codmovimiento']] = true; }
+}
+?>
+<table width="100%" cellpadding="6" cellspacing="0">
+ <tr>
+  <?php if (!empty($logo_pdf)): ?>
+  <td width="20%" align="left" valign="middle"><img src="<?php echo $esc($logo_pdf); ?>" width="<?php echo (int)$logo_ancho; ?>" height="<?php echo (int)$logo_alto; ?>" /></td>
+  <?php endif; ?>
+  <td width="<?php echo !empty($logo_pdf) ? '48%' : '68%'; ?>" valign="middle"><b style="font-size:13pt;color:#241631;"><?php echo $esc($nombreEmpresa); ?></b><?php if (!empty($ruc_empresa)): ?><br><span style="font-size:9pt;color:#6f6682;">RUC: <?php echo $esc($ruc_empresa); ?></span><?php endif; ?><br><span style="font-size:8pt;color:#82788e;">Administración y control de caja</span></td>
+  <td width="32%" align="right" valign="middle"><span style="font-size:8pt;color:#6f6682;">REPORTE DE TESORERÍA</span><br><b style="font-size:11pt;color:#581c87;"><?php echo $esc($caja_nombre ?? ''); ?></b><br><span style="font-size:8pt;color:#6f6682;">Moneda: soles (PEN)</span></td>
+ </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td bgcolor="#581c87" height="2" style="font-size:2pt;line-height:2pt;">&nbsp;</td></tr></table>
+<table width="100%" cellpadding="12" cellspacing="0">
+ <tr>
+  <td width="70%" bgcolor="#581c87" style="color:#ffffff;"><span style="font-size:7pt;color:#e9d8fa;">TESORERÍA / REPORTE DE CAJA</span><br><b style="font-size:19pt;color:#ffffff;">Movimientos de caja</b></td>
+  <td width="30%" bgcolor="#581c87" align="right"><b style="font-size:11pt;color:#ffffff;">DETALLE DE OPERACIONES</b><br><span style="font-size:8pt;color:#e9d8fa;">Ingresos y egresos de caja</span></td>
+ </tr>
+</table>
+<table width="100%" cellpadding="7" cellspacing="0">
+ <tr>
+  <td width="66%" style="border-bottom:1px solid #e4d4ff;"><b style="font-size:8pt;color:#581c87;">DATOS DE LA CONSULTA</b><br><span style="font-size:8pt;color:#71647e;">Todas las aperturas de <?php echo $esc($caja_nombre ?? 'esta caja'); ?><?php if (!empty($usuario_exporta)) { echo ' - Exportado por: '.$esc($usuario_exporta); } ?></span></td>
+  <td width="34%" align="right" bgcolor="#faf7ff" style="border:1px solid #e4d4ff;"><span style="font-size:8pt;color:#71647e;">Período: <b><?php echo date('d/m/Y', strtotime($desde)); ?> al <?php echo date('d/m/Y', strtotime($hasta)); ?></b><br>Exportado: <?php echo $esc($exportado_en ?? date('d/m/Y H:i')); ?></span></td>
+ </tr>
+</table>
+<?php if (!empty($buscar)): ?><p style="font-size:7pt;color:#82788e;">Búsqueda aplicada: <?php echo $esc($buscar); ?></p><?php endif; ?>
+<table width="100%" cellpadding="9" cellspacing="0">
+ <tr>
+  <td width="20%" bgcolor="#f4edff"><span style="color:#581c87;">RECIBOS ACTIVOS</span><br><b style="font-size:13pt;"><?php echo count($recibos); ?></b></td>
+  <td width="27%" bgcolor="#f0f7f3"><span style="color:#16734b;">INGRESOS</span><br><b style="font-size:13pt;color:#16734b;"><?php echo $dinero($ingresos); ?></b></td>
+  <td width="26%" bgcolor="#fcf3f3"><span style="color:#b23838;">EGRESOS</span><br><b style="font-size:13pt;color:#b23838;"><?php echo $dinero($egresos); ?></b></td>
+  <td width="27%" bgcolor="#f4edff"><span style="color:#581c87;">NETO DEL PERÍODO</span><br><b style="font-size:13pt;color:#581c87;"><?php echo $dinero($ingresos-$egresos); ?></b></td>
+ </tr>
+</table>
+<p style="font-size:7pt;color:#82788e;">Una fila por forma de pago. Los ANULADOS se muestran como historial, conservan su fecha original y no suman a los totales. El total del recibo se muestra una sola vez. El neto no incluye el saldo inicial.</p>
+<p style="font-size:8pt;color:#581c87;"><b>DETALLE DE MOVIMIENTOS</b></p>
+<table width="100%" cellpadding="5" cellspacing="0" style="font-size:8pt;">
+ <thead><tr bgcolor="#4c1d95" style="color:#ffffff;font-size:7pt;font-weight:bold;text-align:center;">
+  <th width="3%">#</th><th width="9%">Fecha / Hora</th><th width="11%">Recibo / Tipo</th><th width="14%">Comprobante relacionado</th><th width="14%">Socio / Razón social</th><th width="12%">Concepto</th><th width="10%">Forma pago</th><th width="7%">Pagado</th><th width="7%">Entregado</th><th width="6%">Vuelto</th><th width="7%">Total</th>
+ </tr></thead>
+ <tbody>
+ <?php $vistos = []; foreach ($movimientos as $i=>$m): $anulado = (int)($m['estado'] ?? 1) === 0; $primero = !isset($vistos[$m['codmovimiento']]); $vistos[$m['codmovimiento']] = true; ?>
+ <tr style="<?php echo $anulado ? 'color:#b71c1c;text-decoration:line-through;' : ''; ?>" bgcolor="<?php echo $anulado ? '#fff0f0' : ($i%2 ? '#f7f5fa' : '#ffffff'); ?>" nobr="true">
+  <td width="3%" align="center"><?php echo $i+1; ?></td>
+  <td width="9%" align="center"><?php echo $esc($m['fechamovimiento']); ?><br><span style="font-size:7pt;color:#82788e;"><?php echo $esc($m['horamovimiento'] ?: '--:--:--'); ?></span></td>
+  <td width="11%"><b><?php echo $esc($m['seriecomprobante'].'-'.$m['nrocomprobante']); ?></b><br><span style="color:<?php echo (int)$m['tipomovimiento']===1 ? '#16734b' : '#b23838'; ?>;"><?php echo (int)$m['tipomovimiento']===1 ? 'Ingreso' : 'Egreso'; ?></span><?php if ($anulado) { echo '<br><b style="color:#b71c1c;">ANULADO</b>'; } ?></td>
+  <td width="14%"><span style="font-size:7pt;color:#82788e;"><?php echo $esc($m['tipo_comprobante_referencia'] ?? ''); ?></span><br><b><?php echo $esc($m['comprobante_referencia'] ?: '-'); ?></b><?php if (!empty($m['fecha_comprobante_referencia'])) { echo '<br><span style="font-size:7pt;">'.$esc($m['fecha_comprobante_referencia']).'</span>'; } ?></td>
+  <td width="14%"><?php echo $esc($m['razonsocial']); ?></td>
+  <td width="12%"><?php echo $esc($m['concepto_caja']); ?></td>
+  <td width="10%" align="center"><?php echo $esc($m['tipopago']); ?></td>
+  <td width="7%" align="right"><?php echo $dinero($m['importe_pago']); ?></td>
+  <td width="7%" align="right"><?php echo $dinero($m['importe_entregado']); ?></td>
+  <td width="6%" align="right"><?php echo $dinero($m['vuelto']); ?></td>
+  <td width="7%" align="right"><b><?php echo $primero ? $dinero($m['total_movimiento']) : ''; ?></b></td>
+ </tr>
+ <?php endforeach; ?>
+ <?php if (empty($movimientos)): ?><tr><td colspan="11" align="center">No se encontraron movimientos con los filtros seleccionados.</td></tr><?php endif; ?>
+ <tr bgcolor="#f4edff" style="color:#581c87;font-size:7pt;font-weight:bold;" nobr="true"><td colspan="7" width="73%" align="right">TOTALES DE MOVIMIENTOS ACTIVOS (S/)</td><td width="7%" align="right"><?php echo number_format($pagado, 2, '.', ','); ?></td><td width="7%" align="right"><?php echo number_format($entregado, 2, '.', ','); ?></td><td width="6%" align="right"><?php echo number_format($vuelto, 2, '.', ','); ?></td><td width="7%" align="right"><?php echo number_format($total, 2, '.', ','); ?></td></tr>
+ </tbody>
+</table>
