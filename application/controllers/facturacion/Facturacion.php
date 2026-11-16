@@ -35,7 +35,7 @@ class Facturacion extends Sunat {
 
 	function guias(){
 		if ($this->input->is_ajax_request()) {
-			$guias = $this->db->query("select motivos.descripcion AS motivo,personas.documento, guiasr.destinatario, guiasr.codguiar, guiasr.seriecomprobante, guiasr.nrocomprobante,guiasr.fechaguia,guiasrs.estado from almacen.guiasr as guiasr inner join sunat.guiasunat as guiasrs on(guiasr.codguiar=guiasrs.codguiar) inner join public.personas as personas on (guiasr.codpersona=personas.codpersona) inner join almacen.motivotraslado as motivos on(guiasr.codmotivotraslado=motivos.codmotivotraslado) where guiasrs.estado<>1 order by guiasr.codguiar asc")->result_array();
+			$guias = $this->db->query("select motivos.descripcion AS motivo,personas.documento, guiasr.destinatario, guiasr.codguiar, guiasr.seriecomprobante, guiasr.nrocomprobante,guiasr.fechaguia,guiasrs.estado, guiasrs.descripcion_cdr, guiasrs.ruta_cdr, guiasrs.ticket_gre, guiasrs.conductor_nombres, guiasrs.conductor_apellidos, guiasr.razonsocialconductor, guiasr.codmodalidadtraslado from almacen.guiasr as guiasr inner join sunat.guiasunat as guiasrs on(guiasr.codguiar=guiasrs.codguiar) inner join public.personas as personas on (guiasr.codpersona=personas.codpersona) inner join almacen.motivotraslado as motivos on(guiasr.codmotivotraslado=motivos.codmotivotraslado) where guiasr.estado=1 and guiasrs.codsucursal=".(int)$_SESSION["phuyu_codsucursal"]." order by guiasr.codguiar asc")->result_array();
 
 			$data["guias"] = $guias;
 			echo json_encode($data);
@@ -107,32 +107,81 @@ class Facturacion extends Sunat {
 		}
 	}
 
-	function guias_enviar($codguiar,$codoficial){
-		if ($this->input->is_ajax_request()) {
-			if (isset($_SESSION["phuyu_codusuario"])) {
-				$empresa = $this->db->query("select *from public.webservice where codempresa=1")->result_array();
-
-				$estado = $this->Facturacion_model->phuyu_crearXMLGUIAS($codoficial,$codguiar);
-				if ($estado["estado"]!=0) {
-					$firma = $this->phuyu_firmarXML($estado["carpeta_phuyu"]."/".$estado["archivo_phuyu"], 0, true);
-					if ($firma["estado"]==1) {
-						$credenciales = [$_SESSION["phuyu_ruc"],$empresa[0]["usuariosol"],$empresa[0]["clavesol"],$codguiar];
-                        $estado = Sunat::phuyu_enviarSUNATGUIA("sendBill",$estado["carpeta_phuyu"],$estado["archivo_phuyu"],$credenciales);
-						$mensaje = $estado["mensaje"]; $estado = $estado["estado"]; $alerta = ($estado==1 || $estado==2) ? "success" : "error";
-					}else{
-						$estado = 0; $mensaje = "NO SE PUEDE FIRMAR EL DOCUMENTO XML: ".$firma["mensaje"]; $alerta = "error";
-					}
-				}else{
-					$mensaje = $estado["mensaje"] ?? "NO SE PUEDE GENERAR EL DOCUMENTO XML"; $estado = 0; $alerta = "error";
-				}
-
-				$data["estado"] = $estado; $data["mensaje"] = $mensaje; $data["alerta"] = $alerta;
-				echo json_encode($data);
-			}else{
-				echo "e";
-			}
-		}
-	}
+	function guias_enviar($codguiar,$codoficial='09'){
+        if (!$this->input->is_ajax_request()) return;
+        if (!isset($_SESSION['phuyu_codusuario'])) { echo 'e'; return; }
+        if ($this->input->method() !== 'post') { $this->output->set_status_header(405); return; }
+        $codguiar=(int)$codguiar;
+        $locked=$this->db->query('select pg_try_advisory_lock(1909, ?) as locked',[$codguiar])->row_array();
+        if (!in_array($locked['locked'],[true,'t','1',1],true)) {
+            echo json_encode(['estado'=>0,'mensaje'=>'Esta guia ya se esta procesando. Espere y actualice la lista.','alerta'=>'warning']);return;
+        }
+        try {
+            $g=$this->db->query('select gs.*, g.codmodalidadtraslado from sunat.guiasunat gs join almacen.guiasr g using(codguiar) where gs.codguiar=? and g.estado=1 and gs.codsucursal=?',[$codguiar,(int)$_SESSION['phuyu_codsucursal']])->row_array();
+            if (!$g) throw new RuntimeException('Guia no encontrada en esta sucursal.');
+            if ((int)$g['estado']===1) { echo json_encode(['estado'=>1,'mensaje'=>'La guia ya tiene CDR aceptada.','alerta'=>'success']); return; }
+            if ((int)$g['estado']===3) throw new RuntimeException('Guia rechazada por SUNAT: '.$g['descripcion_cdr'].'. Corresponde emitir una nueva guia corregida.');
+            if ((int)$g['estado']===6 && empty($g['ticket_gre'])) throw new RuntimeException('El intento anterior no obtuvo ticket. Verifique la guia en SUNAT antes de reenviar para evitar duplicados.');
+            $config=$this->db->query('select * from public.webservice where codempresa=1')->row_array();
+            $this->load->library('phuyu_gre');
+            if (empty($g['ticket_gre'])) {
+                $datos=json_decode($this->input->raw_input_stream,true);
+                if (!is_array($datos)) $datos=$this->input->post();
+                $nombres=trim((string)($datos['conductor_nombres']??''));
+                $apellidos=trim((string)($datos['conductor_apellidos']??''));
+                if ($nombres!=='' && $apellidos!=='') {
+                    if (mb_strlen($nombres)>150 || mb_strlen($apellidos)>150) throw new RuntimeException('Nombres o apellidos del conductor demasiado largos.');
+                    $this->db->where('codguiar',$codguiar)->update('sunat.guiasunat',['conductor_nombres'=>$nombres,'conductor_apellidos'=>$apellidos]);
+                }
+                $xml=$this->Facturacion_model->phuyu_crearXMLGUIAS('09',$codguiar);
+                if ((int)$xml['estado']!==1) throw new RuntimeException($xml['mensaje']);
+                $firma=$this->phuyu_firmarXML($xml['carpeta_phuyu'].'/'.$xml['archivo_phuyu'],0,true);
+                if ((int)$firma['estado']!==1) throw new RuntimeException('No se pudo firmar el XML: '.$firma['mensaje']);
+            }
+            $token=$this->phuyu_gre->token($config,$_SESSION['phuyu_ruc']);
+            if (empty($g['ticket_gre'])) {
+                $path=$xml['carpeta_phuyu'].'/'.$xml['archivo_phuyu'];
+                $zip=new ZipArchive();
+                if ($zip->open($path.'.zip',ZipArchive::CREATE|ZipArchive::OVERWRITE)!==true) throw new RuntimeException('No se pudo crear el ZIP de la guia.');
+                $zip->addFile($path.'.xml',$xml['archivo_phuyu'].'.xml');$zip->close();
+                $this->db->where('codguiar',$codguiar)->update('sunat.guiasunat',['estado'=>6,'fechaenvio'=>date('Y-m-d'),'descripcion_cdr'=>'Envio iniciado; pendiente de confirmacion de ticket SUNAT.']);
+                $res=$this->phuyu_gre->request('https://api-cpe.sunat.gob.pe/v1/contribuyente/gem/comprobantes/'.rawurlencode($xml['archivo_phuyu']),json_encode(['archivo'=>['nomArchivo'=>$xml['archivo_phuyu'].'.zip','arcGreZip'=>base64_encode(file_get_contents($path.'.zip')),'hashZip'=>hash_file('sha256',$path.'.zip')]]),$token);
+                if (empty($res['numTicket'])) throw new RuntimeException('SUNAT no devolvio ticket. Verifique el estado en SUNAT antes de volver a enviar.');
+                $g['ticket_gre']=$res['numTicket'];
+                if (!$this->db->where('codguiar',$codguiar)->update('sunat.guiasunat',['ticket_gre'=>$g['ticket_gre'],'estado'=>5,'descripcion_cdr'=>'Recibida por SUNAT; pendiente de CDR.'])) throw new RuntimeException('No se pudo guardar el ticket de SUNAT: '.$g['ticket_gre']);
+            }
+            $res=$this->phuyu_gre->request('https://api-cpe.sunat.gob.pe/v1/contribuyente/gem/comprobantes/envios/'.rawurlencode($g['ticket_gre']),null,$token);
+            $code=(string)($res['codRespuesta']??'');
+            $update=[]; $estado=5; $mensaje='SUNAT esta procesando la guia. Use CONSULTAR para obtener su CDR.';
+            if (!empty($res['arcCdr'])) {
+                $bytes=base64_decode($res['arcCdr'],true);
+                if ($bytes===false) throw new RuntimeException('SUNAT devolvio un CDR ilegible. Consulte nuevamente el ticket.');
+                $cdr=$this->phuyu_gre->leerCdr($bytes,$g['nombre_xml']);
+                $folder='./sunat/comprobantes/'.date('Y/m');
+                if (!is_dir($folder) && !mkdir($folder,0775,true)) throw new RuntimeException('No se pudo crear la carpeta CDR.');
+                $ruta=$folder.'/R-'.$g['nombre_xml'];
+                if (file_put_contents($ruta.'.zip',$bytes)===false) throw new RuntimeException('No se pudo guardar el CDR. Consulte nuevamente.');
+                $estado=$cdr['estado'];$mensaje=$cdr['mensaje'];$update=['ruta_cdr'=>$ruta,'codigorespuesta'=>$cdr['codigo']];
+            } elseif ($code==='99') {
+                $estado=3;$mensaje=($res['error']['numError']??'99').': '.($res['error']['desError']??'SUNAT rechazo el envio.');
+                $update['codigorespuesta']=(string)($res['error']['numError']??'99');
+            } elseif ($code!=='98' && $code!=='0') {
+                throw new RuntimeException('Respuesta de ticket SUNAT no reconocida. Consulte nuevamente.');
+            }
+            $update['estado']=$estado;$update['descripcion_cdr']=$mensaje;
+            $this->db->where('codguiar',$codguiar)->update('sunat.guiasunat',$update);
+            echo json_encode(['estado'=>$estado,'mensaje'=>$mensaje,'alerta'=>$estado===1?'success':($estado===5?'warning':'error')]);
+        } catch (Exception $e) {
+            $mensaje=$e->getMessage();
+            if (in_array($e->getCode(),[400,401,403,422],true) && empty($g['ticket_gre'])) {
+                $this->db->where('codguiar',$codguiar)->where('estado',6)->update('sunat.guiasunat',['estado'=>0]);
+            }
+            $this->db->where('codguiar',$codguiar)->where('estado !=',1)->update('sunat.guiasunat',['descripcion_cdr'=>$mensaje]);
+            echo json_encode(['estado'=>0,'mensaje'=>$mensaje,'alerta'=>'error']);
+        } finally {
+            $this->db->query('select pg_advisory_unlock(1909, ?)',[$codguiar]);
+        }
+    }
 
 	function comprobantes_xml($codkardex,$codoficial){
 		if (isset($_SESSION["phuyu_codusuario"])) {
@@ -153,7 +202,20 @@ class Facturacion extends Sunat {
 
 	function guias_xml($codguiar,$codoficial){
 		if (isset($_SESSION["phuyu_codusuario"])) {
-			$estado = $this->Facturacion_model->phuyu_crearXMLGUIAS($codoficial,$codguiar);
+			$codguiar = (int)$codguiar;
+            $guia = $this->db->query("select nombre_xml,estado from sunat.guiasunat where codguiar=? and codsucursal=?", [$codguiar,(int)$_SESSION["phuyu_codsucursal"]])->row_array();
+            if (!$guia) { show_404(); return; }
+            if (in_array((int)$guia["estado"],[1,3,5,6],true)) {
+                $archivo = "./sunat/webphuyu/".basename($guia["nombre_xml"])."/".basename($guia["nombre_xml"]).".xml";
+                if (is_file($archivo)) {
+                    $this->load->helper("download");
+                    force_download(basename($archivo),file_get_contents($archivo));
+                    return;
+                }
+                echo "El XML enviado no esta disponible. No se regenerara un documento ya enviado.";
+                return;
+            }
+            $estado = $this->Facturacion_model->phuyu_crearXMLGUIAS('09',$codguiar);
 			if ($estado["estado"]!=0) {
 				$firma = $this->phuyu_firmarXML($estado["carpeta_phuyu"]."/".$estado["archivo_phuyu"], 0, true);
 				if ($firma["estado"]!=1) {
@@ -164,7 +226,9 @@ class Facturacion extends Sunat {
 				$this->load->helper("download"); 
 				$descargar_ruta = file_get_contents($estado["carpeta_phuyu"]."/".$estado["archivo_phuyu"].".xml");
 				force_download($estado["archivo_phuyu"].".xml", $descargar_ruta);
-			}
+			}else{
+                echo htmlspecialchars($estado["mensaje"] ?? "No se pudo generar el XML de la guia.", ENT_QUOTES, "UTF-8");
+            }
 		}
 	}
 

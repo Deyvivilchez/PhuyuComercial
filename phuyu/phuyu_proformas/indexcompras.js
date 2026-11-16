@@ -1,7 +1,7 @@
 var phuyu_compras = new Vue({
-	el: "#phuyu_compras",
+	el: "#phuyu_pedidos",
 	data: {
-		cargando: true, registro:0, buscar: "", datos: [], fechas:{"filtro":1,"desde":"","hasta":""},
+		cargando: true, registro:0, buscar: "", formato_impresion: $("#formato").val() || "a4", datos: [], fechas:{"filtro":1,"desde":"","hasta":""},
 		paginacion: {"total":0, "actual":1, "ultima":0, "desde":0, "hasta":0}, offset: 3
 	},
 	computed: {
@@ -45,6 +45,11 @@ var phuyu_compras = new Vue({
 		},
 		phuyu_paginacion: function(pagina){
 			this.paginacion.actual = pagina; this.phuyu_datos();
+		},
+		phuyu_formato: function(){
+			this.$http.get(url+phuyu_controller+"/formato/"+this.formato_impresion).then(function(){
+				phuyu_sistema.phuyu_modulo();
+			});
 		},
 		
 		phuyu_seleccionar: function(registro){
@@ -103,6 +108,13 @@ var phuyu_compras = new Vue({
 					phuyu_sistema.phuyu_alerta("ESTAMOS TENIENDO PROBLEMAS LO SENTIMOS", "ERROR DE RED","error"); 
 					phuyu_sistema.phuyu_fin();
 				});
+			}
+		},
+		phuyu_imprimir: function(){
+			if (this.registro==0) {
+				phuyu_sistema.phuyu_alerta("DEBE SELECCIONAR UNA PROFORMA", "PARA IMPRIMIR EN EL SISTEMA LA PROFORMA !!!", "error");
+			}else{
+				window.open(url+"facturacion/formato/"+this.formato_impresion+"proforma/"+this.registro, "_blank");
 			}
 		},
 		phuyu_egresos: function(){

@@ -817,301 +817,38 @@ class Facturacion_model extends CI_Model
 
     function phuyu_crearXMLGUIAS($codcomprobante, $codguiar)
     {
+        $codguiar = (int) $codguiar;
         $empresa = $this->db->query("select p.documento,p.razonsocial,p.direccion, e.ubigeo, e.departamento, e.provincia, e.distrito from public.personas as p inner join public.empresas as e on(p.codpersona=e.codpersona) where e.codempresa=1")->result_array();
 
-        $info = $this->db->query("select guiasr.licenciaconductor, guiasr.documentoconductor,guiasr.codproveedor,guiasr.fechatraslado,guiasr.codmodalidadtraslado,dt.oficial, documentotipos.oficial AS oficialdocumento,motivos.descripcion AS motivo,motivos.oficial AS oficialmotivo ,guiasr.codmotivotraslado,personas.documento, guiasr.destinatario, guiasr.codguiar, guiasr.seriecomprobante, guiasr.peso, guiasr.nropaquetes, guiasr.documentotransportista, guiasr.razonsocialtransportista, guiasr.codubigeollegada, guiasr.direccionllegada, guiasr.codubigeopartida, guiasr.direccionpartida, guiasr.nrocomprobante,guiasr.fechaguia,guiasrs.estado,guiasr.observaciones,guiasrs.nombre_xml from almacen.guiasr as guiasr inner join sunat.guiasunat as guiasrs on(guiasr.codguiar=guiasrs.codguiar) inner join public.personas as personas on (guiasr.codpersona=personas.codpersona) inner join public.documentotipos as documentotipos on (guiasr.coddocumentotipoconductor=documentotipos.coddocumentotipo) inner join almacen.motivotraslado as motivos on(guiasr.codmotivotraslado=motivos.codmotivotraslado) inner join public.documentotipos as dt on(personas.coddocumentotipo=dt.coddocumentotipo) where guiasr.codguiar=" . $codguiar)->result_array();
+        $info = $this->db->query("select guiasrs.conductor_nombres,guiasrs.conductor_apellidos,guiasr.nroplaca,guiasr.razonsocialconductor,guiasr.licenciaconductor, guiasr.documentoconductor,guiasr.codproveedor,guiasr.fechatraslado,guiasr.codmodalidadtraslado,dt.oficial, documentotipos.oficial AS oficialdocumento,motivos.descripcion AS motivo,motivos.oficial AS oficialmotivo ,guiasr.codmotivotraslado,personas.documento, guiasr.destinatario, guiasr.codguiar, guiasr.seriecomprobante, guiasr.peso, guiasr.nropaquetes, guiasr.documentotransportista, guiasr.razonsocialtransportista, guiasr.codubigeollegada, guiasr.direccionllegada, guiasr.codubigeopartida, guiasr.direccionpartida, guiasr.nrocomprobante,guiasr.fechaguia,guiasrs.estado,guiasr.observaciones,guiasrs.nombre_xml from almacen.guiasr as guiasr inner join sunat.guiasunat as guiasrs on(guiasr.codguiar=guiasrs.codguiar) inner join public.personas as personas on (guiasr.codpersona=personas.codpersona) inner join public.documentotipos as documentotipos on (guiasr.coddocumentotipoconductor=documentotipos.coddocumentotipo) inner join almacen.motivotraslado as motivos on(guiasr.codmotivotraslado=motivos.codmotivotraslado) inner join public.documentotipos as dt on(personas.coddocumentotipo=dt.coddocumentotipo) where guiasr.codguiar=" . $codguiar)->result_array();
 
         $detalle = $this->db->query("select kd.*,p.descripcion as producto,u.oficial as unidad,l.codlinea from almacen.guiasrdetalle as kd inner join almacen.productos as p on(kd.codproducto=p.codproducto) inner join almacen.unidades as u on(kd.codunidad=u.codunidad) inner join almacen.lineas as l on(p.codlinea=l.codlinea) where kd.codguiar=" . $codguiar . " and kd.estado=1 order by kd.item asc")->result_array();
 
-        // 0: CREAMOS UNA CARPETA PARA ALMACENAR EL XML DEL COMPROBANTE TEMPORALMENTE //
-
-        $carpeta_phuyu  = "./sunat/webphuyu/" . $info[0]["nombre_xml"];
-        if (!file_exists($carpeta_phuyu)) {
-            mkdir($carpeta_phuyu, 0777);
-            chmod($carpeta_phuyu, 0777);
+        if (!$empresa || !$info || !$detalle) {
+            return ["estado" => 0, "mensaje" => "Guia no encontrada o sin productos activos."];
         }
-
-        // 1: CREAMOS EL DOCUMENTO XML //
-
-        $xml = new DomDocument("1.0", "UTF-8");
-        $xml->standalone = false;
-        $xml->preserveWhiteSpace = false;
-
-        $Invoice = $xml->createElement("DespatchAdvice");
-        $Invoice = $xml->appendChild($Invoice);
-        $Invoice->setAttribute("xmlns", "urn:oasis:names:specification:ubl:schema:xsd:DespatchAdvice-2");
-
-        $Invoice->setAttribute("xmlns:cac", "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2");
-        $Invoice->setAttribute("xmlns:cbc", "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2");
-        $Invoice->setAttribute("xmlns:ds", "http://www.w3.org/2000/09/xmldsig#");
-        $Invoice->setAttribute("xmlns:ext", "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2");
-
-        $UBLExtension = $xml->createElement("ext:UBLExtensions");
-        $UBLExtension = $Invoice->appendChild($UBLExtension);
-
-        // 2: FIRMA ELECTRONICA //
-
-        $ext = $xml->createElement("ext:UBLExtension");
-        $ext = $UBLExtension->appendChild($ext);
-        $contents = $xml->createElement("ext:ExtensionContent", "");
-        $contents = $ext->appendChild($contents);
-
-        // 3: VERSION DEL XML Y DEL COMPROBANTE //
-
-        $cbc = $xml->createElement("cbc:UBLVersionID", "2.1");
-        $cbc = $Invoice->appendChild($cbc);
-        $cbc = $xml->createElement("cbc:CustomizationID", "1.0");
-        $cbc = $Invoice->appendChild($cbc);
-
-        // 4. SERIE Y NRO DEL COMPROBANTE F001-00000001 - FECHA Y HORA DE EMISION //
-
-        $cbc = $xml->createElement("cbc:ID", $info[0]["seriecomprobante"] . "-" . $info[0]["nrocomprobante"]);
-        $cbc = $Invoice->appendChild($cbc);
-        $cbc = $xml->createElement("cbc:IssueDate", $info[0]["fechaguia"]);
-        $cbc = $Invoice->appendChild($cbc);
-
-        $cbc = $xml->createElement("cbc:IssueTime", '00:00:00');
-        $cbc = $Invoice->appendChild($cbc);
-
-
-        // 5. CODIGO TIPO DOCUMENTO CATALOGO 01 //
-
-        $cbc = $xml->createElement("cbc:DespatchAdviceTypeCode", $codcomprobante);
-        $cbc = $Invoice->appendChild($cbc);
-
-        // 6. OBSERVACION
-
-        $cbc = $xml->createElement("cbc:Note", trim($info[0]["observaciones"]));
-        $cbc = $Invoice->appendChild($cbc);
-
-
-        // 7: DATOS DE LA EMPRESA - REFERENCIA FIRMA DIGITAL //
-
-        $cac_signature = $xml->createElement("cac:Signature");
-        $cac_signature = $Invoice->appendChild($cac_signature);
-        $cbc = $xml->createElement("cbc:ID", "SignSUNAT");
-        $cbc = $cac_signature->appendChild($cbc);
-
-        $cac_signatureparty = $xml->createElement("cac:SignatoryParty");
-        $cac_signatureparty = $cac_signature->appendChild($cac_signatureparty);
-
-        $cac_partyidentification = $xml->createElement("cac:PartyIdentification");
-        $cac_partyidentification = $cac_signatureparty->appendChild($cac_partyidentification);
-        $cbc = $xml->createElement("cbc:ID", $empresa[0]["documento"]);
-        $cbc = $cac_partyidentification->appendChild($cbc);
-        $cac_partyname = $xml->createElement("cac:PartyName");
-        $cac_partyname = $cac_signatureparty->appendChild($cac_partyname);
-        $cbc = $xml->createElement("cbc:Name", htmlspecialchars($empresa[0]["razonsocial"]));
-        $cbc = $cac_partyname->appendChild($cbc);
-
-        $cac_digital = $xml->createElement("cac:DigitalSignatureAttachment");
-        $cac_digital = $cac_signature->appendChild($cac_digital);
-        $cac_externalreference = $xml->createElement("cac:ExternalReference");
-        $cac_externalreference = $cac_digital->appendChild($cac_externalreference);
-        $cbc = $xml->createElement("cbc:URI", "#SignSUNAT");
-        $cbc = $cac_externalreference->appendChild($cbc);
-
-        // 8: DATOS DE LA EMPRESA QUE EMITE //
-
-        $cac_supplierparty = $xml->createElement("cac:DespatchSupplierParty");
-        $cac_supplierparty = $Invoice->appendChild($cac_supplierparty);
-
-        $cbc_customer = $xml->createElement("cbc:CustomerAssignedAccountID", $empresa[0]["documento"]);
-        $cbc_customer = $cac_supplierparty->appendChild($cbc_customer);
-        $cbc_customer->setAttribute("schemeID", "6");
-
-        $cac_party = $xml->createElement("cac:Party");
-        $cac_party = $cac_supplierparty->appendChild($cac_party);
-
-        $cac_legal = $xml->createElement("cac:PartyLegalEntity");
-        $cac_legal = $cac_party->appendChild($cac_legal);
-        $cbc = $xml->createElement("cbc:RegistrationName", htmlspecialchars($empresa[0]["razonsocial"]));
-        $cbc = $cac_legal->appendChild($cbc);
-
-        // 9: DATOS DEL CLIENTE //
-
-        $cac_customerparty = $xml->createElement("cac:DeliveryCustomerParty");
-        $cac_customerparty = $Invoice->appendChild($cac_customerparty);
-
-        $cbc_customer = $xml->createElement("cbc:CustomerAssignedAccountID", $info[0]["documento"]);
-        $cbc_customer = $cac_customerparty->appendChild($cbc_customer);
-        $cbc_customer->setAttribute("schemeID", $info[0]["oficial"]);
-
-        $cac_party = $xml->createElement("cac:Party");
-        $cac_party = $cac_customerparty->appendChild($cac_party);
-
-        $cac_legal = $xml->createElement("cac:PartyLegalEntity");
-        $cac_legal = $cac_party->appendChild($cac_legal);
-        $cbc = $xml->createElement("cbc:RegistrationName", htmlspecialchars($info[0]["destinatario"]));
-        $cbc = $cac_legal->appendChild($cbc);
-
-        if ($info[0]["codmotivotraslado"] == 2) {
-
-            $proveedor = $this->db->query("select *from personas where codpersona=" . $info[0]["codproveedor"])->result_array();
-
-            $cac_proveedor = $xml->createElement("cac:SellerSupplierParty");
-            $cac_proveedor = $Invoice->appendChild($cac_proveedor);
-
-            $cbc_proveedor = $xml->createElement("cbc:CustomerAssignedAccountID", $proveedor[0]["documento"]);
-            $cbc_proveedor = $cac_proveedor->appendChild($cbc_proveedor);
-            $cbc_proveedor->setAttribute("schemeID", "6");
-
-            $cac_party = $xml->createElement("cac:Party");
-            $cac_party = $cac_proveedor->appendChild($cac_party);
-
-            $cac_legal = $xml->createElement("cac:PartyLegalEntity");
-            $cac_legal = $cac_party->appendChild($cac_legal);
-            $cbc = $xml->createElement("cbc:RegistrationName", htmlspecialchars($proveedor[0]["razonsocial"]));
-            $cbc = $cac_legal->appendChild($cbc);
+        $guia = $info[0];
+        foreach ($detalle as &$producto) $producto["unidad"] = $this->phuyu_unidad_sunat($producto["unidad"]);
+        unset($producto);
+        foreach (["partida", "llegada"] as $punto) {
+            $ubigeo = $this->db->query("select ubidepartamento || ubiprovincia || ubidistrito as codigo from public.ubigeo where codubigeo=?", [(int)$guia["codubigeo".$punto]])->row_array();
+            $guia["ubigeo".$punto] = $ubigeo ? $ubigeo["codigo"] : "";
         }
-
-
-        // DESCUENTOS GLOBALES
-
-        /* if($info[0]["det_impdsctoglobal"] > 0)  {
-                $cac_global = $xml->createElement("cac:AllowanceCharge"); $cac_global = $Invoice->appendChild($cac_global);
-                    $cbc = $xml->createElement("cbc:ChargeIndicator", "false"); $cbc = $cac_global->appendChild($cbc);            
-                    $cbc = $xml->createElement("cbc:AllowanceChargeReasonCode", "00"); $cbc = $cac_global->appendChild($cbc);
-                    $cbc = $xml->createElement("cbc:MultiplierFactorNumeric", $info[0]["det_porcdescuento"]); $cbc=$cac_global->appendChild($cbc);
-                    $cbc = $xml->createElement("cbc:Amount", $info[0]["det_impdsctoglobal"]); $cbc = $cac_global->appendChild($cbc);
-                    $cbc = $xml->createElement("cbc:BaseAmount", $info[0]["det_impsubtotal"]); $cbc = $cac_global->appendChild($cbc);
-            } */
-
-        // 11: TOTALES DEL COMPROBANTE //
-
-        $cac_sepelier = $xml->createElement("cac:Shipment");
-        $cac_sepelier = $Invoice->appendChild($cac_sepelier);
-
-        $cbc = $xml->createElement("cbc:ID", "1");
-        $cbc = $cac_sepelier->appendChild($cbc);
-
-        $cbc = $xml->createElement("cbc:HandlingCode", $info[0]["oficialmotivo"]);
-        $cbc = $cac_sepelier->appendChild($cbc);
-        $cbc = $xml->createElement("cbc:Information", $info[0]["motivo"]);
-        $cbc = $cac_sepelier->appendChild($cbc);
-
-        $cbc = $xml->createElement("cbc:GrossWeightMeasure", number_format($info[0]["peso"], 2, ".", ""));
-        $cbc = $cac_sepelier->appendChild($cbc);
-        $cbc->setAttribute("unitCode", "KGM");
-
-        $cbc = $xml->createElement("cbc:TotalTransportHandlingUnitQuantity", $info[0]["nropaquetes"]);
-        $cbc = $cac_sepelier->appendChild($cbc);
-
-        $cac_shipment = $xml->createElement("cac:ShipmentStage");
-        $cac_shipment = $cac_sepelier->appendChild($cac_shipment);
-
-        $cbc = $xml->createElement("cbc:TransportModeCode", '0' . $info[0]["codmodalidadtraslado"]);
-        $cbc = $cac_shipment->appendChild($cbc);
-
-        $cac = $xml->createElement("cac:TransitPeriod");
-        $cac = $cac_shipment->appendChild($cac);
-
-        $cbc = $xml->createElement("cbc:StartDate", $info[0]["fechatraslado"]);
-        $cbc = $cac->appendChild($cbc);
-
-        if ($info[0]["codmodalidadtraslado"] == 1) {
-
-            //EMPRESA TRANSPORTISTA
-            $cac_transporte = $xml->createElement("cac:CarrierParty");
-            $cac_transporte = $cac_shipment->appendChild($cac_transporte);
-            $cac_partyidentification = $xml->createElement("cac:PartyIdentification");
-            $cac_partyidentification = $cac_transporte->appendChild($cac_partyidentification);
-            $cbc = $xml->createElement("cbc:ID", $info[0]["documentotransportista"]);
-            $cbc = $cac_partyidentification->appendChild($cbc);
-            $cbc->setAttribute("schemeID", "6");
-
-            $cac_partyName = $xml->createElement("cac:PartyName");
-            $cac_partyName = $cac_transporte->appendChild($cac_partyName);
-            $cbc = $xml->createElement("cbc:Name", htmlspecialchars($info[0]["razonsocialtransportista"]));
-            $cbc = $cac_partyName->appendChild($cbc);
-        } else {
-
-            //VEHICULO 
-            $cac_vehiculo = $xml->createElement("cac:TransportMeans");
-            $cac_vehiculo = $cac_shipment->appendChild($cac_vehiculo);
-            $cac_transport = $xml->createElement("cac:RoadTransport");
-            $cac_transport = $cac_vehiculo->appendChild($cac_transport);
-
-            $cbc = $xml->createElement("cbc:LicensePlateID", $info[0]["licenciaconductor"]);
-            $cbc = $cac_transport->appendChild($cbc);
-
-
-            //CONDUCTOR
-            $cac_conductor = $xml->createElement("cac:DriverPerson");
-            $cac_conductor = $cac_shipment->appendChild($cac_conductor);
-            $cbc = $xml->createElement("cbc:ID", $info[0]["documentoconductor"]);
-            $cbc = $cac_conductor->appendChild($cbc);
-            $cbc->setAttribute("schemeID", $info[0]["oficialdocumento"]);
+        $this->load->library("phuyu_gre");
+        try {
+            $xml = $this->phuyu_gre->crearXml($empresa[0], $guia, $detalle);
+        } catch (InvalidArgumentException $e) {
+            return ["estado" => 0, "mensaje" => $e->getMessage()];
         }
-
-        $ubigeollegada = $this->db->query("select *from ubigeo WHERE codubigeo=" . $info[0]["codubigeollegada"])->result_array();
-
-        $cac_delivery = $xml->createElement("cac:Delivery");
-        $cac_delivery = $cac_sepelier->appendChild($cac_delivery);
-        $cac_deliveryadress = $xml->createElement("cac:DeliveryAddress");
-        $cac_delivery->appendChild($cac_deliveryadress);
-        $cbc = $xml->createElement("cbc:ID", $ubigeollegada[0]["ubidepartamento"] . $ubigeollegada[0]["ubiprovincia"] . $ubigeollegada[0]["ubidistrito"]);
-        $cbc = $cac_deliveryadress->appendChild($cbc);
-        $cbc = $xml->createElement("cbc:StreetName", htmlspecialchars((string)$info[0]["direccionllegada"]));
-        $cbc = $cac_deliveryadress->appendChild($cbc);
-
-        $ubigeopartida = $this->db->query("select *from ubigeo WHERE codubigeo=" . $info[0]["codubigeopartida"])->result_array();
-
-        $cac_origin = $xml->createElement("cac:OriginAddress");
-        $cac_origin = $cac_sepelier->appendChild($cac_origin);
-        $cbc = $xml->createElement("cbc:ID", $ubigeopartida[0]["ubidepartamento"] . $ubigeopartida[0]["ubiprovincia"] . $ubigeopartida[0]["ubidistrito"]);
-        $cbc = $cac_origin->appendChild($cbc);
-        $cbc = $xml->createElement("cbc:StreetName", htmlspecialchars($info[0]["direccionpartida"]));
-        $cbc = $cac_origin->appendChild($cbc);
-
-        // 12: ITEMS DEL COMPROBANTE //
-
-        foreach ($detalle as $key => $value) {
-            $unidad_sunat = $this->phuyu_unidad_sunat($value["unidad"]);
-
-            $line = $xml->createElement("cac:DespatchLine");
-            $line = $Invoice->appendChild($line);
-
-            // 12.1: NRO DE ITEM / CANTIDAD Y UNIDAD DE MEDIDA //
-
-            $cbc = $xml->createElement("cbc:ID", $value["item"]);
-            $cbc = $line->appendChild($cbc);
-
-            $cbc = $xml->createElement("cbc:DeliveredQuantity", number_format($value["cantidad"], 2, ".", ""));
-            $cbc = $line->appendChild($cbc);
-            $cbc->setAttribute("unitCode", $unidad_sunat);
-
-            $cac_orden = $xml->createElement("cac:OrderLineReference");
-            $cac_orden = $line->appendChild($cac_orden);
-
-            $cbc = $xml->createElement("cbc:LineID", $value["item"]);
-            $cbc = $cac_orden->appendChild($cbc);
-
-            $cac_item = $xml->createElement("cac:Item");
-            $cac_item = $line->appendChild($cac_item);
-            $cbc = $xml->createElement("cbc:Name", htmlspecialchars($value["producto"]));
-            $cbc = $cac_item->appendChild($cbc);
-
-            $cac_seller = $xml->createElement("cac:SellersItemIdentification");
-            $cac_seller = $cac_item->appendChild($cac_seller);
-            $cbc = $xml->createElement("cbc:ID", $value["codproducto"]);
-            $cbc = $cac_seller->appendChild($cbc);
+        $nombre = $empresa[0]["documento"]."-09-".$guia["seriecomprobante"]."-".$guia["nrocomprobante"];
+        $carpeta = "./sunat/webphuyu/".$nombre;
+        if (!is_dir($carpeta) && !mkdir($carpeta, 0775, true)) {
+            return ["estado"=>0, "mensaje"=>"No se pudo crear la carpeta del XML."];
         }
-
-        // FIN DE LA CREACION DEL XML //
-
-        $xml->formatOutput = true;
-        $xml->save($carpeta_phuyu . "/" . $info[0]["nombre_xml"] . ".xml");
-        chmod($carpeta_phuyu . "/" . $info[0]["nombre_xml"] . ".xml", 0777);
-
-        if (file_exists($carpeta_phuyu . "/" . $info[0]["nombre_xml"] . ".xml")) {
-            $data["estado"] = 1;
-            $data["carpeta_phuyu"] = $carpeta_phuyu;
-            $data["archivo_phuyu"] = $info[0]["nombre_xml"];
-        } else {
-            $data["estado"] = 0;
+        if ($xml->save($carpeta."/".$nombre.".xml") === false) {
+            return ["estado"=>0, "mensaje"=>"No se pudo guardar el XML de la guia."];
         }
-        return $data;
+        return ["estado"=>1, "carpeta_phuyu"=>$carpeta, "archivo_phuyu"=>$nombre];
     }
 
     // RESUMEN DE FACTURAS ANULADAS // 

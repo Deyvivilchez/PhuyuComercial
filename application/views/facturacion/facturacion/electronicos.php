@@ -169,17 +169,26 @@
 			<tbody>
 				<tr v-for="dato in guias1">
 					<td style="padding-top:5px;"> 
-						<button type="button" class="btn btn-success btn-sm" v-bind:id="dato.codguiar" v-on:click="guias_enviar(dato.codguiar,'09')">
-							<i class="fa fa-send"></i> ENVIAR
+						<button type="button" class="btn btn-success btn-sm" v-if="dato.estado!=1 && dato.estado!=3 && dato.estado!=6" v-bind:id="dato.codguiar" v-on:click="guias_enviar(dato.codguiar,'09')">
+							<i class="fa fa-send"></i> {{dato.ticket_gre ? "CONSULTAR" : "ENVIAR"}}
 						</button> 
 					</td>
 					<td> {{dato.documento}} </td>
-					<td> {{dato.destinatario}} </td>
+					<td> {{dato.destinatario}}
+                            <div v-if="dato.codmodalidadtraslado==2 && !dato.ticket_gre && dato.estado!=1 && dato.estado!=3">
+                                <small>Conductor: {{dato.razonsocialconductor}}</small>
+                                <input class="form-control form-control-sm mt-1" v-model.trim="dato.conductor_nombres" placeholder="Nombres del conductor" maxlength="150" aria-label="Nombres del conductor">
+                                <input class="form-control form-control-sm mt-1" v-model.trim="dato.conductor_apellidos" placeholder="Apellidos del conductor" maxlength="150" aria-label="Apellidos del conductor">
+                            </div> </td>
 					<td> {{dato.seriecomprobante}} - {{dato.nrocomprobante}}</td>
 					<td> {{dato.fechaguia}} </td>
 					<td> {{dato.motivo}} </td>
 					<td>
-						<b v-if="dato.estado==0" style="color:#d43f3a">PENDIENTE</b>
+						<b v-if="dato.estado==1" class="text-success">ACEPTADA</b>
+                            <b v-if="dato.estado==5" class="text-warning">EN PROCESO</b>
+                            <b v-if="dato.estado==6" class="text-warning">POR VERIFICAR EN SUNAT</b>
+                            <div v-if="dato.descripcion_cdr" class="small">{{dato.descripcion_cdr}}</div>
+                            <b v-if="dato.estado==0" style="color:#d43f3a">PENDIENTE</b>
 						<b v-if="dato.estado==2" style="color:#eea236">CON EXCEPCIONES</b> 
 						<b v-if="dato.estado==3" style="color:#d43f3a">RECHAZADO</b> 
 						<b v-if="dato.estado==4" style="color:#eea236">OBSERVADO</b> 
@@ -187,7 +196,7 @@
 					<td style="padding-top:5px;"> 
 						<button type="button" class="btn btn-info btn-sm" v-on:click="guias_xml(dato.codguiar,'09')">
 							<i class="fa fa-cloud-download"></i> XML
-						</button>
+						</button><button v-if="dato.ruta_cdr" type="button" class="btn btn-info btn-sm mt-1" v-on:click="guias_cdr(dato.codguiar)">CDR</button>
 					</td>
 				</tr>
 			</tbody>
@@ -283,4 +292,4 @@
 	</div>
 </div>
 
-<script src="<?php echo base_url();?>phuyu/phuyu_facturacion/electronicos.js"> </script>
+<script src="<?php echo base_url();?>phuyu/phuyu_facturacion/electronicos.js?v=20261105gre"> </script>

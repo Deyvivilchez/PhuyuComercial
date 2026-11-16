@@ -57,7 +57,8 @@ var phuyu_facturacion = new Vue({
 		guias_enviar: function(codguiar,codoficial){
 			phuyu_sistema.phuyu_inicio_guardar("ENVIANDO EL COMPROBANTE A SUNAT . . ."); $("#"+codguiar).attr("disabled","true");
 
-			this.$http.get(url+"facturacion/facturacion/guias_enviar/"+codguiar+"/"+codoficial).then(function(data){
+			var guia = this.guias1.find(function(g){ return g.codguiar == codguiar; });
+			this.$http.post(url+"facturacion/facturacion/guias_enviar/"+codguiar+"/"+codoficial, {conductor_nombres: guia.conductor_nombres || "", conductor_apellidos: guia.conductor_apellidos || ""}).then(function(data){
 				if (data.body=="e") {
 					phuyu_sistema.phuyu_alerta("SESION DEL USUARIO TERMINADA","DEBE INICIAR SESION NUEVAMENTE","error");
 				}else{
@@ -72,6 +73,9 @@ var phuyu_facturacion = new Vue({
 		comprobantes_xml: function(codkardex,codoficial){
 			window.open(url+"facturacion/facturacion/comprobantes_xml/"+codkardex+"/"+codoficial,"_blank");
 		},
+		guias_cdr: function(codguiar){
+            window.open(url+"facturacion/facturacion/guias_cdr/"+codguiar,"_blank");
+        },
 		guias_xml: function(codguiar,codoficial){
 			window.open(url+"facturacion/facturacion/guias_xml/"+codguiar+"/"+codoficial,"_blank");
 		},

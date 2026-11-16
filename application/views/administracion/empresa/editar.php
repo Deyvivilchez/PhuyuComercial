@@ -65,8 +65,8 @@
 					</div>
 
 					<div class="col-12">
-						<div class="phuyu-section-title mb-0">API SUNAT - Consulta integrada de validez</div>
-						<div class="form-text">Credenciales generadas en Menú SOL para consultar directamente facturas, boletas y notas.</div>
+						<div class="phuyu-section-title mb-0">API SUNAT - Consultas y guías electrónicas</div>
+						<div class="form-text">Credenciales generadas en Menú SOL. Para declarar guías habilite GRE Emisión de Comprobantes (/v1/contribuyente/gem) y seleccione Alcance Desktop en SOL, además de los permisos de consulta que utilice.</div>
 					</div>
 					<div class="col-12 col-md-6">
 						<label class="form-label">Client ID API SUNAT</label>

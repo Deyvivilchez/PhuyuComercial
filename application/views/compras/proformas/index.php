@@ -1,5 +1,6 @@
 <div id="phuyu_pedidos" class="phuyu-proformas">
 	<input type="hidden" id="almacen" value="<?php echo $almacen;?>">
+	<input type="hidden" id="formato" value="<?php echo isset($_SESSION['phuyu_formatoproforma']) ? $_SESSION['phuyu_formatoproforma'] : 'a4';?>">
 
 	<div class="page-title-box d-sm-flex align-items-center justify-content-between mb-3">
 		<div>
@@ -50,6 +51,9 @@
 					</button>
 					<button type="button" class="btn btn-info" v-on:click="phuyu_ver()">
 						<i class="bi bi-eye me-1"></i> Ver
+					</button>
+					<button type="button" class="btn btn-primary" v-on:click="phuyu_imprimir()">
+						<i class="bi bi-printer me-1"></i> Imprimir
 					</button>
 					<button type="button" class="btn btn-warning" v-on:click="phuyu_editar()">
 						<i class="bi bi-pencil-square me-1"></i> Editar
