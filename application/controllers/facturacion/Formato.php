@@ -166,9 +166,12 @@ class Formato extends CI_Controller
 
     public function formato_guia($codguiar)
     {
-        $estilo = 'border-left:1px solid #000; border-right:1px solid #000;';
-        $estilo1 = 'border-top:1px solid #000; border-left:1px solid #000; border-right:1px solid #000;text-align:right';
-        $marco = 'padding:10px';
+        $codguiar = (int)$codguiar;
+        if ($codguiar <= 0) {
+            show_error('Código de guía inválido.', 400);
+            return;
+        }
+
         $empresa = $this->db->query('select documento,razonsocial,nombrecomercial,email from public.personas where codpersona=1')->result_array();
         $sucursal = $this->db->query('select *from public.sucursales where codsucursal=' . $_SESSION['phuyu_codsucursal'])->result_array();
         $principal = $this->db->query('select *from public.sucursales where principal=1 and estado=1')->result_array();
@@ -181,188 +184,91 @@ class Formato extends CI_Controller
             )
             ->result_array();
 
-        $detalle = $this->db->query('select kd.item,kd.cantidad,p.descripcion as producto,u.descripcion as unidad,kd.peso from almacen.guiasrdetalle as kd inner join almacen.productos as p on(p.codproducto=kd.codproducto) inner join almacen.unidades as u on(u.codunidad=kd.codunidad) where kd.codguiar=' . $codguiar . ' order by kd.item')->result_array();
+        if (empty($guia)) {
+            show_404();
+            return;
+        }
+
+        // Las guías anteriores pueden tener la observación solo en el ítem de la venta vinculada.
+        $detalle = $this->db->query("
+            SELECT kd.item, kd.cantidad, p.descripcion AS producto, u.descripcion AS unidad, kd.peso,
+                COALESCE(NULLIF(BTRIM(kd.detalle), ''), (
+                    SELECT string_agg(DISTINCT NULLIF(BTRIM(vd.descripcion), ''), E'\\n')
+                    FROM almacen.kardexguiasrdetalle vinculo
+                    INNER JOIN kardex.kardexdetalle vd
+                        ON vd.codkardex = vinculo.codkardex AND vd.item = vinculo.itemgk
+                        AND vd.codproducto = vinculo.codproducto AND vd.codunidad = vinculo.codunidad
+                    WHERE vinculo.codguiar = kd.codguiar AND vinculo.itemgr = kd.item
+                ), '') AS observacion_item
+            FROM almacen.guiasrdetalle kd
+            INNER JOIN almacen.productos p ON p.codproducto = kd.codproducto
+            INNER JOIN almacen.unidades u ON u.codunidad = kd.codunidad
+            WHERE kd.codguiar = " . $codguiar . " ORDER BY kd.item
+        ")->result_array();
 
         $formato = $this->db->query('select *from caja.comprobantes where codcomprobantetipo=' . $guia[0]['codcomprobantetipo'] . " AND seriecomprobante = '" . $guia[0]['seriecomprobante'] . "' AND codsucursal= " . $_SESSION['phuyu_codsucursal'])->result_array();
 
-        $logo = 'empresa/default.png';
-        if ($formato[0]['logo'] != '') {
-            $logo = 'empresa/' . $formato[0]['logo'];
-        }
-        $logo = base_url() . 'public/img/' . $logo;
-        if (!file_exists($logo)) {
-            $logo = '';
-        }
-
-        if ($empresa[0]['nombrecomercial'] == '') {
-            $nombre = $empresa[0]['razonsocial'];
-        } else {
-            $nombre = $empresa[0]['nombrecomercial'];
-        }
-
-        $ubigeopartida = $guia[0]['distpartida'] . ' - ' . $guia[0]['provpartida'] . ' - ' . $guia[0]['deppartida'];
-        $ubigeodestino = $guia[0]['distdestino'] . ' - ' . $guia[0]['provdestino'] . ' - ' . $guia[0]['depdestino'];
-
-        $html = '<table width="100%" align="center">';
-        $html .= '<tr>';
-        $html .= '<th style="width:20%">';
-        $html .= '<h4></h4> <img src="' . $logo . '" style="height:100px">';
-        $html .= '</th>';
-        $html .= '<th style="width:50%">';
-        $html .= '<h3>' . $nombre . '</h3>';
-        if (count($principal) > 0) {
-            if ($_SESSION['phuyu_codsucursal'] != $principal[0]['codsucursal']) {
-                $html .= '<b style="font-size:8px">PRINCIPAL: ' . $principal[0]['direccion'] . '</b>';
-
-                $html .= '<b style="font-size:8px">SUCURSAL: ' . $sucursal[0]['direccion'] . '</b>';
-            } else {
-                $html .= '<b style="font-size:8px">' . $sucursal[0]['direccion'] . '</b>';
+        $configuracion = $formato[0] ?? [];
+        $logoSrc = '';
+        if (!isset($configuracion['impresionlogo']) || $configuracion['impresionlogo'] === '' || (int)$configuracion['impresionlogo'] === 1) {
+            $logoPath = !empty($configuracion['logo'])
+                ? FCPATH . 'public/img/empresa/' . $configuracion['logo']
+                : FCPATH . 'public/img/' . ($_SESSION['phuyu_logo'] ?? 'empresa/default.png');
+            // Algunas series antiguas guardaron logo_o.png y el archivo es logo_O.png.
+            if (!is_file($logoPath) && is_dir(dirname($logoPath))) {
+                foreach (scandir(dirname($logoPath)) as $archivoLogo) {
+                    if (strcasecmp($archivoLogo, basename($logoPath)) === 0) {
+                        $logoPath = dirname($logoPath) . '/' . $archivoLogo;
+                        break;
+                    }
+                }
             }
-        } else {
-            $html .= '<b style="font-size:8px">' . $sucursal[0]['direccion'] . '</b>';
+            if (is_file($logoPath) && is_readable($logoPath)) {
+                $extension = strtolower(pathinfo($logoPath, PATHINFO_EXTENSION));
+                if (in_array($extension, ['png', 'jpg', 'jpeg'], true)) {
+                    $mime = $extension === 'png' ? 'png' : 'jpeg';
+                    $logoSrc = 'data:image/' . $mime . ';base64,' . base64_encode(file_get_contents($logoPath));
+                }
+            }
         }
-        $html .= '<br><b style="font-size:8px">Teléfono: ' . $sucursal[0]['telefonos'] . '</b>';
-        $html .= '<br><b style="font-size:8px">Email: ' . $empresa[0]['email'] . '</b>';
-        $html .= '<p>' . $parametros[0]['slogan'] . '</p>';
-        $html .= '</th>';
-        $html .= '<th style="width:30%;border:1px solid #000;color:#000;">';
-        $html .= '<h3 style="padding-top:10px">RUC: ' . $empresa[0]['documento'] . '</h3> <h3>' . $guia[0]['comprobante'] . '</h3>';
-        $html .= '<h3>' . $guia[0]['seriecomprobante'] . ' - ' . $guia[0]['nrocomprobante'] . '</h3>';
-        $html .= '</th>';
-        $html .= '</tr>';
-        $html .= '</table>';
-        $html .= '<table cellpadding="0" width="100%"> <tr> <th style="height:5px;"></th> </tr> </table>';
 
-        $html .= '<table cellpadding="3" width="100%" style="border:1px solid #000;">';
-        $html .= '<tr>';
-        $html .= '<td style="width:16%;font-size:9px;' . $marco . '"> <b>FECHA EMISION</b> </td>';
-        $html .= '<td style="width:84%;font-size:9px;' . $marco . '">: ' . $guia[0]['fechaguia'] . '</td>';
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td style="font-size:9px"> <b>RAZON SOCIAL</b> </td>';
-        $html .= '<td style="font-size:9px">: ' . $guia[0]['cliente'] . '</td>';
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td style="font-size:9px"> <b>DNI / RUC</b> </td>';
-        $html .= '<td style="font-size:9px">: ' . $guia[0]['documento'] . '</td>';
-        $html .= '</tr>';
-        $html .= '</table>';
-        $html .= '<table cellpadding="1" width="100%"> <tr> <th style="height:10px;"></th> </tr> </table>';
+        $html = $this->load->view('facturacion/formato/a4_guia', [
+            'empresa' => $empresa[0] ?? [],
+            'sucursal' => $sucursal[0] ?? [],
+            'principal' => $principal[0] ?? [],
+            'guia' => $guia[0],
+            'detalle' => $detalle,
+            'nombre_empresa' => !empty($configuracion['nombrecomercial'])
+                ? $configuracion['nombrecomercial']
+                : ($empresa[0]['nombrecomercial'] ?: $empresa[0]['razonsocial']),
+            'logo_src' => $logoSrc,
+            'slogan' => !empty($configuracion['slogan']) ? $configuracion['slogan'] : ($parametros[0]['slogan'] ?? ''),
+            'publicidad' => !empty($configuracion['publicidad']) ? $configuracion['publicidad'] : ($parametros[0]['publicidad'] ?? ''),
+        ], true);
 
-        $html .= '<table cellpadding="3" width="100%" style="border:1px solid #000;">';
-        $html .= '<tr>';
-        $html .= '<td style="width:16%;font-size:9px;"> <b>MOT. TRASLADO</b> </td>';
-        $html .= '<td style="width:34%;font-size:9px;">: ' . $guia[0]['motivo'] . '</td>';
-        $html .= '<td style="width:20%;font-size:9px;"> <b>FECHA TRASLADO</b> </td>';
-        $html .= '<td style="width:30%;font-size:9px;">: ' . $guia[0]['fechatraslado'] . '</td>';
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td style="font-size:9px"> <b>PESO TOTAL BRUTO</b> </td>';
-        $html .= '<td style="font-size:9px">: ' . number_format($guia[0]['peso'], 2, '.', '') . '</td>';
-        $html .= '<td style="font-size:9px"> <b>N° TOTAL DE BULTOS</b> </td>';
-        $html .= '<td style="font-size:9px">: ' . number_format($guia[0]['nropaquetes'], 2, '.', '') . '</td>';
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td style="font-size:9px"> <b>PUNTO DE PARTIDA</b> </td>';
-        $html .= '<td style="font-size:9px" colspan="3">: ' . $guia[0]['direccionpartida'] . ', ' . $ubigeopartida . '</td>';
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td style="font-size:9px"> <b>PUNTO DE LLEGADA</b> </td>';
-        $html .= '<td style="font-size:9px" colspan="3">: ' . $guia[0]['direccionllegada'] . ', ' . $ubigeodestino . '</td>';
-        $html .= '</tr>';
-        $html .= '</table>';
-        $html .= '<table cellpadding="1" width="100%"> <tr> <th style="height:10px;"></th> </tr> </table>';
-
-        $html .= '<table cellpadding="3" width="100%" style="border:1px solid #000;">';
-        $html .= '<tr>';
-        $html .= '<td style="width:16%;font-size:9px;' . $marco . '"> <b>MOD. TRANSPORTE</b> </td>';
-        $html .= '<td style="width:84%;font-size:9px;' . $marco . '">: ' . $guia[0]['modalidad'] . '</td>';
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td style="font-size:9px"> <b>TRANSPORTISTA</b> </td>';
-        $html .= '<td style="font-size:9px">: ' . $guia[0]['razonsocialtransportista'] . '</td>';
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td style="font-size:9px"> <b>DNI / RUC</b> </td>';
-        $html .= '<td style="font-size:9px">: ' . $guia[0]['documentotransportista'] . '</td>';
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td style="font-size:9px"> <b>CONDUCTOR</b> </td>';
-        $html .= '<td style="font-size:9px">: ' . $guia[0]['razonsocialconductor'] . '</td>';
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td style="font-size:9px"> <b>DNI / RUC</b> </td>';
-        $html .= '<td style="font-size:9px">: ' . $guia[0]['documentoconductor'] . '</td>';
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td style="font-size:9px"> <b>LICENCIA CONDUCTOR</b> </td>';
-        $html .= '<td style="font-size:9px">: ' . $guia[0]['licenciaconductor'] . '</td>';
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td style="font-size:9px"> <b>VEHICULO PLACA</b> </td>';
-        $html .= '<td style="font-size:9px">: ' . $guia[0]['nroplaca'] . '</td>';
-        $html .= '</tr>';
-        $html .= '<tr>';
-        $html .= '<td style="font-size:9px"> <b>MTC VEHICULO </b> </td>';
-        $html .= '<td style="font-size:9px">: ' . $guia[0]['constancia'] . '</td>';
-        $html .= '</tr>';
-        $html .= '</table>';
-        $html .= '<table cellpadding="1" width="100%"> <tr> <th style="height:10px;"></th> </tr> </table>';
-
-        $html .= '<table cellpadding="2" width="100%" style="border:1px solid #000;">';
-        $html .= '<tr>';
-        $html .= '<td style="' . $estilo . 'width:6%;font-size:9px"> <b>ITEM</b> </td>';
-        $html .= '<td style="' . $estilo . 'width:53%;font-size:9px"> <b>DESCRIPCION</b> </td>';
-        $html .= '<td style="' . $estilo . 'width:15%;font-size:9px"> <b>UND MEDIDA</b> </td>';
-        $html .= '<td style="' . $estilo . 'width:13%;font-size:9px"> <b>CANTIDAD</b> </td>';
-        $html .= '<td style="' . $estilo . 'width:13%;font-size:9px"> <b>PESO</b> </td>';
-        $html .= '</tr>';
-        $html .= '</table>';
-
-        $html .= '<table cellpadding="1" width="100%" style="border:1px solid #000;">';
-        foreach ($detalle as $value) {
-            $html .= '<tr>';
-            $html .= '<td style="' . $estilo . 'width:6%;font-size:9px"> 0' . $value['item'] . ' </td>';
-            $html .= '<td style="' . $estilo . 'width:53%;font-size:10px;font-size:9px"> ' . $value['producto'] . ' </td>';
-            $html .= '<td style="' . $estilo . 'width:15%;font-size:9px"> ' . $value['unidad'] . ' </td>';
-            $html .= '<td style="' . $estilo . 'width:13%;font-size:9px;text-align:right"> ' . number_format($value['cantidad'], 2) . ' </td>';
-            $html .= '<td style="' . $estilo . 'width:13%;font-size:9px;text-align:right"> ' . number_format($value['peso'], 2) . ' </td>';
-            $html .= '</tr>';
+        // La guía usa el mismo motor y tipografía que el comprobante A4.
+        require_once FCPATH . 'vendor/autoload.php';
+        $tempDir = APPPATH . 'cache/dompdf';
+        if (!is_dir($tempDir)) {
+            mkdir($tempDir, 0777, true);
         }
-        $html .= '</table>';
-        $html .= '<table cellpadding="1" width="100%"> <tr> <th style="height:10px;"></th> </tr> </table>';
-        $html .= '<table cellpadding="1" width="100%" style="border:1px solid #000;"> <tr><td style="' . $estilo . 'width:6%;font-size:9px">Observacion</td><td style="width:94%;font-size:9px">' . $guia[0]['observaciones'] . '</td></tr></table>';
+        $options = new \Dompdf\Options();
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('isRemoteEnabled', false);
+        $options->set('defaultFont', 'DejaVu Sans');
+        $options->set('chroot', FCPATH);
+        $options->set('tempDir', $tempDir);
+        $options->set('fontDir', FCPATH . 'vendor/dompdf/dompdf/lib/fonts');
+        $options->set('fontCache', $tempDir);
+        $options->set('dpi', 96);
 
-        $html .= '<table cellpadding="1" width="100%"> <tr> <th style="height:10px;"></th> </tr> </table>';
-        $html .= '<table width="100%" align="center">';
-        $html .= '<tr>';
-        $html .= '<th style="width:100%">';
-        $html .= '<h5 style="color:#000;" align="center">' . $parametros[0]['publicidad'] . '</h5>';
-        $html .= '</th>';
-        $html .= '</tr>';
-        $html .= '</table>';
-
-        $this->load->library('Pdf');
-
-        $pdf = new Pdf('P', 'mm', 'A4', true, 'UTF-8', false);
-        $pdf->SetCreator(PDF_CREATOR);
-        $pdf->SetAuthor('WEB phuyu');
-        $pdf->SetTitle('WEB phuyu | IMPRIMIR VENTA');
-        $pdf->SetSubject('WEB phuyu');
-
-        $pdf->setPrintHeader(false);
-
-        $pdf->SetAutoPageBreak(true, PDF_MARGIN_BOTTOM);
-        $pdf->setImageScale(PDF_IMAGE_SCALE_RATIO);
-
-        $pdf->setFontSubsetting(true);
-        $pdf->SetFont('helvetica', '', 9);
-        $pdf->AddPage('A');
-        $pdf->writeHTML($html, true, 0, true, 0);
-        //$pdf->writeHTML($html, true, false, true, false, '');
-
-        $nombre_archivo = utf8_decode('ImprimirVenta.pdf');
-        $pdf->Output($nombre_archivo, 'I');
+        $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf->loadHtml($html, 'UTF-8');
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+        $dompdf->getCanvas()->page_text(470, 810, 'Página {PAGE_NUM} de {PAGE_COUNT}', null, 8, [0.44, 0.40, 0.51]);
+        $nombreArchivo = 'Guia-' . $guia[0]['seriecomprobante'] . '-' . $guia[0]['nrocomprobante'] . '.pdf';
+        $dompdf->stream($nombreArchivo, ['Attachment' => false]);
     }
 
     public function consulta($codkardex)
